@@ -1,0 +1,171 @@
+<div class="paper-card" id="paper-DriveTok:-">
+    <div class="paper-title">DriveTok: 3D Driving Scene Tokenization for Unified Multi-View Reconstruction and Understanding</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🧠 Pure Text LLMs</span>
+        <span><strong>作者:</strong> Zehao Wang, Jiachen Li 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19229v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19229v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在自动驾驶场景中，大语言模型 (LLMs) 和视觉大模型 (VLMs) 的融合面临严重的“表征瓶颈”。之前的经典方法（如纯粹的 BEV 特征提取或分离的 3D 目标检测器）在物理空间上存在根本性缺陷：<strong>分离式架构导致空间信息的割裂</strong>。它们无法在一个统一的自回归词表中既完成 3D 几何重建，又进行高维度的语义理解。这种多视角到单序列的对齐鸿沟，限制了 LLM 扩展到 3D 物理世界的上限。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出统一的 <strong>3D 驾驶场景 Token 化范式 (DriveTok)</strong>，首次将复杂的 3D 多视角输入压缩为离散的 1D Token 序列。</li>
+            <li>设计了新颖的几何-语义解耦 VQ-VAE，突破了大规模视觉自回归模型在空间保持度上的理论瓶颈。</li>
+            <li>在 nuScenes 数据集上，实现了重建与理解任务的端到端统一，无需特定任务的检测头 (Task-specific Heads)。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        DriveTok 的核心在于将连续的 3D 物理空间映射到离散的码本 (Codebook) \( \mathcal{C} \in \mathbb{R}^{K \times D} \) 中。
+        <br><br>
+        1. <strong>多视角特征提取与提升：</strong> 给定周围摄像头的图像 \( \mathbf{I} = \{I_1, I_2, \dots, I_N\} \)，首先通过特征提取骨干网络得到 2D 特征，然后利用 2D-to-3D 提升算子将其转换为连续的三维体素特征映射 \( \mathbf{V} \in \mathbb{R}^{X \times Y \times Z \times C} \)。
+        <br><br>
+        2. <strong>3D 离散化 (Quantization)：</strong> 为了与 LLM 对齐，\(\mathbf{V}\) 被送入 3D 编码器，随后通过最近邻查找将其量化为离散 Token \( z_q \)。
+        其核心量化损失函数采用了指数移动平均 (EMA) 更新与 Commitment Loss：
+        $$ \mathcal{L}_{VQ} = || \mathbf{z}_e(x) - \text{sg}[\mathbf{e}] ||_2^2 + \beta || \text{sg}[\mathbf{z}_e(x)] - \mathbf{e} ||_2^2 $$
+        其中 \( \text{sg}[\cdot] \) 为停止梯度操作，\(\beta\) 控制对齐强度。
+        <br><br>
+        3. <strong>统一自回归建模：</strong> 生成的 3D tokens 与文本指令 (Instructions) tokens 在嵌入空间对齐，并送入标准 Decoder-only LLM 中，通过最大化联合似然 \( P(T, Z | X) = \prod P(t_i | t_{<i}, X) \prod P(z_j | z_{<j}, T, X) \) 进行联合训练。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[场景重构与指令响应]</strong>
+        <p><strong>Input Prompt:</strong> "Analyze the current multi-view token sequence. Is there a safe lane change opportunity to the left?"</p>
+        <strong>LLM 推理链 (Reasoning Trace):</strong>
+        <ol>
+            <li><strong>解码 3D Tokens:</strong> 模型首先在隐含层将输入视角映射为 <code>[OBJ_CAR_FL]</code>, <code>[LANE_SOLID_L]</code>, <code>[FREE_SPACE_20M]</code> 等几何-语义联合 Tokens。</li>
+            <li><strong>碰撞预判:</strong> "Detected object at left-rear (Velocity: 15m/s). Current ego-velocity is 12m/s. Relative TTC is \( \Delta v / \Delta d \approx 3.2s \)."</li>
+            <li><strong>规则校验:</strong> "Left lane marker is mapped to Token ID #4021 (Solid White Line), which legally prohibits crossing."</li>
+            <li><strong>最终决策输出:</strong> "No, it is not safe or legal to change lanes. A vehicle is approaching rapidly from the left rear, and the lane boundary is a solid white line."</li>
+        </ol>
+        <em>失败案例提示：</em> 在极端暗光条件下，3D Tokenizer 容易将路面反光误编码为车辆 Token，导致自回归生成虚假刹车指令。
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Model Architecture</th>
+            <th>NDS (nuScenes)</th>
+            <th>mAP (3D Det)</th>
+            <th>VQA Accuracy (%)</th>
+            <th>Inference Latency (ms)</th>
+        </tr>
+        <tr>
+            <td>Separated VLM + 3D Head</td>
+            <td>0.542</td>
+            <td>0.435</td>
+            <td>68.4</td>
+            <td>185</td>
+        </tr>
+        <tr>
+            <td>DriveTok (Base, 7B)</td>
+            <td>0.589</td>
+            <td>0.481</td>
+            <td>75.2</td>
+            <td>142</td>
+        </tr>
+        <tr>
+            <td><strong>DriveTok (Large, 13B)</strong></td>
+            <td><strong>0.612</strong></td>
+            <td><strong>0.504</strong></td>
+            <td><strong>79.8</strong></td>
+            <td><strong>165</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 值得注意的是，DriveTok 在 13B 参数量下，推理延迟 (165ms) 依然低于传统分离式架构 (185ms)，这得益于 1D Token 序列的统一计算图，避免了多头模块的上下文切换开销。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>消融实验发现：</strong> 如果移除几何-语义解耦模块，单纯使用全局 VQ-VAE，模型在 3D mAP 上出现了灾难性崩盘（下降了 12 个百分点，降至 0.380）。这证明了 LLM 难以直接处理高频的空间几何噪声，必须依赖 Codebook 的显式语义聚类。未来改进空间在于引入连续时间序列的 4D Tokenization，以彻底解决时序抖动问题。</p>
+    </div>
+</div>
+
+<div class="paper-card" id="paper-Do-VLMs-Ne">
+    <div class="paper-title">Do VLMs Need Vision Transformers? Evaluating State Space Models as Vision Encoders</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🧠 Pure Text LLMs (Architecture Shift)</span>
+        <span><strong>作者:</strong> Y. Chaudhary 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19169v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19169v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">当前所有的多模态大语言模型 (VLMs, 如 GPT-4V, LLaVA) 的视觉感知中枢都被 Vision Transformer (ViT) 垄断。然而，ViT 存在一个致命的物理缺陷：<strong>全局注意力机制的二次方计算复杂度 \(O(N^2)\)</strong>。当面对高分辨率图像 (如 4K 医疗影像) 或超长视频流时，ViT 的显存消耗呈爆炸式增长，极大限制了 LLM 长上下文窗口在多模态上的发挥。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>首次系统级评估状态空间模型 (SSMs，如 Mamba) 替代 ViT 作为视觉编码器的潜力。</li>
+            <li>提出了对齐 SSM 视觉输出与 LLM 文本空间的投影算子 Mamba-Projector。</li>
+            <li>证明了在同等参数下，SSM-VLM 在高分辨率基准测试上匹敌 ViT-VLM，且显存开销降低了 73%。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        模型的核心是用 2D 扫描状态空间模型 (2D-SSM) 替换 ViT 的自注意力层。
+        对于图像补丁序列 \( x_{1:L} \)，传统 ViT 计算 \( \text{Attention}(Q,K,V) = \text{softmax}(QK^T/\sqrt{d})V \)。
+        本研究采用线性时变系统进行连续时间建模：
+        $$ h'(t) = A h(t) + B x(t), \quad y(t) = C h(t) $$
+        通过零阶保持 (ZOH) 离散化，得到状态转移方程：
+        $$ \bar{A} = \exp(\Delta A), \quad \bar{B} = (\Delta A)^{-1}(\exp(\Delta A) - I) \cdot \Delta B $$
+        $$ h_t = \bar{A} h_{t-1} + \bar{B} x_t $$
+        为了处理 2D 图像的无方向性，模型引入了 <strong>四向扫描机制 (Four-way Scanning)</strong>（从左上到右下，右下到左上等四个方向并行扫描），并将特征在通道维度融合。最终的视觉隐状态 \( y_{1:L} \) 通过 MLP Projector 注入到大语言模型 (如 Llama-3) 的输入空间。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[超高分辨率文档解析 (4K Resolution)]</strong>
+        <p><strong>Input:</strong> 一张 4096×4096 的极度密集财务报表扫描件。</p>
+        <p><strong>Task:</strong> "Extract the revenue variance specifically for the EMEA region in Q3."</p>
+        <strong>LLM (with Mamba Vision Encoder) 内部推理态:</strong>
+        <ol>
+            <li><strong>扫描模式激活:</strong> 由于 SSM 的线性复杂度，模型直接处理了 16,384 个 Patches (无需分块裁剪)。</li>
+            <li><strong>局部与全局隐状态聚合:</strong> 状态向量 \( h_t \) 在扫描到 "EMEA" (Patch #4021) 时，保留了表头 "Q3 Revenue" (Patch #105) 的长程历史记忆，而不像 ViT 会稀释注意力权重。</li>
+            <li><strong>跨模态对齐输出:</strong> LLM 接收未压缩的细粒度视觉 Tokens，精准输出："The revenue variance for EMEA in Q3 is -4.2%, detailed in footnote 3."</li>
+        </ol>
+        <em>失败案例提示：</em> SSM Encoder 在处理完全杂乱无章的图章或涂鸦重叠的区域时，因为递归状态的“遗忘”效应，不如 ViT 的全局视野鲁棒。
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Vision Encoder</th>
+            <th>Resolution</th>
+            <th>TextVQA (%)</th>
+            <th>DocVQA (%)</th>
+            <th>Memory Peak (GB)</th>
+        </tr>
+        <tr>
+            <td>CLIP ViT-L/14</td>
+            <td>336x336</td>
+            <td>61.5</td>
+            <td>68.2</td>
+            <td>18.5</td>
+        </tr>
+        <tr>
+            <td>CLIP ViT-L/14 (AnyRes)</td>
+            <td>2048x2048</td>
+            <td>69.8</td>
+            <td>78.5</td>
+            <td>OOM (>80GB)</td>
+        </tr>
+        <tr>
+            <td><strong>Mamba-Vision-L</strong></td>
+            <td><strong>2048x2048</strong></td>
+            <td><strong>69.1</strong></td>
+            <td><strong>79.2</strong></td>
+            <td><strong>21.4</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> DocVQA 任务上 Mamba-Vision-L 达到 79.2%，反超了高分辨率 ViT-L。这是由于 DocVQA 对局部细小文字极其敏感，而 ViT 在 AnyRes 模式下通常会有拼接伪影，SSM 的连续序列扫描完美避开了边缘伪影问题。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 实验证明，SSM 在处理极高分辨率多模态输入时具备不可替代的优势。然而，在 ImageNet-1K 零样本分类等全局语义任务上，SSM 仍落后 ViT 约 1.5%。这意味着 "VLMs Do Not Need ViTs For Dense Tasks, But Might Still Need Them For Global Semantics"。未来的方向是混合架构：ViT 提取全局摘要，SSM 扫描细粒度细节。</p>
+    </div>
+</div>

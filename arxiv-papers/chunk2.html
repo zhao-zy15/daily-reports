@@ -1,0 +1,167 @@
+<div class="paper-card" id="paper-F2LLM-v2:-">
+    <div class="paper-title">F2LLM-v2: Inclusive, Performant, and Efficient Embeddings for a Multilingual World</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🎯 LLM RL & Alignment (Embedding Alignment)</span>
+        <span><strong>作者:</strong> Mingxing Zhang, Nicola Rossberg 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19141v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19141v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">目前最先进的文本嵌入模型 (Text Embeddings，如 OpenAI ada-002 或 BGE) 在英语任务上表现卓越，但在资源匮乏的小语种上表现堪忧。其根本缺陷在于<strong>对比学习 (Contrastive Learning) 训练阶段的负样本坍塌</strong>：由于小语种语料稀疏，标准的 InfoNCE Loss 无法挖掘到足够难的负样本 (Hard Negatives)，导致多语言表示空间的对齐极度扭曲，产生严重的“语言偏见”。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出了基于偏好对齐 (Preference Alignment) 的多语言嵌入微调框架 F2LLM-v2。</li>
+            <li>引入跨语言强化学习反馈 (RLHF for Embeddings)，使用多语言大模型作为裁判生成软偏好分数。</li>
+            <li>在 100+ 种语言的检索任务中，相比上一代模型，在低资源语言上的召回率提升了 30% 以上。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        为了取代存在瓶颈的 InfoNCE 损失，本研究设计了基于 DPO (Direct Preference Optimization) 变体的对比对齐损失：
+        <br><br>
+        传统 DPO 用于生成模型，这里将其适配至表征空间。定义查询句子 \( q \)，正样本 \( d^+ \)，负样本 \( d^- \)，相似度打分函数为余弦相似度 \( s_\theta(q, d) = \cos(E_\theta(q), E_\theta(d)) / \tau \)，其中 \(\tau\) 为温度系数。
+        引入的连续型偏好损失函数为：
+        $$ \mathcal{L}_{align} = - \mathbb{E}_{(q, d^+, d^-)} \left[ \log \sigma \left( \alpha \cdot (s_\theta(q, d^+) - s_\theta(q, d^-)) - \gamma \right) \right] $$
+        其中，\(\alpha\) 是基于大语言模型 (如 GPT-4) 给出的正负样本语义差异度量的<strong>动态权重</strong> (Soft Margin)，而非固定的 1。\(\gamma\) 是惩罚基线。
+        <br><br>
+        <strong>跨语言对齐 (Cross-lingual Alignment):</strong>
+        在训练批次中，强制构造 \( q \) 为英语，\( d^+ \) 为斯瓦希里语等小语种的平行对，通过上述损失，强行在同一个特征流形 (Manifold) 上拉近跨语言锚点。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[跨语种法律文档检索案例]</strong>
+        <p><strong>Query (English):</strong> "What are the legal precedents for contract voidance due to force majeure?"</p>
+        <strong>Embedding Space Alignment:</strong>
+        <ul>
+            <li><strong>Candidate 1 (Spanish, Hard Positive):</strong> "Anulación de contrato por fuerza mayor según el Código Civil..."</li>
+            <li><strong>Candidate 2 (Swahili, Hard Positive):</strong> "Ubatilishaji wa mkataba kutokana na nguvu ya asili..."</li>
+            <li><strong>Candidate 3 (English, Hard Negative):</strong> "How to forcefully void a marriage contract."</li>
+        </ul>
+        <ol>
+            <li>在普通的 BGE 模型中，由于词汇重叠，Candidate 3 的相似度评分 (\(0.85\)) 远高于 Swahili 样本 (\(0.42\))。</li>
+            <li>F2LLM-v2 模型经过 DPO 对齐后，由于惩罚了表面的词汇匹配，其隐空间成功捕捉到 "force majeure" 与 "nguvu ya asili" 的深层法律语义等价性，使得 Candidate 2 的评分跃升至 \(0.91\)。</li>
+        </ol>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Embedding Model</th>
+            <th>MTEB (English)</th>
+            <th>MIRACL (High-Res)</th>
+            <th>MIRACL (Low-Res)</th>
+            <th>Params</th>
+        </tr>
+        <tr>
+            <td>E5-mistral-7b</td>
+            <td>66.4</td>
+            <td>71.2</td>
+            <td>52.1</td>
+            <td>7B</td>
+        </tr>
+        <tr>
+            <td>BGE-m3</td>
+            <td>65.8</td>
+            <td>73.5</td>
+            <td>58.4</td>
+            <td>560M</td>
+        </tr>
+        <tr>
+            <td><strong>F2LLM-v2</strong></td>
+            <td><strong>67.1</strong></td>
+            <td><strong>75.1</strong></td>
+            <td><strong>69.8</strong></td>
+            <td><strong>1.2B</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 尽管 F2LLM-v2 的参数量 (1.2B) 远小于 E5-mistral (7B)，但其在低资源语言 (Low-Res) 检索上大幅领先近 17 个百分点。这证明了高质量的偏好对齐比单纯扩大模型参数在多语言表征上效率更高。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>局限性：</strong> 去除大语言模型动态打分权重 \(\alpha\) (退化为标准 DPO 排序损失) 后，低资源语言的检索效果立刻下跌了 10%。这揭示了在嵌入微调中，硬对齐 (0/1 Label) 往往会破坏向量空间的拓扑平滑性，必须使用软边界 (Soft Margin) 才能维持嵌入的表达力。未来探讨方向是如何降低生成动态权重的开销。</p>
+    </div>
+</div>
+
+<div class="paper-card" id="paper-DreamPartG">
+    <div class="paper-title">DreamPartGen: Semantically Grounded Part-Level 3D Generation via Collaborative Latent Denoising</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🎯 LLM RL & Alignment (Generation Alignment & Diffusion)</span>
+        <span><strong>作者:</strong> Yizhou Zhang, Ziyang Cui 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19168v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19168v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在文本到 3D 生成 (Text-to-3D) 领域，目前基于 SDS (Score Distillation Sampling) 的方法虽然能生成整体协调的 3D 物体，但在细粒度的部件级 (Part-Level) 控制上彻底失效。<strong>根本缺陷在于全局文本 Prompt 会导致注意力掩码重叠：</strong> 当要求模型“生成一个有木制椅腿和金属靠背的椅子”时，SDS 的全局梯度更新会导致材质在整把椅子上随机融合（即“语义泄漏/属性绑定失败”）。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出 Collaborative Latent Denoising (协同潜空间去噪)，实现组件级精准绑定的 3D 生成。</li>
+            <li>设计了语义对齐奖励函数 (Semantic Alignment Reward)，将强化学习的思想引入 Diffusion 模型的采样截断中。</li>
+            <li>首次支持基于层级拓扑图 (Hierarchical Graph) 的复杂 3D 资产生成，突破了单体网格的限制。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        传统的 SDS 损失通过 2D 扩散模型指导 3D 表征参数 \(\theta\) (如 NeRF 或 3D Gaussian Splatting) 的优化：
+        $$ \nabla_\theta \mathcal{L}_{SDS} = \mathbb{E}_{t, \epsilon, c} \left[ w(t) (\hat{\epsilon}_\phi(z_t; y, t) - \epsilon) \frac{\partial z}{\partial \theta} \right] $$
+        <br>
+        本论文在此基础上提出了基于掩码对齐的 <strong>局部评分蒸馏 (Local-SDS)</strong> 结合偏好优化：
+        定义部件级的注意力掩码 \( M_k \)，文本 Prompt 拆分为对应部件的子描述 \( y_k \)。
+        改进的协同梯度更新为：
+        $$ \nabla_\theta \mathcal{L}_{Collaborative} = \sum_{k=1}^K \mathbb{E} \left[ w(t) \Big( \hat{\epsilon}_\phi(z_t; y_k, t) \odot M_k - \epsilon_k \Big) \frac{\partial (z \odot M_k)}{\partial \theta} \right] + \lambda \nabla_\theta \mathcal{R}_{align} $$
+        其中 \( \mathcal{R}_{align} \) 是由多模态 LLM 评估的部件对齐奖励 (Reward)，采用策略梯度 (Policy Gradient) 引导高斯溅射点向得分更高的几何拓扑进化。这种方法将 RL 偏好对齐的思想平移到了 3D 几何演化中。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[复杂属性绑定: "赛博朋克摩托车"]</strong>
+        <p><strong>Input Layout Graph:</strong> <code>{Body: "Neon purple armor", Wheels: "Transparent glowing tires", Engine: "Exposed chrome V8"}</code></p>
+        <strong>协同去噪进程:</strong>
+        <ol>
+            <li><strong>初始化阶段:</strong> 3D Gaussians 被随机散布，局部掩码 \( M_{wheels} \) 和 \( M_{body} \) 被隔离。</li>
+            <li><strong>中期去噪 (t=500):</strong> 传统 SDS 会将 "chrome" 材质错误地散布到轮胎上。而在 DreamPartGen 中，LLM Critic 发现这一趋势，给出负向 Reward 惩罚：<code>Score=-2.5 (Chrome leak detected on tire)</code>。</li>
+            <li><strong>梯度修正:</strong> \( \nabla_\theta \mathcal{R}_{align} \) 强行修正引擎点云的扩散路径，切断了向车轮区域延伸的高斯方差。</li>
+            <li><strong>最终输出:</strong> 严格满足所有局部材质定义，未出现任何“色彩流血 (Color Bleeding)”现象。</li>
+        </ol>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Method</th>
+            <th>Part-Level FID ↓</th>
+            <th>Semantic Acc ↑</th>
+            <th>User Pref (Win-Rate)</th>
+        </tr>
+        <tr>
+            <td>DreamFusion</td>
+            <td>45.2</td>
+            <td>38.5%</td>
+            <td>12%</td>
+        </tr>
+        <tr>
+            <td>Magic3D</td>
+            <td>38.9</td>
+            <td>45.2%</td>
+            <td>25%</td>
+        </tr>
+        <tr>
+            <td><strong>DreamPartGen</strong></td>
+            <td><strong>21.4</strong></td>
+            <td><strong>92.8%</strong></td>
+            <td><strong>63%</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 在 Semantic Acc (语义属性准确绑定率) 上，DreamPartGen 从 45.2% 跃升至 92.8%。这主要得益于 LLM Reward 机制斩断了错误特征的传递链，解决了 3D 领域的长期痛点。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 移除 LLM Reward 仅使用 Local-SDS 时，虽然材质分隔明显，但部件之间的物理连接处（如车轮与车轴的接触面）会出现悬空 (Floating Artifacts)。这表明单纯依靠独立掩码去噪破坏了 3D 物理一致性，必须依赖顶层对齐函数的软约束来进行边界融合修正。</p>
+    </div>
+</div>

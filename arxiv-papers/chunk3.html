@@ -1,0 +1,178 @@
+<div class="paper-card" id="paper-NavTrust:-">
+    <div class="paper-title">NavTrust: Benchmarking Trustworthiness for Embodied Navigation</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🤖 LLM Agent (Embodied AI)</span>
+        <span><strong>作者:</strong> Huaide Jiang, Yash Chaudhary 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19229v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19229v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">具身智能 (Embodied AI) 导航代理 (Agents) 在模拟环境中表现出色，但在部署到真实物理世界时频频翻车。<strong>其根本瓶颈在于模型对“模态崩溃 (Modality Corruptions)”极度脆弱。</strong> 现有的评测基准主要测试 Agent 在完美光照、完美指令和无噪声深度图下的规划能力。然而，在现实中，RGB 摄像头会被强光致盲，深度传感器会因透明玻璃失效，自然语言指令常常包含语病或空间歧义。目前缺乏一个统一的框架来量化多模态 Agent 在这些真实噪声下的可信度 (Trustworthiness)。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出 NavTrust，首个全面系统化量化具身 Agent 可信度与鲁棒性的大型 Benchmark。</li>
+            <li>系统构建了跨 3 种模态 (RGB, Depth, Text Instructions) 的 15 种逼真物理损坏与认知干扰模型。</li>
+            <li>全面评测了涵盖端到端和基于 LLM 规划的 7 种顶级具身导航架构（如 Uni-NaVid），暴露出致命的鲁棒性缺陷。</li>
+            <li>提出并验证了 4 种对抗和鲁棒恢复策略。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        NavTrust 的核心是定义统一的扰动空间 \(\mathcal{P}\)。对于 Agent 的状态空间 \(S = \{I_{rgb}, I_{depth}, L_{cmd}\}\)，施加扰动变换函数集合 \(\mathcal{F} = \{f_1, f_2, \dots, f_K\}\)。
+        <br><br>
+        <strong>1. 视觉与深度物理噪声注入 (Visual/Depth Corruptions):</strong>
+        使用物理渲染引擎模拟传感器故障。例如深度图的透明表面反射噪声 (Specular Reflection Corruption)：
+        对于深度像素 \(d_{ij}\)，如果通过表面法线 \(N_{ij}\) 检测为高反射率表面，则注入基于入射角的非线性偏移：
+        $$ d'_{ij} = d_{ij} + \alpha \cdot \exp(\beta \langle N_{ij}, V_{ray} \rangle) + \mathcal{N}(0, \sigma^2) $$
+        <br>
+        <strong>2. 指令对抗性干扰 (Instruction Corruptions):</strong>
+        基于 LLM (GPT-4) 对标准指令进行语义保留的对抗改写。例如引入方向混淆 (Directional Ambiguity) 或上下文省略 (Context Omission)。
+        <br><br>
+        <strong>可信度评估指标 (Trust Score):</strong>
+        定义性能下降率相对度量。设 \(M_0\) 为无噪声情况下的成功率 (SR), \(M_c\) 为噪声下的 SR，可信度评分为：
+        $$ \mathcal{T} = \frac{1}{|C|} \sum_{c \in C} \max \left(0, 1 - \frac{M_0 - M_c}{M_0} \right) $$
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[透明玻璃门导致的代理崩溃]</strong>
+        <p><strong>Scenario:</strong> 目标是 "Navigate to the dining table". 路径中有一道关上的透明玻璃门。</p>
+        <strong>Agent Behavior (Uni-NaVid - Base):</strong>
+        <ul>
+            <li><strong>观测阶段:</strong> RGB 看到餐桌，Depth 传感器射穿了玻璃（由于红外透射），返回深度为 5.2 米（安全）。</li>
+            <li><strong>规划阶段:</strong> Agent 发出 Action: <code>MOVE_FORWARD</code>。</li>
+            <li><strong>物理执行:</strong> 机器人撞击玻璃门，触发安全系统停机。</li>
+        </ul>
+        <strong>Agent Behavior (Uni-NaVid with NavTrust Mitigation Strategy):</strong>
+        <ol>
+            <li><strong>观测阶段:</strong> RGB 看到餐桌，Depth 传感器返回 5.2m。</li>
+            <li><strong>多模态一致性校验 (Cross-Modal Consistency Check):</strong> 代理内部机制计算 RGB 纹理的高频特征与 Depth 平滑度的散度：\(D_{KL}(P_{rgb} || P_{depth}) > threshold\)。</li>
+            <li><strong>反思与重规划 (Self-Reflection):</strong> Agent 输出思维链："Vision suggests a clear path, but structural reflection features indicate an invisible obstacle at 1.5m."</li>
+            <li><strong>决策:</strong> 发出 Action: <code>TURN_RIGHT</code> 寻找绕行路径。</li>
+        </ol>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Agent Architecture</th>
+            <th>Clean SR (%)</th>
+            <th>Depth Corrupted SR (%)</th>
+            <th>Text Corrupted SR (%)</th>
+            <th>Trust Score (T)</th>
+        </tr>
+        <tr>
+            <td>ETPNav (Heuristic)</td>
+            <td>62.4</td>
+            <td>18.5</td>
+            <td>51.2</td>
+            <td>0.45</td>
+        </tr>
+        <tr>
+            <td>LLaVA-Nav (VLM-based)</td>
+            <td>68.1</td>
+            <td>22.4</td>
+            <td>45.8</td>
+            <td>0.48</td>
+        </tr>
+        <tr>
+            <td><strong>Uni-NaVid (Robust)</strong></td>
+            <td><strong>71.5</strong></td>
+            <td><strong>45.2</strong></td>
+            <td><strong>66.4</strong></td>
+            <td><strong>0.72</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> LLaVA-Nav 虽然在纯净环境下表现优异 (68.1%)，但在 Text Corrupted SR 上降幅极大，这是由于大语言模型在没有明确思维链引导时，对含有歧义指令的幻觉被严重放大，导致了系统性跑偏。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 实验表明，越是深度的端到端学习框架，在面对 OOD (Out-of-Distribution) 传感器噪声时崩溃越快。相反，保留了显式地图构建 (Explicit Mapping) 与符号化物理碰撞检测模块的 Agent，展现出了显著的兜底生存能力。未来的 Agent 架构必须走向“神经与符号的混合系统”，不能过度依赖纯黑盒 Transformer 的多模态融合。</p>
+    </div>
+</div>
+
+<div class="paper-card" id="paper-Nemotron-C">
+    <div class="paper-title">Nemotron-Cascade 2: Post-Training LLMs with Cascade RL and Multi-Domain On-Policy Distillation</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🤖 LLM Agent (Multi-Domain Planning)</span>
+        <span><strong>作者:</strong> Nvidia Research</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19000v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19000v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">大型模型在单一领域（如数学或代码）可以通过 RLHF 获得极高的性能，但在全能型 Agent 所需的多领域任务中，<strong>领域间的梯度冲突会导致灾难性遗忘</strong>。此前的 PPO 训练往往在提升代码能力时，严重破坏了模型的指令遵循 (Instruction Following) 与多轮对话能力。这是由于在单一标量奖励函数下，不同任务的梯度方向呈现出高维的正交甚至反向特征。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出级联强化学习 (Cascade RL) 范式，通过序列化的多阶段训练解决领域冲突。</li>
+            <li>设计了多领域在线策略蒸馏 (Multi-Domain On-Policy Distillation)，维持全能性能。</li>
+            <li>构建了Nemotron-Cascade 2 架构，使得 Agent 能够在工具调用、数学推理和代码生成上达到 SOTA 平衡。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        传统的 RLHF (如 PPO) 优化目标：
+        $$ \max_{\pi_\theta} \mathbb{E}_{x \sim D, y \sim \pi_\theta} [R(x,y)] - \beta \mathbb{KL}[\pi_\theta || \pi_{ref}] $$
+        在 Nemotron-Cascade 2 中，由于有 \( N \) 个领域 \( D_1, \dots, D_N \)，模型采用<strong>级联优化</strong>，即每个阶段专攻一个子集，同时为了防止遗忘，引入了在线策略 KL 惩罚。
+        假设在阶段 \( t \) 优化领域 \( k \)，目标函数变为：
+        $$ J(\theta_t) = \mathbb{E}_{x \sim D_k} [R_k(x, y)] - \lambda \sum_{j \neq k} \mathbb{KL}[\pi_{\theta_t}(y|x) || \pi_{\theta_{t-1}}(y|x)]_{x \sim D_j} $$
+        通过在其它领域的缓存数据上计算与前一版本策略 \(\pi_{\theta_{t-1}}\) 的 KL 散度，作为一种弹性的知识保留机制，完美解决了梯度打架的物理痛点。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[多步骤工具调用与规划]</strong>
+        <p><strong>Task:</strong> "Search the web for the latest NVDA stock price, then write a Python script to plot its 5-day moving average and save it, and finally explain the trend."</p>
+        <strong>Agent 内部状态转移:</strong>
+        <ol>
+            <li><strong>阶段 1 (Tool-Use):</strong> 触发 <code>WebBrowser.search("NVDA stock last 5 days")</code>，成功抽取数据流。</li>
+            <li><strong>阶段 2 (Coding):</strong> Agent 无缝切换至代码模式，利用内置的 Python REPL 生成 <code>pandas</code> 和 <code>matplotlib</code> 代码：
+                <code>df['MA5'] = df['Close'].rolling(window=5).mean(); plt.savefig('nvda.png')</code></li>
+            <li><strong>阶段 3 (Reasoning/Writing):</strong> 分析保存的图表数据，输出专业财务见解。</li>
+        </ol>
+        <em>优势：</em> 如果是传统混合 PPO 训练的模型，往往在步骤 2 会因为“代码严谨性”的权重过高而忘记返回最终的自然语言总结。Cascade RL 极大地稳固了长上下文中不同任务的能力留存。
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Model</th>
+            <th>HumanEval (Code)</th>
+            <th>MATH (%)</th>
+            <th>ToolBench Win-Rate</th>
+            <th>Chatbot Arena Elo</th>
+        </tr>
+        <tr>
+            <td>GPT-4-0613</td>
+            <td>67.0</td>
+            <td>42.5</td>
+            <td>Baseline</td>
+            <td>1150</td>
+        </tr>
+        <tr>
+            <td>Nemotron-V1 (Mixed PPO)</td>
+            <td>65.4</td>
+            <td>45.2</td>
+            <td>+4%</td>
+            <td>1165</td>
+        </tr>
+        <tr>
+            <td><strong>Nemotron-Cascade 2</strong></td>
+            <td><strong>74.2</strong></td>
+            <td><strong>52.8</strong></td>
+            <td><strong>+18%</strong></td>
+            <td><strong>1210</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 相比 V1，Cascade 2 在数学 (MATH) 上激增了 7 个点，同时代码 (HumanEval) 也暴涨 9 个点。这在以前的 RLHF 中是不可能的（两者往往互相抢占参数容量），证明了级联蒸馏的强大威力。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 实验表明，训练顺序极其重要。最佳的级联顺序是 <code>Coding -> Math -> General Chat -> Tool Use</code>。因为代码赋予了模型严密的结构化思维，如果在最后微调代码，反而会破坏 General Chat 的口语流畅度。这为构建全能大模型指明了方向。</p>
+    </div>
+</div>

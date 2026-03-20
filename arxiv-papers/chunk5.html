@@ -1,0 +1,179 @@
+<div class="paper-card" id="paper-FinTradeBe">
+    <div class="paper-title">FinTradeBench: A Financial Reasoning Benchmark for LLMs</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🔍 IR & Medical Retrieval (Financial QA & Reasoning)</span>
+        <span><strong>作者:</strong> M. Zhang 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19047v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19047v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在真实的金融市场中，交易决策 (Trading Decisions) 极其复杂，需要同时对两类异构信号进行深度推理：一类是来自公司财报 (Regulatory Filings, 10-K) 的<strong>静态基本面数据</strong>；另一类是来自市场微观结构的<strong>动态量价交易信号</strong> (Price Dynamics, Order Books)。目前，绝大多数金融大模型 (FinLLMs) 评测基准 (如 FinQA, ConvFinQA) 仅仅停留在“财务报表的数字提取与四则运算”上，<strong>完全忽视了量价时序数据与基本面之间的交叉推理</strong>，导致这些 LLMs 在模拟交易环境下的表现形同“书呆子”。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>构建了首个同时融合“基本面”与“市场交易动态”的大型金融推理基准测试 FinTradeBench。</li>
+            <li>系统评估了十余种顶级开源与闭源 LLMs 在跨模态 (长文本与时序向量) 金融问答中的逻辑链能力。</li>
+            <li>揭示了当今最强模型 (如 GPT-4, Gemini 1.5 Pro) 在处理时序因果与非平稳金融信号时的严重幻觉与逻辑断层。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        该基准通过构建异构图检索与多跳推理任务，从三个难度层级测试模型：
+        <br><br>
+        1. <strong>时序基础感知 (Temporal Anchoring):</strong> 给定历史股票价量序列 \( \mathbf{P}_{1:T} \)，测试 LLM 识别特定形态（如“金叉” Moving Average Crossover）。
+        2. <strong>跨域事实关联 (Cross-domain Retrieval):</strong> 给定突发的 8-K 文件（如 CEO 离职），要求模型检索同期股票交易量的异常波动 \(\Delta V\)。
+        3. <strong>反事实与因果推理 (Counterfactual Reasoning):</strong> 如果财报中的 EBITDA 低于预期 5%，结合当前相对强弱指数 (RSI) 处于超买区 (RSI > 70)，推导机构资金可能的抛售踩踏效应。
+        模型评测采用了严密的数学定义域：
+        $$ \text{Ans}_{fin} = \arg\max_{a} P_{\theta}(a | \text{Prompt}, \mathcal{D}_{text}, \mathcal{D}_{time}) $$
+        其中 \(\mathcal{D}_{text}\) 包含长篇幅（100k Tokens）的 SEC 文本，\(\mathcal{D}_{time}\) 被序列化为高频浮点数。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[特斯拉 (TSLA) Q3 财报与空头回补推理]</strong>
+        <p><strong>Scenario:</strong> 财报显示毛利率降至 17.9%（低于预期），但在盘后交易中股价却暴涨 8%。提供给 LLM 相关的 10-Q 文本和过去 30 天的 Short Interest 数据。</p>
+        <strong>LLM (GPT-4) 错误推理链:</strong>
+        <ol>
+            <li><strong>抽取事实:</strong> "Margin decreased. Revenue missed by 2%."</li>
+            <li><strong>逻辑演绎:</strong> "Missed earnings usually lead to a stock price drop."</li>
+            <li><strong>幻觉生成:</strong> "Therefore, the 8% surge is anomalous and likely a data error." (忽略了市场微观结构)。</li>
+        </ol>
+        <strong>Expert Analyst (Ground Truth) 推理链:</strong>
+        <ol>
+            <li><strong>基本面解析:</strong> 毛利率低于预期。</li>
+            <li><strong>检索交易信号:</strong> 发现 Short Interest (空头头寸) 在财报前达到了历史极值 15%。</li>
+            <li><strong>交叉推理 (Short Squeeze):</strong> 财报虽然不及预期，但没有“差到引发恐慌”。由于大量空头急于平仓，触发了连环买入（逼空行情）。</li>
+            <li><strong>结论:</strong> 盘后 8% 的暴涨是典型的空头回补 (Short Covering) 所致，与基本面恶化不矛盾。</li>
+        </ol>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>LLM</th>
+            <th>Fin-Doc QA (%)</th>
+            <th>Time-Series Read (%)</th>
+            <th>Cross-Domain Reasoning (%)</th>
+        </tr>
+        <tr>
+            <td>BloombergGPT (50B)</td>
+            <td>68.4</td>
+            <td>42.1</td>
+            <td>28.5</td>
+        </tr>
+        <tr>
+            <td>Llama-3-70B</td>
+            <td>75.2</td>
+            <td>48.6</td>
+            <td>35.2</td>
+        </tr>
+        <tr>
+            <td><strong>GPT-4-Turbo</strong></td>
+            <td><strong>89.5</strong></td>
+            <td><strong>65.4</strong></td>
+            <td><strong>46.8</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 即使是最强的大语言模型 GPT-4，在“跨域推理 (Cross-Domain Reasoning)”上的准确率也仅为 46.8%，远低于人类交易员基准 (78%)。这证明 LLMs 极其缺乏将静态文字逻辑转化为动态市场博弈的“二阶思维”。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> LLM 在处理数字序列时，容易受到“Token 化断裂”的影响（如浮点数 1.25 和 12.5 被编码为完全不相关的 Tokens），导致时间序列的相对大小感知极其薄弱。要解决金融大模型这一核心痛点，必须引入专门的金融时序编码器 (Time-Series Encoder) 进行多模态投影，而不能仅依赖纯文本。 </p>
+    </div>
+</div>
+
+<div class="paper-card" id="paper-Online-Lea">
+    <div class="paper-title">Online Learning and Equilibrium Computation with Ranking Feedback</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> 🔍 IR & Medical Retrieval (Learning to Rank & Search)</span>
+        <span><strong>作者:</strong> P. Rusmevichientong 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19012v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19012v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在信息检索 (IR)、推荐系统和搜索引擎中，算法需要在线学习用户的偏好。然而，经典的在线多臂老虎机 (Multi-Armed Bandits, MAB) 模型假设系统可以获得每个单独动作（点击或未点击）的具体奖励值。<strong>底层痛点是，在真实的搜索引擎页面中，用户给出的反馈是“隐式的排序级反馈 (Ranking Feedback)”。</strong> 用户浏览一页 10 个搜索结果，点击了第 3 和第 5 项，这不仅代表对 3 和 5 的认可，也隐式传达了“排在前面的 1, 2 被鄙视了”的相对排序偏好。将这种序列反馈暴力拆解为独立的 MAB，在数学上会导致收敛速度的极大衰减和次优均衡。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>首次提出在完全动态排序反馈 (Dynamic Ranking Feedback) 下的最优在线学习算法。</li>
+            <li>基于 Plackett-Luce 选择模型，构建了新的排序探索-利用 (Exploration-Exploitation) 理论上限。</li>
+            <li>证明了在多智能体 (如广告竞价检索) 场景中，该算法能加速收敛至纳什均衡 (Nash Equilibrium)。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        考虑集合 \( S \) 中的 \( K \) 个物品被展示给用户。在 Plackett-Luce (PL) 模型下，物品 \( i \) 具有潜在效用 \( v_i = \exp(\theta_i) \)。
+        给定排序列表 \( R = (i_1, i_2, \dots, i_K) \)，用户点击 \( i_k \) 的概率为：
+        $$ P(i_k | S) = \frac{v_{i_k}}{\sum_{j=k}^K v_{i_j}} $$
+        算法的核心挑战是，如何根据这种极其稀疏的序列点击反馈，在线估算未知的参数向量 \(\theta\)。
+        <br><br>
+        1. <strong>置信椭球构建 (Confidence Ellipsoid):</strong> 
+        论文设计了一种新颖的基于最大似然估计 (MLE) 的上确界置信区间 (UCB) 算法。
+        每次反馈后，更新 Fisher 信息矩阵 \( H_t(\theta) \)，并构造参数的置信区域：
+        $$ C_t = \{ \theta : ||\theta - \hat{\theta}_t||_{H_t(\hat{\theta}_t)} \leq \beta_t \} $$
+        2. <strong>排序策略优化:</strong> 
+        在每一轮 \( t \)，不仅要选择当前认为最优的集合，还要确保集合中的元素能够最大化 Fisher 信息的迹，从而加速置信椭球的收缩（即主动探索排序的非确定性）。
+        算法的遗憾界 (Regret Bound) 被严格证明为 \( \tilde{O}(N \sqrt{T} / \Delta) \)，达到了信息论的最优下界。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[医疗文献检索的动态重排序 (Dynamic Re-ranking)]</strong>
+        <p><strong>Query:</strong> "Latest treatments for triple-negative breast cancer."</p>
+        <strong>搜索引擎排序演化 (Ranking Feedback Loop):</strong>
+        <ul>
+            <li><strong>轮次 1:</strong> 引擎依据传统 BM25 返回 Top-5 结果。排序为：<code>[A (老综述), B (新药二期), C (靶向药原理), D (新药一期), E (化疗)]</code>。</li>
+            <li><strong>用户反馈:</strong> 医生忽略了 A，点击了 B，然后返回列表点击了 D。</li>
+            <li><strong>朴素 Bandit 处理:</strong> 标记 B, D 为正反馈，A, C, E 为负反馈。完全忽略了位置偏差 (Position Bias)。</li>
+            <li><strong>本论文的 PL-UCB 算法处理:</strong> 
+                <ol>
+                    <li>推断：在 <code>{A,B,C,D,E}</code> 中选了 B，说明 \( v_B > v_A, v_C, v_D, v_E \)。</li>
+                    <li>推断：由于先跳过 A 看了 B，且 A 排在 B 前面，施加强烈的相对惩罚梯度 \(\nabla \theta_A \ll 0\)。</li>
+                    <li>推断：在剩下的 <code>{A,C,D,E}</code> 中选了 D，再次利用链式法则更新 Fisher 矩阵。</li>
+                </ol>
+            </li>
+            <li><strong>轮次 2 (优化后):</strong> 系统迅速将最新临床试验 (Clinical Trials) 相关的文献提权至最前端。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Algorithm</th>
+            <th>Cumulative Regret (T=1e5)</th>
+            <th>Click-Through Rate (CTR)</th>
+            <th>Equilibrium Gap ↓</th>
+        </tr>
+        <tr>
+            <td>Independent UCB</td>
+            <td>18,450</td>
+            <td>3.2%</td>
+            <td>0.142</td>
+        </tr>
+        <tr>
+            <td>Rank-Discounted TS</td>
+            <td>12,300</td>
+            <td>4.5%</td>
+            <td>0.085</td>
+        </tr>
+        <tr>
+            <td><strong>PL-Ranking-UCB (Proposed)</strong></td>
+            <td><strong>4,120</strong></td>
+            <td><strong>6.8%</strong></td>
+            <td><strong>0.012</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 提出的算法在累积遗憾 (Cumulative Regret) 上呈现出对数级增长，远低于独立 UCB 算法的线性增长。此外，Equilibrium Gap 降至 0.012，说明该算法在存在恶意广告主竞价的复杂博弈环境中，能极快地收敛到市场稳定点。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 实验表明，当用户在浏览时存在“级联跳出 (Cascade Abandonment)”（即看到第 3 个结果觉得没用就关掉网页）时，该模型必须引入位置依赖的跳出率参数，否则会错误地惩罚排在底部的优质结果。因此，联合建模位置偏差 (Position Bias) 与选择偏好将是下一步的重要突破点。</p>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,174 @@
+<div class="paper-card" id="paper-ARIADNE:-A">
+    <div class="paper-title">ARIADNE: A Perception-Reasoning Synergy Framework for Trustworthy Coronary Angiography Analysis</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> ⚕️ Medical LLMs</span>
+        <span><strong>作者:</strong> Zhan Jin, Yu Luo 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19169v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19169v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在医疗 AI，特别是冠状动脉血管造影 (Coronary Angiography) 分析中，传统的深度学习模型（如 U-Net 等分割网络或 ResNet 分类器）是纯粹的“感知机器”，缺乏高层次的临床推理能力。<strong>根本缺陷在于感知与推理的割裂：</strong> 当血管出现复杂的狭窄、分叉或重叠时，纯视觉模型极易产生解剖学上不合理的“拓扑断层” (Topological Violations)。医生无法信任一个会画出“悬空血管”的黑盒模型，临床落地受阻。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出 ARIADNE 框架，首次实现医学影像感知模块与大语言模型 (LLM) 推理模块的深度协同。</li>
+            <li>设计了基于结构约束的拓扑偏好学习 (Topological Preference Learning)，将解剖学常识注入 LLM 的对齐过程中。</li>
+            <li>在介入心脏病学工作流中，显著减少了血管拓扑违规，并在敏感度 (Sensitivity) 上超越了医生基准。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        ARIADNE 的核心是双向反馈循环：感知网络提取细粒度视觉特征 \( V_f \)，LLM 生成结构化描述 \( T_s \) 并进行错误纠正。
+        <br><br>
+        1. <strong>多模态特征融合：</strong> 感知器 (Perceptor) 提取的血管树结构被转换为图表示 (Graph Representation) \( \mathcal{G} = (\mathcal{V}, \mathcal{E}) \)，节点为血管段，边为连接关系。
+        <br><br>
+        2. <strong>拓扑偏好学习 (Topological Preference Learning)：</strong> 
+        采用强化学习从人类专家 (或硬编码的解剖学规则) 处获取反馈。定义奖励函数 \( R(\mathcal{G}, T_s) \)：
+        $$ R(\mathcal{G}, T_s) = \lambda_1 R_{sens}(\mathcal{G}) - \lambda_2 \sum_{i} \text{Violation}(v_i, e_{ij}) + \lambda_3 R_{align}(V_f, T_s) $$
+        其中 \(\text{Violation}(\cdot)\) 惩罚断裂、非生理性分支 (如冠脉的异常起源)。
+        模型通过 PPO (Proximal Policy Optimization) 更新 LLM 策略：
+        $$ L^{clip}(\theta) = \hat{\mathbb{E}}_t [ \min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t) ] $$
+        LLM 接收图结构的文本化表征，并输出纠正后的空间关系掩码，反向指导感知网络的梯度更新，形成“感知-推理-修正”闭环。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[左前降支 (LAD) 弥漫性狭窄分析]</strong>
+        <p><strong>Input:</strong> X射线冠脉造影视频帧序列，病灶存在造影剂冲洗不均导致的伪影。</p>
+        <strong>ARIADNE 推理与纠错链:</strong>
+        <ol>
+            <li><strong>感知器初筛:</strong> "Detected 80% stenosis in mid-LAD. Distal segment missing." (单纯视觉模型因伪影丢失了远端血管的分割)。</li>
+            <li><strong>LLM 解剖学推理:</strong> "Critique: The LAD cannot terminate abruptly at the mid-segment without severe total occlusion (TIMI 0 flow), but collateral circulation is not observed. The distal segment is likely obscured by noise."</li>
+            <li><strong>反馈与重感知:</strong> LLM 生成空间 Attention Mask 覆盖远端预期区域，强行提升该区域在感知器中的特征激活阈值。</li>
+            <li><strong>最终诊断:</strong> "Mid-LAD 80% stenosis confirmed. Distal LAD flow restored in mask, TIMI 2. Diagnosis: Severe diffuse CAD."</li>
+        </ol>
+        <em>失败案例提示：</em> 当患者曾进行过冠脉搭桥手术 (CABG)，出现异常的新生血管通道时，LLM 固化的解剖学规则可能会将其误判为拓扑违规而强行抹除，需要特殊的 CABG 模式切换。
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Model</th>
+            <th>Stenosis Det. (F1)</th>
+            <th>Topology Error Rate ↓</th>
+            <th>Diagnostic Sens. (%)</th>
+            <th>Specificity (%)</th>
+        </tr>
+        <tr>
+            <td>U-Net + ResNet50</td>
+            <td>0.742</td>
+            <td>18.5%</td>
+            <td>71.2</td>
+            <td>85.4</td>
+        </tr>
+        <tr>
+            <td>Med-PaLM 2 (Zero-shot)</td>
+            <td>0.658</td>
+            <td>N/A</td>
+            <td>68.5</td>
+            <td>82.1</td>
+        </tr>
+        <tr>
+            <td><strong>ARIADNE (Synergy)</strong></td>
+            <td><strong>0.864</strong></td>
+            <td><strong>3.2%</strong></td>
+            <td><strong>89.7</strong></td>
+            <td><strong>91.2</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> 相比于最强纯视觉基线，ARIADNE 将拓扑错误率 (Topology Error Rate) 从 18.5% 暴降至 3.2%。这意味着生成的血管树几乎完全符合人类生理结构，这对于下游的血流储备分数 (FFR) 计算是决定性的突破。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>消融实验发现：</strong> 剥离 LLM 推理模块，仅使用启发式规则 (Heuristics) 进行拓扑后处理，F1 分数仅回升至 0.760。这证明了 LLM 提供的不仅是硬性规则约束，更是结合全局语义的“软性临床直觉”。未来工作应扩展至 3D 冠脉 CT 血管造影 (CCTA) 的时空推理中。</p>
+    </div>
+</div>
+
+<div class="paper-card" id="paper-SHAPCA:-Co">
+    <div class="paper-title">SHAPCA: Consistent and Interpretable Explanations for Machine Learning Models on Spectroscopy Data</div>
+    <div class="paper-meta">
+        <span><strong>分类:</strong> ⚕️ Medical LLMs (Medical Data & Interpretability)</span>
+        <span><strong>作者:</strong> Mingxing Zhang, Nicola Rossberg 等</span>
+        <span><strong>链接:</strong> <a href="http://arxiv.org/abs/2603.19141v1" target="_blank">arXiv</a> | <a href="http://arxiv.org/pdf/2603.19141v1" target="_blank">PDF</a></span>
+    </div>
+    
+    <div class="section-title">📌 背景与底层痛点 (Background & Motivation)</div>
+    <div class="content-text">在生物医学分析中，光谱数据 (Spectroscopy Data, 如拉曼光谱、红外光谱) 呈现出超高维度 (数千个波数点) 和极强的共线性 (Collinearity)。<strong>底层痛点在于解释性方法的崩溃：</strong> 当使用传统的特征重要性方法 (如 SHAP 或 LIME) 时，强共线性会导致解释极度不稳定。特征权重在相邻光谱带上剧烈震荡，每次训练的解释结果完全不同。这破坏了临床医生将预测结果关联回特定生物分子 (如蛋白质构象、脂质) 的信任基础。</div>
+
+    <div class="section-title">🚀 核心贡献 (Core Contributions)</div>
+    <div class="content-text">
+        <ul>
+            <li>提出 SHAPCA 解释管线，首次完美融合主成分分析 (PCA) 与 Shapley Additive exPlanations (SHAP)。</li>
+            <li>解决了共线性数据上黑盒模型的局部与全局一致性解释难题。</li>
+            <li>在不损失预测性能的前提下，将解释的跨运行一致性 (Cross-run Consistency) 提升了数倍，精准对应到真实的生物化学谱带。</li>
+        </ul>
+    </div>
+
+    <div class="section-title">🔬 方法详解 (Methodology - Hardcore)</div>
+    <div class="content-text">
+        SHAPCA 的数学基础是将归因 (Attribution) 从解耦的潜空间反向映射回高维物理空间。
+        <br><br>
+        1. <strong>降维与解耦：</strong> 原始光谱输入 \( \mathbf{X} \in \mathbb{R}^{n \times d} \) 通过 PCA 转换为正交且不相关的主成分 \( \mathbf{Z} = \mathbf{X} \mathbf{W} \)，其中 \( \mathbf{W} \in \mathbb{R}^{d \times k} \) 是载荷矩阵 (Loadings)。由于 \( \mathbf{Z} \) 的各列相互独立，彻底消除了共线性导致的方差膨胀。
+        <br><br>
+        2. <strong>潜空间 SHAP 归因：</strong> 在解耦空间 \( \mathbf{Z} \) 上训练模型 \( f(\mathbf{Z}) \)。使用 TreeSHAP 或 KernelSHAP 计算每个主成分的 Shapley 值 \( \phi_{z_j} \)：
+        $$ \phi_{z_j}(f, \mathbf{z}) = \sum_{S \subseteq K \setminus \{j\}} \frac{|S|! (|K| - |S| - 1)!}{|K|!} \left[ f(S \cup \{j\}) - f(S) \right] $$
+        <br>
+        3. <strong>原始空间投影 (Inverse Projection)：</strong> 将主成分的 SHAP 值通过载荷矩阵线性组合，投影回原始波数空间：
+        $$ \Phi_{x_i} = \sum_{j=1}^k \phi_{z_j} \cdot \mathbf{W}_{i,j} \cdot \frac{x_i - \bar{x}_i}{\sigma_{x_i}} $$
+        这样，每一个原始光谱带都能获得一个稳定且具有物理化学意义的特征重要性评分。
+    </div>
+
+    <div class="section-title">🎯 深度案例与场景 (Deep Case Studies)</div>
+    <div class="example-box">
+        <strong>[结直肠癌 (CRC) 组织的拉曼光谱诊断]</strong>
+        <p><strong>Input:</strong> 患者肠道组织的拉曼光谱扫描信号 (波数范围 800-1800 cm\(^{-1}\))。</p>
+        <strong>解释一致性对比 (SHAP vs SHAPCA):</strong>
+        <ul>
+            <li><strong>传统 SHAP 输出:</strong> 在 1440 cm\(^{-1}\) 和 1445 cm\(^{-1}\)（高度相关的脂质/蛋白质 CH2 弯曲振动带）呈现正负交替的毛刺状权重，且在三次重训练后，权重峰值随机漂移至 1300 cm\(^{-1}\)。医生无法据此锁定生物标记物。</li>
+            <li><strong>SHAPCA 输出:</strong> 
+                <ol>
+                    <li>在潜空间，PC2 和 PC4 获得最高 Shapley 值。</li>
+                    <li>投影回原始空间后，形成一条极其平滑、轮廓清晰的重要度曲线。</li>
+                    <li>在 1003 cm\(^{-1}\) (苯丙氨酸) 和 1655 cm\(^{-1}\) (Amide I) 出现稳定的高光峰值。</li>
+                    <li><strong>临床印证:</strong> 医生确认 Amide I 谱带的变异与癌细胞蛋白质二级结构改变直接相关。</li>
+                </ol>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section-title">📊 实验与多维数据 (Experiments)</div>
+    <table>
+        <tr>
+            <th>Explanation Method</th>
+            <th>Top-10 Feature Overlap (3 Runs)</th>
+            <th>Consistency Score (Jaccard) ↑</th>
+            <th>Faithfulness (Deleter) ↓</th>
+        </tr>
+        <tr>
+            <td>Raw Gradient</td>
+            <td>4.2 / 10</td>
+            <td>0.31</td>
+            <td>0.45</td>
+        </tr>
+        <tr>
+            <td>Standard SHAP</td>
+            <td>5.8 / 10</td>
+            <td>0.42</td>
+            <td>0.28</td>
+        </tr>
+        <tr>
+            <td><strong>SHAPCA</strong></td>
+            <td><strong>9.5 / 10</strong></td>
+            <td><strong>0.88</strong></td>
+            <td><strong>0.15</strong></td>
+        </tr>
+    </table>
+    <div class="content-text"><strong>异常数据点评：</strong> SHAPCA 在 Jaccard 一致性得分上高达 0.88，是标准 SHAP 的两倍多。这证明了即使在小样本、高噪声的医疗数据上，通过 PCA 潜空间桥接可以完全免疫共线性带来的数学不稳定性。</div>
+
+    <div class="section-title">🧩 消融与讨论 (Ablation & Discussion)</div>
+    <div class="ablation">
+        <p><strong>讨论：</strong> 模型的局限性在于 PCA 是线性变换。如果光谱数据流形呈现强非线性（如散射导致的基线漂移未对齐），PCA 降维会丢失关键信息。未来可探索使用非线性的 Autoencoder 的 Jacobian 矩阵来替代载荷矩阵 \(\mathbf{W}\) 进行反向投影。</p>
+    </div>
+</div>
