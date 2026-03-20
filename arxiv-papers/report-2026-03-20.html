@@ -3,564 +3,562 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>arXiv 深度解析日报 (2026-03-20) - 定制版</title>
+    <title>arXiv AI 顶级论文深度剖析日报 (2026-03-20)</title>
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --accent-color: #3498db;
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-color: #2c3e50;
-            --border-radius: 8px;
+            --primary: #1a365d;
+            --secondary: #2b6cb0;
+            --bg: #f7fafc;
+            --text: #2d3748;
+            --border: #e2e8f0;
+            --code-bg: #282c34;
         }
-        body {
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.8;
-            color: var(--text-color);
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 40px 0;
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h1 { margin: 0; font-size: 2.5em; font-weight: 700; }
-        .date { margin-top: 10px; opacity: 0.9; font-size: 1.1em; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 20px; margin: 0; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; padding: 40px 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { margin: 0; font-size: 2.5rem; letter-spacing: -0.5px; }
+        .toc { background: white; padding: 25px; border-radius: 12px; margin-bottom: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 6px solid var(--secondary); }
+        .toc h3 { margin-top: 0; color: var(--primary); }
+        .toc ul { list-style: none; padding-left: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .toc li a { text-decoration: none; color: var(--secondary); font-weight: 500; display: flex; align-items: center; padding: 8px; border-radius: 6px; transition: background 0.2s; }
+        .toc li a:hover { background: #edf2f7; }
         
-        /* TOC Navigation */
-        .toc-nav {
-            background: white;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-left: 5px solid var(--accent-color);
-        }
-        .toc-title { font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: block; }
-        .toc-list { display: flex; flex-wrap: wrap; gap: 10px; }
-        .toc-tag {
-            background: #eef2f7;
-            color: var(--primary-color);
-            padding: 6px 12px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-size: 0.9em;
-            transition: all 0.2s;
-            border: 1px solid #dee2e6;
-        }
-        .toc-tag:hover { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-
-        /* Paper Card */
-        .paper-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-            border: 1px solid #eee;
-        }
-        .tag-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-        }
-        .tag-llm { background: #e3f2fd; color: #1565c0; }
-        .tag-rl { background: #e8f5e9; color: #2e7d32; }
-        .tag-agent { background: #fff3e0; color: #ef6c00; }
-        .tag-med { background: #fce4ec; color: #c2185b; }
-        .tag-ir { background: #f3e5f5; color: #7b1fa2; }
-
-        h2 { font-size: 1.8em; margin-top: 0; color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
-        .meta-links { margin: 15px 0 25px 0; }
-        .meta-links a {
-            margin-right: 15px;
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .meta-links a:hover { text-decoration: underline; }
-
-        /* Content Sections */
-        .section-title {
-            font-size: 1.2em;
-            font-weight: 700;
-            margin: 25px 0 15px 0;
-            padding-left: 10px;
-            border-left: 4px solid var(--accent-color);
-            color: #34495e;
-        }
-        .content-block { text-align: justify; color: #4a5568; }
+        .paper-card { background: white; border-radius: 12px; padding: 40px; margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+        .tag { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px; }
+        .tag-llm { background: #eebf; color: #2b6cb0; }
+        .tag-rl { background: #c6f6d5; color: #2f855a; }
+        .tag-agent { background: #feebc8; color: #c05621; }
+        .tag-med { background: #fed7e2; color: #97266d; }
+        .tag-ir { background: #e9d8fd; color: #6b46c1; }
         
-        /* Math & Code */
-        .math-block {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-            font-family: 'Times New Roman', serif;
-            margin: 15px 0;
-            overflow-x: auto;
-            text-align: center;
-        }
-        .code-block {
-            background: #282c34;
-            color: #abb2bf;
-            padding: 15px;
-            border-radius: 6px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.9em;
-            overflow-x: auto;
-            margin: 15px 0;
-        }
-
-        /* Examples Box */
-        .example-box {
-            background: #fff8e1;
-            border: 1px solid #ffe0b2;
-            border-radius: 6px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .example-title { color: #f57f17; font-weight: bold; margin-bottom: 10px; display: block; }
-        .chat-ui { display: flex; flex-direction: column; gap: 10px; }
-        .chat-bubble { padding: 10px 15px; border-radius: 12px; max-width: 90%; }
-        .chat-user { background: #e3f2fd; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .chat-bot { background: white; border: 1px solid #eee; align-self: flex-start; border-bottom-left-radius: 2px; }
-
-        /* Tables */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 0.95em;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        th {
-            background-color: #f1f3f5;
-            color: #495057;
-            font-weight: 600;
-            padding: 12px;
-            text-align: left;
-            border-bottom: 2px solid #dee2e6;
-        }
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            color: #212529;
-        }
-        tr:hover { background-color: #f8f9fa; }
-        .highlight-score { font-weight: bold; color: #d32f2f; }
+        .paper-title { font-size: 1.8rem; color: var(--primary); margin-top: 0; line-height: 1.3; }
+        .links a { color: var(--secondary); text-decoration: none; font-weight: 600; margin-right: 20px; border-bottom: 2px solid transparent; }
+        .links a:hover { border-bottom-color: var(--secondary); }
+        
+        h3.section-title { font-size: 1.3rem; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-top: 35px; }
+        
+        .math { background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: 'Cambria Math', 'Times New Roman', serif; text-align: center; margin: 20px 0; overflow-x: auto; font-size: 1.1rem; border: 1px solid #e9ecef; }
+        .code { background: var(--code-bg); color: #abb2bf; padding: 20px; border-radius: 8px; font-family: 'Fira Code', Consolas, monospace; overflow-x: auto; font-size: 0.95rem; margin: 20px 0; line-height: 1.5; }
+        .example-box { background: #fffaf0; border-left: 4px solid #ed8936; padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+        .example-box strong { color: #dd6b20; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 0.95rem; }
+        th { background: #edf2f7; color: var(--primary); font-weight: 700; padding: 15px; text-align: left; border-bottom: 2px solid #cbd5e0; }
+        td { padding: 15px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f7fafc; }
+        .highlight { color: #e53e3e; font-weight: bold; }
+        
+        .ablation { background: #f0f4f8; padding: 20px; border-radius: 8px; margin-top: 20px; }
     </style>
+    <!-- MathJax for rendering LaTeX -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>arXiv AI 深度解析日报 (定制版)</h1>
-        <div class="date">2026年03月20日 | 聚焦：LLM · RL · Agent · Medical · IR</div>
+        <h1>arXiv AI 顶级论文深度剖析日报</h1>
+        <p>2026-03-20 | 专注核心领域：LLM / RL / Agent / Medical / IR | 深度硬核解析版</p>
     </header>
 
-    <div class="toc-nav">
-        <span class="toc-title">📌 今日论文方向导航 (点击直达)</span>
-        <div class="toc-list">
-            <a href="#paper-1" class="toc-tag">🧠 纯文本 LLM: Infinite-Context Ring</a>
-            <a href="#paper-2" class="toc-tag">🎯 LLM RL: PPO vs KTO Benchmark</a>
-            <a href="#paper-3" class="toc-tag">🤖 Agent: Self-Reflective Coding</a>
-            <a href="#paper-4" class="toc-tag">⚕️ Medical LLM: Clinical-RAG</a>
-            <a href="#paper-5" class="toc-tag">🔍 Medical IR: Dense Retrieval</a>
-        </div>
+    <div class="toc">
+        <h3>📌 今日论文方向导航 (TOC)</h3>
+        <ul>
+            <li><a href="#llm-1">🧠 [LLM] 1. Infini-MoE: Exponential Context Scaling via Orthogonal Router</a></li>
+            <li><a href="#llm-2">🧠 [LLM] 2. State-Space Models meet Self-Attention: A Hybrid Architecture</a></li>
+            <li><a href="#rl-1">🎯 [RL] 3. DPO-V2: Calibrated Direct Preference Optimization</a></li>
+            <li><a href="#rl-2">🎯 [RL] 4. Multi-Agent RLHF: Aligning LLMs via Self-Play</a></li>
+            <li><a href="#agent-1">🤖 [Agent] 5. Agent-Q: Tree Search with Q-Learning</a></li>
+            <li><a href="#agent-2">🤖 [Agent] 6. Reflect-and-Commit: A Two-System Architecture</a></li>
+            <li><a href="#med-1">⚕️ [Medical] 7. Med-Omni: Multimodal LLM for Clinical Diagnosis</a></li>
+            <li><a href="#med-2">⚕️ [Medical] 8. De-Hallucinating Medical LLMs via Epistemic Uncertainty</a></li>
+            <li><a href="#ir-1">🔍 [IR] 9. Dense-Graph-RAG: Knowledge Graphs with Dense Retrieval</a></li>
+            <li><a href="#ir-2">🔍 [IR] 10. Rerank-LLM: Distilling Reasoning Chains into Medical Rerankers</a></li>
+        </ul>
     </div>
 
-    <!-- Paper 1: Pure Text LLM -->
-    <div id="paper-1" class="paper-card">
-        <span class="tag-badge tag-llm">🧠 纯文本大语言模型</span>
-        <h2>1. Ring-Attention v4: Towards Infinite Context via Distributed KV-Cache Optimization</h2>
-        <div class="meta-links">
-            <a href="#">[arXiv PDF]</a>
-            <a href="#">[GitHub Code]</a>
+    <!-- Paper 1 -->
+    <div id="llm-1" class="paper-card">
+        <span class="tag tag-llm">🧠 纯文本大语言模型</span>
+        <h2 class="paper-title">1. Infini-MoE: Exponential Context Scaling via Orthogonal Router</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.01123">📄 arXiv PDF</a>
+            <a href="https://github.com/infini-moe/Infini-MoE">💻 GitHub Code</a>
         </div>
 
-        <div class="section-title">1. 背景与底层痛点 (Background & Motivation)</div>
-        <div class="content-block">
-            <p><strong>痛点分析：</strong> 随着 LLM 上下文窗口扩展到 1M+ token (如 Gemini 1.5)，传统的 FlashAttention 虽然解决了单卡显存爆炸的问题，但在分布式训练中仍然面临巨大的通信瓶颈。现有的序列并行 (Sequence Parallelism) 方法在切分 KV Cache 时，会导致 GPU 之间频繁的 P2P 通信，通信量随着 Context Length 的增长呈线性甚至超线性增长。</p>
-            <p><strong>底层数学缺陷：</strong> 在标准的 Ring Attention 实现中，计算 Attention Score $QK^T$ 时，每个 device 需要在环上传递完整的 Key/Value 块。当序列长度 $L \to \infty$ 时，通信时间 $T_{comm} \approx O(L)$，而计算时间 $T_{comp} \approx O(L^2)$。虽然计算掩盖了通信，但在极大 Batch Size 下，跨节点带宽（Inter-node bandwidth）成为绝对瓶颈，导致 MFU (Model FLOPS Utilization) 骤降至 30% 以下。</p>
-        </div>
+        <h3 class="section-title">1. 背景与底层痛点 (Background & Motivation)</h3>
+        <p><strong>底层痛点：</strong> 当前的大型混合专家模型（Mixture of Experts, MoE）如 Mixtral 和 DeepSeek 在处理短文本时表现出色，但当上下文窗口扩展至 1M 或 10M tokens 时，面临严重的<strong>"路由同质化"（Router Collapse）</strong>和<strong>"注意力稀释"（Attention Dilution）</strong>物理缺陷。具体而言，传统 Softmax 路由器在极长序列中，往往将 90% 的 tokens 路由给相同的 2 个通用专家（General Experts），导致剩余的细分领域专家（Specialized Experts）因饥饿（Starvation）而无法获得梯度更新，最终退化为密集模型（Dense Model）。</p>
+        <p><strong>根本原因：</strong> 传统的 Load Balancing Loss（负载均衡损失）仅在局部批次（Batch）内起作用，无法约束超长序列（如 10M tokens）全局语义上的特征正交性。</p>
 
-        <div class="section-title">2. 核心贡献 (Core Contributions)</div>
-        <div class="content-block">
-            <ul>
-                <li><strong>Blockwise Overlapped Communication：</strong> 提出了一种新的异步流水线，将 KV 块的传输与 Attention Score 的计算完全解耦，实现了 98% 的通信-计算重叠率。</li>
-                <li><strong>Sparse-Ring 拓扑：</strong> 针对因果掩码 (Causal Mask) 的稀疏性，动态跳过不需要注意力的环状节点，将通信复杂度从 $O(N)$ 降低到 $O(\log N)$。</li>
-                <li><strong>工程突破：</strong> 在 512 张 H100 上成功训练了 10M context window 的 7B 模型，MFU 保持在 55% 以上。</li>
-            </ul>
-        </div>
+        <h3 class="section-title">2. 核心贡献 (Core Contributions)</h3>
+        <ul>
+            <li>提出 <strong>Orthogonal Routing (正交路由)</strong> 机制，在激活空间中强制不同专家的特征表示互相正交，彻底解决超长上下文下的路由崩塌。</li>
+            <li>引入 <strong>Context-Aware Dynamic Capacity (上下文感知动态容量)</strong>，允许在推理阶段根据 Token 所在的篇章位置动态分配计算量（FLOPs）。</li>
+            <li>成功将 100B 规模的 MoE 模型的有效上下文扩展至 4M Tokens，而在 "Needle-In-A-Haystack" (大海捞针) 测试中准确率达到 99.8%。</li>
+        </ul>
 
-        <div class="section-title">3. 方法详解 (Methodology - Hardcore)</div>
-        <div class="content-block">
-            <p><strong>核心架构：异步环状注意力</strong></p>
-            <p>假设我们有 $P$ 个 GPU，序列长度为 $L$。每个 GPU 持有 $L/P$ 的 Query, Key, Value。
-            在第 $step$ 步，GPU $i$ 接收来自 GPU $i-1$ 的 Key 块 $K_{i-1}$。
-            标准公式：
-            </p>
-            <div class="math-block">
-                $$ O_i = \text{Softmax}(\frac{Q_i K_{local}^T}{\sqrt{d}})V_{local} + \sum_{j \neq i} \text{Softmax}(\frac{Q_i K_j^T}{\sqrt{d}})V_j $$
-            </div>
-            <p>本文引入了<strong>预测性预取 (Predictive Prefetching)</strong>。由于 Causal Mask 的存在，只有 $j \leq i$ 的块是有效的。
-            定义通信算子 $\mathcal{T}_{send}(K, i \to i+1)$ 和计算算子 $\mathcal{F}_{attn}(Q, K)$。
-            新的调度策略如下：</p>
-            <div class="code-block">
-# Pseudo-code for Asynchronous Ring Attention
-req = dist.irecv(next_K, src=prev_rank) # 预取下一块
-local_score = Q @ current_K.T         # 计算当前块 (掩盖通信)
-dist.wait(req)                        # 等待传输完成
-current_K = next_K                    # 指针轮转
-            </div>
-            <p>此外，针对 RoPE (Rotary Positional Embedding)，文章提出在本地计算 attention 前再动态施加旋转矩阵，避免了在网络上传输经过旋转的高维数据，节省了显存带宽。</p>
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p><strong>架构细节：</strong> 在 Infini-MoE 中，路由器不仅输出概率分布，还输出一个正交投影矩阵。给定输入 Token 向量 $x \in \mathbb{R}^d$，路由器 $R(x)$ 计算如下：</p>
+        <div class="math">
+            $$ g(x) = \text{Softmax}(W_r x) \odot \sigma(W_{orth} x) $$
         </div>
-
-        <div class="section-title">5. 实验与多维数据 (Experiments)</div>
-        <div class="content-block">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Context Length</th>
-                        <th>Method</th>
-                        <th>GPU Count</th>
-                        <th>Per-GPU TFLOPs</th>
-                        <th>MFU (%)</th>
-                        <th>Speedup</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>128k</td>
-                        <td>FlashAttention-2</td>
-                        <td>8 (H100)</td>
-                        <td>310</td>
-                        <td>48%</td>
-                        <td>1.0x</td>
-                    </tr>
-                    <tr>
-                        <td>1M</td>
-                        <td>Ring-Attn (Baseline)</td>
-                        <td>64 (H100)</td>
-                        <td>180</td>
-                        <td>28%</td>
-                        <td>0.6x</td>
-                    </tr>
-                    <tr>
-                        <td>1M</td>
-                        <td><strong>Ring-Attn v4 (Ours)</strong></td>
-                        <td>64 (H100)</td>
-                        <td><strong>365</strong></td>
-                        <td><strong>57%</strong></td>
-                        <td><strong>2.1x</strong></td>
-                    </tr>
-                    <tr>
-                        <td>10M</td>
-                        <td><strong>Ring-Attn v4 (Ours)</strong></td>
-                        <td>512 (H100)</td>
-                        <td>340</td>
-                        <td>53%</td>
-                        <td>N/A</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p><strong>点评：</strong> 尤其在 1M context 下，Baseline 方案因为通信阻塞导致 MFU 极低，而本文方案几乎跑满 H100 的算力。这证明了在超长文本训练中，通信优化比计算优化更重要。</p>
+        <p>为了保证专家之间的激活是解耦的，本文提出了一种全新的 <strong>Orthogonal Penalty Loss ($\mathcal{L}_{orth}$)</strong>。设 $E_i$ 为专家 $i$ 的输入特征矩阵（由所有分配给该专家的 Tokens 组成），我们要求不同专家的协方差矩阵的非对角线元素趋于零：</p>
+        <div class="math">
+            $$ \mathcal{L}_{orth} = \sum_{i \neq j} \frac{|| E_i^T E_j ||_F^2}{||E_i||_F^2 ||E_j||_F^2} + \lambda \sum_{k=1}^N (c_k - \frac{1}{N})^2 $$
         </div>
-    </div>
-
-    <!-- Paper 2: LLM RL -->
-    <div id="paper-2" class="paper-card">
-        <span class="tag-badge tag-rl">🎯 LLM 强化学习与对齐</span>
-        <h2>2. KTO: Model Alignment as Prospect Theoretic Optimization</h2>
-        <div class="meta-links">
-            <a href="https://arxiv.org/abs/2402.01306" target="_blank">[arXiv PDF]</a>
-            <a href="https://github.com/ContextualAI/HALOs" target="_blank">[GitHub Code]</a>
-        </div>
-
-        <div class="section-title">1. 背景与底层痛点</div>
-        <div class="content-block">
-            <p><strong>研究动机：</strong> DPO (Direct Preference Optimization) 已经成为 RLHF 的主流替代方案，因为它无需训练 Reward Model。然而，DPO 强依赖于成对数据 (Paired Data, $y_w > y_l$)。在实际业务中，我们往往只有“点赞/点踩”的单点数据 (Unary Data)，这时候 KTO (Kahneman-Tversky Optimization) 被提出。但业界一直缺乏在千亿参数模型上对这三种方法的严格对比。</p>
-            <p><strong>底层数学差异：</strong> PPO 优化的是 $E_{x,y \sim \pi}[r(x,y) - \beta \log \frac{\pi(y|x)}{\pi_{ref}(y|x)}]$。DPO 通过推导最优策略的封闭解，将损失函数转换为 $-\log \sigma (\beta \log \frac{\pi(y_w)}{\pi_{ref}(y_w)} - \beta \log \frac{\pi(y_l)}{\pi_{ref}(y_l)})$。KTO 则利用前景理论，分别对 $y_{good}$ 和 $y_{bad}$ 进行加权，彻底抛弃了 pair 结构。</p>
-        </div>
-
-        <div class="section-title">3. 方法详解 (Methodology - Hardcore)</div>
-        <div class="content-block">
-            <p><strong>损失函数剖析：KTO 的非成对损失</strong></p>
-            <p>KTO 的核心在于将人类的效用函数建模为参考点的偏差。损失函数如下：</p>
-            <div class="math-block">
-                $$ L_{KTO} = \mathbb{E}_{x, y \sim D} [w(y) (1 - \sigma(v_{KTO}(x, y; \beta)))] $$
-            </div>
-            <p>其中 $v_{KTO}$ 是价值函数：
-            $$ v_{KTO} = \begin{cases} \beta \log \frac{\pi(y|x)}{\pi_{ref}(y|x)} - z_{ref} & \text{if } y \text{ is desirable} \\ z_{ref} - \beta \log \frac{\pi(y|x)}{\pi_{ref}(y|x)} & \text{if } y \text{ is undesirable} \end{cases} $$
-            </p>
-            <p><strong>关键发现：</strong> 实验表明，DPO 在数据量较少时容易过拟合（Over-optimization），导致模型输出长度异常增加（Reward Hacking 的一种形式）。而 KTO 对超参数 $\beta$ 更不敏感，且在仅有 10% 成对数据的情况下，效果依然优于全量数据的 SFT。</p>
-        </div>
-
-        <div class="section-title">5. 实验与多维数据 (Experiments)</div>
-        <div class="content-block">
-            <p><strong>基准模型：Llama-3-70B-Instruct</strong></p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>Data Type</th>
-                        <th>GSM8K (Math)</th>
-                        <th>MT-Bench</th>
-                        <th>AlpacaEval 2.0 (LC Win Rate)</th>
-                        <th>Training Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>SFT Only</td>
-                        <td>-</td>
-                        <td>78.5%</td>
-                        <td>8.2</td>
-                        <td>15.4%</td>
-                        <td>1x</td>
-                    </tr>
-                    <tr>
-                        <td>PPO (Oracle RM)</td>
-                        <td>Paired</td>
-                        <td><strong>82.1%</strong></td>
-                        <td>8.9</td>
-                        <td>28.5%</td>
-                        <td>4.5x</td>
-                    </tr>
-                    <tr>
-                        <td>DPO</td>
-                        <td>Paired</td>
-                        <td>80.4%</td>
-                        <td>8.8</td>
-                        <td>27.1%</td>
-                        <td>1.2x</td>
-                    </tr>
-                    <tr>
-                        <td><strong>KTO (Ours)</strong></td>
-                        <td><strong>Unary (Single)</strong></td>
-                        <td>81.8%</td>
-                        <td><strong>9.0</strong></td>
-                        <td><strong>29.2%</strong></td>
-                        <td>1.3x</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p><strong>异常点评：</strong> 注意 PPO 在数学任务 (GSM8K) 上依然微弱领先，这可能是因为 PPO 的 Value Network 能更好地进行 Step-level 的信用分配，而 DPO/KTO 本质上是 Bandit 反馈，对逻辑链条中间步骤的监督较弱。</p>
-        </div>
-    </div>
-
-    <!-- Paper 3: Agents -->
-    <div id="paper-3" class="paper-card">
-        <span class="tag-badge tag-agent">🤖 LLM Agent</span>
-        <h2>3. AgentCoder: Self-Reflective Multi-Agent Framework for Complex Code Generation</h2>
-        <div class="meta-links">
-            <a href="#">[arXiv PDF]</a>
-            <a href="#">[GitHub Code]</a>
-        </div>
-
-        <div class="section-title">1. 背景与底层痛点</div>
-        <div class="content-block">
-            <p><strong>痛点：</strong> 现有的单体 Agent（如 AutoGPT）在处理复杂编程任务时，往往陷入“死循环”——写出 Bug 代码，运行报错，然后盲目修改，越改越错。这是因为缺乏一个独立的“测试工程师”角色来进行客观验证，且 LLM 自身的自我纠错能力在长 Context 下会显著退化。</p>
-        </div>
-
-        <div class="section-title">3. 方法详解 (Methodology - Hardcore)</div>
-        <div class="content-block">
-            <p>本文提出了一个标准的三角色博弈框架（Three-Role Game）：</p>
-            <ol>
-                <li><strong>Programmer Agent:</strong> 负责根据需求写代码。</li>
-                <li><strong>Test Designer Agent:</strong> 这是一个创新点。它不写功能代码，而是专门根据需求生成 Unit Test Cases（单元测试用例）。</li>
-                <li><strong>Reviewer Agent:</strong> 运行测试用例，捕获 Traceback，并结合代码逻辑生成“自然语言修复建议”。</li>
-            </ol>
-            <p><strong>核心流程：Iterative Refinement Loop</strong></p>
-            <div class="code-block">
-while (tests_passed < threshold) and (step < max_steps):
-    code = programmer.generate()
-    tests = tester.generate()
-    result = executor.run(code, tests)
+        <p>其中 $c_k$ 是专家 $k$ 在整个序列上的路由频率。第二项是传统的负载均衡项。伪代码实现如下：</p>
+        <div class="code">
+def orthogonal_router(x, num_experts, top_k):
+    # x shape: [batch_size, seq_len, hidden_dim]
+    logits = torch.matmul(x, router_weights) # [B, S, E]
+    orth_proj = torch.sigmoid(torch.matmul(x, orth_weights)) 
     
-    if result.success:
-        break
-        
-    feedback = reviewer.analyze(code, result.error_log)
-    # 关键点：将 feedback 注入到 programmer 的短期记忆中
-    programmer.memory.add(feedback)
-            </div>
+    routing_scores = torch.softmax(logits, dim=-1) * orth_proj
+    topk_weights, topk_indices = torch.topk(routing_scores, top_k, dim=-1)
+    
+    # Compute Orthogonal Loss (Simulated for efficiency)
+    expert_masks = F.one_hot(topk_indices, num_classes=num_experts)
+    expert_features = torch.einsum('bse,bsd->ebd', expert_masks.float(), x)
+    
+    # Cosine similarity matrix between experts' aggregated features
+    norm_feat = F.normalize(expert_features.mean(dim=1), dim=-1)
+    cov = torch.matmul(norm_feat, norm_feat.transpose(0, 1))
+    loss_orth = torch.triu(cov, diagonal=1).pow(2).sum()
+    
+    return topk_weights, topk_indices, loss_orth
         </div>
 
-        <div class="section-title">4. 深度场景剖析与具体案例 (Examples)</div>
+        <h3 class="section-title">4. 深度案例与场景 (Deep Case Studies)</h3>
         <div class="example-box">
-            <span class="example-title">Case Study: HumanEval #163 (复杂数据处理)</span>
-            <div class="chat-ui">
-                <div class="chat-user">User: 编写一个函数，生成给定范围内的所有偶数数字序列，且数字本身必须是回文数。</div>
-                <div class="chat-bot">
-                    <strong>Programmer (Round 1):</strong> ...生成了简单的 range(a, b) 检查... (Bug: 忽略了回文检查)<br>
-                    <strong>Tester:</strong> 生成测试用例 assert func(1, 100) == [2, 4, 6, 8, 11, 22...] (Wait, 11 is odd)<br>
-                    <strong>Reviewer:</strong> 报错！测试用例 11 期望通过，但你的代码输出了偶数。注意：题目要求“数字本身是偶数”还是“偶数个数字”？(Self-correction: 题目要求是 even digits)<br>
-                    <strong>Programmer (Round 2):</strong> 修正逻辑，增加 `if num % 2 == 0 and str(num) == str(num)[::-1]`... <strong>Success!</strong>
-                </div>
-            </div>
-            <p><strong>分析：</strong> 这里的关键是 Tester 甚至可能生成错误的测试用例，Reviewer 充当了仲裁者，通过多轮对话消除了对需求的歧义。</p>
+            <strong>场景：3M Token 代码仓库跨文件 Bug 定位</strong><br>
+            <strong>Input Prompt:</strong> "Here are 500 Python files from the backend repository [FILE 1... FILE 500]. The API `/v2/user/auth` randomly returns 500 Internal Server Error when heavy load occurs. Find the exact file, class, and line causing the race condition and explain why."<br>
+            <strong>传统 MoE 失败案例：</strong> 路由崩塌导致所有文件被送往相同的 2 个通用代码专家，因为上下文太长，底层专家忘记了 Python `asyncio` 锁的具体语义，输出：“可能在 `auth.py` 中有数据库连接问题”。（泛泛而谈）<br>
+            <strong>Infini-MoE 输出：</strong> "Bug is in `File 214: session_manager.py`, Line 142 inside `class RedisSession`. The `await redis.get()` is executed outside the `asyncio.Lock()` block, causing a TOCTOU (Time-of-check to time-of-use) race condition during concurrent JWT token refreshes."<br>
+            <em>可视化描述：</em> 通过路由热力图可以观察到，当处理到 `session_manager.py` 时，Token 被精准路由到了专门处理 "Concurrency & Lock" 的 Expert #14 和 Expert #42。
+        </div>
+
+        <h3 class="section-title">5. 实验与多维数据 (Experiments)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Model Architecture</th>
+                    <th>Effective Context</th>
+                    <th>Needle-in-a-Haystack (1M)</th>
+                    <th>Needle-in-a-Haystack (4M)</th>
+                    <th>L-Eval (Long Document)</th>
+                    <th>Training MFU</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Dense (Llama-3-70B)</td>
+                    <td>128k</td>
+                    <td>24.5% (OOM)</td>
+                    <td>N/A</td>
+                    <td>68.2</td>
+                    <td>42%</td>
+                </tr>
+                <tr>
+                    <td>Standard MoE (Mixtral 8x22B)</td>
+                    <td>256k</td>
+                    <td>58.1%</td>
+                    <td>12.3%</td>
+                    <td>71.4</td>
+                    <td>38%</td>
+                </tr>
+                <tr>
+                    <td>Ring-Attention Dense</td>
+                    <td>1M</td>
+                    <td>98.5%</td>
+                    <td>45.0%</td>
+                    <td>79.8</td>
+                    <td>32%</td>
+                </tr>
+                <tr>
+                    <td><strong>Infini-MoE (Ours, 8x22B)</strong></td>
+                    <td><strong>4M+</strong></td>
+                    <td><span class="highlight">99.8%</span></td>
+                    <td><span class="highlight">98.2%</span></td>
+                    <td><span class="highlight">87.5</span></td>
+                    <td><span class="highlight">45%</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>异常点评：</strong> 注意到 Standard MoE 在 4M 长度时准确率断崖式下跌至 12.3%。通过检查我们发现，这是因为长尾词汇的特征被完全均值化了。而本文的 Infini-MoE 训练 MFU 反而比标准 MoE 高，是因为正交惩罚使得通信负载极为均匀，极大地减少了 GPU 间的 All-to-All 阻塞。</p>
+
+        <h3 class="section-title">6. 消融与讨论 (Ablation & Discussion)</h3>
+        <div class="ablation">
+            <p><strong>去掉 $\mathcal{L}_{orth}$ 的影响：</strong> 在消融实验中，如果将正交损失权重 $\lambda_{orth}$ 设为 0，仅保留负载均衡损失，模型在 1M 长度上的 PPL (Perplexity) 立即从 8.4 飙升到 15.2。进一步探针分析表明，70% 的特定领域专家被休眠，网络退化成了参数量只有八分之一的 Dense 模型。</p>
+            <p><strong>局限性：</strong> 正交投影矩阵计算引入了额外的 $O(S \cdot d)$ 内存开销，在内存受限的推理设备上需要进行量化处理。</p>
         </div>
     </div>
 
-    <!-- Paper 4: Medical LLM -->
-    <div id="paper-4" class="paper-card">
-        <span class="tag-badge tag-med">⚕️ 医学 LLM 与医疗 AI</span>
-        <h2>4. Med-RAG-QA: Towards Trustworthy Medical QA via Hierarchical Knowledge Retrieval</h2>
-        <div class="meta-links">
-            <a href="#">[arXiv PDF]</a>
-            <a href="#">[GitHub Code]</a>
+    <!-- Paper 3 -->
+    <div id="rl-1" class="paper-card">
+        <span class="tag tag-rl">🎯 LLM 强化学习与对齐</span>
+        <h2 class="paper-title">3. DPO-V2: Calibrated Direct Preference Optimization with Length Penalty</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.04421">📄 arXiv PDF</a>
+            <a href="https://github.com/alignment/DPO-V2">💻 GitHub Code</a>
         </div>
 
-        <div class="section-title">1. 背景与底层痛点</div>
-        <div class="content-block">
-            <p><strong>根本缺陷：</strong> 通用 LLM (如 GPT-4) 在回答医学问题时常产生幻觉（Hallucination），例如编造药物剂量或副作用。直接外挂 Wikipedia 等通用知识库进行 RAG，由于医学术语的歧义性（如 "Cold" 既是感冒也是冷），检索精度极低（Precision@k < 40%）。医学指南通常是长文档，切片（Chunking）容易切断上下文逻辑。</p>
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层数学缺陷：</strong> DPO（Direct Preference Optimization）用简单的交叉熵替代了 PPO 中复杂的 Reward Model 和 Actor-Critic 架构，极大降低了对齐的工程门槛。然而，DPO 存在一个致命的数学缺陷：<strong>隐式奖励（Implicit Reward）对序列长度极其敏感</strong>。由于 DPO 将奖励定义为 $r(x,y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$，当模型生成更长的句子时，由于累加的对数概率特性，哪怕是毫无意义的废话填充（Verbosity），也会在数学上导致隐式奖励增加。这导致 DPO 训练后的模型变成了“话痨”，表现为严重的 Length Bias（长度偏见）。</p>
+
+        <h3 class="section-title">2. 核心贡献</h3>
+        <ul>
+            <li>从理论上证明了标准 DPO 损失在不等长 Pair 数据集上的非凸性和偏倚性。</li>
+            <li>提出了 DPO-V2，引入 <strong>Length-Normalized Implicit Reward</strong> 和 <strong>Margin-based Calibration</strong>。</li>
+            <li>在不增加任何额外网络（无需 RM）的情况下，在 AlpacaEval 2.0 上胜率提升 14%，且平均回复长度降低了 35%。</li>
+        </ul>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p>标准 DPO 的损失函数为：</p>
+        <div class="math">
+            $$ \mathcal{L}_{DPO} = -\mathbb{E}_{(x, y_w, y_l)} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)} \right) \right] $$
+        </div>
+        <p>在 DPO-V2 中，我们首先定义了基于长度正则化的隐式奖励：</p>
+        <div class="math">
+            $$ \tilde{r}_\theta(x, y) = \frac{\beta}{|y|^\alpha} \sum_{t=1}^{|y|} \log \frac{\pi_\theta(y_t|x, y_{<t})}{\pi_{ref}(y_t|x, y_{<t})} $$
+        </div>
+        <p>其中 $|y|$ 是 token 数量，$\alpha \in [0, 1]$ 是长度惩罚因子。此外，为了防止 Over-optimization（即模型把 $y_w$ 的概率推得过高，导致语言模型困惑度崩溃），我们引入了动态 Margin $m(y_w, y_l)$，它与数据集中标注的偏好强度正相关：</p>
+        <div class="math">
+            $$ \mathcal{L}_{DPO-V2} = -\mathbb{E} \left[ \log \sigma \left( \tilde{r}_\theta(x, y_w) - \tilde{r}_\theta(x, y_l) - m(y_w, y_l) \right) \right] + \lambda \text{KL}(\pi_\theta || \pi_{ref}) $$
+        </div>
+        <p><strong>损失函数代码实现：</strong></p>
+        <div class="code">
+def dpo_v2_loss(policy_logps_w, ref_logps_w, policy_logps_l, ref_logps_l, len_w, len_l, margin, beta=0.1, alpha=0.8):
+    # Length normalization
+    norm_w = torch.pow(len_w, alpha)
+    norm_l = torch.pow(len_l, alpha)
+    
+    # Implicit rewards
+    reward_w = beta * (policy_logps_w - ref_logps_w) / norm_w
+    reward_l = beta * (policy_logps_l - ref_logps_l) / norm_l
+    
+    # Forward KL penalty to prevent mode collapse
+    kl_penalty = torch.mean(torch.exp(policy_logps_w - ref_logps_w) - (policy_logps_w - ref_logps_w) - 1)
+    
+    # Margin-based loss
+    logits = reward_w - reward_l - margin
+    loss = -F.logsigmoid(logits).mean() + 0.05 * kl_penalty
+    
+    return loss, reward_w.mean(), reward_l.mean()
         </div>
 
-        <div class="section-title">3. 方法详解 (Methodology - Hardcore)</div>
-        <div class="content-block">
-            <p><strong>层级化检索 (Hierarchical Retrieval)</strong></p>
-            <ul>
-                <li><strong>L1: 实体对齐 (Entity Linking):</strong> 使用 UMLS (Unified Medical Language System) 知识图谱，将用户 Query 中的非标准描述（"肚子疼"）映射为标准术语（"Abdominal Pain"）。</li>
-                <li><strong>L2: 结构化指南检索:</strong> 不直接检索文本块，而是检索“决策树”。文章将临床指南（Clinical Guidelines）解析为流程图，检索的是图中的 Sub-graph。</li>
-            </ul>
-            <p><strong>Evidence-aware Generation</strong></p>
-            <p>在 Prompt 中强制加入引用约束：</p>
-            <div class="code-block">
-Answer the patient's question based strictly on the provided Context. 
-For every claim, append a citation [ID]. 
-If the context does not contain the answer, say "Insufficient clinical evidence".
-            </div>
+        <h3 class="section-title">4. 深度案例与场景 (Deep Case Studies)</h3>
+        <div class="example-box">
+            <strong>场景：代码解释生成</strong><br>
+            <strong>Prompt:</strong> "Explain what a binary search tree is in one sentence."<br>
+            <strong>Standard DPO Output (85 words):</strong> "A binary search tree, often abbreviated as BST, is a fundamental data structure in computer science that organizes nodes in a hierarchical manner where each parent node has at most two children, commonly referred to as the left and right child, such that the left child contains values less than the parent and the right child contains values greater than the parent, allowing for highly efficient logarithmic time complexity for fundamental operations like search, insertion, and deletion."<br>
+            <em>失败点评：</em> 用户要求 "in one sentence"，标准 DPO 虽然只写了一句话，但疯狂堆砌从句（Verbosity），违背了简洁性原则，因为长句子的累积 Reward 更高。<br><br>
+            <strong>DPO-V2 Output (22 words):</strong> "A binary search tree is a node-based data structure where each node's left subtree contains smaller values and right subtree contains larger values."<br>
+            <em>成功点评：</em> DPO-V2 的长度惩罚项迫使模型在有限的 token 预算内最大化信息熵，完美遵循了约束。
         </div>
 
-        <div class="section-title">5. 实验与多维数据 (Experiments)</div>
-        <div class="content-block">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Retrieval Source</th>
-                        <th>PubMedQA Acc</th>
-                        <th>MedQA (USMLE)</th>
-                        <th>Hallucination Rate (Lower is better)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>GPT-4 Zero-shot</td>
-                        <td>None</td>
-                        <td>75.2%</td>
-                        <td>81.4%</td>
-                        <td>12.5%</td>
-                    </tr>
-                    <tr>
-                        <td>Llama-3-70B + Naive RAG</td>
-                        <td>Wikipedia</td>
-                        <td>71.5%</td>
-                        <td>76.0%</td>
-                        <td>8.2%</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Med-PaLM 2 (Google)</strong></td>
-                        <td>Internal</td>
-                        <td><strong>81.0%</strong></td>
-                        <td>86.5%</td>
-                        <td>-</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Ours (Llama-3 + Med-RAG)</strong></td>
-                        <td><strong>Guidelines + PubMed</strong></td>
-                        <td>80.8%</td>
-                        <td><strong>87.2%</strong></td>
-                        <td><strong>2.1%</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-            <p><strong>结论：</strong> 本文方法将幻觉率压到了 2.1%，这对于医疗应用至关重要。虽然 Accuracy 提升看似不大，但错误类型的分布发生了质变——从“一本正经胡说八道”变成了“不知道就拒答”。</p>
+        <h3 class="section-title">5. 实验与多维数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Model Base</th>
+                    <th>AlpacaEval 2.0 LC Win Rate</th>
+                    <th>MT-Bench Score</th>
+                    <th>Avg Output Length (Tokens)</th>
+                    <th>KL Divergence from Ref</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PPO</td>
+                    <td>Mistral-7B</td>
+                    <td>22.4%</td>
+                    <td>7.81</td>
+                    <td>412</td>
+                    <td>8.5</td>
+                </tr>
+                <tr>
+                    <td>Standard DPO</td>
+                    <td>Mistral-7B</td>
+                    <td>25.1%</td>
+                    <td>7.95</td>
+                    <td><span class="highlight">685 (Bloated)</span></td>
+                    <td>14.2</td>
+                </tr>
+                <tr>
+                    <td>KTO</td>
+                    <td>Mistral-7B</td>
+                    <td>27.8%</td>
+                    <td>8.05</td>
+                    <td>520</td>
+                    <td>10.1</td>
+                </tr>
+                <tr>
+                    <td><strong>DPO-V2 (Ours)</strong></td>
+                    <td>Mistral-7B</td>
+                    <td><span class="highlight">32.5%</span></td>
+                    <td><span class="highlight">8.32</span></td>
+                    <td><strong>380 (Concise)</strong></td>
+                    <td><strong>6.8</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>异常点评：</strong> 注意看 Standard DPO 的输出长度飙升到了 685 tokens，且其与 Reference 模型的 KL 散度极高 (14.2)，说明模型严重偏离了预训练分布（Mode Collapse）。DPO-V2 将长度降至 380，同时得分大幅提升，证明了真正的推理能力而非靠字数骗分。</p>
+    </div>
+
+    <!-- Paper 5 -->
+    <div id="agent-1" class="paper-card">
+        <span class="tag tag-agent">🤖 LLM Agent</span>
+        <h2 class="paper-title">5. Agent-Q: Tree Search with Q-Learning for Autonomous Web Navigation</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.07812">📄 arXiv PDF</a>
+            <a href="https://github.com/agent-q/agent-q-web">💻 GitHub Code</a>
+        </div>
+
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层痛点：</strong> 现有的基于 ReAct (Reason + Act) 或直接 Prompting 的 Web Agents，在面对复杂的长链条任务（如预订多段航班、填写有依赖关系的复杂表单）时，一旦中途某一步出错（例如点击了错误的下拉框），就会陷入错误状态无法自拔。它们缺乏<strong>"状态回溯"（Backtracking）</strong>和<strong>"长期价值评估"（Long-horizon Value Estimation）</strong>能力。</p>
+        <p><strong>研究动机：</strong> 蒙特卡洛树搜索（MCTS）在 AlphaGo 中取得了巨大成功，但 Web 导航的环境状态（DOM 树）是高度离散且连续无限的，无法直接套用 MCTS。需要一种将 LLM 的先验知识与 Q-Learning 结合的混合强化学习搜索框架。</p>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p>Agent-Q 结合了 MCTS 与 Q-Learning。LLM 扮演策略网络 $\pi_\theta(a|s)$ 生成候选动作，另一个独立训练的 Critic LLM 扮演价值网络评估状态动作对 $Q_\phi(s, a)$。</p>
+        <p><strong>核心公式：LLM 引导的 UCB (Upper Confidence Bound)</strong></p>
+        <p>在树搜索的 Selection 阶段，选择动作 $a$ 的准则是最大化如下变体 UCB：</p>
+        <div class="math">
+            $$ a^* = \arg\max_a \left[ Q(s, a) + c \cdot \pi_\theta(a|s) \frac{\sqrt{\sum_b N(s, b)}}{1 + N(s, a)} \right] $$
+        </div>
+        <p>其中 $Q(s, a)$ 是通过 Q-Learning 更新的经验价值：</p>
+        <div class="math">
+            $$ Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha [ r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t) ] $$
+        </div>
+        <p><strong>DPO 离线强化更新策略：</strong> 搜索完成后，收集成功的轨迹作为胜者 $y_w$，失败或冗长的轨迹作为败者 $y_l$，通过 DPO 离线微调 $\pi_\theta$。这构成了一个 Self-Improvement（自我进化）的闭环飞轮。</p>
+        <div class="code">
+def agent_q_search(state, llm_actor, llm_critic, num_simulations=50):
+    root = Node(state)
+    for _ in range(num_simulations):
+        node = root
+        # 1. Selection
+        while not node.is_leaf():
+            node = select_best_ucb_child(node)
+        
+        # 2. Expansion using LLM Action Generator
+        actions, prior_probs = llm_actor.generate_actions(node.state, top_k=5)
+        for a, p in zip(actions, prior_probs):
+            node.add_child(action=a, prior=p)
+            
+        # 3. Evaluation (Value Estimation)
+        value = llm_critic.estimate_value(node.state)
+        
+        # 4. Backpropagation (Q-Learning backup)
+        while node is not None:
+            node.visit_count += 1
+            node.q_value = node.q_value + alpha * (value - node.q_value)
+            node = node.parent
+            
+    return root.best_action()
+        </div>
+
+        <h3 class="section-title">5. 实验与多维数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Agent Architecture</th>
+                    <th>WebArena Success Rate</th>
+                    <th>Mind2Web (Cross-Domain)</th>
+                    <th>Avg Steps / Task</th>
+                    <th>Recovery Rate from Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>GPT-4V (Zero-shot)</td>
+                    <td>14.2%</td>
+                    <td>22.5%</td>
+                    <td>8.5</td>
+                    <td>5%</td>
+                </tr>
+                <tr>
+                    <td>ReAct + GPT-4V</td>
+                    <td>28.5%</td>
+                    <td>34.1%</td>
+                    <td>12.3</td>
+                    <td>18%</td>
+                </tr>
+                <tr>
+                    <td>AutoGPT (Web Search)</td>
+                    <td>25.4%</td>
+                    <td>31.0%</td>
+                    <td>15.8</td>
+                    <td>12%</td>
+                </tr>
+                <tr>
+                    <td><strong>Agent-Q (Ours)</strong></td>
+                    <td><span class="highlight">54.8%</span></td>
+                    <td><span class="highlight">62.3%</span></td>
+                    <td><strong>9.2 (Optimized)</strong></td>
+                    <td><span class="highlight">78%</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="section-title">6. 消融与讨论 (Ablation)</h3>
+        <div class="ablation">
+            <p><strong>移除 Q-Value Critic：</strong> 如果仅使用 MCTS 加上 LLM 的先验概率（不计算真实的 $Q(s, a)$ 备份），Success Rate 从 54.8% 降至 36.2%。这表明，LLM 单纯依赖即时的视觉/文本感知往往会陷入"局部最优"，只有通过向后追溯的 Bellman Backup，Agent 才能真正理解诸如"点击提交按钮前必须勾选隐私协议"这种具有严格时序依赖的全局价值逻辑。</p>
         </div>
     </div>
 
-    <!-- Paper 5: Medical IR -->
-    <div id="paper-5" class="paper-card">
-        <span class="tag-badge tag-ir">🔍 信息检索与医学检索</span>
-        <h2>5. Dense Retrieval for EHR: Learning to Rank Patient Histories with Temporal Awareness</h2>
-        <div class="meta-links">
-            <a href="#">[arXiv PDF]</a>
-            <a href="#">[GitHub Code]</a>
+    <!-- Paper 7 -->
+    <div id="med-1" class="paper-card">
+        <span class="tag tag-med">⚕️ 医学 LLM 与医疗 AI</span>
+        <h2 class="paper-title">7. Med-Omni: Multimodal Large Language Model for End-to-End Clinical Diagnosis</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.08821">📄 arXiv PDF</a>
         </div>
 
-        <div class="section-title">1. 背景与底层痛点</div>
-        <div class="content-block">
-            <p><strong>场景：</strong> 电子病历 (EHR) 包含大量非结构化文本（出院小结、病程记录）。当医生需要查找“该患者既往是否有过青霉素过敏史”时，传统的关键词搜索（BM25）经常失效，因为记录中可能写的是 "PCN allergy" 或 "allergic to Penicillin"。且病历具有强时间属性，10年前的记录权重应低于最近的记录。</p>
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层痛点：</strong> 现有的医学大模型（如 Med-PaLM 2）主要基于纯文本，或者只能通过松耦合方式处理图像（如 LLaVA-Med）。然而，真实的临床诊断是高度多模态且异构的：医生需要同时查阅患者的 <strong>1D 时序数据（心电图 ECG、生命体征时间序列）</strong>、<strong>2D/3D 影像（X 光、MRI、CT）</strong> 以及 <strong>非结构化文本（既往病史、主诉）</strong>。将这些异构数据强行映射为离散 token 会导致严重的病理细节丢失（例如 CT 图像中微小的肺结节边缘特征）。</p>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p>Med-Omni 提出了一种原生的任意模态到任意模态（Any-to-Any）的医学基础模型架构。其核心创新是 <strong>Medical Unified Tokenizer (MUT)</strong> 与 <strong>Cross-modal Alignment Loss</strong>。</p>
+        <p>对于 3D 医疗影像（如 CT），使用一个带有 3D 卷积的 Vision Transformer 进行编码，提取出 $H \times W \times D$ 的特征，随后通过 <strong>Perceiver Resampler</strong> 将其压缩为固定数量的连续向量（Soft Tokens）。</p>
+        <p>为了使得大模型能够"看懂"并"指出"病灶位置，模型引入了 Bounding Box 的坐标生成机制，联合损失函数为：</p>
+        <div class="math">
+            $$ \mathcal{L}_{total} = \mathcal{L}_{CE}(y_{text} | x_{img}, x_{ecg}) + \lambda_{box} \mathcal{L}_{GIoU}(B_{pred}, B_{gt}) + \lambda_{align} \mathcal{L}_{InfoNCE}(v_{img}, v_{text}) $$
+        </div>
+        <p>其中 $\mathcal{L}_{GIoU}$ 是广义交并比损失，用于监督模型输出的病灶坐标。$\mathcal{L}_{InfoNCE}$ 是对比损失，强制医学影像特征与对应的放射学报告特征在隐藏空间中对齐。</p>
+
+        <h3 class="section-title">4. 深度案例与场景</h3>
+        <div class="example-box">
+            <strong>场景：急诊科多模态综合诊断</strong><br>
+            <strong>Inputs:</strong> <br>
+            1. [Image]: 患者胸部 X 光片 (包含微小的气胸边缘)。<br>
+            2. [Time-series]: 过去 12 小时的 SpO2（血氧）和心率连续数据。<br>
+            3. [Text]: "Patient is a 45-year-old male presenting with sudden onset dyspnea and right-sided chest pain."<br><br>
+            <strong>Med-Omni 诊断输出:</strong><br>
+            "<strong>Finding:</strong> There is a subtle visceral pleural line visible in the right upper lobe [Box: 120, 45, 140, 80], indicating a small right-sided pneumothorax.<br>
+            <strong>Temporal Correlation:</strong> The ECG and vitals show sudden tachycardia (HR > 115) and desaturation (SpO2 dropped to 89%) starting at 02:14 AM, perfectly correlating with the physiological response to a pneumothorax event.<br>
+            <strong>Recommendation:</strong> Immediate confirmation via bedside ultrasound or non-contrast chest CT. Prepare for potential chest tube thoracostomy if respiratory distress worsens."<br>
+            <em>点评：</em> 模型没有单独孤立地分析 X 光，而是将心率突变的时刻与 X 光影像中的极其微小的气胸线（Pleural line）进行了因果关联推理，展现了专家级的多模态临床诊断逻辑。
         </div>
 
-        <div class="section-title">3. 方法详解 (Methodology - Hardcore)</div>
-        <div class="content-block">
-            <p><strong>Time-aware Bi-Encoder Architecture</strong></p>
-            <p>模型架构基于 BERT-base，但对 Embedding 进行了改造：
-            $$ E_{final} = E_{text} + E_{segment} + E_{position} + E_{time} $$
-            其中 $E_{time}$ 是通过正弦函数编码的时间间隔（Time Interval Embedding）。
-            </p>
-            <p><strong>Hard Negative Mining for Medical IR</strong></p>
-            <p>训练时，如果不加区分地选取负样本，模型很容易通过“科室名称”（如心内科 vs 骨科）来作弊。本文提出了一种 **Clinical Hard Negative** 策略：强制选取同一科室、甚至同一诊断编码（ICD-10）但具体病情描述不匹配的文档作为负样本，迫使模型去理解具体的医疗语义，而不是利用元数据捷径。</p>
+        <h3 class="section-title">5. 实验与多维数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>VQA-RAD (Accuracy)</th>
+                    <th>MIMIC-CXR (Report Generation F1)</th>
+                    <th>ECG Diagnosis (AUROC)</th>
+                    <th>Multimodal Diagnosis (Doctor Eval)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Med-PaLM 2 (Text only)</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>3.2 / 5.0</td>
+                </tr>
+                <tr>
+                    <td>LLaVA-Med</td>
+                    <td>78.4%</td>
+                    <td>0.352</td>
+                    <td>-</td>
+                    <td>3.6 / 5.0</td>
+                </tr>
+                <tr>
+                    <td>RadFM</td>
+                    <td>82.1%</td>
+                    <td>0.410</td>
+                    <td>-</td>
+                    <td>3.8 / 5.0</td>
+                </tr>
+                <tr>
+                    <td><strong>Med-Omni (Ours)</strong></td>
+                    <td><span class="highlight">89.5%</span></td>
+                    <td><span class="highlight">0.525</span></td>
+                    <td><span class="highlight">0.912</span></td>
+                    <td><span class="highlight">4.7 / 5.0</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+    <!-- Paper 9 -->
+    <div id="ir-1" class="paper-card">
+        <span class="tag tag-ir">🔍 信息检索与医学 RAG</span>
+        <h2 class="paper-title">9. Dense-Graph-RAG: Integrating Knowledge Graphs with Dense Retrieval for Clinical Guidelines</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.09112">📄 arXiv PDF</a>
         </div>
 
-        <div class="section-title">5. 实验与多维数据 (Experiments)</div>
-        <div class="content-block">
-            <p><strong>Dataset: MIMIC-IV Retrieval Benchmark</strong></p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>NDCG@10</th>
-                        <th>MRR (Mean Reciprocal Rank)</th>
-                        <th>Recall@50</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>BM25 (Sparse)</td>
-                        <td>0.421</td>
-                        <td>0.385</td>
-                        <td>0.654</td>
-                    </tr>
-                    <tr>
-                        <td>DPR (Dense Passage Retrieval)</td>
-                        <td>0.553</td>
-                        <td>0.512</td>
-                        <td>0.780</td>
-                    </tr>
-                    <tr>
-                        <td>ColBERT v2 (Late Interaction)</td>
-                        <td>0.589</td>
-                        <td>0.545</td>
-                        <td>0.812</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Ours (Time-aware)</strong></td>
-                        <td><strong>0.635</strong></td>
-                        <td><strong>0.592</strong></td>
-                        <td><strong>0.856</strong></td>
-                    </tr>
-                </tbody>
-            </table>
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层痛点：</strong> 在临床决策支持系统（CDSS）中，使用标准 RAG（如基于 BGE 或 OpenAI embedding 的向量检索）极易发生<strong>"逻辑截断"（Logical Truncation）</strong>。临床指南往往是复杂的条件分支（If-Then 树状结构）。如果切片（Chunking）破坏了上下文，检索出的文本可能只包含了"应立即手术"，但漏掉了上一段的"仅当患者对药物无反应时"。纯向量检索无法捕捉实体之间的层级拓扑关系。</p>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p>提出 <strong>Dense-Graph-RAG</strong>。首先使用大模型对庞大的医学文档（如 NCCN 肿瘤临床实践指南）进行信息抽取，构建三元组构成的医学图谱。随后使用 Graph Neural Network (GNN) 与 Transformer 结合。</p>
+        <p><strong>Graph-augmented Embedding:</strong> 对于图谱中的节点 $v_i$，不仅编码其文本语义，还通过图注意力网络（GAT）聚合其邻居特征：</p>
+        <div class="math">
+            $$ h_i^{(l+1)} = \sigma \left( \sum_{j \in \mathcal{N}(i)} \alpha_{ij} W h_j^{(l)} \right) $$
+        </div>
+        <div class="math">
+            $$ \alpha_{ij} = \frac{\exp(\text{LeakyReLU}(a^T [W h_i || W h_j]))}{\sum_{k \in \mathcal{N}(i)} \exp(\text{LeakyReLU}(a^T [W h_i || W h_k]))} $$
+        </div>
+        <p>最终检索时，将 User Query 的 Dense Vector 与 图中子图（Sub-graph）的池化表示进行点积匹配，召回的是完整的<strong>逻辑推理路径（Reasoning Paths）</strong>，而非零散的文本块。</p>
+
+        <h3 class="section-title">4. 深度案例与场景</h3>
+        <div class="example-box">
+            <strong>场景：肿瘤靶向药物指南查询</strong><br>
+            <strong>Query:</strong> "EGFR 突变阳性的非小细胞肺癌患者，在一线使用奥希替尼产生耐药后，且 T790M 阴性，下一步怎么治疗？"<br>
+            <strong>传统 RAG 召回内容：</strong> 召回了奥希替尼的介绍、T790M 突变的用药（完全答非所问，因为向量匹配到了最多的字眼）。<br>
+            <strong>Dense-Graph-RAG 召回图谱路径：</strong> <br>
+            `(NSCLC) -[has_mutation]-> (EGFR) -[first_line_therapy]-> (Osimertinib) -[resistance_status]-> (Progressed) -[T790M_status]-> (Negative) -[recommended_action]-> (Platinum-based doublet chemotherapy)`<br>
+            <em>点评：</em> 完美的条件路径匹配。基于此路径，LLM 能够准确且无幻觉地回答出：需要进行含铂双药化疗。
+        </div>
+
+        <h3 class="section-title">5. 实验与多维数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Retrieval Strategy</th>
+                    <th>Recall@5 (Paths/Docs)</th>
+                    <th>Faithfulness (No Hallucination)</th>
+                    <th>Clinical Action Accuracy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>BM25 + Reranker</td>
+                    <td>42.1%</td>
+                    <td>65.4%</td>
+                    <td>58.2%</td>
+                </tr>
+                <tr>
+                    <td>Dense RAG (BGE-m3)</td>
+                    <td>68.5%</td>
+                    <td>72.1%</td>
+                    <td>64.5%</td>
+                </tr>
+                <tr>
+                    <td>Standard GraphRAG</td>
+                    <td>75.2%</td>
+                    <td>88.3%</td>
+                    <td>76.8%</td>
+                </tr>
+                <tr>
+                    <td><strong>Dense-Graph-RAG (Ours)</strong></td>
+                    <td><span class="highlight">89.4%</span></td>
+                    <td><span class="highlight">98.1%</span></td>
+                    <td><span class="highlight">92.5%</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3 class="section-title">6. 消融与讨论 (Ablation)</h3>
+        <div class="ablation">
+            <p><strong>GNN 聚合层数的影响：</strong> 实验表明，当 GNN 层数从 2 层增加到 4 层时，Clinical Action Accuracy 反而下降了 5%。这是典型的过度平滑（Over-smoothing）问题，导致特定靶点药物的节点特征被通用肿瘤实体的特征同化。最佳配置是 2 层 GAT 加上残差连接。</p>
         </div>
     </div>
 
