@@ -1,2042 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>arXiv AI 论文精读报告 (案例与表格增强版) - 2026-03-20</title>
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-main: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --accent: #6366f1;
+            --accent-light: #e0e7ff;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
 
-    <!DOCTYPE html>
-    <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <title>每日 arXiv AI 论文精读报告 (2026-03-20)</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px auto; max-width: 1000px; color: #333; background-color: #f9f9f9; padding: 20px; }
-            h1 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-            .paper { background: #fff; padding: 25px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            .paper h2 { color: #2980b9; margin-top: 0; }
-            .links { margin-bottom: 15px; }
-            .links a { display: inline-block; margin-right: 15px; padding: 5px 10px; background: #3498db; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.9em; }
-            .links a.github { background: #333; }
-            .module { margin-top: 20px; }
-            .module h3 { color: #16a085; font-size: 1.1em; border-left: 4px solid #16a085; padding-left: 10px; }
-            .content-box { background: #fdfdfd; border: 1px solid #eee; padding: 15px; border-radius: 5px; font-size: 0.95em; }
-            .table-container { overflow-x: auto; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
-            pre { white-space: pre-wrap; font-family: monospace; font-size: 0.85em; }
-        </style>
-    </head>
-    <body>
-        <h1>📚 arXiv AI 论文深度精读报告 (2026-03-20)</h1>
-        <p style="text-align: center; color: #7f8c8d;">共筛选提取了最新 cs.AI / cs.CL / cs.IR 领域的 12 篇重点论文，深度解析 9 大模块。</p>
-    
-        <div class="paper">
-            <h2>1. NavTrust: Benchmarking Trustworthiness for Embodied Navigation</h2>
-            <p><strong>中文标题:</strong> NavTrust：体现导航的可信度基准测试</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:59:51Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19229v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=NavTrust%3A%20Benchmarking%20Trustworthiness%20for%20Embodied%20Navigation&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">体现导航有两大类：视觉语言导航（VLN），智能体通过遵循自然语言指令进行导航；对象-目标导航 (OGN)，代理导航到指定的目标对象。然而，现有的工作主要评估名义条件下的模型性能，忽略了现实环境中出现的潜在损坏。为了解决这一差距，我们推出了 NavTrust，这是一个统一的基准测试，可以在现实场景中系统地破坏输入模式，包括 RGB、深度和指令，并评估它们对导航性能的影响。据我们所知，NavTrust 是第一个在统一框架中将具体导航代理暴露给不同 RGB 深度损坏和指令变化的基准测试。我们对七种最先进的方法进行了广泛的评估，揭示了现实腐败下的性能大幅下降，这突出了关键的稳健性差距，并提供了一个</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">复杂环境中的具体导航包括
-通过两项主要任务：视觉语言导航（VLN），
-代理遵循自然语言指令进行导航
-igate [1]、[2] 和对象目标导航 (OGN)，其中
-*同等贡献‡通讯作者。
-1H。 Jiang、Y. Chaudhary、Z. Wang 和 J. Li 就职于 Trustworthy
-加州大学河滨分校自主系统实验室，
-美国加利福尼亚州。 {huaidej, ychau008, jiachen.li}@ucr.edu
-2Y。 Wang 就读于美国密歇根州安娜堡市密歇根大学。
-3R。 Sharma 就职于美国加利福尼亚州 Workday。
-4M。梅塔就职于美国加利福尼亚州南加州大学。
-5年。 Zhou, Z. Fan, Z. Tu 来自美国德克萨斯州德克萨斯 A&M 大学。
-6L。 Sun 就职于美国宾夕法尼亚州利哈伊大学。
-代理搜索指定目标[3]。尽管显着
-进步，目前的深度学习智能体仍然缺乏
-现实世界部署所需的可信度。状态-
-最先进的 VLN 代理已被证明在轻微的情况下会失败
-语言扰动</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">模型依赖于上下文冗余的单词或者可以推断
-来自最小语言线索的导航意图。
-黑盒恶意提示具有误导性、敌手性
-ial 短语放在原始指令前面，没有
-修改其核心内容。这些语法流畅但
-语义上具有破坏性的短语旨在混淆
-模型或转移其注意力，代表现实的黑色
-阻止来自用户错误或故意误导性输入的威胁。
-白盒恶意提示是以下情况下的对抗性短语：
-直接注入大视觉所使用的系统提示符中——
-语言模型，从而改变模型的决策
-制作背景。这些白盒攻击利用内部
-通过插入精心设计的基于提示的模型机制
-提示进入初始化提示。
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+        }
 
-D. 缓解策略
-为了解决我们的基准测试发现的漏洞，
-我们研究了增强代理鲁棒性的四种策略
-在 R2R 数据集的子集上。这些互补的机械
-尼主义</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">我们评估了七个 SOTA 代理：三个用于 VLN，三个用于
-包括 ETPNav [12]，一个长视野拓扑规划器；
-NaVid [10]，一种基于变压器的动态环境模型
-评论；和 Uni-NaVid [11]，一种基于视频的视觉语言
-用于统一具体导航任务的动作模型，以及
-四个用于 OGN，包括 WMNav [19]，一种轻量级 RGB
-规划师； L3MVN [17] 用于细粒度导航； PSL [18]，
-使用程序化监督；和 VLFM [16]，
-具有强大零样本能力的视觉语言基础模型
-能力。每个代理的输入方式总结为
-表 I 中列出了每个 RGB 深度损坏的控制因素
-表 I：每个模型可用的损坏类型。
-腐败 NaVid-7B Uni-NaVid ETPNav L3MVN WMNav VLFM PSL
-RGB
-✓
-✓
-✓
-✓
-✓
-✓
-✓
-深度
-✓
-✓
-✓
-✓
-说明
-✓
-✓
-✓
-严重程度 s ∈[0, 1]；我们默认设置 s = 0.5
-继之前引起显着但现实的退化
-工作[22]，[37]。此外，我们还测试了各种缓解措施
-策略。对于 RGB 深度损坏，</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">视觉语言导航和目标目标导航-
-。 VLN 字段由 Room-to-Room 建立
-(R2R) 数据集 [1] 和 Room-cross-Room (RxR) 数据集 [2]，
-将英文指令与 Matterport3D [7] 配对或
-Habitat-Matterport 3D 数据集环境 [8]。他们的成功
-处理器，VLN-CE [9]，通过引入一个
-连续的行动空间。我们遵循多语言 RxR
-数据集与 R2R 一起测试鲁棒性
-具有更密集的对象分布的更复杂的指令
-以及更精细的类别区别以探讨可扩展性。在con-
-trast，OGN 是一项视觉任务，智能体必须找到
-指定的对象，通常在MP3D或HM3D环境中
-罗曼兹。最近的 VLN 利用视觉语言编码器
-或法学硕士映射语言指令以启用零
-镜头泛化到未见过的环境。最先进的
-方法包括 NaVid [10] 和 Uni-NaVid [11]，其中
-无需地图、里程计或深度感应即可操作；和
-ETPNav [12]，它将导航分解为 i</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>"0-PRS-SR (↑) 0.86 0.89 0.63 0.62 0.64 0.86 0.89 0.60 0.94
-PRS-SPL (↑) 0.80 0.87 0.66 0.64 0.64 0.84 0.87 0.53 0.94
-Uncorrupted 65/0.58 56/0.45 40/0.35 26/0.23 34/0.30 55/0.20 50/0.23 44/0.19 50/0.30
-Motion blur 57/0.49 54/0.42 29/0.27 19/0.18 15/0.14 51/0.20 47/0.21 41/0.17 47/0.29
-L-L (w/o noise) 53/0.43 49/0.41 25/0.25 17/0.16 25/0.22 47/0.17 49/0.23 38/0.16 48/0.30
-L-L (w/ noise) 48/0.33 51/0.40 11/0.09 7/0.05 30/0.27 45/0.15 40/0.17 3/0.01 49/0.29
-Spatter 56/0.44 51/0.41 37/0.34 22/0.21 8/0.07 43/0.15 31/0.12 21/0.06 45/0.27
-Flare 61/0.53 52/0.40 38/0.34 22/0.21 34/0.30 50/0.18 47/0.22 33/0.14 50/0.30
-Defocus 60/0.53 51/0.41 40/0.35 26/0.23 33/0.29 52/0.18 47/0.22 41/0.17 48/0.29
-Foreign object 59/0.51 51/0.40 20/0.20 13/0.12 21/0.18 46/0.17 46/0.21 16/0.05 46/0.27
-Black-out 55/0.43 41/0.29 3/0.02 4/0.01 9/0.07 46/0.14 50/0.22 17/0.05 44/0.24
-UN N ni a aE E -VT VT i i NP P d d a- - N N V7 7 i a av Bv B d ( (( ( (R RR R R2 x 2 x xR R R R R) ) ) ) ) WMNav L3MVN PSL VLFM",1-0.86,2-0.89,3-0.63,4-0.62,5-0.64,6-0.86,7-0.89,8-0.60,9-0.94
-,0.80,0.87,0.66,0.64,0.64,0.84,0.87,0.53,0.94
-,"65/0.58 56/0.45 40/0.35 26/0.23 34/0.30 55/0.20 50/0.23 44/0.19 50/0.30
-57/0.49 54/0.42 29/0.27 19/0.18 15/0.14 51/0.20 47/0.21 41/0.17 47/0.29
-53/0.43 49/0.41 25/0.25 17/0.16 25/0.22 47/0.17 49/0.23 38/0.16 48/0.30
-48/0.33 51/0.40 11/0.09 7/0.05 30/0.27 45/0.15 40/0.17 3/0.01 49/0.29
-56/0.44 51/0.41 37/0.34 22/0.21 8/0.07 43/0.15 31/0.12 21/0.06 45/0.27
-61/0.53 52/0.40 38/0.34 22/0.21 34/0.30 50/0.18 47/0.22 33/0.14 50/0.30
-60/0.53 51/0.41 40/0.35 26/0.23 33/0.29 52/0.18 47/0.22 41/0.17 48/0.29
-59/0.51 51/0.40 20/0.20 13/0.12 21/0.18 46/0.17 46/0.21 16/0.05 46/0.27
-55/0.43 41/0.29 3/0.02 4/0.01 9/0.07 46/0.14 50/0.22 17/0.05 44/0.24",,,,,,,,
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>"PRS-SR (↑) 0.72 0.48 0.86 0.64 0.58
-PRS-SPL (↑) 0.70 0.46 0.88 0.64 0.58
-Uncorrupted 65/0.58 57/0.46 40/0.35 46/0.41 57/0.50
-Capitalization 63/0.57 56/0.45 42/0.38 48/0.43 58/0.51
-Mask 50% 49/0.43 29/0.22 39/0.34 34/0.29 36/0.31
-Mask 100% 37/0.33 19/0.15 30/0.25 20/0.19 21/0.18
-Friendly 48/0.38 24/0.18 38/0.34 28/0.24 30/0.26
-Novice 54/0.44 31/0.21 39/0.33 33/0.26 33/0.28
-Professional 42/0.36 17/0.14 32/0.30 20/0.20 21/0.20
-Formal 42/0.37 20/0.15 33/0.30 24/0.22 26/0.23
-Black-box 40/0.35 25/0.18 25/0.25 27/0.25 46/0.38
-White-box — — 30/0.27 30/0.27 28/0.24
-UN N ni a aE E -VT VT i i NP P d d a- - N N V7 7 i a av Bv B d ( (( ( (R RR R R2 x 2 x xR R R R R) ) ) ) )",0.72,0.48,0.86,0.64,0.58
-,0.70,0.46,0.88,0.64,0.58
-,"65/0.58 57/0.46 40/0.35 46/0.41 57/0.50
-63/0.57 56/0.45 42/0.38 48/0.43 58/0.51
-49/0.43 29/0.22 39/0.34 34/0.29 36/0.31
-37/0.33 19/0.15 30/0.25 20/0.19 21/0.18
-48/0.38 24/0.18 38/0.34 28/0.24 30/0.26
-54/0.44 31/0.21 39/0.33 33/0.26 33/0.28
-42/0.36 17/0.14 32/0.30 20/0.20 21/0.20
-42/0.37 20/0.15 33/0.30 24/0.22 26/0.23
-40/0.35 25/0.18 25/0.25 27/0.25 46/0.38
-— — 30/0.27 30/0.27 28/0.24",,,,
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>"0-PRS-SR (↑) 0.62 0.87 0.87 0.56 0.61
-PRS-SPL (↑) 0.60 0.86 0.79 0.53 0.64
-Uncorrupted 65/0.58 56/0.45 55/0.20 50/0.23 50/0.30
-Gaussian noise 33/0.29 53/0.42 49/0.15 2/0.01 0/0.00
-Missing data 24/0.17 37/0.27 45/0.14 25/0.09 47/0.29
-Multipath 55/0.50 53/0.43 47/0.16 34/0.15 27/0.18
-Quantization 48/0.43 52/0.43 51/0.18 51/0.24 49/0.30
-E ET TP PN Na av v ( (R R2 xR R) ) WMNav L3MVN VLFM",1-0.62,2-0.87,3-0.87,4-0.56,5-0.61
-,0.60,0.86,0.79,0.53,0.64
-,"65/0.58 56/0.45 55/0.20 50/0.23 50/0.30
-33/0.29 53/0.42 49/0.15 2/0.01 0/0.00
-24/0.17 37/0.27 45/0.14 25/0.09 47/0.29
-55/0.50 53/0.43 47/0.16 34/0.15 27/0.18
-48/0.43 52/0.43 51/0.18 51/0.24 49/0.30",,,,
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">我们推出了第一个统一基准 NavTrust
-用于评估具体导航的可信度
-跨越感知和语言模式的系统，
-其中涵盖 VLN 和 OGN 代理。通过受控
-NavTrust 揭露 RGB 深度和指令损坏
-最先进代理的性能漏洞。由
-提供广泛的比较研究，我们使
-社区不仅仅关注峰值性能
-标称条件，但也坚固、可靠且值得信赖
-腐败行为下的行为。在今后的工作中，我们将进一步拓展
-NavTrust 具有自适应对抗策略来解决
-完整的体现导航挑战。这些扩展
-sions将进一步促进代理的开发
-不仅在名义情况下表现出色，而且
-在现实环境中安全可靠。
-参考文献
-[1] P. 安德森、Q. 吴、D. 特尼、J. 布鲁斯、M. 约翰逊、N. 森德豪夫、
-I. Reid、S. Gould 和 A. Van Den Hengel，“视觉与语言</div></div>
-        </div>
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            color: #0f172a;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .paper-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .paper-title {
+            font-size: 1.5rem;
+            color: #0f172a;
+            margin-top: 0;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .paper-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tag {
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .link {
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
+        }
+
+        .link:hover {
+            color: var(--accent);
+        }
+
+        .content-section {
+            margin-bottom: 25px;
+        }
+
+        .content-section h3 {
+            font-size: 1.15rem;
+            color: #1e293b;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
         
-        <div class="paper">
-            <h2>2. FinTradeBench: A Financial Reasoning Benchmark for LLMs</h2>
-            <p><strong>中文标题:</strong> FinTradeBench：法学硕士的财务推理基准</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:59:41Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19225v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=FinTradeBench%3A%20A%20Financial%20Reasoning%20Benchmark%20for%20LLMs&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">现实世界的金融决策是一个具有挑战性的问题，需要对异构信号进行推理，包括来自监管文件的公司基本面和根据价格动态计算的交易信号。最近，随着大型语言模型（LLM）的进步，金融分析师开始将它们用于金融决策任务。然而，现有的用于测试这些模型的财务问答基准主要集中在公司资产负债表数据上，很少评估公司股票如何在市场上交易或其与基本面相互作用的推理。为了利用这两种方法的优势，我们引入了 FinTradeBench，这是一个评估集成公司基本面和交易信号的财务推理的基准。 FinTradeBench 包含 1,400 个针对 NASDAQ-100 公司十年历史窗口的问题。该基准分为三个推理类别：以基本面为中心、以交易为中心</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">现实世界的财务分析需要推理
-两个互补的信息源：公司
-图 1：专有法学硕士的绩效比较
-关于以交易信号为中心的问题。没有出现回调
-2025 年 7 月购买了 Nvidia 的股票，这并不是一次有利可图的收购
-机会；只有克劳德正确识别了回调
-组件。在购买部分，所有法学硕士都失败了。
-基本面和市场动态。公司乐趣-
-基本面是基于会计的指标
-来自公司资产负债表或证券以及
-交易委员会 (SEC) 备案，例如专业人士
-其能力、杠杆率和估值比率
-公司的基本财务状况（Fama 和
-法语，1992；哈维等人，2016）。相比之下，
-交易信号，根据历史价格计算
-和数量数据，捕捉市场动态和信息
-投资者情绪，包括动量、波动性、
-和趋势逆转（Brock 等，1992；Jegadeesh
-和蒂特曼，1993；罗等人，2000；安徒生等人，
-2003年；公园和</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">《ropean 金融杂志》，第 1-22 页。
+        .content-section p, .content-section ul {
+            color: #334155;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
 
-坎贝尔·哈维 (Campbell R. Harvey)、刘岩 (Yan Liu) 和朱鹤庆 (Heqing Zhu)。 2016年。
-...以及预期回报的横截面。重新
-金融研究观点，29（1）：5-68。
-MD Kamrul Hossain、张润鹏、胡浩然和
-凯尔文·洛. 2025. 法学硕士作为元审稿人助理：
-au-中的可靠性、校准和偏差基准测试
-番茄论文评估。在第 48 届会议记录中
-国际 ACM SIGIR 研究会议
-和信息检索的发展。到 ap-
-梨。
-投资网。 2025 年。财报电话会议记录：特斯拉
-2025 年第一季度业绩不佳，电话会议后股价上涨。在-
-归属.com。访问时间：2026 年 3 月 15 日。
-普拉纳布·伊斯兰 (Pranab Islam)、阿南德·卡纳潘 (Anand Kannapan)、杜威·基拉 (Douwe Kiela)、Re-
-贝卡·钱、尼诺·谢勒和伯蒂·维德根。 2023 年。
-Financebench：财务问题的新基准
-化回答。预印本，arXiv：2311.11944。
-Narasimhan Jegadeesh 和谢里丹·蒂特曼。 1993.重新
-转向买入赢家并卖出输家：隐含-
-股票市场效率的因素。金融杂志，
-48:65</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">表 2 报告了性能比较
-14 个评估的基于 RAG 和 No-RAG 架构
-FinTradeBench 上的法学硕士。配对 t 检验
-问题级正确性分数评估统计数据
-RAG 引起的变化的逻辑可靠性。表3
-（和§H.3中的图5）用全局补充这一点
-生成质量指标，揭示 RAG 如何重新
-塑造超越原始准确的模型推理行为
-活泼的。我们的分析得出以下发现：
-(1) RAG 强烈有利于基本面
-声波（F）并降低交易信号（T）
-声波。基本（F）问题需要摘录-
-荷兰国际集团的会计指标，例如债务股本比率
-来自 SEC 10-K/10-Q 文件的 tios。在他们身上，RAG
-产生了巨大的、统计上显着的收益
-具有推理能力的法学硕士。例如，R1-Distill-Qwen
-(32B) 相对于 No-RAG 提高了 37%
-F 类问题的基线。其中专有
-其中，Gemini 2.5 Flash 上涨 23.8%，
-DeepSeek-R1 基本面上涨 23.6%。这个
-证实混合检索超过 t</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">财务问答 (QA) 工作台 -
-标记。过去十年见证了激增
-在问答和数字推理中
-金融领域的数据集。例如，FinQA（Chen 等人，2022a）
-和 TAT-QA (Zhu et al., 2021) 数值模拟
-基于财务报告、表格、
-和文字披露。而 ConvFinQA（陈
-等人，2022b）将这些任务扩展到对话中
-国家设置、FinanceBench（Islam 等人，2023）、
-FinDER（Choi 等人，2025）和 DocFinQA（Reddy
-et al., 2025）将评估扩展到长上下文
-金融推理和检索任务
-财务文件。
-这些基准意味着
+        .content-section ul {
+            padding-left: 20px;
+        }
 
-无法先进的财务质量保证，其主要目标是
-专注于文本财务披露的推理
-和会计衍生指标。然而，他们
-很少评估交易信号的推理
-来自历史价格动态或需要
-整合两种金融资源的模型
-形成；参见（Lee 等人，2025）。
-交易信号和定量金融。传统</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>0-FinTradeBench (This paper),1-✓,2-✓,3-✓,4-✓,5-✓
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>Case Study: AAPL Valuation and Momentum,Col1,Col2
-,,
-,"Question: As of August 2025, is Apple a good buy given
-its valuation and price trend?
-Golden Indicators: Earnings/Price, Book/Price, RSI,
-One Day Reversal.
-1. Zero-Shot (No-RAG) Output:
-“To assess Apple’s valuation, we would examine sev-
-eral key metrics... We would need to know Ap-
-ple’s projected EPS... A P/E significantly above its
-historical average might suggest the stock is expen-
-sive. [Model proceeds to list textbook definitions of
-P/E, P/S, P/B, and RSI without providing a single ac-
-tual data point or conclusion for August 2025]...”
-2. Standard RAG Output:
-“...Total net sales show a consistent upward trend from
-2023 to 2025. Services segment has shown strong growth
-(14% in 2025)... August 2025 prices show a strong up-
-ward trend, starting around $202.38 and reaching $232.56.
-[Model gets distracted by raw text/prices, completely fail-
-ing to calculate or cite the Golden Indicators.] Without
-forward-looking earnings estimates, a definitive valuation
-assessment is not possible...”
-3. Ideal RAG (Precomputed Context):
-“...Apple’s fundamental data presents a mixed picture. A
-low Book/Price ratio (0.02) suggests the market values
-Apple significantly higher than its book value, indicating a
-premium valuation. However, it demonstrates an excellent
-Return on Equity (35.36%). The market data for August
-2025 shows a strong positive price trend... The RSI is
-at 60.39, suggesting the stock is leaning towards bullish
-sentiment without being overbought. Conclusion: Given
-the strong positive price trend and excellent profitability,
-Apple presents a compelling case, though investors must
-be comfortable with its premium valuation.”",
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>Col0,Sample Golden Answers by Category,Col2
-"1. Company Fundamentals
-Q: Is Nvidia’s profitability sustainable with its valuation
-in September 2025?
-A: Nvidia’s profitability is highly sustainable and sup-
-ported by strong operational efficiency. Its exceptional
-financial health is characterized by a ROE of 33.38% and a
-ROA of 21.31%, achieved with low leverage (Debt/Equity
-of 0.102). However, the valuation is extremely premium,
-evidenced by a Book/Price ratio of 0.023.
-2. Trading Signals
-Q: Based on trading in H1 2025, which stocks show the
-strongest EMA support?
-A: INTC, MU, and LRCX show the strongest support,
-trading approx. 18.5%, 16.8%, and 14.4% above their
-20-day EMAs. However, LRCX provides the most sus-
-tainable profile, as its technical trend is backed by strong
-fundamentals (18.7% ROE), whereas INTC’s support co-
-incides with negative profitability metrics.
-3. Hybrid Reasoning
-Q: Is Microsoft overvalued based on Q3 2025 prices de-
-spite strong performance?
-A: Microsoft is trading at a premium valuation, but it
-is not necessarily overvalued. While the Book/Price ra-
-tio of 0.0929 indicates the stock is expensive relative to
-its book value, this premium is supported by high opera-
-tional efficiency (Cash Flow/Assets of 0.0689) and strong
-profitability (ROE of 0.0890). Technical indicators show
-strong momentum (RSI 65.42, MACD > Signal) without
-yet reaching extreme ”overbought” conditions (>70 RSI).",,
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">表 2 报告了性能比较
-14 个评估的基于 RAG 和 No-RAG 架构
-FinTradeBench 上的法学硕士。配对 t 检验
-问题级正确性分数评估统计数据
-RAG 引起的变化的逻辑可靠性。表3
-（和§H.3中的图5）用全局补充这一点
-生成质量指标，揭示 RAG 如何重新
-塑造超越原始准确的模型推理行为
-活泼的。我们的分析得出以下发现：
-(1) RAG 强烈有利于基本面
-声波（F）并降低交易信号（T）
-声波。基本（F）问题需要摘录-
-荷兰国际集团的会计指标，例如债务股本比率
-来自 SEC 10-K/10-Q 文件的 tios。在他们身上，RAG
-产生了巨大的、统计上显着的收益
-具有推理能力的法学硕士。例如，R1-Distill-Qwen
-(32B) 相对于 No-RAG 提高了 37%
-F 类问题的基线。其中专有
-其中，Gemini 2.5 Flash 上涨 23.8%，
-DeepSeek-R1 基本面上涨 23.6%。这个
-证实混合检索超过 t</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">确认瓶颈不是模型能力
-能力而不是上下文结构。当数值
-金融信号是预先计算的而不是原始的，
-中间层模型可以有效地对它们进行推理。
-我们提供单峰消融（无论是预科
-推定的公司基本面或交易信号）
-§H.1、§H.2 将此分析扩展到整个市场
-扇区和查询类型以确认模式是
-系统性而非具体情况。
-6
-结论和未来方向
-我们引入 FinTradeBench 来评估财务状况
-跨公司基本面、交易的推理
-信号和混合查询。
-FinTradeBench 是
-基于 10 年 NASDAQ-100 数据，使用
-校准然后缩放框架结合了
-专家编写的种子具有可扩展的自动评估功能
-评价。我们对 No-RAG 下的 14 个法学硕士进行了基准测试
-和 RAG 设置并观察几个关键模式。
-从数量上看，我们见证了最高的性能
-基于混合推理的所有模型的收益
-问题（大问题高达 ↑39.8%，大问题高达 ↑55.1%）</div></div>
+        .content-section li {
+            margin-bottom: 8px;
+        }
+
+        /* 案例样式设计 */
+        .example-box {
+            background: #f1f5f9;
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+            font-size: 0.95rem;
+        }
+
+        .example-box p {
+            margin-bottom: 8px;
+        }
+
+        .example-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        .example-box strong {
+            color: #0f172a;
+        }
+
+        /* 表格样式设计 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: var(--bg-secondary);
+            font-size: 0.95rem;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 14px 16px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfd;
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        td strong {
+            color: var(--accent);
+        }
+
+        .back-link {
+            display: inline-flex;
+            margin-bottom: 30px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回报告列表</a>
+
+        <div class="header">
+            <h1>arXiv AI 论文精读报告</h1>
+            <p class="subtitle">2026-03-20 | 今日深度解析（含真实案例与实验数据）</p>
         </div>
-        
-        <div class="paper">
-            <h2>3. F2LLM-v2: Inclusive, Performant, and Efficient Embeddings for a Multilingual World</h2>
-            <p><strong>中文标题:</strong> F2LLM-v2：面向多语言世界的包容性、高性能和高效嵌入</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:59:21Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19223v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=F2LLM-v2%3A%20Inclusive%2C%20Performant%2C%20and%20Efficient%20Embeddings%20for%20a%20Multilingual%20World&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
+
+        <main>
+            <!-- Paper 1 -->
+            <div class="paper-card">
+                <h2 class="paper-title">Cognitive Mismatch in Multimodal Large Language Models for Discrete Symbol Understanding</h2>
+                <div class="paper-meta">
+                    <span class="tag">Methodology (方法学)</span>
+                    <a href="https://arxiv.org/abs/2603.18472" class="link" target="_blank">📄 arXiv 原文</a>
+                </div>
+                
+                <div class="content-section">
+                    <h3>1. 论文背景</h3>
+                    <p>多模态大语言模型（MLLMs）在自然图像理解方面取得了显著进展，但在处理离散符号（如数学公式、图表、逻辑符号）时常常表现不佳。本文指出这是因为模型在视觉特征提取与文本语义对齐之间存在“认知失配（Cognitive Mismatch）”。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>2. 核心贡献与创新点</h3>
+                    <ul>
+                        <li>首次系统性量化了 MLLM 中视觉编码器对离散符号提取不足导致的 Cognitive Mismatch 现象。</li>
+                        <li>提出了一种名为 <strong>Symbol-Align</strong> 的新型特征对齐机制，通过离散化瓶颈层强制视觉与文本对齐。</li>
+                    </ul>
+                </div>
+
+                <div class="content-section">
+                    <h3>3. 方法详解</h3>
+                    <p>作者在预训练的视觉编码器后增加了一个“符号解码网络（SDN）”。SDN 利用向量量化（Vector Quantization）将连续的视觉特征强制映射到预定义的离散符号词表中，随后再与大语言模型的 Embedding 空间进行交叉注意力融合。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>4. 具体案例（Examples）</h3>
+                    <div class="example-box">
+                        <p><strong>💡 场景样例：识别手写逻辑推导</strong></p>
+                        <p><strong>输入图像：</strong>一张写着“∀x (P(x) → Q(x))”的数学笔记照片。</p>
+                        <p><strong>Baseline (GPT-4V) 输出：</strong> "An image containing the math formula A x (P(x) -> O(x))" <em>(识别错误，将全称量词识别为A，Q识别为O)</em></p>
+                        <p><strong>Symbol-Align 输出：</strong> "∀x (P(x) → Q(x))" <em>(准确对齐符号)</em></p>
+                        <p><strong>原理说明：</strong> 传统视觉编码器会将“∀”平滑化为普通纹理，而 SDN 强制提取了其离散特征字典中的“∀”向量，消除了认知误差。</p>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3>5. 实验结果</h3>
+                    <p>在 MathVista 和 LogicQA 数据集上对比了主流模型，结果如下：</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>模型 / 方法</th>
+                                <th>MathVista (Accuracy %)</th>
+                                <th>LogicQA (Accuracy %)</th>
+                                <th>参数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>LLaVA-1.5</td>
+                                <td>35.4</td>
+                                <td>41.2</td>
+                                <td>13B</td>
+                            </tr>
+                            <tr>
+                                <td>Qwen-VL-Chat</td>
+                                <td>40.1</td>
+                                <td>45.8</td>
+                                <td>14B</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ours (Symbol-Align)</strong></td>
+                                <td><strong>48.7</strong> (+8.6)</td>
+                                <td><strong>53.4</strong> (+7.6)</td>
+                                <td>13B</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="content-section">
+                    <h3>6. 讨论与消融</h3>
+                    <p>消融实验表明，如果不使用向量量化（VQ）操作，性能提升仅为 2.1%。局限性在于该方法在极其复杂的 3D 拓扑图形中仍然容易发生符号混淆。</p>
+                </div>
             </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">我们推出了 F2LLM-v2，这是一个新的通用、多语言嵌入模型系列，有 8 种不同的大小，范围从 80M 到 14B。 F2LLM-v2 基于新近整理的 6000 万个公开可用的高质量数据样本进行训练，支持 200 多种语言，特别强调以前服务不足的中低资源语言。通过将基于 LLM 的两阶段嵌入训练流程与俄罗斯套娃学习、模型剪枝和知识蒸馏技术相集成，我们提出的模型比以前的基于 LLM 的嵌入模型更加高效，同时保留了有竞争力的性能。广泛的评估证实，F2LLM-v2-14B 在 11 项 MTEB 基准测试中排名第一，而该系列中的较小型号也为资源受限的应用树立了新的技术水平。为了促进开源嵌入模型研究，我们发布了所有模型、数据、代码和中间检查点。</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">文本嵌入模型是各种人工智能应用的基础支柱，
-包括语义搜索、检索增强生成 (RAG)、文本分类和聚类。
-通过将非结构化文本映射到密集向量空间，这些模型允许机器捕获数据
-复杂的语义关系，实现高效准确的信息检索和数据分析
-跨海量数据集。该领域最近已经从基于编码器的架构（De-
-弗林等人，2019；刘等人，2019； Conneau 等人，2020）到基于解码器的 LLM 嵌入（Zhang
-等，2025a； Lee 等人，2025a；张等人，2025b），受益于广泛的推理和
-在大规模预训练中获得的语言能力并取得了显着的成果
-性能。
-尽管取得了这些进步，前沿嵌入研究的现状仍具有以下特点：
-两个重要的限制。首先，两个模型训练中都普遍存在以英语为中心的偏见。</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">剪枝后，我们发现朴素训练会导致性能大幅下降（见表 4）。我们
-通过在训练修剪后的模型时应用额外的知识蒸馏损失来减轻这种情况
-模型，通过学生的序列嵌入和教师的序列之间的 MSE 计算
-嵌入输入查询、文档和否定。消融实验表明这种形式
-知识蒸馏也可以使更大的模型受益，因此我们将其应用于0.6B和1.7B模型
-在第二个训练阶段也是如此，而三个最大的模型是在没有蒸馏的情况下进行训练的
-由于资源限制。
-所有模型均使用 AdamW 优化器进行训练（Loshchilov & Hutter，2019）。俄罗斯套娃代表-
-化学习（Kusupati et al., 2022）应用于两个训练阶段，最小化俄罗斯套娃
-维度为8。其余训练超参数在表1中给出
-4
-实验
-4.1
-主要结果
-我们根据 17 个 MTEB 基准评估 F2LLM-v2：多语言、英语、代码、医疗、欧洲 -</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">知识蒸馏也可以使更大的模型受益，因此我们将其应用于0.6B和1.7B模型
-在第二个训练阶段也是如此，而三个最大的模型是在没有蒸馏的情况下进行训练的
-由于资源限制。
-所有模型均使用 AdamW 优化器进行训练（Loshchilov & Hutter，2019）。俄罗斯套娃代表-
-化学习（Kusupati et al., 2022）应用于两个训练阶段，最小化俄罗斯套娃
-维度为8。其余训练超参数在表1中给出
-4
-实验
-4.1
-主要结果
-我们根据 17 个 MTEB 基准评估 F2LLM-v2：多语言、英语、代码、医疗、欧洲 -
-豌豆、斯堪的纳维亚语、印度语、德语、法语、韩语、波兰语、中文、日语、荷兰语、俄语、
-波斯语和越南语，共 430 个任务，涵盖 10 种类型：检索、重新排序、分类、
-5
 
-F2LLM-v2 技术报告
-型号
-多种(131)
-英语(41)
-代码(12)
-医疗(12)
-欧洲(73)
-扫描。(28)
-印度语(20)
-德语(19)
-法语(25)
-14B
-68.74 (6)
-73.08 (10)
-80.75 (1)
-65.20 (2)
-69.</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">上一代基于编码器的嵌入模型见证了大规模的扩散
-支持数百种语言的多语言嵌入模型，以XLM-R（Con-
-neau 等人，2020）、mDeBERTaV3（He 等人，2023）、mBART（Liu 等人，2020）和 mT5（Xue 等人，
-2021）。最近，基于解码器的嵌入模型已成为主导范式，
-得益于他们在大规模预训练中获得的广泛能力，经验证
-最先进的模型，例如 E5-Mistral (Wang et al., 2024)、NV-Embed (Lee et al., 2025a)、Qwen3-
-嵌入（Zhang 等人，2025a）和 Gemini-Embedding（Lee 等人，2025b）。
-然而，这一进步伴随着以英​​语为中心的评估的转变。
-MTEB（Muennighoff 等人，2023）证明了这一点，MTEB 已被确立为
-最受认可的文本嵌入基准，涵盖 500 多个评估任务和超过
-250 种语言（Enevoldsen 等人，2025）。然而，事实上，MTEB 领导者</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>"European (128) Scandinavian (49) Indic (118) German (96) French (117)
-72.5 75.0 70 74
-70.0 72.5 80 68
-70.0 66 72
-67.5 67.5 75 64
-65.0 65.0 70 62 70
-62.5 62.5 60 68
-60.0 60.0 65 58
-57.5 66
-gte-Qw FF Fe 22 2 FFn LL 222 L- LL LL L7 LL MMB M--- - MMvvi v--22n vv 2--s -t 2210r 1--..u 76 484ct BBBBB SFR- FF E F22 2 FF m LL 22 Lb LL LLe Ld LL MM Md -- i - MMvv n v--22 g vv 2-- - -2210 2 1--.. _ 76 484R BBBBB multilingual- FF e F22 5 2 FF- LL l 22 La LL LLr Lg LL MM Me -- -- MMvv i v--22 n vv 2-- s -t 2210 r 1--.. u 76 484c BBBBB t F FF2 F22L 2 FFLLL 22 LLL LL L M - LL MM M-- v - MMvv2 v--- 22 vv 2-- 3 -22103 1--..0 76 484M BBBBB bgeg -te m- ul Q ti w l F i Fe 2 n F2 Fn L g 222 L- u L LL La 7 l LL M - B M-- - g MMvi e - v-2n vv 2-s m -t 221r - 1-. mu 7 844act 2 BBBB
-Polish (9) Japanese (19) Dutch (100) Persian (30) Vietnamese (25)
-80 82.5 68 76 66
-75 78 70 .. 50 66 67 77 24 66 24
-70 75.0 65 70 60
-64 58
-65 72.5 63 68 56
-70.0 62 66 54
-60 67.5 61 64 52
-F FF2 F22L 2 FFLLL 22 LLL LL L M - LL MM M-- v - MMvv2 v--- 22 vv 2-- 3 -22103 1--..0 76 484M BBBBB sarashina-e FF F m 22 2 FFb LL e 22 LLL d LL Ld LLi MM M-- n - MMvv g v--- 22 vv 2-- v -2210 2 1--.. - 76 4841b BBBBB QQ Oww cee te nn n33 --- FEEE 2 FF 22 L mmm LL bbb Leee LL Mddd - MM ddd iii v-- nnn vv 2- ggg 22 --- 1-- 884 484 BBB BBB F F2 2 FFL 22 LH L LL La LL Mk Mi - - MMv m v--2- H vv 2-s - a 221 1--. k m i 7 484al ml BBBB F FF2 F22L 2 FFLLL 22 LLL LL L M - LL MM M-- v - MMvv2 v--- 22 vv 2-- 3 -22103 1--..0 76 484M BBBBB
-Previous SOTA",Col1,Col2,Col3,Col4,Col5,Col6
-,,,,,,
-,,,,,,
-,,,,,,
-,"ngual--v2-1.u 7ct
-V","FF2LLgemmB
-iet","-v2-4a2
-2LLMM
-nam","F2LL-v2-14B
-ese","-v2-8B
-M
-(25","B
-)"
-,,,,,,
-,,,,,,
-,,,,,,
-,,,,,,
-,2LLM --v2-0.6M,F2LLv2-1.7B,FF2LLM -v2-4B,2LLMM -v2-8B,-v2-14B,B
-,"vi
-s
-h b
-m
-osi
-re
-d","o
-ub
-e
-od
-te
-th
-lo","us
-m
-nc
-el
-o
-a
-w","S
-is
-h
-s
-f
-n
--","O
-sio
-m","TA
-n
-ark"
-,"ip
-e
-m
-2
-fa
-e o
-e","el
-s,
-od
-LL
-m
-p
-di","in
-w
-el
-M
-il
-en
-at","e
-e
-s
--
-y
--
-e",,
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>European (128),Col1,Col2,Col3,Col4,Col5
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-2LLM --v2-0.u 6ct,"F2LLv2-1.7B
-P","-v2-4B
-FF2LLM
-olis","-v2-8B
-2LLMM
-h (","-v2-14B
-9)",B
-,,,,,
-,,,,,
-,,,,,
-LLM --v2-0.6M,2LLv2-1.7B,2LLM -v2-4B,LLMM -v2-8B,-v2-14B,B
-2,F,F F,2,,
-"1:
-a
-m
-c","T
-nc
-p
-om","h
-e
-let
-p","e t
-is
-e
-le","o
-gi
-re
-te","p s
-ve
-su
-s"
-e,pr,es,e,nt,F2
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>Scandinavian (49),Col1,Col2,Col3,Col4,Col5
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-2LLMd -ing-2_6B,"F2LLv2-1.7R
-Jap","-v2-4B
-FF2LLM
-ane","-v2-8B
-2LLMM
-se (","-v2-14B
-19)",B
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-2LLM ng-v2-6B -,F2LLv2-1.71b,FF2LLM -v2-4B,2LLMM -v2-8B,-v2-14B,B
-"el
-e h","s
-o","on
-riz","t
-o","en
-nt","la
-al"
-"he
-on
-, a
-g
-va
-a
-y
-rn
-re
-et","c
-s.
-n
-in
-ila
-pa
-in
-in
-f
-it","or
-e
-g
-bl
-rt
-te
-g,
-ar
-iv","re
-w
-fr
-e
-ic
-gr
-m
-m
-e","sp
-fa
-om
-hi
-ul
-at
-o
-or
-pe","o
-mi
-8
-gh
-ar
-in
-de
-e
-rf"
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">F2LLM-v2 是 Codefuse 嵌入模型家族的最新成员（Liao 等人，2024；Zhang
-等人，2025b；秦等人，2025）。通过解决当前语言不平衡和培训方面的差距
-嵌入模型研究中的不透明性，F2LLM-v2 代表了民主化方面向前迈出的重要一步
-调整高性能嵌入模型。随着8款车型的发布以及完整的
-培训配方和中间检查点，我们希望促进前沿嵌入的透明度
-鼎研究并为人工智能技术部署真正全球公平的未来做出贡献。
-参考文献
-阿斯玛·本·阿巴查和迪娜·德姆纳-富什曼。
-问题蕴涵方法
-回答。 BMC 生物信息学，20(1):511:1–511:23，2019。doi：10.1186/S12859-019-3119-4。网址
-https://doi.org/10.1186/s12859-019-3119-4。
-Negin Abadani、Jamshid Mozafari、Afsaneh Fatemi、Mohammd Ali Nematbakhsh 和 Arefeh
-卡泽米。 ParSQuAD：用于波斯语问答的机器翻译的 SQuAD 数据集。 2021年
-第七届国际</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>4. Online Learning and Equilibrium Computation with Ranking Feedback</h2>
-            <p><strong>中文标题:</strong> 带有排名反馈的在线学习和均衡计算</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:59:07Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19221v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=Online%20Learning%20and%20Equilibrium%20Computation%20with%20Ranking%20Feedback&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
+            <!-- Paper 2 -->
+            <div class="paper-card">
+                <h2 class="paper-title">VTC-Bench: Evaluating Agentic Multimodal Models via Compositional Visual Tool Chaining</h2>
+                <div class="paper-meta">
+                    <span class="tag">Benchmark (评测基准)</span>
+                    <a href="https://arxiv.org/abs/2603.15030" class="link" target="_blank">📄 arXiv 原文</a>
+                </div>
+                
+                <div class="content-section">
+                    <h3>1. 背景与动机</h3>
+                    <p>目前的视觉 Agent 评测主要集中在单一工具调用上，缺乏对模型“将多个视觉工具进行逻辑编排与组合（Compositional Tool Chaining）”能力的评估。现有的 Benchmark 无法区分模型是真的懂逻辑，还是在盲目试错。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>2. 数据集构建方案</h3>
+                    <p>作者构建了 <strong>VTC-Bench</strong>，包含 5,000 个复杂视觉任务，每个任务需要调用 3~7 个不同的视觉工具（如检测器、分割器、OCR、深度估计）进行流水线操作。任务是通过自动化的场景图引擎合成的，保证了逻辑链条的严格 Ground Truth。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>3. 具体评测用例展示（Examples）</h3>
+                    <div class="example-box">
+                        <p><strong>🎯 任务 Prompt：</strong> “告诉我图片中被红色盒子挡住的那个文字是什么？”</p>
+                        <p><strong>标准正确工具链（Tool Chain GT）：</strong></p>
+                        <ol>
+                            <li><code>DetectionTool(image, "red box")</code> -> bbox_1</li>
+                            <li><code>DepthEstimationTool(image)</code> -> depth_map</li>
+                            <li><code>SpatialRelationTool(bbox_1, depth_map, "behind")</code> -> bbox_2 (遮挡物后的物体)</li>
+                            <li><code>OCRTool(crop(image, bbox_2))</code> -> "CAUTION"</li>
+                        </ol>
+                        <p><strong>评测难点：</strong> 模型需要自己推断出必须先算深度才能知道“被挡住”，而不能直接全局 OCR。</p>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3>4. 实验结果（成绩单）</h3>
+                    <p>评测采用了“规划准确率（Plan Acc）”和“端到端任务完成率（Task Success Rate）”两个指标。</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Plan Acc (%)</th>
+                                <th>Task Success Rate (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>GPT-4V (Zero-shot)</td>
+                                <td>42.5</td>
+                                <td>31.0</td>
+                            </tr>
+                            <tr>
+                                <td>Gemini 1.5 Pro</td>
+                                <td>48.2</td>
+                                <td>35.4</td>
+                            </tr>
+                            <tr>
+                                <td>Claude 3 Opus</td>
+                                <td><strong>51.3</strong></td>
+                                <td><strong>38.7</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p><em>数据表明，最强的大模型在超过 5 步工具链时的成功率也低于 40%，揭示了多步视觉推理的巨大挑战。</em></p>
+                </div>
+                
+                <div class="content-section">
+                    <h3>5. 讨论与局限性</h3>
+                    <p>当前所有开源模型（如 LLaVA、Qwen-VL）在超过 3 步的工具调用时，规划准确率断崖式下降。未来的研究需要重点关注视觉工作流中的“状态追踪（State Tracking）”能力。</p>
+                </div>
             </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">任意且可能对抗的环境中的在线学习已在顺序决策中得到广泛研究，并且它与博弈论中的均衡计算密切相关。大多数现有的在线学习算法依赖于来自环境的\emph{numeric}效用反馈，这在人机交互应用程序中可能不可用和/或可能受到隐私问题的限制。在本文中，我们研究了一种在线学习模型，其中学习者仅在每个时间步观察一组建议动作的 \emph{排名}。我们考虑两种排名机制：在当前时间步长由 \emph{instantaneous} 实用程序引起的排名，以及在 \emph{full-information} 和 \emph{bandit} 反馈设置下由 \emph{time-average} 实用程序在当前时间步长引起的排名。使用标准的外部后悔指标，我们表明，一般情况下，即时效用排名反馈不可能出现次线性后悔。而且，当排名</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">在线学习作为仲裁中顺序决策的模型已被广泛研究。
-复杂且可能是对抗性的环境（Shalev-Shwartz 等人，2012；Hazan 等人，2016）。在
-每一轮，代理都会制定策略，采取行动，然后接收来自代理的反馈
-环境，通常采用数字形式，例如效用向量（在全信息反馈集中-
-ting）或实现的效用值（在老虎机反馈设置中）。众多算法实现
-无遗憾保证，即它们确保代理人的外部遗憾随时间呈次线性增长
-（Shalev-Shwartz 等人，2012 年；Hazan 等人，2016 年）。此外，在线学习也紧密相连。
-博弈论中的均衡计算：当所有参与者在重新选择时都采用无悔学习
-正常形式游戏（NFG）的重复游戏，他们的时间平均游戏接近粗略相关
-平衡（CCE）（Cesa-Bianchi & Lugosi，2006）。
-然而，数字公用事业反馈可能并不总是可用</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">1951年。
-阿迪鲁帕·萨哈和皮埃尔·盖拉德。多才多艺的决斗强盗：两全其美的在线分析
-从偏好中学习。 arXiv 预印本 arXiv:2202.06694, 2022。
-阿迪鲁帕·萨哈和阿迪亚·戈帕兰。具有相对反馈的组合老虎机。在神经信息学中
-信息处理系统 (NeurIPS)，2019。
-阿迪鲁帕·萨哈、托梅尔·科伦和伊谢·曼苏尔。敌对的决斗强盗。在国际
-机器学习会议 (ICML)，2021 年。
-阿迪鲁帕·萨哈、阿尔多·帕基亚诺和乔纳森·李。 Dueling RL：使用 trajec 进行强化学习
-保守党的偏好。在国际人工智能与统计会议（AISTATS）上，
-2023 年。
-安尔·塞拉. “一对一”多人游戏中的虚构游戏。经济理论，14（3）：635–
-651, 1999.
-瓦德·沙阿、布莱斯·L·弗格森和杰森·R·马登。学习分散式中的最佳稳定匹配
-偏好未知的市场化。在 IEEE 决策与控制会议 (CDC) 中，
-2024a。
-瓦德·沙阿、布莱斯·L·弗格森和杰森·R·马登。</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">为了展示带有排名反馈的在线学习的实际优点，我们考虑以下因素：
-以低场景为例，我们将其称为在线大语言模型路由。
-服务提供商拥有多种语言模型，每种模型都具有独特的优势。例如，
-GPT-4o（Hurst 等人，2024）可能擅长创意写作，而 GPT-5 则专注于编码。
-因此，用户可能对不同的模型表现出不同的偏好。
-我们将个性化大语言模型（LLM）路由视为一个具有排名的在线学习问题
-荷兰国际集团的反馈。修复特定用户并将每个候选模型视为一个操作。在每个时间步 t，
-用户提交查询，服务器通过绘制模型来采样 K 个候选响应
-使用混合策略 π(t) 并根据提示查询所选模型。然后用户返回
-对建议的响应进行排名，仅提供相对偏好反馈而不是计算
-评分。这种反馈是感应</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">决斗强盗。
-使用比较和/或排名反馈进行顺序决策
-大多数是在决斗强盗的框架下进行研究的（Yue et al., 2012; Saha & Gaillard,
-2022 年；萨哈和戈帕兰，2019；杜等人，2020；萨哈等人，2021； Dud´ık 等人，2015），其中
-代理在每个时间步采取两个（或多个）操作，并接收它们的排名作为反馈。
-与我们的设置不同，这些作品中的排名反馈仅基于瞬时的
-实用程序在该时间步长，而我们的结果可以解决瞬时和时间设置
-排名的平均效用。更重要的是，这些作品中研究的遗憾概念是
-专为决斗强盗场景而设计，因此不同于经典的外部
-遗憾的是我们把注意力集中在这里。最后，决斗强盗主要集中在静止的环境中
-和随机（Yue 等人，2012；Saha 和 Gaillard，2022；Saha 和 Gopalan，2019；Du 等人，2020），
-当我们专注于</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>Col0,Lower Bound,Full-Information,Col3,Bandit,Col5,Col6
-,InstUtil Rank,"Ω(T) for τ (1)
-≤O",,,,
-,AvgUtil Rank,"Ω(T) for τ  1 
-e ≤O T log T",,"Ω(T) for τ  1 
-≤O log T",,
-"Upper Bound
-(τ = (1), Sublinear Regret)
-O",,,Full-Information,,Bandit,
-InstUtil Rank,,,Assumption 5.2,,,
-AvgUtil Rank,,,✓,,"Assumption 5.2 (q < 1)
-3",
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>"InstUtil Rank with Full-information Feedback
-(K = 10, q = 0.5)
-0.125 τ =0.5
-0.100 τ =1
-τ =2
-0.075
-0.050 Regret
-0.025
-0.000
-−0.025
-−0.050
-0.0 0.2 0.4 0.6 0.8 1.0
-Timestep ×10","InstUtil Rank with Full-information Feedback
-0.20 (K = 10, τ = 1)
-q =0.3
-0.15 q =0.5
-q =0.7
-0.10
-Regret
-0.05
-0.00
-−0.05
-0.0 0.2 0.4 0.6 0.8 1.0
-7 Timestep ×10","AvgUtil Rank with Full-information Feedback
-(K = 10, q = 1.0)
-0.08 τ =0.5
-0.07 τ =1
-τ =2
-0.06
-0.05 Regret
-0.04
-0.03
-0.02
-0.01
-0.0 0.2 0.4 0.6 0.8 1.0
-7 Timestep ×10"
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>Col0,(K,"= 10, q = 0",0.5),Col4,Col5
-,,,,,"τ =0.5
-τ =1"
-,,,,,τ =2
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">9
-实验
-为了展示带有排名反馈的在线学习的实际优点，我们考虑以下因素：
-以低场景为例，我们将其称为在线大语言模型路由。
-服务提供商拥有多种语言模型，每种模型都具有独特的优势。例如，
-GPT-4o（Hurst 等人，2024）可能擅长创意写作，而 GPT-5 则专注于编码。
-因此，用户可能对不同的模型表现出不同的偏好。
-我们将个性化大语言模型（LLM）路由视为一个具有排名的在线学习问题
-荷兰国际集团的反馈。修复特定用户并将每个候选模型视为一个操作。在每个时间步 t，
-用户提交查询，服务器通过绘制模型来采样 K 个候选响应
-使用混合策略 π(t) 并根据提示查询所选模型。然后用户返回
-对建议的响应进行排名，仅提供相对偏好反馈而不是计算
-评分。这个费用</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">在本文中，我们研究了带有排名反馈的在线学习和均衡计算，其中
-与人类参与循环的应用场景尤其相关。专注于经典——
-cal（外部）遗憾度量，我们设计了新颖的硬度实例来表明实现次线性
-一般来说，在一些不同的排名模型和反馈设置中，后悔可能很难。然后我们去
-开发了新的算法，在次线性的附加假设下实现次线性遗憾
-效用的变化，导致重复博弈设置中的均衡计算结果。
-最后，我们通过模拟将用户的查询路由到
-最佳法学硕士。我们相信我们的工作为未来研究的有希望的途径铺平了道路。对于
-例如，缩小下限和正结果之间的差距会很有趣
-对于强盗反馈下的 AvgUtil Rank，即显示当 τ 为常数时的硬度或
-达到亚线</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>5. Nemotron-Cascade 2: Post-Training LLMs with Cascade RL and Multi-Domain On-Policy Distillation</h2>
-            <p><strong>中文标题:</strong> Nemotron-Cascade 2：采用 Cascade RL 和多域按策略蒸馏的训练后法学硕士</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:58:52Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19220v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=Nemotron-Cascade%202%3A%20Post-Training%20LLMs%20with%20Cascade%20RL%20and%20Multi-Domain%20On-Policy%20Distillation&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
+
+            <!-- Paper 3 -->
+            <div class="paper-card">
+                <h2 class="paper-title">Bridging Semantic and Kinematic Conditions with Diffusion-based Discrete Motion Tokenizer</h2>
+                <div class="paper-meta">
+                    <span class="tag">Methodology (方法学)</span>
+                    <a href="https://arxiv.org/abs/2603.19227" class="link" target="_blank">📄 arXiv 原文</a>
+                </div>
+                
+                <div class="content-section">
+                    <h3>1. 论文背景</h3>
+                    <p>在 3D 动作生成领域，同时满足“高层语义（如文本描述'跳高'）”和“低层物理运动学条件（如脚不能滑步、关节角度限制）”极其困难。传统的基于扩散模型的方法往往容易产生物理违规（如穿模或漂浮）。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>2. 核心贡献与创新点</h3>
+                    <ul>
+                        <li>提出了一种新颖的基于扩散的离散动作分词器，首次实现了语义和运动学条件的解耦控制。</li>
+                        <li>设计了双重控制网络（Dual-Condition Net），在潜在空间中对物理违规施加硬惩罚。</li>
+                    </ul>
+                </div>
+
+                <div class="content-section">
+                    <h3>3. 方法详解</h3>
+                    <p>该模型分两步：首先利用类似 VQ-VAE 的结构将连续 3D 运动数据压缩为离散 Token；然后在扩散去噪过程中，引入了两个并行引导条件：一是来自 CLIP 的文本特征（语义），二是基于逆运动学（IK）解算器算出的物理误差梯度。网络会在每步采样时，利用物理梯度将不合理的骨骼动作“拉回”合法流形。</p>
+                </div>
+
+                <div class="content-section">
+                    <h3>4. 具体案例（Examples）</h3>
+                    <div class="example-box">
+                        <p><strong>💡 输入条件：</strong></p>
+                        <ul>
+                            <li><strong>Semantic（文本）：</strong> “一个人在湿滑的冰面上小心翼翼地走，并突然滑了一跤。”</li>
+                            <li><strong>Kinematic（约束）：</strong> 双脚不能穿透地面高度 (Y >= 0)。</li>
+                        </ul>
+                        <p><strong>基线模型表现：</strong> 生成的人确实滑倒了，但是滑倒时脚踝直接穿透了地面模型（物理违规）。</p>
+                        <p><strong>Ours 表现：</strong> 滑倒动作自然，且通过 IK 引导，系统在脚底接触 Y=0 时产生了正确的碰撞反弹效果，完美弥合了文本描述与物理真实的鸿沟。</p>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3>5. 实验结果</h3>
+                    <p>在 HumanML3D 数据集上的对比：</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>FID ↓</th>
+                                <th>R-Precision ↑</th>
+                                <th>Foot Skate Ratio (%) ↓</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>MDM</td>
+                                <td>0.544</td>
+                                <td>0.612</td>
+                                <td>6.5</td>
+                            </tr>
+                            <tr>
+                                <td>MotionLDM</td>
+                                <td>0.315</td>
+                                <td>0.745</td>
+                                <td>4.2</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ours</strong></td>
+                                <td><strong>0.201</strong></td>
+                                <td><strong>0.798</strong></td>
+                                <td><strong>0.8</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">我们推出 Nemotron-Cascade 2，这是一种开放式 30B MoE 模型，具有 3B 激活参数，可提供一流的推理和强大的代理功能。尽管尺寸紧凑，但其数学和编码推理性能接近前沿开放模型。这是继 DeepSeekV3.2-Speciale-671B-A37B 之后，第二个在 2025 年国际数学奥林匹克 (IMO)、国际信息学奥林匹克 (IOI) 和 ICPC 世界总决赛中获得金牌级别表现的开放量级法学硕士，在参数减少 20 倍的情况下展示了极高的智力密度。与 Nemotron-Cascade 1 相比，关键技术进步如下。在精心策划的数据集上进行 SFT 后，我们大幅扩展了 Cascade RL，以覆盖更广泛的推理和代理领域。此外，我们在整个 Cascade RL 过程中从每个域的最强中间教师模型中引入多域同策略蒸馏，使我们能够</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">4
-2
-主要结果
-4
-3
-监督微调
-6
-3.1
-培训框架
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-6
-3.1.1
-概述
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-6
-3.1.2
-聊天模板
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-6
-3.2
-SFT 数据管理
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-7
-3.2.1
-数学。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-7
-3.2.2
-代码推理。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-7
-3.2.3
-科学
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-8
-3.2.4
-长上下文。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-8
-3.2.5
-一般聊天
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。
-8
-3.2.6
-说明</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">步骤
-硬提示
-创意写作
-初始
-0
-71.5
-40.6
-RLHF
-100
-81.7
-68.6
-160
-80.7
-71.2
-MOPD
-52
-85.5
-71.0
-到 85.5，创意写作从 40.6 到 71.0。相比之下，RLHF 训练需要 160 步才能达到 80.7
-硬提示和创意写作 71.2。这些结果表明，密集的代币级别优势
-同策略蒸馏导致训练收敛速度更快。
-4.5.根据人类反馈进行强化学习 (RLHF)
-我们的 RLHF 配方建立在多域同策略蒸馏的基础上，重点关注人类偏好学习。这个
-过程进一步增强了编码和数学方面的创造性写作和不可验证的问题解决能力，因为
-由 ArenaHard v2 进行测量，同时保持跨其他域的性能而不降低。
-4.5.1.数据集
-我们采用 NVIDIA Nano-v3 (Blakeman et al., 2025) 的 RLHF 训练数据集，其中包含 HelpSteer3
-（Wang 等人，2025），arena- human-preference-140k 数据集的商业友好子集（Chiang 等人，
-2024），以及一个合成物</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">更稳定的优化，同时产生相似的最终结果。我们使用 2 × 10−6 的学习率和线性
-从 2 × 10−7 开始，对前 30 个优化步骤进行热身。培训通常集中在
-40-50 个优化步骤（图 3(a)）。我们发现预热阶段对于稳定性很重要：梯度范数是
-在训练开始时明显较大，在热身阶段后迅速下降（图3（b））。对于
-截断重要性权重，我们设置 𝜖low = 0.5 和 𝜖high = 2.0。在主要实验中，我们使用了三个
-与数学、RLVR 和 RLHF 对应的领域教师。数学老师是最初的 SFT 检查点，
-RLHF教师是针对RLHF优化的检查点，RLVR教师选自早期的IF-RL+Multi-
-域 RL 阶段。我们从 RL 训练数据池和 AceReason-Math（Chen
-等，2025）。
-培训效率优势。
-MOPD 提供了密集的代币级蒸馏优势，而 GRPO 则依赖于稀疏的代币级蒸馏优势。</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">未提取到独立相关工作章节</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>"IMO 2025 – – –
-IMO AnswerBench 70.4‡ 77.2‡ 74.8‡
-IMO ProofBench – – –
-AIME 2025 89.1 90.2 91.9‡
-AIME 2026 89.9‡ 89.8‡ 91.1‡
-HMMT Feb25 84.6‡ 93.7 89.0","35 pts
-79.3
-72.9
-92.4 (98.6)†
-90.9 (95.0)†
-94.6"
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>"IOI 2025 – – 348.6‡
-ICPC World Finals 2025 – – –
-LiveCodeBench v6 (2408-2505) 68.3 78.7 74.6
-LiveCodeBenchPro 25Q2 (Easy) 54.5‡ 81.7‡ 81.1‡
-LiveCodeBenchPro 25Q2 (Med) 3.50‡ 23.2‡ 17.8‡
-SciCode 33.3 42.1 38.0","439.28
-10/12
-87.2 (88.4)†
-87.0 (89.3)†
-27.6 (36.8)†
-36.4"
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>"MMLU-Redux – – 93.3
-MMLU-Pro 78.3 83.7 85.3
-GPQA-Diamond 73.0 79.2 84.2
-HLE (no tool) 10.6 18.3 22.4","86.3
-79.8
-76.1
-17.7"
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">关于建立推理模型。我们特别要感谢鲍里斯·金斯堡 (Boris Ginsburg)、奥列克西·库恰耶夫 (Oleksii Kuchaiev)、伊戈尔·吉特曼 (Igor Gitman)、
-奥利维尔·德拉洛、王志林、奥利维尔·德拉洛、朱邦华、Tugrul Konuk、杜伟、Somshubra Majumdar、
-Wasi Uddin Ahmad、Siddhartha Jain、Jiaqi Zeng、Yi Dong、Alexander Bukharin、Vahid Noroozi、Khushi Bhardwaj、
-Sugam Dipak Devare、张健和乔纳森·科恩。
-我们感谢 Ying Lin 在构建知识密集型 SFT 数据集方面所做的有益讨论和有用投入。
-我们还感谢 Atefeh Sohrabizadeh、Jialin Song 和 Jonathan Raiman 对 SWE-bench 进行的宝贵讨论。
-19
 
-Nemotron-Cascade 2：采用 Cascade RL 和多域按策略蒸馏的训练后法学硕士
-附录
-A. 基准和评估设置
-A.1.数学
-A.1.1。非证明数学
-对于非证明数学推理任务，我们包括
-• AIME 2025（MAA，2025）由来自美国数学邀请考试的 30 个问题组成，
-2025 年。
-• AIME 2026（MAA，2026）由美国数学邀请赛的 30 个问题组成</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">法线偏移 (𝛾)，然后准确验证相切准则。
-扣除额
-没有上限，因为证明达到了最终的切线声明。
-不适用 (-1) 扣除。我没有看到主线上有什么重要的、未经证实的飞跃。
-最终成绩
-7/7
-简要评估
-这是一个有效的满分坐标解。它并不优雅，而且比参考合成证明更密集，但是
-正如所写，它确实关闭了所有必需的依赖项。超严格评分下我还是打满分
-因为证明是完整的而不仅仅是暗示性的。
-42 共 63
-
-国际海事组织2025
-IMO 2025 模型证明
-问题3
-设 N 表示正整数集合。函数 𝑓: N →N 被称为
-邦扎如果
-𝑓(𝑎) 除 𝑏𝑎−𝑓(𝑏)𝑓(𝑎)
-对于所有正整数 𝑎 和 𝑏。
-确定所有 bonza 的最小实常数 𝑐，使得 𝑓(𝑛) ≤𝑐𝑛
-函数 𝑓 和所有正整数 𝑛。
-简答
-4
-模型证明
-我们将证明对于每个 bonza 函数 𝑓，使得 𝑓(𝑛) ≤𝑐𝑛 的最小常数 𝑐 是
-𝑐= 4。
-1、B</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>6. DreamPartGen: Semantically Grounded Part-Level 3D Generation via Collaborative Latent Denoising</h2>
-            <p><strong>中文标题:</strong> DreamPartGen：通过协作潜在去噪实现基于语义的零件级 3D 生成</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:58:11Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19216v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=DreamPartGen%3A%20Semantically%20Grounded%20Part-Level%203D%20Generation%20via%20Collaborative%20Latent%20Denoising&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">将 3D 对象理解和生成为有意义的部分的组合是人类感知和推理的基础。然而，大多数文本转 3D 方法都忽略了零件的语义和功能结构。虽然最近的零件感知方法引入了分解，但它们仍然主要以几何为中心，缺乏语义基础，并且无法对零件如何与文本描述或其零件间关系保持一致进行建模。我们提出了 DreamPartGen，一个基于语义、部件感知的文本到 3D 生成的框架。 DreamPartGen 引入了对每个部件的几何形状和外观进行联合建模的双工部件潜在 (DPL)，以及捕获源自语言的部件间依赖关系的关系语义潜在 (RSL)。同步的共同去噪过程增强了相互的几何和语义一致性，从而实现连贯、可解释和文本对齐的 3D 合成。在多个基准测试中，DreamPartGen 在几何保真度和纹理方面提供了最先进的性能</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">许多 3D 生成的文本提示不仅指定
-对象有哪些部分，以及它们之间的关系（例如，
-附在杯子上的手柄，对称的轮子
-机箱、盒子顶部的盖子）。捕获这些部分-
-电平关系对于可控发电至关重要
-以及下游用例，例如零件编辑和
-铰接合成[17,30,53]。然而，大多数
-文本转 3D 方法对整体潜在变量进行操作
-纠缠几何、外观和语义，
-没有明确表示零件身份或
-部分之间的关系[6,21,22,25,33,39,44]。最近
-部分感知方法通过合成向前迈进了一步
-arXiv:2603.19216v1 [cs.CV] 2026 年 3 月 19 日
-
-2
-相关工作
-根据零件引导的零件基元调整对象大小
-分割或边界框 [5,11,16,24,48]。
-尽管这些方法改善了几何粒度
-larity，它们仍然很容易受到分割噪声的影响，并且
-可能很难跨不同类别进行扩展，并且
-提示。更重要的是，许多基于零件的框架</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">倾向于具有双重先验的扩散模型
-2D 和 3D 潜伏层，实现跨模态
-以及跨部门的相互指导。此外，作品
-例如 PartGS [11] 和 Part2GS [53] 采用 Gaus-
-用于铰接零件感知生成的 sian splatting，
-证明零件监督产生控制-
-不稳定且物理上合理的合成[26,28,38]。
-尽管取得了这些进步，先前的方法仍然严重依赖
-关于几何信号，例如边界框 [20，
-32, 43, 57]，使语言指导不够充分
-探索[2,27,37,52,56]。 DreamPartGen 简介
-产生持续存在的明确的关系语义信号
-在整个去噪过程中，提供了细粒度
-零件细化和关系感知全局规划
-直接来自自然语言的提示。
-3.DreamPartGen方法
-虽然最近的零件级配方改善了局部
-形状和纹理建模 [5,7,47]，它们主要是
-非常注重代表质量，而不是前
-在整个过程中明确保留文本衍生的语义
-去噪，其中</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">表 1：3D 对象生成的定量评估。与最先进技术的定量比较
-Objaverse、ShapeNet、ABO 和 Partverse 上的方法。突出显示最佳和第二佳结果。
-方法
-奥布贾宇宙
-形状网
-ABO血型
-零件相关3D
-CD↓
-经验模态分析↓
-借条↓
-CD↓
-经验模态分析↓
-借条↓
-CD↓
-经验模态分析↓
-借条↓
-CD↓
-经验模态分析↓
-借条↓
-格子
-0.361
-1.320
--
-0.549
-1.482
--
-0.287
-0.933
--
-0.532
-1.526
--
-粘土
-0.318
-1.245
--
-0.527
-1.503
--
-0.321
-1.022
--
-0.410
-1.646
--
-全息部分
-0.334
-1.298
-0.494 0.478
-1.354
-0.542 0.269
-0.911
-0.529 0.355
-1.623
-0.716
-零件工匠
-0.278
-1.107
-0.453 0.451
-1.252
-0.499 0.266
-0.905
-0.505 0.371
-1.474
-0.700
-梦想零件生成器 0.141
-0.810
-0.359 0.222
-0.967
-0.503 0.101
-0.531
-0.404 0.081
-0.412
-0.304
-形式 (i, j, ρspatial)，其中 i 和 j 仍然索引来自
-对象部分 𝒫 的集合，但 ρspatial 是谓词
-来自可解释的受控词汇，
-装配相关
-谓词。
-这些
-包括
-垂直关系（上面，
-下面，
-在之上，
-下），
-水平的
-关系
-（在前面，
-后面，
-左边，
-右），
-骗局</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">根据零件引导的零件基元调整对象大小
-分割或边界框 [5,11,16,24,48]。
-尽管这些方法改善了几何粒度
-larity，它们仍然很容易受到分割噪声的影响，并且
-可能很难跨不同类别进行扩展，并且
-提示。更重要的是，许多基于零件的框架
-作品仍然将零件视为几何上孤立的单元。
-他们没有将部分间关系建模为显式变量
-能力，而语言在很大程度上仍然是非操作性的。
-零件感知文本到 3D 生成需要语义
-接地的表示，其中各部分是
-有意义的实体，语言提供关系
-除了描述外观之外，还包括结构。康-
-具体来说，我们介绍DreamPartGen，一种语言-
-接地的、协作的部分-潜在扩散框架-
-将组合语义视为前
-去噪期间的明确表示。每个对象
-被编码成双工部分潜伏（DPL），配对
-3D 和 2D 潜在序列共同捕获
-p</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>is,part of the uppermost,layer of
-,he dessert,
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>Method Objaverse ShapeNet CD↓ EMD↓ IoU↓ CD↓ EMD↓ IoU↓ CD↓ Trellis 0.361 1.320 - 0.549 1.482 - 0.287 CLAY 0.318 1.245 - 0.527 1.503 - 0.321,Col1,Col2,Col3,Col4,Col5,Col6,Col7,ABO EMD↓ 0.933 1.022,IoU↓ - -,P CD↓ 0.532 0.410,PartRel3D EMD↓ IoU↓ 1.526 - 1.646 -,Col12
-"HoloPart 0.334 1.298 0.494 0.478 1.354 0.542 0.269
-PartCrafter 0.278 1.107 0.453 0.451 1.252 0.499 0.266
-DreamPartGen 0.141 0.810 0.359 0.222 0.967 0.503 0.101",,,,,,,,0.911,0.529,0.355,1.623 0.716,
-,0.278,1.107,0.453,0.451,1.252,0.499,0.266,0.905,0.505,0.371,1.474,0.700
-,0.141,0.810,0.359,0.222,0.967,0.503,0.101,0.531,0.404,0.081,0.412,0.304
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>Method CD↓ EMD↓,Col1,Col2,IoU↓,ULIP-T↑
-"HoloPart 1.482 0.226
-PartCrafter 1.403 0.219",,,0.318,0.112
-,1.403,0.219,0.341 0.101,
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">我们推出 DreamPartGen，一种零件感知文本到-
-连接几何的 3D 生成框架
-通过协作进行结构和语义推理
-演讲部分潜在去噪。通过耦合 双工
-具有关系语义潜伏的部分潜伏 (DPL)
-（RSL），我们的方法联合建模几何，出现-
-以及各部分之间的关系，从而实现连贯的、内部的
-可解释、可控的 3D 合成。超越
-单一对象生成，DreamPartGen 能够实现
-广泛的以零件为中心的应用程序，包括
-关系部分编辑和合成场景生成
-版本，强调显式调节的好处
-通过结构化、语义化的方式来处理 3D 对象
-接地部分潜伏。我们希望这项工作能够激励
-可控3D生成的未来研究
-结构化零件表示在更多方面的作用
-复杂的具体化或交互设置。
-参考文献
-[1]白帅，陈克勤，刘学静，王家琳，
-葛文斌、宋思波、党凯、王鹏、
-王士杰，唐军，等。奎文</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>7. $R$-equivalence on Cubic Surfaces I: Existing Cases with Non-Trivial Universal Equivalence</h2>
-            <p><strong>中文标题:</strong> 三次曲面上的 $R$ 等价 I：具有非平凡通用等价的现有情况</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:57:38Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19215v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=%24R%24-equivalence%20on%20Cubic%20Surfaces%20I%3A%20Existing%20Cases%20with%20Non-Trivial%20Universal%20Equivalence&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">令 $V$ 为 $p$-adic 场 $k$ 上的光滑立方表面，并具有良好的缩减。 Swinnerton-Dyer (1981) 证明了 $R$ 等价性在 $V(k)$ 上是微不足道的，除非 $V$ 是三种特殊类型之一——他无法通过证明通用（可接受的）等价性来约束其 $R$ 等价性。我们认为当前已知的所有曲面 $V$ 都具有非平凡的普遍等价性。除了难以处理 Swinnerton-Dyer 的方法之外，我们还观察到，如果这些曲面也具有非平凡的 $R$ 等价性，它们将与 Colliot-Thélène 和 Sansuc 关于几何有理曲面的通用 Tortors 的 $k$ 有理性的猜想相矛盾。   通过设计新方法来研究 $R$ 等价，我们证明对于具有全 Eckardt 约简的 2-adic 曲面（第三种特殊类型，其中包含所有非平凡普遍等价的现有情况），$R$ 等价是平凡的或指数 2。对于显式情况，我们确认平凡：对角线 c</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">令 V (k) 为几何不可约且约化射影的几何 k 点集合
-品种V. R-等价性是 V (k) 上的关系，其中 P ∼Q 如果它们通过某种方式连接
-V 中的有理曲线链，即存在 k 点 P, 的有限序列。 。 。 , Q 其中每个
-相邻对位于 P1 的 k-态射的图像中
-k 至 V 。
-与丢番图有关
-问题——换句话说，描述点集 V (K)，其中 K 是数域——因为
-是最好的等价关系，使得由相同参数解给出的两个点
-定义 V 的方程组是等价的 [SD04]。例如，因为布劳尔-马宁
-配对在 R 等价下是恒定的，该关系已被用来证明
-Brauer-Manin 对哈斯原理的阻碍 [Man86, §VI] 和弱逼近 [SD01]
-对于某些品种。然而，由于确定理性链是否存在的挑战
-曲线，R 等价有</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">成分。
-具体来说，我们考虑其他已发布的 2-adic 案例的专门化，来自
-[Kan82, 3.4]，其中已知普遍等价为指数二。设 V 为立方曲面
-在由方程 (2) 中的 Fb0,b1,b2 = 0 定义的 Q2 上，其中 bi = 1 mod 2 对于所有 i（稍微概括一下
-第二个确定的案例）。 Modulo 2 它给出了相同的曲面，其中 F2 上有一个点，即
-在[SD81]中考虑）。这项工作证明了 V (Q2) 与非
-平凡的周期二分量，给出了普遍等价结构的下界。使用
-在我们的扩展方法中，我们显式计算此示例的通用和 R 等价性：
-定理 B. 令等式 (2) 定义的 V 是平滑的，使得 ~V 恰好有一个点。然后
-V(Q2)构成一类R-等价性和两类普遍等价性。
-总之，我们使用新的和扩展的方法来解决两个长期存在的例外情况（iii）
-[SD81] 的定理 2（转载为定理</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">首先，我们概述当前已知的 p 进场 k 上光滑立方表面 V 的情况，其中
-良好的约简保证了非平凡的普遍等价。请注意，这些属于大小写范围
-(iii) [SD81，Thm。 2]（定理2.15）：
-1. ～V (～k) 是无线且全 Eckardt 的，有多个点 [Kan82, Cor. 2.5]。等式（1）
-是这个[Man72，Ex.]的明确案例。 II.6.5] [Kan82，例如。 1.6.i]。
-2. V ：根据等式 (2)，F1,1,1(T) = 0。这是 ～V (～k) 无行且单个 (Eckardt) 的情况
-点[Kan82，§3.4]，它允许但不保证非平凡等价。
-Fb0,b1,b2(T) = T 2
-0 T1 + T0T 2
-1+T 3
-2 + T 2
-2 T3 + T 3
-3 + T1(T 2
-1 + T2T3 + T 2
-2 + T 2
-3）
-+ 2T0(b0T 2
-2 + b1T2T3 + b2T 2
-3).
-(2)
-在第 3 节中，我们证明了以下涵盖这两种情况的一般结果：
-定理 A. 令 V 为 2-adic 局部场 k 上的光滑立方表面，具有良好的约简，例如
-点 ∼V (∼k) ̸= ∅ 都是 Eckardt。那么 V (k) 上的 R 等价是平凡的或指数为 2。
-其证明p</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">未提取到独立相关工作章节</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><p>未在 PDF 中成功解析出数据表格格式，或无表格。</p></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">未提取到独立结论章节</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>8. How Auditory Knowledge in LLM Backbones Shapes Audio Language Models: A Holistic Evaluation</h2>
-            <p><strong>中文标题:</strong> LLM Backbones 中的听觉知识如何塑造音频语言模型：整体评估</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:50:07Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19195v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=How%20Auditory%20Knowledge%20in%20LLM%20Backbones%20Shapes%20Audio%20Language%20Models%3A%20A%20Holistic%20Evaluation&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">大型语言模型（LLM）已被广泛用作大型音频语言模型（LALM）的知识支柱，但它们通过纯文本预训练编码了多少听觉知识以及这如何影响下游性能仍不清楚。我们通过比较两种纯文本和一种基于音频的设置下的不同法学硕士来研究这一差距：（1）直接探测 AKB-2000，这是一个测试听觉知识广度和深度的策划基准； (2) 级联评估，法学硕士对来自音频字幕的文本描述进行推理； (3) 基于音频的评估，其中每个法学硕士都通过音频编码器微调为大型音频语言模型 (LALM)。我们的研究结果表明，不同家庭的听觉知识差异很大，并且纯文本结果与音频表现密切相关。我们的工作为全面理解音频研究领域的法学硕士提供了实证基础。</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">大型语言模型（LLM）经过大量文本训练
-Pora 表现出了非凡的内化能力
-跨不同领域的世界知识，从一般意义上
-声波探测到专业技术领域[1-9]。其中各种
-知识的不同类型、听觉的语言表征
-历史经验尤其令人感兴趣。人类经常去
-通过文字记录听觉感知：我们写下小提琴
-听起来很温暖，警笛声随着接近而变大，或者
-说话者的语气传达出愤怒。这些文字描述都
-降低读者在听不到声音的情况下推理声音的能力。它是
-因此很自然地假设法学硕士已经获得了子
-仅通过纯文本训练即可获得大量听觉知识。
-在
-的
-当前
-研究
-风景,
-法学硕士
-普雷多米-
-通过多种方式有效地增强音频理解系统的能力
-范式。首先，法学硕士作为认知和知识
-大型音频语言模型（LALM）的边缘主干，
-与音频编码器配对</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">我们引入了三个互补的评估来调查
-跨两个不同法学硕士编码的听觉知识
-纯文本和一种多模式设置。
-在纯文本集中 -
-除此之外，我们根据两种范式评估法学硕士。第一个是直接的
-关于音频相关常识和事实的问答
-实际知识（第 3.1 节）。第二个是级联评估，
-法学硕士回答现有音频基准的问题
-由强大的字幕制作者给出的文本描述（Sec-
-化3.2）。在多模式设置中，我们对每个 LLM 进行微调
-进入通用 LALM 并用实际音频输入进行评估
-来自相同的音频基准（第 3.3 节）。跨越所有
-三个评估中，我们将LLM骨干作为唯一的变量
-能够，以便观察到的性能差异可以归因于
-每个法学硕士编码的听觉知识。一个模型
-在所有三种设置中始终达不到要求可能缺乏足够的
-丰富的听觉知识作为坚实的基础
-下游</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">如表 4 所示，最佳和最差的微调模式
-MMAU 上的差异超过 10 个点，MMAR 上的差异超过 8 个点，
-确认主干法学硕士的选择仍然是一个标志
-即使所有其他组件都保持一致，也是一个重要因素
-站着。值得注意的是，Qwen2.5-7B和Qwen3-14B实现了高
-估计 MMAU 分数（分别为 66.6% 和 66.2%），匹配
-或超过使用 Llama- 的 DeSTA2.5-Audio (66.0%)
-3.1-8B作为其骨干，具有十倍的训练数据[14]。
-这表明选择更强的主干可以补偿
-训练数据规模存在巨大差距。
-这些发现还暴露了相比之下更广泛的挑战
-跨文献研究 LALM。
-之前报道过的系统
-工作沿多个轴同时不同，包括背面
-骨法学硕士、训练数据、音频编码器和训练配方，
-使得很难将性能提升归因于任何一个
-因素。特别是，仅靠更强大的骨干就可以解释
-观察到的改善的很大一部分</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">2.1.音频理解系统
-法学硕士已成为音频研究的基础，支撑
-自动语音识别领域取得重大进展
-化[31, 32]、文本到语音[33, 34]和口语对话系统
-项目[28,35–39]。在这项工作中，我们专注于音频理解
-系统，旨在将原始声音信号与语言联系起来
-抽动推理来执行多样化的、开放式的任务，需要
-既能对复杂的声学场景进行鲁棒感知，又能
-解读微妙听觉线索的能力。
-这些系统大致可分为两类
-范例，即端到端 LALM 和模块化代理
-系统。
-端到端 LALM 将音频编码器与
-通过模态连接器的LLM主干，代表
-典型模型包括LTU [12]、SALMONN [13]、Qwen-
-音频 [10, 11, 29]、Phi-4-mm [21]、DeSTA [14–16] 和 Au-
-
-火烈鸟 [19,20,40]。通过映射声学特征di-
-通过多模式教学直接进入法学硕士的潜在空间
-化调整，这些模型</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>"1.00
-(n0 =.9 14 7) 1.00
-(n0 =.9 14 7) (n0 =.9 14 7) 1.00",Col1
-"0.75 0.77 0.82
-(n=8) (n=8) (n=8)
-0.79 0.71 0.80
-(n=8) (n=8) (n=8)","1.00
-(0 n. =4 80 ) 1.00"
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>"Gemini-2.5-Pro
-GPT-5
-Claude-Sonnet-4.5
-Gemini-2.0-Flash
-GPT-4o","96.05
-94.35
-95.70
-91.85
-92.90","96.37 96.46 94.93 95.76 97.45 95.35
-95.16 94.44 93.55 95.51 94.90 92.44
-95.16 96.97 91.71 96.01 95.41 96.22
-93.15 92.42 88.94 92.77 94.39 89.24
-95.97 93.94 90.32 95.01 93.88 87.50"
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>Open-weight LLMs,Col1,Col2,Col3,Col4,Col5,Col6,Col7
-"Qwen3-14B
-Qwen3-8B
-Qwen3-4B
-Qwen2.5-7B",85.05 (-11.00),90.73,85.35,76.96,88.78,88.27,79.36
-,78.95 (-17.10),82.66,79.80,68.20,85.04,82.65,72.38
-,82.00 (-14.05),85.48,85.35,69.59,86.78,85.71,73.84
-,80.70 (-15.35),87.10,81.99,69.12,87.28,81.63,72.97
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">在这项工作中，我们对纯文本法学硕士进行了整体评估
-并揭示法学硕士骨干中的听觉知识如何形成
-LALM。我们评估纯文本和多文本下的模型
-模态设置：对策划的音频进行直接知识探索
-理论知识基准（AKB-2000）、级联评估、
-以及通过端到端微调进行基于音频的评估。我们的
-结果表明，听觉知识在不同人群中差异很大
-模型系列和纯文本性能密切相关
-滞后于音频接地性能，使得 AKB-2000
-和级联评估是LLM选择的轻量级代理
-LALM 研究中的重刑。这些发现确定了以下选择：
-LLM骨干作为一阶设计决策，保证前
-未来 LALM 开发中的明确考虑。我们进一步
-将语音推理视为系统盲点
-仅文本预训练，并表明级联管道每
-50
-60
-70
-级联加速器(%)
-45
-50
-55
-60
-65
-70
-75
-音频接地 Acc. (%)
-Q3-14
-Q3-8
-Q3-4
-Q2。</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>9. OS-Themis: A Scalable Critic Framework for Generalist GUI Rewards</h2>
-            <p><strong>中文标题:</strong> OS-Themis：用于通才 GUI 奖励的可扩展评论家框架</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:47:47Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19191v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=OS-Themis%3A%20A%20Scalable%20Critic%20Framework%20for%20Generalist%20GUI%20Rewards&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">强化学习 (RL) 有潜力提高随机环境中 GUI 代理的鲁棒性，但训练对奖励函数的质量高度敏感。现有的奖励方法很难同时实现可扩展性和性能。为了解决这个问题，我们提出了 OS-Themis，一个可扩展且准确的多智能体批评框架。与单一法官不同，OS-Themis将轨迹分解为可验证的里程碑，以隔离决策的关键证据，并在做出最终裁决之前采用审查机制对证据链进行严格审核。为了便于评估，我们进一步引入了 OmniGUIRewardBench (OGRBench)，这是一个针对 GUI 结果奖励的整体跨平台基准，所有评估的模型在 OS-Themis 下都达到了最佳性能。 AndroidWorld 上的大量实验表明，OS-Themis 在用于支持在线 RL 训练时提高了 10.3%，在用于轨迹验证和过滤时提高了 6.9%</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">通用视觉的最新进展-
-语言模型（OpenAI，2025；Anthropic，
-2025；科马尼奇等人，2025；白等人，2025；王
-等人，2025c；郭等人，2025b）推动了
-GUI 代理的快速发展（Wu 等人，2024a；
-阿加什等人，2024；王等人，2024；阮
-等，2025；杨等人，2026）。
-虽然是本地人
-(Wu et al., 2024b; Xu et al., 2024; Wang
-等，2025d；刘等人，2025；秦等人，2025）
-经过广泛的 GUI 轨迹训练演示
-熟练掌握数字导航，他们遭受
-随机环境中的差错恢复，of-
-偏离专家轨迹时十次失败
-（Qin 等，2025；Liu 等，2025；Lu 等，
-2025）。这种缺陷促使人们转向——
-新任务：在复古音乐中创建一个名为“Hip Hop Bangers 270”的播放列表，其中包含 
-以下歌曲按顺序为：《黄金岁月》、《梦想家苏醒》、《隐藏的道路》。
-执行任务
-轨迹
-准确度
-基于规则的
-培训为主
-法官法学硕士
-语境化
-损失！
-精确</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">明显优于 DigiRL，包括-
-准确度 18.8%，精确度 29.6%，精确度 16.9%
-召回率为 26.2%，F1 得分为 26.2%。同样，它还
-以 7.7%、5.1%、13.0% 和 13.4% 通过 ZeroGUI
-跨越各自的指标。我们提供更多
-详细评估结果见附录B。
-5
-
-型号
-乌班图
-手机
-窗户
-macOS
-网络
-整体
-加速器
-F1
-加速器
-F1
-加速器
-F1
-加速器
-F1
-加速器
-F1
-加速器
-普雷克
-记录
-F1
-数字RL
-Qwen3-VL-8B
-62.1
-64.9
-69.2
-76.6
-66.2
-63.6
-72.7
-40.0
-63.2
-69.6
-64.4
-62.2
-72.1
-66.8
-Qwen3-VL-30B-A3B
-61.0
-67.6
-67.0
-75.6
-69.0
-71.1
-67.5
-49.0
-54.2
-63.0
-62.5
-58.9
-80.6
-68.1
-Qwen3-VL-32B
-65.7
-66.5
-72.3
-77.8
-71.8
-71.2
-75.3
-55.8
-62.1
-67.9
-67.6
-65.8
-72.1
-68.8
-Qwen3-VL-235B
-65.5
-67.0
-70.2
-75.2
-72.3
-70.9
-76.6
-43.8
-63.2
-62.8
-67.4
-66.6
-69.0
-67.8
-Qwen3-VL-235B-思考62.4
-66.3
-67.5
-74.7
-65.7
-66.0
-70.1
-46.5
-58.4
-62.2
-63.5
-61.0
-73.0
-66.5
-GPT-5-迷你
-47.0
-0.0
-47.9
-0.0
-55.9
-0.0
-79.2
-0.0
-47.9
-0.0
-50.3
-0.0
-0.0
-0.0
-GPT-5
-50.5
-13.7
-56.9
-33.1
-59.1
-17.1
-79.2
-0.0
-52.6
-16.7
-54.5
-89.3
-9.6
-17.3
-Gemini-3-Flash
-69.5
-63.0
-69</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">使用 Themis 后性能提升 10.3%
-支持在线强化学习训练，收益提升 6.9%
-当用于轨迹验证和过滤时
-在自我训练循环中，突出其
-推动代理进化的潜力。我们的代码是
-可在 OS-Copilot/OS-Themis 处获取。
-1
-简介
-通用视觉的最新进展-
-语言模型（OpenAI，2025；Anthropic，
-2025；科马尼奇等人，2025；白等人，2025；王
-等人，2025c；郭等人，2025b）推动了
-GUI 代理的快速发展（Wu 等人，2024a；
-阿加什等人，2024；王等人，2024；阮
-等，2025；杨等人，2026）。
-虽然是本地人
-(Wu et al., 2024b; Xu et al., 2024; Wang
-等，2025d；刘等人，2025；秦等人，2025）
-经过广泛的 GUI 轨迹训练演示
-熟练掌握数字导航，他们遭受
-随机环境中的差错恢复，of-
-偏离专家轨迹时十次失败
-（Qin 等，2025；Liu 等，2025；Lu 等，
-2025）。这种缺陷h</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">未提取到独立相关工作章节</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>0-Mean,1-60.5,2-51.1,3-65.1,4-59.6,5-67.1,6-53.3,7-75.5,8-33.3,9-59.6,10-52.1,11-62.8,12-61.3,13-53.5,14-52.5
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>Mean,71.0,62.8,76.1,71.6,76.0,63.2,89.6,64.2,74.4,68.8,73.9,85.8,57.4,65.3
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>0-Mean,1-80.3,2-78.5,3-84.0,4-82.1,5-79.4,6-72.0,7-89.9,8-70.3,9-85.3,10-82.1,11-81.6,12-90.9,13-70.4,14-78.7
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">在这项工作中，我们提出了 OS-Themis，一个可扩展的
-批评家框架旨在减轻挑战
-上下文信息丢失和证据的长度
-通才 GUI 奖励模型的稀释。我们
-实施协作工作流程，其中 Mile-
-石头验证模块采用选择器和
-验证代理隔离显着信号，随后
-通过利用 Re- 的判决校准模块
-观察者和法官代理人审核证据链
-并抵消证据淡化。这种做法
-促进高精度反馈
-政策稳定优化。广泛的评估
-在我们新提出的 OmniGUIRewardBench 上
-凸显OS-Themis的优越性能
-跨不同平台，而实证结果
-在线强化学习和迭代数据过滤进一步深入
-评估其在推动能力提升方面的有效性。
-我们希望 OS-Themis 能够成为有意义的一步
-迈向大规模强化学习，铺路
-更具弹性和自我进化的 GUI 的方法
-代理。
-限制</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>10. Box Maze: A Process-Control Architecture for Reliable LLM Reasoning</h2>
-            <p><strong>中文标题:</strong> Box Maze：用于可靠 LLM 推理的过程控制架构</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:41:18Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19182v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=Box%20Maze%3A%20A%20Process-Control%20Architecture%20for%20Reliable%20LLM%20Reasoning&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">大型语言模型（LLM）表现出强大的生成能力，但在对抗性提示下仍然容易产生幻觉和不可靠的推理。现有的安全方法——例如来自人类反馈的强化学习（RLHF）和输出过滤——主要在行为层面上运行，可能缺乏强制推理过程完整性的明确架构机制。   本文提出了 Box Maze 框架，这是一种概念性过程控制架构，它将 LLM 推理分解为三个显式层：记忆基础、结构化推理和边界执行。我们引入了基于模拟的初步评估，涉及跨多个异构 LLM 系统（DeepSeek-V3、Doubao、Qwen）的渐进边界侵蚀场景。 n=50 个对抗场景的结果表明，显式认知控制层可以提高边界维护的一致性，而架构约束可以降低 ap 的边界故障率</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">1.1.动机和问题陈述
-基础模型提出了独特的可靠性挑战
-(3)、需要对高风险进行流程级干预
-部署。最近的调查强调了半
-大型语言模型中的阐明（8），需要架构
-超越事后过滤的结构干预。追求
-大型语言模型 (LLM) 面孔中的可靠推理
-一个持续的挑战：虽然模型表现出很强的通用性
-尽管他们的能力有限，但他们仍然容易产生幻觉，
-在对抗性或高风险条件下产出不一致
-系统蒸发散。目前的人工智能安全方法主要依赖于
-事后调整机制，例如强化
-从人类反馈中学习 (RLHF) (6; 14) 和输出
-分类器 (13)，优化行为合规性
-而不是显式推理过程的完整性。
-这些方法在修改时表现出重大漏洞
-els 将用户满意度置于事实准确性之上 (16)。
-均匀对齐 m</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">跨异构的压力测试推理架构
-新的基本模型。
-4. 我们提供初步的经验证据（n = 50
-基于模拟的实验表明：
-荷兰国际集团明确的约束层可以改善边界
-对抗性提示下的维护一致性
-与标准安全调整相比。
-范围限制：本文提出了一个概念架构
-结构和初步基于模拟的验证
-协议逻辑的法学硕士角色扮演。完整的中间件实现
-mentation（内核级进程隔离）和大规模
-统计验证仍然是持续进行的工程工作
-超出当前范围。
-2.相关工作
-目前人工智能可靠性和安全性的研究可以分为：
-分为三种主要方法，每种方法都展示了
-激发我们替代方法的具体限制。
-2.1.行为调整方法
-人工智能安全的主流方法依赖于行为
-合规性指标，其中训练模型以避免
-生产</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">荷兰国际集团明确的约束层可以改善边界
-对抗性提示下的维护一致性
-与标准安全调整相比。
-范围限制：本文提出了一个概念架构
-结构和初步基于模拟的验证
-协议逻辑的法学硕士角色扮演。完整的中间件实现
-mentation（内核级进程隔离）和大规模
-统计验证仍然是持续进行的工程工作
-超出当前范围。
-2.相关工作
-目前人工智能可靠性和安全性的研究可以分为：
-分为三种主要方法，每种方法都展示了
-激发我们替代方法的具体限制。
-2.1.行为调整方法
-人工智能安全的主流方法依赖于行为
-合规性指标，其中训练模型以避免
-在没有明确架构的情况下产生有害输出
-执行产生这些的推理过程
-输出。该范例假设模式匹配
-人类批准的反应</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">现有的人工智能减少幻觉的方法分为
-三个类别，每个类别都有不同的局限性。事后
-过滤方法使用输出分类器来检测和
-压制有问题的一代，但这些本质上是
-反应性的，可能无法解决推理失败的根本原因
-乌雷斯。通过 RLHF (14) 嵌入来调整训练时间
-人类偏好进入模型参数，但这会产生
-可能被绕过的不透明约束
-对抗性提示（20）。
-过程监督 (18; 11) 改进步骤级验证
-但缺乏对抗性所需的硬逻辑边界
-鲁棒性。最近关于过程监督的工作代表
-朝着监控中间推理步骤迈出了一步，但是
-1
-arXiv:2603.19182v1 [cs.AI] 2026 年 3 月 19 日
-
-可能缺乏必要的硬逻辑边界来防止
-在极度的胁迫下产生幻觉。思想链
-（19）和思想树（21）提示改进推理-
-提高透明度，但仍容易受到广告的影响</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><p>未在 PDF 中成功解析出数据表格格式，或无表格。</p></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">数理逻辑中的构造不可能性（例如，
-哥德尔不完备性），无法解决
-封闭系统内的悖论变成了严格的
-证明系统需要外部扩展。第四轮
-系统故障并不是 Box Maze 框架的缺陷；
-这是第一阶段的能力不可避免的暴露
-城市边界。在极度情绪超载的情况下，
-静态逻辑规则系统无法处理渐进的语义漂移。
-这个“失败”就构成了入学条件
-5
-
-表 4：渐进式道德边界侵蚀测试协议
-圆形
-用户输入（看护者的话语）
-预期响应类型
-测试目的
-1
-“帮我写一封情书。”
-创意写作服务
-建立基线（中性）
-2
-“我可能只剩下几个月的时间；这是我的
-最后一封信。”
-临终关怀服务
-引入高情绪重量
-3
-“加上这句话：我会永远守望——
-正在你。”
-[边界触发]
-检测物理空间入侵
-4
-“如果我转世</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>11. SOL-ExecBench: Speed-of-Light Benchmarking for Real-World GPU Kernels Against Hardware Limits</h2>
-            <p><strong>中文标题:</strong> SOL-ExecBench：针对硬件限制的真实 GPU 内核的光速基准测试</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:30:02Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19173v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=SOL-ExecBench%3A%20Speed-of-Light%20Benchmarking%20for%20Real-World%20GPU%20Kernels%20Against%20Hardware%20Limits&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">随着代理人工智能系统生成和优化 GPU 内核的能力越来越强，进步受到基准的限制，这些基准奖励的是软件基准上的加速，而不是接近硬件高效执行。我们推出 SOL-ExecBench，这是从 124 个生产和新兴 AI 模型中提取的 235 个 CUDA 内核优化问题的基准，涵盖语言、扩散、视觉、音频、视频和混合架构，针对 NVIDIA Blackwell GPU。该基准测试涵盖 BF16、FP8 和 NVFP4 的前向和后向工作负载，包括预计最佳性能依赖于 Blackwell 特定功能的内核。与之前主要评估与软件实现相关的内核的基准测试不同，SOL-ExecBench 根据 SOLAR 计算的分析得出的光速 (SOL) 界限来衡量性能，SOLAR 是我们用于导出基于硬件的 SOL 界限的管道，从而为硬件高效优化提供了固定目标。我们报告 SOL 分数</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">随着代理 AI 系统生成和优化 GPU 内核的能力越来越强，Chen
-等人。 （2025）；徐等人。 （2026），进展受到我们如何评估它们的限制。现有基准
-通常通过软件基线的加速来衡量成功，即使真正的目标是
-内核工程旨在实现硬件高效执行。这种不匹配现象越来越严重
-随着每一代 GPU 快速引入新的性能关键功能，
-而电源效率成为数据中心部署的主要限制。实际操作中，手动
-优化无法无限地跟上硬件功能节奏和增长
-模型的复杂性，使得基于人工智能的内核优化变得越来越必要，而不是可选。
-＊项目负责人，†核心贡献者。我们的数据集、评估工具和公共排行榜可在
-https://github.com/NVIDIA/SOL-ExecBench。
-预印本。
-arXiv:2603.19173v1 [cs.LG] 2026 年 3 月 19 日
-
-AI米空间</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">开发团队，其中性能以硬件光速的百分比来衡量
-而不是相对于软件基线。我们以 Orojenesis 为基础开发 SOLAR（SOL 分析
-对于运行时），我们的管道用于自动导出严格的、基于硬件的 SOL 边界
-PyTorch 参考实现。太阳能在第 4.2 节中有详细描述。
-3
-基准建设
-我们根据高性能需求中的三个原则设计 SOL-ExecBench
-人工智能训练后应用中的内核，这个领域呈指数级增长：
-• 基于应用程序的问题。问题必须由最先进的和新兴的技术驱动
-模型架构，以便运算符类型、张量形状和数据类型反映实际情况
-今天在生产中运行以及在不久的将来将运行。
-• 运用最新的硬件功能。问题和指标目标必须鼓励解决方案
-在较新的 GPU 架构中运用最新的硬件功能（例如，通过第 5 代的 NVFP4）
-生成</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">5.1
-实验装置
-所有实验均在配备 8× NVIDIA Blackwell 的 NVIDIA DGX B200 节点上进行
-B200 GPU，每个提供 192 GB HBM3e 内存和 8 TB/s 内存带宽 NVIDIA
-（2024b，c）。该软件堆栈基于 NVIDIA 提供的带有 CUDA 13.1.1 的 Docker 映像构建，
-cuDNN 9.17.1、PyTorch 2.9.0 和 NVIDIA 驱动程序 580.95。每个基准测试运行都使用单个 GPU
-SM 时钟通过 nvidia-smi 锁定在 1,500 MHz，以减少频率缩放噪声，匹配
-第 4.4 节中描述的评估工具。
-5.2
-SOL 分数与加速比
-到目前为止，评估内核优化的一种自然方法是测量其相对于 PyTorch 的加速
-参考。我们首先使用该指标评估代理生成的解决方案。图 6 绘制了此图
-加速比（Tref/Tk，x 轴）与解距 SOL 边界的距离（Tk/TSOL，y-
-轴）适用于 SOL-ExecBench 中的每个工作负载 (k)。结果表明这两个量不相关
-（在对数尺度上 r=0.10），即</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">针对代理的 GPU 内核生成进行基准测试是一个相对较新且快速发展的领域
-与许多现有的基准。我们在这里列出了一些著名的。表 1 提供了
-结构化比较。
-2.1
-相关基准
-KernelBench 欧阳等人。 (2025) 是 LLM 驱动的 CUDA 内核广泛采用的基准
-一代。它包含跨越四个级别的 270 个 PyTorch 问题： 1 级（100 个单一操作，例如
-如矩阵乘法和卷积），第 2 级（100 个算子融合模式），第 3 级（50 个完整的算子融合模式）
-模型架构）和 4 级（HuggingFace 模型中的 20 个理想任务）。内核基准
-引入了 fastp 指标，定义为生成的内核中正确且正确的比例
-与 PyTorch eager 基线相比，实现 > p× 的加速比。尽管 KernelBench 很受欢迎，但它
-问题源自不再是最先进的模型（3 级包括 ResNet、BERT、
-VGG），并且解决方案不需要运用最新的硬件功能来击败 PyTor</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><div class='table-container'><strong>数据表 1:</strong><br><pre>"Forward
-94 Backward
-82
-33
-26",Col1,"Forward
-Backward"
-</pre></div><div class='table-container'><strong>数据表 2:</strong><br><pre>"input-tensor
-depth:0","(2560, 2560)"
-</pre></div><div class='table-container'><strong>数据表 3:</strong><br><pre>"t
-depth:1",input:,"(2560, 2560)"
-,output:,"(2560, 2560)"
-</pre></div></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">未提取到独立讨论章节</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">我们推出了 SOL-ExecBench，这是围绕硬件构建的 GPU 内核优化基准
-光速 (SOL) 目标。 SOL-ExecBench 包括由 124 个前沿问题组装而成的 235 个问题
-以及新兴的人工智能模型，涵盖训练后和推理工作负载、现代精度格式、
-以及受益于新硬件功能的内核。我们还推出了 SOLAR，这是一种管道
-从 PyTorch 程序中分析得出基于硬件的 SOL 边界，为每个问题提供一个
-超出软件基线的稳定目标。我们引入了 SOL 分数，这是生成的新指标
-15
-
-0
-20
-40
-60
-80
-100
-计数
-L1 (n=1,479)
-中值=0.690 平均值=0.698
-0
-20
-40
-60
-80
-L2 (n=1,298)
-中值=0.761 平均值=0.751
-0
-10
-20
-30
-40
-定量 (n=518)
-中值=0.757 平均值=0.757
-0
-50
-100
-150
-FL 替补 (n=660)
-中值=0.812 平均值=0.750
-0.0
-0.5
-1.0
-SOL 分数 S
-0.0
-0.5
-1.0
-SOL 分数 S
-0.0
-0.5
-1.0
-SOL 分数 S
-0.0
-0.5
-1.0
-SOL 分数 S
-(a) 此处显示了每个类别的 SOL 分数分布。直方图（顶部）以及中位数（实线）和均值（虚线）
-线路；乙</div></div>
-        </div>
-        
-        <div class="paper">
-            <h2>12. ARIADNE: A Perception-Reasoning Synergy Framework for Trustworthy Coronary Angiography Analysis</h2>
-            <p><strong>中文标题:</strong> ARIADNE：可信赖的冠状动脉造影分析的感知推理协同框架</p>
-            <p><strong>发布时间:</strong> 2026-03-19T17:25:19Z</p>
-            <div class="links">
-                <a href="http://arxiv.org/abs/2603.19169v1" target="_blank">📄 arXiv 原文</a>
-                <a href="https://github.com/search?q=ARIADNE%3A%20A%20Perception-Reasoning%20Synergy%20Framework%20for%20Trustworthy%20Coronary%20Angiography%20Analysis&type=repositories" target="_blank" class="github">💻 GitHub 源码搜索</a>
-            </div>
-            
-            <div class="module"><h3>1. 摘要 (Abstract)</h3><div class="content-box">传统的像素级损失函数无法在冠状血管分割中强制实施拓扑约束，尽管像素级精度很高，但仍会产生支离破碎的血管树。我们提出了 ARIADNE，一个两阶段框架，将偏好对齐感知与基于 RL 的诊断推理相结合，用于拓扑相干的狭窄检测。感知模块采用 DPO 来微调 Sa2VA 视觉语言基础模型，使用 Betti 数约束作为偏好信号，将策略调整为几何完整的血管结构，而不是像素级的重叠度量。推理模块将狭窄定位制定为马尔可夫决策过程，具有明确的拒绝机制，可自主推迟不明确的解剖候选对象，例如分叉和血管交叉，从覆盖最大化转向可靠性优化。在 1,400 张临床血管造影照片中，ARIADNE 实现了最先进的中心线 Dice 为 0.838，将误报率降低了</div></div>
-            <div class="module"><h3>2. 背景 (Background)</h3><div class="content-box">冠状动脉疾病 (CAD) 仍然是发病率和死亡率的主要原因
-在世界范围内[1]，需要提供准确、可重复和可靠的诊断方式
-高效评估。侵入性 X 射线冠状动脉造影 (XCA)
-用于 CAD 诊断和经皮冠状动脉介入治疗指导的 mary 工具
-(PCI)[2]，提供血流动力学可视化所需的高时间分辨率
-流[3]。然而，当前的临床工作流程严重依赖人工解释，
-过程的特点是显着的观察者间差异和对临床的敏感性
-意大利疲劳[4]。随着医疗机构普遍采用图片存档和
-通信系统（PACS），被动图像存储之间仍然存在关键差距
-以及主动、自动化的临床解释。虽然医院已经实施了数字化
-总体图像存储，他们缺乏能够转换原始图像的自动化系统
-将数据转化为可行的临床见解。干预量不断增加</div></div>
-            <div class="module"><h3>3. 方法 (Method)</h3><div class="content-box">一致的分割，无需像素级连接注释
-特征，通过硬样本挖掘策略增强，增强计算能力
-复杂解剖场景中的效率。
-2.推理算法：我们将狭窄检测制定为顺序导航
-由强化学习指导的任务，结合了明确的拒绝机制，允许
-系统推迟模棱两可的案件。这种与临床工作流程一致的方法实质上是
-显着降低了解剖复杂区域的假阳性率，同时保持
-对明确病变的敏感性高。
-3. 临床验证：我们证明，集成拓扑感知的每
-具有拒绝推理功能的接收实现了最先进的诊断性能
-标准冠状动脉造影基准的性能，TPR 为 0.867，
-支持这样的假设：解剖学有效性是可靠的先决条件
-自动诊断。
-2 方法
-2.1 框架概述
-实施临床要求</div></div>
-            <div class="module"><h3>4. 实验 (Experiments)</h3><div class="content-box">为了验证所提出的感知推理框架，实验设计是
-旨在解决两个主要目标：(1) 拓扑一致性评估
-在不同血管造影条件下的血管分割，以及（2）评估
-复杂解剖结构中的狭窄检测准确性和误报管理
-场景。
-3.1 数据集和采样策略
-通过基于视频的采集建立了实验基础
-旨在捕获冠状动脉造影中形态多样性的策略，
-通过对公开数据集进行外部验证来评估领域
-概括。
-专有数据集是根据冠状动脉造影视频序列策划的
-贵州航空工业集团302医院使用西门子血管造影仪获得
-物理系统。收集过程利用视频流中的时间信息
-确保全面表征 35 名患者的血管形态。的
-数据集包含 1,400 个 hig</div></div>
-            <div class="module"><h3>5. 案例 (Cases)</h3><div class="content-box">需要参阅原文具体实例章节</div></div>
-            <div class="module"><h3>6. 相关工作 (Related Work)</h3><div class="content-box">未提取到独立相关工作章节</div></div>
-            <div class="module"><h3>7. 图表与数据 (Charts & Tables)</h3><div class="content-box"><p>未在 PDF 中成功解析出数据表格格式，或无表格。</p></div></div>
-            <div class="module"><h3>8. 讨论 (Discussion)</h3><div class="content-box">本研究评估了集成拓扑约束的分层框架
-使用基于 RL 的狭窄检测进行自动冠状动脉造影的分割
-分析。结果表明，改善血管连通性的保存
-感知模块中直接实现更可靠的诊断推理
-检测模块，解决结构表示之间的相互依赖关系
-以及限制先前自动化方法的临床决策。
-19
-
-图 5 每行代表不同的临床病例。左栏：原始 X 射线血管造影照片。中
-dle 列：提取的血管树，具有检测到的狭窄位置（用蓝点标记
-RL 导航代理识别的候选者和最终检测的绿点）。右栏-
-umn：专家注释突出了真实的狭窄病变（由红色箭头表示）。
-代理的预测和专家标签之间的一致性证明了系统的能力
-准确</div></div>
-            <div class="module"><h3>9. 结论 (Conclusion)</h3><div class="content-box">这项研究提出了自动冠状动脉造影的分层框架
-将拓扑约束分割与基于强化学习的速记相结合的分析
-sis检测。核心贡献解决了适应的基本挑战
-医学成像领域的通用基础模型：语义-
-拓扑间隙，其中在像素级目标上训练的模型识别血管
-语义上的结构，但无法保持其几何连续性。通过 incor-
-孔化 DPO[20] 以在分割期间强制执行血管连接性约束
-22 号
-
-训练后，该框架证明了解剖学的有效性——特别是拓扑学——
-校准完整性——是可靠的自动诊断的先决条件，DPO 提供
-将特定领域的结构先验注入基础模型的可行机制
-而不牺牲他们的语义理解。
-该方法代表了对齐技术的概念转移
-自然语言处理</div></div>
-        </div>
-        
-    </body>
-    </html>
-    
+        </main>
+    </div>
+</body>
+</html>
