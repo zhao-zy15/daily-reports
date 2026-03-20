@@ -1,1 +1,2 @@
 - 2026-03-20: Fetched 12 recent cs.AI/cs.CL/cs.IR papers from arXiv. Downloaded PDFs, extracted section contents and experimental data tables via PyMuPDF. Translated using deep-translator, constructed HTML report with 9 modules, saved to arxiv-papers/report-2026-03-20.html and pushed to GitHub.
+- 2026-03-20 16:15: Re-generated arXiv AI daily report (report-2026-03-20.html) focusing on deep technical details, core architectures, mathematical formulas (LaTeX), medical/agent/IR tags, ablation studies and multi-baseline tables. Pushed to main branch.

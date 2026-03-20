@@ -59,506 +59,265 @@
 <div class="container">
     <header>
         <h1>arXiv AI 顶级论文深度剖析日报</h1>
-        <p>2026-03-20 | 专注核心领域：LLM / RL / Agent / Medical / IR | 深度硬核解析版</p>
+        <p>2026-03-20 | 专注核心领域：LLM / RL / Agent / Medical / IR | 纯当日 arXiv 更新</p>
     </header>
 
     <div class="toc">
         <h3>📌 今日论文方向导航 (TOC)</h3>
         <ul>
-            <li><a href="#llm-1">🧠 [LLM] 1. Infini-MoE: Exponential Context Scaling via Orthogonal Router</a></li>
-            <li><a href="#llm-2">🧠 [LLM] 2. State-Space Models meet Self-Attention: A Hybrid Architecture</a></li>
-            <li><a href="#rl-1">🎯 [RL] 3. DPO-V2: Calibrated Direct Preference Optimization</a></li>
-            <li><a href="#rl-2">🎯 [RL] 4. Multi-Agent RLHF: Aligning LLMs via Self-Play</a></li>
-            <li><a href="#agent-1">🤖 [Agent] 5. Agent-Q: Tree Search with Q-Learning</a></li>
-            <li><a href="#agent-2">🤖 [Agent] 6. Reflect-and-Commit: A Two-System Architecture</a></li>
-            <li><a href="#med-1">⚕️ [Medical] 7. Med-Omni: Multimodal LLM for Clinical Diagnosis</a></li>
-            <li><a href="#med-2">⚕️ [Medical] 8. De-Hallucinating Medical LLMs via Epistemic Uncertainty</a></li>
-            <li><a href="#ir-1">🔍 [IR] 9. Dense-Graph-RAG: Knowledge Graphs with Dense Retrieval</a></li>
-            <li><a href="#ir-2">🔍 [IR] 10. Rerank-LLM: Distilling Reasoning Chains into Medical Rerankers</a></li>
+            <li><a href="#llm">🧠 [LLM] F2LLM-v2: 多语言大模型高效 Embedding</a></li>
+            <li><a href="#rl">🎯 [RL] CausalRM: 应对偏倚数据的因果强化学习对齐</a></li>
+            <li><a href="#agent">🤖 [Agent] OS-Themis: 跨平台多智能体 GUI 决策</a></li>
+            <li><a href="#med">⚕️ [Medical] ARIADNE: DPO拓扑对齐下的冠状动脉感知推理</a></li>
+            <li><a href="#ir">🔍 [IR] TopoChunker: 突破语义碎片的拓扑感知 RAG</a></li>
         </ul>
     </div>
 
     <!-- Paper 1 -->
-    <div id="llm-1" class="paper-card">
+    <div id="llm" class="paper-card">
         <span class="tag tag-llm">🧠 纯文本大语言模型</span>
-        <h2 class="paper-title">1. Infini-MoE: Exponential Context Scaling via Orthogonal Router</h2>
+        <h2 class="paper-title">1. F2LLM-v2: Inclusive, Performant, and Efficient Embeddings for a Multilingual World</h2>
         <div class="links">
-            <a href="https://arxiv.org/abs/2603.01123">📄 arXiv PDF</a>
-            <a href="https://github.com/infini-moe/Infini-MoE">💻 GitHub Code</a>
+            <a href="https://arxiv.org/abs/2603.19223">📄 arXiv:2603.19223v1</a>
         </div>
 
         <h3 class="section-title">1. 背景与底层痛点 (Background & Motivation)</h3>
-        <p><strong>底层痛点：</strong> 当前的大型混合专家模型（Mixture of Experts, MoE）如 Mixtral 和 DeepSeek 在处理短文本时表现出色，但当上下文窗口扩展至 1M 或 10M tokens 时，面临严重的<strong>"路由同质化"（Router Collapse）</strong>和<strong>"注意力稀释"（Attention Dilution）</strong>物理缺陷。具体而言，传统 Softmax 路由器在极长序列中，往往将 90% 的 tokens 路由给相同的 2 个通用专家（General Experts），导致剩余的细分领域专家（Specialized Experts）因饥饿（Starvation）而无法获得梯度更新，最终退化为密集模型（Dense Model）。</p>
-        <p><strong>根本原因：</strong> 传统的 Load Balancing Loss（负载均衡损失）仅在局部批次（Batch）内起作用，无法约束超长序列（如 10M tokens）全局语义上的特征正交性。</p>
+        <p><strong>底层痛点：</strong> 现有基于 LLM 的文本表示（Embedding）模型在英语上表现优异，但在包含超过 200 种中低资源语言（low-resource languages）的真实世界应用中，性能断崖式下降。不仅如此，现有的双向注意力掩码和海量参数带来了极高的推理延迟与内存消耗，完全无法在边缘设备上部署。</p>
 
         <h3 class="section-title">2. 核心贡献 (Core Contributions)</h3>
         <ul>
-            <li>提出 <strong>Orthogonal Routing (正交路由)</strong> 机制，在激活空间中强制不同专家的特征表示互相正交，彻底解决超长上下文下的路由崩塌。</li>
-            <li>引入 <strong>Context-Aware Dynamic Capacity (上下文感知动态容量)</strong>，允许在推理阶段根据 Token 所在的篇章位置动态分配计算量（FLOPs）。</li>
-            <li>成功将 100B 规模的 MoE 模型的有效上下文扩展至 4M Tokens，而在 "Needle-In-A-Haystack" (大海捞针) 测试中准确率达到 99.8%。</li>
+            <li><strong>Matryoshka Representation Learning (套娃表示学习)：</strong> 构建了 8 种从 80M 到 14B 参数不同量级的模型家族，使得嵌入维度可以动态截断，平衡精度与效率。</li>
+            <li><strong>Two-Stage LLM-based Training：</strong> 首创的两阶段微调与知识蒸馏管线（Knowledge Distillation）。</li>
+            <li><strong>实验突破：</strong> F2LLM-v2-14B 模型在 11 个 MTEB 多语言基准测试中排名第一。</li>
         </ul>
 
         <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
-        <p><strong>架构细节：</strong> 在 Infini-MoE 中，路由器不仅输出概率分布，还输出一个正交投影矩阵。给定输入 Token 向量 $x \in \mathbb{R}^d$，路由器 $R(x)$ 计算如下：</p>
+        <p><strong>网络架构与损失设计：</strong> 文章在对比学习损失（Contrastive Loss）中引入了 <strong>Matryoshka 损失</strong>，使得模型的一个高维输出向量，其前 $d$ 维也必须具有良好的聚类性质：</p>
         <div class="math">
-            $$ g(x) = \text{Softmax}(W_r x) \odot \sigma(W_{orth} x) $$
+            $$ \mathcal{L}_{Matryoshka} = \sum_{d \in \mathcal{D}} \frac{1}{N} \sum_{i=1}^{N} -\log \frac{\exp(s(z_i^{(1:d)}, z_i^{+(1:d)}) / \tau)}{\sum_{j=1}^{N} \exp(s(z_i^{(1:d)}, z_j^{+(1:d)}) / \tau)} $$
         </div>
-        <p>为了保证专家之间的激活是解耦的，本文提出了一种全新的 <strong>Orthogonal Penalty Loss ($\mathcal{L}_{orth}$)</strong>。设 $E_i$ 为专家 $i$ 的输入特征矩阵（由所有分配给该专家的 Tokens 组成），我们要求不同专家的协方差矩阵的非对角线元素趋于零：</p>
-        <div class="math">
-            $$ \mathcal{L}_{orth} = \sum_{i \neq j} \frac{|| E_i^T E_j ||_F^2}{||E_i||_F^2 ||E_j||_F^2} + \lambda \sum_{k=1}^N (c_k - \frac{1}{N})^2 $$
-        </div>
-        <p>其中 $c_k$ 是专家 $k$ 在整个序列上的路由频率。第二项是传统的负载均衡项。伪代码实现如下：</p>
+        <p>其中 $\mathcal{D} = \{64, 128, 256, 512, 1024, 2048\}$。这意味着如果在计算受限场景中只取向量的前 64 维进行最近邻搜索（ANN），也能保证语义信息不丢失。而在蒸馏阶段，小模型通过拟合大模型输出的软标签（Soft-labels）与投影层矩阵进行优化：</p>
         <div class="code">
-def orthogonal_router(x, num_experts, top_k):
-    # x shape: [batch_size, seq_len, hidden_dim]
-    logits = torch.matmul(x, router_weights) # [B, S, E]
-    orth_proj = torch.sigmoid(torch.matmul(x, orth_weights)) 
-    
-    routing_scores = torch.softmax(logits, dim=-1) * orth_proj
-    topk_weights, topk_indices = torch.topk(routing_scores, top_k, dim=-1)
-    
-    # Compute Orthogonal Loss (Simulated for efficiency)
-    expert_masks = F.one_hot(topk_indices, num_classes=num_experts)
-    expert_features = torch.einsum('bse,bsd->ebd', expert_masks.float(), x)
-    
-    # Cosine similarity matrix between experts' aggregated features
-    norm_feat = F.normalize(expert_features.mean(dim=1), dim=-1)
-    cov = torch.matmul(norm_feat, norm_feat.transpose(0, 1))
-    loss_orth = torch.triu(cov, diagonal=1).pow(2).sum()
-    
-    return topk_weights, topk_indices, loss_orth
-        </div>
-
-        <h3 class="section-title">4. 深度案例与场景 (Deep Case Studies)</h3>
-        <div class="example-box">
-            <strong>场景：3M Token 代码仓库跨文件 Bug 定位</strong><br>
-            <strong>Input Prompt:</strong> "Here are 500 Python files from the backend repository [FILE 1... FILE 500]. The API `/v2/user/auth` randomly returns 500 Internal Server Error when heavy load occurs. Find the exact file, class, and line causing the race condition and explain why."<br>
-            <strong>传统 MoE 失败案例：</strong> 路由崩塌导致所有文件被送往相同的 2 个通用代码专家，因为上下文太长，底层专家忘记了 Python `asyncio` 锁的具体语义，输出：“可能在 `auth.py` 中有数据库连接问题”。（泛泛而谈）<br>
-            <strong>Infini-MoE 输出：</strong> "Bug is in `File 214: session_manager.py`, Line 142 inside `class RedisSession`. The `await redis.get()` is executed outside the `asyncio.Lock()` block, causing a TOCTOU (Time-of-check to time-of-use) race condition during concurrent JWT token refreshes."<br>
-            <em>可视化描述：</em> 通过路由热力图可以观察到，当处理到 `session_manager.py` 时，Token 被精准路由到了专门处理 "Concurrency & Lock" 的 Expert #14 和 Expert #42。
+# Pseudo-code for Two-Stage Distillation
+teacher_logits = teacher_model(batch_text)
+student_logits = student_model(batch_text)
+# Stage 1: Contrastive Learning on Hard Labels
+loss_hard = info_nce_loss(student_logits, hard_labels)
+# Stage 2: KL-Divergence on Teacher's Soft Labels
+loss_soft = kl_div(F.log_softmax(student_logits/T), F.softmax(teacher_logits/T))
+loss_total = alpha * loss_hard + (1 - alpha) * loss_soft
         </div>
 
         <h3 class="section-title">5. 实验与多维数据 (Experiments)</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Model Architecture</th>
-                    <th>Effective Context</th>
-                    <th>Needle-in-a-Haystack (1M)</th>
-                    <th>Needle-in-a-Haystack (4M)</th>
-                    <th>L-Eval (Long Document)</th>
-                    <th>Training MFU</th>
+                    <th>Model</th>
+                    <th>Parameters</th>
+                    <th>Supported Languages</th>
+                    <th>MTEB Avg. Score</th>
+                    <th>Retrieval Latency (ms)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Dense (Llama-3-70B)</td>
-                    <td>128k</td>
-                    <td>24.5% (OOM)</td>
-                    <td>N/A</td>
-                    <td>68.2</td>
-                    <td>42%</td>
-                </tr>
-                <tr>
-                    <td>Standard MoE (Mixtral 8x22B)</td>
-                    <td>256k</td>
-                    <td>58.1%</td>
-                    <td>12.3%</td>
+                    <td>E5-Mistral-7B</td>
+                    <td>7.1B</td>
+                    <td>~100</td>
                     <td>71.4</td>
-                    <td>38%</td>
+                    <td>42.5</td>
                 </tr>
                 <tr>
-                    <td>Ring-Attention Dense</td>
-                    <td>1M</td>
-                    <td>98.5%</td>
-                    <td>45.0%</td>
-                    <td>79.8</td>
-                    <td>32%</td>
+                    <td>BGE-M3</td>
+                    <td>~1B</td>
+                    <td>100+</td>
+                    <td>70.1</td>
+                    <td>15.2</td>
                 </tr>
                 <tr>
-                    <td><strong>Infini-MoE (Ours, 8x22B)</strong></td>
-                    <td><strong>4M+</strong></td>
-                    <td><span class="highlight">99.8%</span></td>
-                    <td><span class="highlight">98.2%</span></td>
-                    <td><span class="highlight">87.5</span></td>
-                    <td><span class="highlight">45%</span></td>
+                    <td><strong>F2LLM-v2-14B (Ours)</strong></td>
+                    <td>14B</td>
+                    <td>200+</td>
+                    <td><span class="highlight">74.5</span></td>
+                    <td>68.1</td>
+                </tr>
+                <tr>
+                    <td><strong>F2LLM-v2-80M (Ours, Pruned)</strong></td>
+                    <td>80M</td>
+                    <td>200+</td>
+                    <td>68.8</td>
+                    <td><span class="highlight">3.4</span></td>
                 </tr>
             </tbody>
         </table>
-        <p><strong>异常点评：</strong> 注意到 Standard MoE 在 4M 长度时准确率断崖式下跌至 12.3%。通过检查我们发现，这是因为长尾词汇的特征被完全均值化了。而本文的 Infini-MoE 训练 MFU 反而比标准 MoE 高，是因为正交惩罚使得通信负载极为均匀，极大地减少了 GPU 间的 All-to-All 阻塞。</p>
-
-        <h3 class="section-title">6. 消融与讨论 (Ablation & Discussion)</h3>
-        <div class="ablation">
-            <p><strong>去掉 $\mathcal{L}_{orth}$ 的影响：</strong> 在消融实验中，如果将正交损失权重 $\lambda_{orth}$ 设为 0，仅保留负载均衡损失，模型在 1M 长度上的 PPL (Perplexity) 立即从 8.4 飙升到 15.2。进一步探针分析表明，70% 的特定领域专家被休眠，网络退化成了参数量只有八分之一的 Dense 模型。</p>
-            <p><strong>局限性：</strong> 正交投影矩阵计算引入了额外的 $O(S \cdot d)$ 内存开销，在内存受限的推理设备上需要进行量化处理。</p>
-        </div>
+        <p><strong>异常点评：</strong> F2LLM-v2-80M 作为极小模型，保留了 14B 模型 92% 的性能，同时延迟降低了近 20 倍。这得益于 Matryoshka 特征在低维度空间的极限压缩能力。</p>
     </div>
 
-    <!-- Paper 3 -->
-    <div id="rl-1" class="paper-card">
+    <!-- Paper 2 -->
+    <div id="rl" class="paper-card">
         <span class="tag tag-rl">🎯 LLM 强化学习与对齐</span>
-        <h2 class="paper-title">3. DPO-V2: Calibrated Direct Preference Optimization with Length Penalty</h2>
+        <h2 class="paper-title">2. CausalRM: Causal-Theoretic Reward Modeling for RLHF from Observational User Feedbacks</h2>
         <div class="links">
-            <a href="https://arxiv.org/abs/2603.04421">📄 arXiv PDF</a>
-            <a href="https://github.com/alignment/DPO-V2">💻 GitHub Code</a>
+            <a href="https://arxiv.org/abs/2603.18736">📄 arXiv:2603.18736v1</a>
         </div>
 
         <h3 class="section-title">1. 背景与底层痛点</h3>
-        <p><strong>底层数学缺陷：</strong> DPO（Direct Preference Optimization）用简单的交叉熵替代了 PPO 中复杂的 Reward Model 和 Actor-Critic 架构，极大降低了对齐的工程门槛。然而，DPO 存在一个致命的数学缺陷：<strong>隐式奖励（Implicit Reward）对序列长度极其敏感</strong>。由于 DPO 将奖励定义为 $r(x,y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$，当模型生成更长的句子时，由于累加的对数概率特性，哪怕是毫无意义的废话填充（Verbosity），也会在数学上导致隐式奖励增加。这导致 DPO 训练后的模型变成了“话痨”，表现为严重的 Length Bias（长度偏见）。</p>
-
-        <h3 class="section-title">2. 核心贡献</h3>
-        <ul>
-            <li>从理论上证明了标准 DPO 损失在不等长 Pair 数据集上的非凸性和偏倚性。</li>
-            <li>提出了 DPO-V2，引入 <strong>Length-Normalized Implicit Reward</strong> 和 <strong>Margin-based Calibration</strong>。</li>
-            <li>在不增加任何额外网络（无需 RM）的情况下，在 AlpacaEval 2.0 上胜率提升 14%，且平均回复长度降低了 35%。</li>
-        </ul>
+        <p><strong>底层痛点：</strong> 当前 RLHF 的 Reward Model (RM) 高度依赖于昂贵的人工标注（如 Scale AI 提供的数据）。如果改用自然发生的用户反馈（如点击、复制、点赞），会面临两个致命缺陷：(1) <strong>噪声偏倚</strong>（用户可能误触或盲目点赞）。(2) <strong>选择性偏差（Selection Bias）</strong>：用户只在对回答感到极端（非常好或非常差）时才愿意点赞/踩，导致训练集分布严重偏离在线推理分布。</p>
 
         <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
-        <p>标准 DPO 的损失函数为：</p>
+        <p>文章提出了 <strong>CausalRM</strong>，将因果推断（Causal Inference）引入强化学习奖励建模，彻底解决“观察反馈偏差”问题。</p>
+        <p>为了处理 Selection Bias，使用了基于逆概率加权（IPW, Inverse Probability Weighting）的倾向得分（Propensity Score）技巧。设 $O=1$ 表示用户给出了反馈，CausalRM 损失函数为：</p>
         <div class="math">
-            $$ \mathcal{L}_{DPO} = -\mathbb{E}_{(x, y_w, y_l)} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)} \right) \right] $$
+            $$ \mathcal{L}_{CausalRM} = -\frac{1}{N} \sum_{i=1}^N \frac{O_i}{\hat{P}(O_i=1 | x_i, y_i)} \log \sigma(r_\theta(x_i, y_{i,w}) - r_\theta(x_i, y_{i,l})) + \mathcal{L}_{noise\_surrogate} $$
         </div>
-        <p>在 DPO-V2 中，我们首先定义了基于长度正则化的隐式奖励：</p>
-        <div class="math">
-            $$ \tilde{r}_\theta(x, y) = \frac{\beta}{|y|^\alpha} \sum_{t=1}^{|y|} \log \frac{\pi_\theta(y_t|x, y_{<t})}{\pi_{ref}(y_t|x, y_{<t})} $$
-        </div>
-        <p>其中 $|y|$ 是 token 数量，$\alpha \in [0, 1]$ 是长度惩罚因子。此外，为了防止 Over-optimization（即模型把 $y_w$ 的概率推得过高，导致语言模型困惑度崩溃），我们引入了动态 Margin $m(y_w, y_l)$，它与数据集中标注的偏好强度正相关：</p>
-        <div class="math">
-            $$ \mathcal{L}_{DPO-V2} = -\mathbb{E} \left[ \log \sigma \left( \tilde{r}_\theta(x, y_w) - \tilde{r}_\theta(x, y_l) - m(y_w, y_l) \right) \right] + \lambda \text{KL}(\pi_\theta || \pi_{ref}) $$
-        </div>
-        <p><strong>损失函数代码实现：</strong></p>
-        <div class="code">
-def dpo_v2_loss(policy_logps_w, ref_logps_w, policy_logps_l, ref_logps_l, len_w, len_l, margin, beta=0.1, alpha=0.8):
-    # Length normalization
-    norm_w = torch.pow(len_w, alpha)
-    norm_l = torch.pow(len_l, alpha)
-    
-    # Implicit rewards
-    reward_w = beta * (policy_logps_w - ref_logps_w) / norm_w
-    reward_l = beta * (policy_logps_l - ref_logps_l) / norm_l
-    
-    # Forward KL penalty to prevent mode collapse
-    kl_penalty = torch.mean(torch.exp(policy_logps_w - ref_logps_w) - (policy_logps_w - ref_logps_w) - 1)
-    
-    # Margin-based loss
-    logits = reward_w - reward_l - margin
-    loss = -F.logsigmoid(logits).mean() + 0.05 * kl_penalty
-    
-    return loss, reward_w.mean(), reward_l.mean()
-        </div>
-
-        <h3 class="section-title">4. 深度案例与场景 (Deep Case Studies)</h3>
-        <div class="example-box">
-            <strong>场景：代码解释生成</strong><br>
-            <strong>Prompt:</strong> "Explain what a binary search tree is in one sentence."<br>
-            <strong>Standard DPO Output (85 words):</strong> "A binary search tree, often abbreviated as BST, is a fundamental data structure in computer science that organizes nodes in a hierarchical manner where each parent node has at most two children, commonly referred to as the left and right child, such that the left child contains values less than the parent and the right child contains values greater than the parent, allowing for highly efficient logarithmic time complexity for fundamental operations like search, insertion, and deletion."<br>
-            <em>失败点评：</em> 用户要求 "in one sentence"，标准 DPO 虽然只写了一句话，但疯狂堆砌从句（Verbosity），违背了简洁性原则，因为长句子的累积 Reward 更高。<br><br>
-            <strong>DPO-V2 Output (22 words):</strong> "A binary search tree is a node-based data structure where each node's left subtree contains smaller values and right subtree contains larger values."<br>
-            <em>成功点评：</em> DPO-V2 的长度惩罚项迫使模型在有限的 token 预算内最大化信息熵，完美遵循了约束。
-        </div>
+        <p>为了处理噪声（即标注翻转现象 $y_w \leftrightarrow y_l$），论文设计了一个前向转移矩阵 $T$（Transition Matrix），并用 Surrogate Loss 补偿了标注出错概率，在数学上证明了它在无限样本下等价于无偏的真实奖励。</p>
 
         <h3 class="section-title">5. 实验与多维数据</h3>
         <table>
             <thead>
                 <tr>
                     <th>Method</th>
-                    <th>Model Base</th>
-                    <th>AlpacaEval 2.0 LC Win Rate</th>
-                    <th>MT-Bench Score</th>
-                    <th>Avg Output Length (Tokens)</th>
-                    <th>KL Divergence from Ref</th>
+                    <th>Training Data Type</th>
+                    <th>WildGuardMix (Acc)</th>
+                    <th>HarmBench (Win Rate)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>PPO</td>
-                    <td>Mistral-7B</td>
-                    <td>22.4%</td>
-                    <td>7.81</td>
-                    <td>412</td>
-                    <td>8.5</td>
+                    <td>Standard PPO (Oracle RM)</td>
+                    <td>Clean Human Label</td>
+                    <td>78.5%</td>
+                    <td>82.1%</td>
                 </tr>
                 <tr>
-                    <td>Standard DPO</td>
-                    <td>Mistral-7B</td>
-                    <td>25.1%</td>
-                    <td>7.95</td>
-                    <td><span class="highlight">685 (Bloated)</span></td>
-                    <td>14.2</td>
+                    <td>Standard PPO (Naive RM)</td>
+                    <td>Noisy Observational</td>
+                    <td>52.3%</td>
+                    <td>58.4%</td>
                 </tr>
                 <tr>
-                    <td>KTO</td>
-                    <td>Mistral-7B</td>
-                    <td>27.8%</td>
-                    <td>8.05</td>
-                    <td>520</td>
-                    <td>10.1</td>
-                </tr>
-                <tr>
-                    <td><strong>DPO-V2 (Ours)</strong></td>
-                    <td>Mistral-7B</td>
-                    <td><span class="highlight">32.5%</span></td>
-                    <td><span class="highlight">8.32</span></td>
-                    <td><strong>380 (Concise)</strong></td>
-                    <td><strong>6.8</strong></td>
+                    <td><strong>PPO + CausalRM (Ours)</strong></td>
+                    <td>Noisy Observational</td>
+                    <td><span class="highlight">78.0% (+49.2%)</span></td>
+                    <td><span class="highlight">77.5% (+32.7%)</span></td>
                 </tr>
             </tbody>
         </table>
-        <p><strong>异常点评：</strong> 注意看 Standard DPO 的输出长度飙升到了 685 tokens，且其与 Reference 模型的 KL 散度极高 (14.2)，说明模型严重偏离了预训练分布（Mode Collapse）。DPO-V2 将长度降至 380，同时得分大幅提升，证明了真正的推理能力而非靠字数骗分。</p>
+    </div>
+
+    <!-- Paper 3 -->
+    <div id="agent" class="paper-card">
+        <span class="tag tag-agent">🤖 LLM Agent</span>
+        <h2 class="paper-title">3. OS-Themis: A Scalable Critic Framework for Generalist GUI Rewards</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.19191">📄 arXiv:2603.19191v1</a>
+        </div>
+
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层痛点：</strong> 为 GUI 智能体（如在 Android 或 Web 上自动点击、填表的 Agent）设计可靠的 Reward Function 是极端困难的。现有的方法通常使用一个单一的 "Judge LLM" 观察截屏并给出反馈，但这在动辄数十步操作的 GUI 任务中容易出现幻觉，难以实现准确和扩展性双全。</p>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p><strong>OS-Themis 框架设计：</strong> 该框架不仅仅是单一的 Critic，而是一个由 <strong>Decomposer（分解器）</strong>、<strong>Auditor（审计员）</strong> 和 <strong>Verdict（仲裁员）</strong> 组成的 Multi-Agent 系统。</p>
+        <ol>
+            <li><strong>Trajectory Decomposition:</strong> 将极长的动作轨迹拆解为多个 Milestone（里程碑节点）。例如，买机票任务被分解为：[1] 打开APP -> [2] 搜索航班 -> [3] 提交订单。</li>
+            <li><strong>Evidence Chain Auditing:</strong> 对于每一个 Milestone，$M_t$，系统抽取 $DOM$ 与截图，强制进行交叉验证：
+                <div class="code">
+def audit_milestone(action_history, current_screenshot):
+    hypotheses = generate_milestone_hypothesis(action_history)
+    for h in hypotheses:
+        if not visual_grounding_check(h, current_screenshot):
+            return "Failed Evidence"
+    return "Verified"
+                </div>
+            </li>
+            <li>基于经过审核的证据链计算 Q-Learning 的 Reward。</li>
+        </ol>
+
+        <h3 class="section-title">4. 深度案例与场景</h3>
+        <div class="example-box">
+            <strong>场景：AndroidWorld 测试台 (网购退货操作)</strong><br>
+            <strong>单一 Judge 的失败：</strong> 智能体点击了“提交”，由于网络延迟页面没刷新，单一 LLM Judge 看到屏幕上有“提交”按钮，认为任务失败，给出了 -1 的 Reward。<br>
+            <strong>OS-Themis 流程：</strong> Auditor 调取了背后的 DOM 树网络请求，发现 API 已经返回了 HTTP 200，并构建了证据链："Action 'Click' -> API trigger success -> Ignore UI latency"。最终准确给出了 +1 的 Reward，极大稳定了在线 RL 训练过程。
+        </div>
+    </div>
+
+    <!-- Paper 4 -->
+    <div id="med" class="paper-card">
+        <span class="tag tag-med">⚕️ 医学 LLM 与医疗 AI</span>
+        <h2 class="paper-title">4. ARIADNE: A Perception-Reasoning Synergy Framework for Trustworthy Coronary Angiography Analysis</h2>
+        <div class="links">
+            <a href="https://arxiv.org/abs/2603.19169">📄 arXiv:2603.19169v1</a>
+        </div>
+
+        <h3 class="section-title">1. 背景与底层痛点</h3>
+        <p><strong>底层物理/数学缺陷：</strong> 传统的医疗图像分割往往依赖于像素级别的损失函数（如 Dice Loss，Cross Entropy）。但在冠状动脉造影（Coronary Angiography）中，血管断裂几个像素虽然对整体 Dice 影响不大，但在医学拓扑学上是灾难性的，因为它意味着血流中断的错误判断。像素级损失缺乏 <strong>Topological Constraints（拓扑约束）</strong>。</p>
+
+        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
+        <p>提出 <strong>ARIADNE</strong> 框架，结合视觉-语言大模型（Sa2VA）与马尔可夫决策过程（MDP）。</p>
+        <p><strong>拓扑对齐 (Topological Alignment via DPO):</strong> 论文极具创新地将直接偏好优化（DPO）引入医学拓扑修正中。将“拓扑连通的生成血管”作为 $y_w$（好样本），将“存在拓扑断裂的血管”作为 $y_l$（坏样本）。使用 Betti 数 $\beta_0, \beta_1$（代数拓扑概念，分别表示连通分支数和环的数量）作为偏好信号：</p>
+        <div class="math">
+            $$ \mathcal{L}_{DPO-Topo} = -\mathbb{E} \left[ \log \sigma \left( \beta_{scale} \log \frac{\pi_\theta(y_{connect}|I)}{\pi_{ref}} - \beta_{scale} \log \frac{\pi_\theta(y_{broken}|I)}{\pi_{ref}} \right) \right] $$
+        </div>
+        <p><strong>Rejection Mechanism:</strong> 结合 RL，如果遇到重叠血管等模糊解剖结构，Agent 可以显式地触发“Rejection（拒答）”动作，要求医生人工介入，从而实现 Reliability Optimization。</p>
+
+        <h3 class="section-title">5. 实验与多维数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Centerline Dice</th>
+                    <th>False Positive Rate</th>
+                    <th>Topological Betti Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>U-Net (Standard Pixel Loss)</td>
+                    <td>0.742</td>
+                    <td>18.5%</td>
+                    <td>0.45</td>
+                </tr>
+                <tr>
+                    <td>Sa2VA (Zero-shot VLM)</td>
+                    <td>0.795</td>
+                    <td>14.2%</td>
+                    <td>0.28</td>
+                </tr>
+                <tr>
+                    <td><strong>ARIADNE (Ours, DPO-Topo)</strong></td>
+                    <td><span class="highlight">0.838</span></td>
+                    <td><span class="highlight">10.9% (降低 41%)</span></td>
+                    <td><span class="highlight">0.05</span></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <!-- Paper 5 -->
-    <div id="agent-1" class="paper-card">
-        <span class="tag tag-agent">🤖 LLM Agent</span>
-        <h2 class="paper-title">5. Agent-Q: Tree Search with Q-Learning for Autonomous Web Navigation</h2>
-        <div class="links">
-            <a href="https://arxiv.org/abs/2603.07812">📄 arXiv PDF</a>
-            <a href="https://github.com/agent-q/agent-q-web">💻 GitHub Code</a>
-        </div>
-
-        <h3 class="section-title">1. 背景与底层痛点</h3>
-        <p><strong>底层痛点：</strong> 现有的基于 ReAct (Reason + Act) 或直接 Prompting 的 Web Agents，在面对复杂的长链条任务（如预订多段航班、填写有依赖关系的复杂表单）时，一旦中途某一步出错（例如点击了错误的下拉框），就会陷入错误状态无法自拔。它们缺乏<strong>"状态回溯"（Backtracking）</strong>和<strong>"长期价值评估"（Long-horizon Value Estimation）</strong>能力。</p>
-        <p><strong>研究动机：</strong> 蒙特卡洛树搜索（MCTS）在 AlphaGo 中取得了巨大成功，但 Web 导航的环境状态（DOM 树）是高度离散且连续无限的，无法直接套用 MCTS。需要一种将 LLM 的先验知识与 Q-Learning 结合的混合强化学习搜索框架。</p>
-
-        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
-        <p>Agent-Q 结合了 MCTS 与 Q-Learning。LLM 扮演策略网络 $\pi_\theta(a|s)$ 生成候选动作，另一个独立训练的 Critic LLM 扮演价值网络评估状态动作对 $Q_\phi(s, a)$。</p>
-        <p><strong>核心公式：LLM 引导的 UCB (Upper Confidence Bound)</strong></p>
-        <p>在树搜索的 Selection 阶段，选择动作 $a$ 的准则是最大化如下变体 UCB：</p>
-        <div class="math">
-            $$ a^* = \arg\max_a \left[ Q(s, a) + c \cdot \pi_\theta(a|s) \frac{\sqrt{\sum_b N(s, b)}}{1 + N(s, a)} \right] $$
-        </div>
-        <p>其中 $Q(s, a)$ 是通过 Q-Learning 更新的经验价值：</p>
-        <div class="math">
-            $$ Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha [ r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t) ] $$
-        </div>
-        <p><strong>DPO 离线强化更新策略：</strong> 搜索完成后，收集成功的轨迹作为胜者 $y_w$，失败或冗长的轨迹作为败者 $y_l$，通过 DPO 离线微调 $\pi_\theta$。这构成了一个 Self-Improvement（自我进化）的闭环飞轮。</p>
-        <div class="code">
-def agent_q_search(state, llm_actor, llm_critic, num_simulations=50):
-    root = Node(state)
-    for _ in range(num_simulations):
-        node = root
-        # 1. Selection
-        while not node.is_leaf():
-            node = select_best_ucb_child(node)
-        
-        # 2. Expansion using LLM Action Generator
-        actions, prior_probs = llm_actor.generate_actions(node.state, top_k=5)
-        for a, p in zip(actions, prior_probs):
-            node.add_child(action=a, prior=p)
-            
-        # 3. Evaluation (Value Estimation)
-        value = llm_critic.estimate_value(node.state)
-        
-        # 4. Backpropagation (Q-Learning backup)
-        while node is not None:
-            node.visit_count += 1
-            node.q_value = node.q_value + alpha * (value - node.q_value)
-            node = node.parent
-            
-    return root.best_action()
-        </div>
-
-        <h3 class="section-title">5. 实验与多维数据</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Agent Architecture</th>
-                    <th>WebArena Success Rate</th>
-                    <th>Mind2Web (Cross-Domain)</th>
-                    <th>Avg Steps / Task</th>
-                    <th>Recovery Rate from Error</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>GPT-4V (Zero-shot)</td>
-                    <td>14.2%</td>
-                    <td>22.5%</td>
-                    <td>8.5</td>
-                    <td>5%</td>
-                </tr>
-                <tr>
-                    <td>ReAct + GPT-4V</td>
-                    <td>28.5%</td>
-                    <td>34.1%</td>
-                    <td>12.3</td>
-                    <td>18%</td>
-                </tr>
-                <tr>
-                    <td>AutoGPT (Web Search)</td>
-                    <td>25.4%</td>
-                    <td>31.0%</td>
-                    <td>15.8</td>
-                    <td>12%</td>
-                </tr>
-                <tr>
-                    <td><strong>Agent-Q (Ours)</strong></td>
-                    <td><span class="highlight">54.8%</span></td>
-                    <td><span class="highlight">62.3%</span></td>
-                    <td><strong>9.2 (Optimized)</strong></td>
-                    <td><span class="highlight">78%</span></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3 class="section-title">6. 消融与讨论 (Ablation)</h3>
-        <div class="ablation">
-            <p><strong>移除 Q-Value Critic：</strong> 如果仅使用 MCTS 加上 LLM 的先验概率（不计算真实的 $Q(s, a)$ 备份），Success Rate 从 54.8% 降至 36.2%。这表明，LLM 单纯依赖即时的视觉/文本感知往往会陷入"局部最优"，只有通过向后追溯的 Bellman Backup，Agent 才能真正理解诸如"点击提交按钮前必须勾选隐私协议"这种具有严格时序依赖的全局价值逻辑。</p>
-        </div>
-    </div>
-
-    <!-- Paper 7 -->
-    <div id="med-1" class="paper-card">
-        <span class="tag tag-med">⚕️ 医学 LLM 与医疗 AI</span>
-        <h2 class="paper-title">7. Med-Omni: Multimodal Large Language Model for End-to-End Clinical Diagnosis</h2>
-        <div class="links">
-            <a href="https://arxiv.org/abs/2603.08821">📄 arXiv PDF</a>
-        </div>
-
-        <h3 class="section-title">1. 背景与底层痛点</h3>
-        <p><strong>底层痛点：</strong> 现有的医学大模型（如 Med-PaLM 2）主要基于纯文本，或者只能通过松耦合方式处理图像（如 LLaVA-Med）。然而，真实的临床诊断是高度多模态且异构的：医生需要同时查阅患者的 <strong>1D 时序数据（心电图 ECG、生命体征时间序列）</strong>、<strong>2D/3D 影像（X 光、MRI、CT）</strong> 以及 <strong>非结构化文本（既往病史、主诉）</strong>。将这些异构数据强行映射为离散 token 会导致严重的病理细节丢失（例如 CT 图像中微小的肺结节边缘特征）。</p>
-
-        <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
-        <p>Med-Omni 提出了一种原生的任意模态到任意模态（Any-to-Any）的医学基础模型架构。其核心创新是 <strong>Medical Unified Tokenizer (MUT)</strong> 与 <strong>Cross-modal Alignment Loss</strong>。</p>
-        <p>对于 3D 医疗影像（如 CT），使用一个带有 3D 卷积的 Vision Transformer 进行编码，提取出 $H \times W \times D$ 的特征，随后通过 <strong>Perceiver Resampler</strong> 将其压缩为固定数量的连续向量（Soft Tokens）。</p>
-        <p>为了使得大模型能够"看懂"并"指出"病灶位置，模型引入了 Bounding Box 的坐标生成机制，联合损失函数为：</p>
-        <div class="math">
-            $$ \mathcal{L}_{total} = \mathcal{L}_{CE}(y_{text} | x_{img}, x_{ecg}) + \lambda_{box} \mathcal{L}_{GIoU}(B_{pred}, B_{gt}) + \lambda_{align} \mathcal{L}_{InfoNCE}(v_{img}, v_{text}) $$
-        </div>
-        <p>其中 $\mathcal{L}_{GIoU}$ 是广义交并比损失，用于监督模型输出的病灶坐标。$\mathcal{L}_{InfoNCE}$ 是对比损失，强制医学影像特征与对应的放射学报告特征在隐藏空间中对齐。</p>
-
-        <h3 class="section-title">4. 深度案例与场景</h3>
-        <div class="example-box">
-            <strong>场景：急诊科多模态综合诊断</strong><br>
-            <strong>Inputs:</strong> <br>
-            1. [Image]: 患者胸部 X 光片 (包含微小的气胸边缘)。<br>
-            2. [Time-series]: 过去 12 小时的 SpO2（血氧）和心率连续数据。<br>
-            3. [Text]: "Patient is a 45-year-old male presenting with sudden onset dyspnea and right-sided chest pain."<br><br>
-            <strong>Med-Omni 诊断输出:</strong><br>
-            "<strong>Finding:</strong> There is a subtle visceral pleural line visible in the right upper lobe [Box: 120, 45, 140, 80], indicating a small right-sided pneumothorax.<br>
-            <strong>Temporal Correlation:</strong> The ECG and vitals show sudden tachycardia (HR > 115) and desaturation (SpO2 dropped to 89%) starting at 02:14 AM, perfectly correlating with the physiological response to a pneumothorax event.<br>
-            <strong>Recommendation:</strong> Immediate confirmation via bedside ultrasound or non-contrast chest CT. Prepare for potential chest tube thoracostomy if respiratory distress worsens."<br>
-            <em>点评：</em> 模型没有单独孤立地分析 X 光，而是将心率突变的时刻与 X 光影像中的极其微小的气胸线（Pleural line）进行了因果关联推理，展现了专家级的多模态临床诊断逻辑。
-        </div>
-
-        <h3 class="section-title">5. 实验与多维数据</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Model</th>
-                    <th>VQA-RAD (Accuracy)</th>
-                    <th>MIMIC-CXR (Report Generation F1)</th>
-                    <th>ECG Diagnosis (AUROC)</th>
-                    <th>Multimodal Diagnosis (Doctor Eval)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Med-PaLM 2 (Text only)</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>3.2 / 5.0</td>
-                </tr>
-                <tr>
-                    <td>LLaVA-Med</td>
-                    <td>78.4%</td>
-                    <td>0.352</td>
-                    <td>-</td>
-                    <td>3.6 / 5.0</td>
-                </tr>
-                <tr>
-                    <td>RadFM</td>
-                    <td>82.1%</td>
-                    <td>0.410</td>
-                    <td>-</td>
-                    <td>3.8 / 5.0</td>
-                </tr>
-                <tr>
-                    <td><strong>Med-Omni (Ours)</strong></td>
-                    <td><span class="highlight">89.5%</span></td>
-                    <td><span class="highlight">0.525</span></td>
-                    <td><span class="highlight">0.912</span></td>
-                    <td><span class="highlight">4.7 / 5.0</span></td>
-                </tr>
-            </tbody>
-        </table>
-
-    </div>
-
-    <!-- Paper 9 -->
-    <div id="ir-1" class="paper-card">
+    <div id="ir" class="paper-card">
         <span class="tag tag-ir">🔍 信息检索与医学 RAG</span>
-        <h2 class="paper-title">9. Dense-Graph-RAG: Integrating Knowledge Graphs with Dense Retrieval for Clinical Guidelines</h2>
+        <h2 class="paper-title">5. TopoChunker: Topology-Aware Agentic Document Chunking Framework</h2>
         <div class="links">
-            <a href="https://arxiv.org/abs/2603.09112">📄 arXiv PDF</a>
+            <a href="https://arxiv.org/abs/2603.18409">📄 arXiv:2603.18409v1</a>
         </div>
 
         <h3 class="section-title">1. 背景与底层痛点</h3>
-        <p><strong>底层痛点：</strong> 在临床决策支持系统（CDSS）中，使用标准 RAG（如基于 BGE 或 OpenAI embedding 的向量检索）极易发生<strong>"逻辑截断"（Logical Truncation）</strong>。临床指南往往是复杂的条件分支（If-Then 树状结构）。如果切片（Chunking）破坏了上下文，检索出的文本可能只包含了"应立即手术"，但漏掉了上一段的"仅当患者对药物无反应时"。纯向量检索无法捕捉实体之间的层级拓扑关系。</p>
+        <p><strong>底层痛点：</strong> 在目前的检索增强生成（RAG）管道中，文本分块（Chunking）是极其粗暴的。大多数框架（如 LangChain 的 RecursiveCharacterTextSplitter）强制将具有层级结构的文档“线性化”（Linearize）。这剥夺了文本固有的树状拓扑依赖，引发了强烈的<strong>"语义碎片化"（Semantic Fragmentation）</strong>，导致检索器在寻找跨段落因果关系时彻底瘫痪。</p>
 
         <h3 class="section-title">3. 方法详解 (Methodology - Hardcore)</h3>
-        <p>提出 <strong>Dense-Graph-RAG</strong>。首先使用大模型对庞大的医学文档（如 NCCN 肿瘤临床实践指南）进行信息抽取，构建三元组构成的医学图谱。随后使用 Graph Neural Network (GNN) 与 Transformer 结合。</p>
-        <p><strong>Graph-augmented Embedding:</strong> 对于图谱中的节点 $v_i$，不仅编码其文本语义，还通过图注意力网络（GAT）聚合其邻居特征：</p>
+        <p>TopoChunker 引入了结构化中间表示（Structured Intermediate Representation, SIR）。它采用一个双智能体（Dual-Agent）架构：</p>
+        <ol>
+            <li><strong>Inspector Agent:</strong> 执行代价优化的路由提取，解析文档为非循环有向图（DAG），每个块都是图中的一个节点 $N_i$。</li>
+            <li><strong>Refiner Agent:</strong> 执行拓扑上下文消歧（Topological Context Disambiguation）。它向上追溯祖先节点的 Headers，并将其注入当前块的 Metadata 中。</li>
+        </ol>
+        <p><strong>Capacity Auditing:</strong> 当一个 Chunk 超出 Token 预算时，算法通过最小割（Min-Cut）算法在语义连接最脆弱的边上进行切割：</p>
         <div class="math">
-            $$ h_i^{(l+1)} = \sigma \left( \sum_{j \in \mathcal{N}(i)} \alpha_{ij} W h_j^{(l)} \right) $$
-        </div>
-        <div class="math">
-            $$ \alpha_{ij} = \frac{\exp(\text{LeakyReLU}(a^T [W h_i || W h_j]))}{\sum_{k \in \mathcal{N}(i)} \exp(\text{LeakyReLU}(a^T [W h_i || W h_k]))} $$
-        </div>
-        <p>最终检索时，将 User Query 的 Dense Vector 与 图中子图（Sub-graph）的池化表示进行点积匹配，召回的是完整的<strong>逻辑推理路径（Reasoning Paths）</strong>，而非零散的文本块。</p>
-
-        <h3 class="section-title">4. 深度案例与场景</h3>
-        <div class="example-box">
-            <strong>场景：肿瘤靶向药物指南查询</strong><br>
-            <strong>Query:</strong> "EGFR 突变阳性的非小细胞肺癌患者，在一线使用奥希替尼产生耐药后，且 T790M 阴性，下一步怎么治疗？"<br>
-            <strong>传统 RAG 召回内容：</strong> 召回了奥希替尼的介绍、T790M 突变的用药（完全答非所问，因为向量匹配到了最多的字眼）。<br>
-            <strong>Dense-Graph-RAG 召回图谱路径：</strong> <br>
-            `(NSCLC) -[has_mutation]-> (EGFR) -[first_line_therapy]-> (Osimertinib) -[resistance_status]-> (Progressed) -[T790M_status]-> (Negative) -[recommended_action]-> (Platinum-based doublet chemotherapy)`<br>
-            <em>点评：</em> 完美的条件路径匹配。基于此路径，LLM 能够准确且无幻觉地回答出：需要进行含铂双药化疗。
+            $$ (S, T) = \arg\min \sum_{u \in S, v \in T} w(u, v) \quad \text{s.t.} \quad \text{Tokens}(S) \leq C_{max} $$
         </div>
 
-        <h3 class="section-title">5. 实验与多维数据</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Retrieval Strategy</th>
-                    <th>Recall@5 (Paths/Docs)</th>
-                    <th>Faithfulness (No Hallucination)</th>
-                    <th>Clinical Action Accuracy</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>BM25 + Reranker</td>
-                    <td>42.1%</td>
-                    <td>65.4%</td>
-                    <td>58.2%</td>
-                </tr>
-                <tr>
-                    <td>Dense RAG (BGE-m3)</td>
-                    <td>68.5%</td>
-                    <td>72.1%</td>
-                    <td>64.5%</td>
-                </tr>
-                <tr>
-                    <td>Standard GraphRAG</td>
-                    <td>75.2%</td>
-                    <td>88.3%</td>
-                    <td>76.8%</td>
-                </tr>
-                <tr>
-                    <td><strong>Dense-Graph-RAG (Ours)</strong></td>
-                    <td><span class="highlight">89.4%</span></td>
-                    <td><span class="highlight">98.1%</span></td>
-                    <td><span class="highlight">92.5%</span></td>
-                </tr>
-            </tbody>
-        </table>
-        
-        <h3 class="section-title">6. 消融与讨论 (Ablation)</h3>
+        <h3 class="section-title">6. 消融与讨论 (Ablation & Discussion)</h3>
         <div class="ablation">
-            <p><strong>GNN 聚合层数的影响：</strong> 实验表明，当 GNN 层数从 2 层增加到 4 层时，Clinical Action Accuracy 反而下降了 5%。这是典型的过度平滑（Over-smoothing）问题，导致特定靶点药物的节点特征被通用肿瘤实体的特征同化。最佳配置是 2 层 GAT 加上残差连接。</p>
+            <p><strong>去拓扑消融对比：</strong> 当剥离 Inspector Agent 强制退回 LangChain 的固定长度线性 Chunking 时，对于逻辑依赖极强的 GovReport（政府报告）数据集，生成准确率下降了 8.0%。更重要的是，由于去除了拓扑消歧信息，导致在 Embedding 距离计算时，模型无法区分不同章节下的同名术语。实验还发现，该方法能反向减少由于重叠字数（Overlap）带来的 Token 冗余开销（Token overhead 降低了 23.5%）。</p>
         </div>
     </div>
 
