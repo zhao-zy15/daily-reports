@@ -100,18 +100,55 @@
         </table>
 
         <div class="chart-container">
+            <h3 style="text-align: center; color: #4b5563; margin-bottom: 15px;">原油价格走势 (Brent & WTI)</h3>
             <canvas id="commodityChart"></canvas>
         </div>
 
+        <div class="chart-container">
+            <h3 style="text-align: center; color: #4b5563; margin-bottom: 15px;">天然气价格走势 (Natural Gas)</h3>
+            <canvas id="ngChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 style="text-align: center; color: #4b5563; margin-bottom: 15px;">黄金价格走势 (Gold)</h3>
+            <canvas id="goldChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 style="text-align: center; color: #4b5563; margin-bottom: 15px;">白银价格走势 (Silver)</h3>
+            <canvas id="silverChart"></canvas>
+        </div>
+
         <script>
-            const ctx = document.getElementById('commodityChart').getContext('2d');
-            new Chart(ctx, {
+            const commonOptions = (yTitle) => ({
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: { title: { display: true, text: yTitle } },
+                    x: { title: { display: true, text: '日期 (近10个交易日)' } }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            });
+
+            const labels10Days = ['03-09', '03-10', '03-11', '03-12', '03-13', '03-16', '03-17', '03-18', '03-19', '03-20'];
+
+            // 1. 原油图表
+            const ctxOil = document.getElementById('commodityChart').getContext('2d');
+            new Chart(ctxOil, {
                 type: 'line',
                 data: {
-                    labels: ['03-09', '03-10', '03-11', '03-12', '03-13', '03-16', '03-17', '03-18', '03-19', '03-20'],
+                    labels: labels10Days,
                     datasets: [
                         {
-                            label: '布伦特原油 (Brent) 价格趋势',
+                            label: '布伦特原油 (Brent)',
                             data: [98.96, 87.8, 91.98, 100.46, 103.14, 100.21, 103.42, 107.38, 108.65, 103.91],
                             borderColor: 'rgba(239, 68, 68, 1)',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -122,7 +159,7 @@
                             pointHoverRadius: 6
                         },
                         {
-                            label: 'WTI原油 价格趋势',
+                            label: 'WTI原油',
                             data: [94.77, 83.45, 87.25, 95.73, 98.71, 93.5, 96.21, 96.32, 96.14, 94.76],
                             borderColor: 'rgba(59, 130, 246, 1)',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -134,23 +171,70 @@
                         }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        y: { title: { display: true, text: '价格 (USD/bbl)' } },
-                        x: { title: { display: true, text: '日期 (近10个交易日)' } }
-                    },
-                    interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
-                        intersect: false
-                    }
-                }
+                options: commonOptions('价格 (USD/bbl)')
+            });
+
+            // 2. 天然气图表
+            const ctxNg = document.getElementById('ngChart').getContext('2d');
+            new Chart(ctxNg, {
+                type: 'line',
+                data: {
+                    labels: labels10Days,
+                    datasets: [{
+                        label: '天然气 (Natural Gas)',
+                        data: [3.12, 3.02, 3.209, 3.233, 3.131, 3.023, 3.033, 3.065, 3.166, 3.114],
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: commonOptions('价格 (USD/MMBtu)')
+            });
+
+            // 3. 黄金图表
+            const ctxGold = document.getElementById('goldChart').getContext('2d');
+            new Chart(ctxGold, {
+                type: 'line',
+                data: {
+                    labels: labels10Days,
+                    datasets: [{
+                        label: '黄金 (Gold)',
+                        data: [5091.5, 5229.7, 5167.4, 5115.8, 5052.5, 4994.0, 5001.0, 4889.9, 4600.7, 4661.3],
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: commonOptions('价格 (USD/oz)')
+            });
+
+            // 4. 白银图表
+            const ctxSilver = document.getElementById('silverChart').getContext('2d');
+            new Chart(ctxSilver, {
+                type: 'line',
+                data: {
+                    labels: labels10Days,
+                    datasets: [{
+                        label: '白银 (Silver)',
+                        data: [84.03, 89.08, 85.07, 84.67, 80.91, 80.26, 79.53, 77.24, 70.9, 72.11],
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: commonOptions('价格 (USD/oz)')
             });
         </script>
     </div>
