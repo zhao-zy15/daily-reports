@@ -106,26 +106,49 @@
         <script>
             const ctx = document.getElementById('commodityChart').getContext('2d');
             new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: ['Brent Crude ($)', 'WTI Crude ($)', 'Natural Gas ($)', 'Silver ($)'],
-                    datasets: [{
-                        label: '商品实时价格对冲图 (除黄金外)',
-                        data: [103.91, 94.76, 3.135, 72.31],
-                        backgroundColor: [
-                            'rgba(239, 68, 68, 0.7)',
-                            'rgba(239, 68, 68, 0.7)',
-                            'rgba(107, 114, 128, 0.7)',
-                            'rgba(245, 158, 11, 0.7)'
-                        ],
-                        borderWidth: 1
-                    }]
+                    labels: ['03-09', '03-10', '03-11', '03-12', '03-13', '03-16', '03-17', '03-18', '03-19', '03-20'],
+                    datasets: [
+                        {
+                            label: '布伦特原油 (Brent) 价格趋势',
+                            data: [98.96, 87.8, 91.98, 100.46, 103.14, 100.21, 103.42, 107.38, 108.65, 103.91],
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'WTI原油 价格趋势',
+                            data: [94.77, 83.45, 87.25, 95.73, 98.71, 93.5, 96.21, 96.32, 96.14, 94.76],
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: '价格 (USD/bbl)' } },
+                        x: { title: { display: true, text: '日期 (近10个交易日)' } }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
                     }
                 }
             });
