@@ -35,11 +35,17 @@ def fetch_google_news_rss(keyword):
                 dt = email.utils.parsedate_to_datetime(pubDate)
                 # Check if within 24h
                 if datetime.now(dt.tzinfo) - dt <= timedelta(hours=36):
+                    description = item.find('description').text if item.find('description') is not None else ''
+                    # Clean HTML from description
+                    clean_summary = re.sub(r'<[^>]+>', '', description)
+                    # If summary is too short or empty, fallback to title (but title is already used), or just empty
+                    if len(clean_summary) < 10: clean_summary = ""
+                    
                     items.append({
                         'title': title,
                         'link': link,
                         'pubDate': dt,
-                        'summary': title # Google news description is often HTML, we just use title for quick summary
+                        'summary': clean_summary
                     })
             except Exception:
                 pass
@@ -153,7 +159,8 @@ for cat in CATEGORIES.keys():
         html_content += f"""
         <div class="flash-card">
             <div class="title">{item['clean_title']}</div>
-            <div class="source">发布时间: {item['pubDate'].strftime('%m-%d %H:%M')} | 🔗 <a href="{item['link']}" target="_blank">阅读原文</a></div>
+            {f'<div class="summary" style="font-size: 14px; color: #475569; margin-top: 5px;">{item["summary"][:120]}...</div>' if item.get('summary') else ''}
+            <div class="source" style="margin-top: 8px;">发布时间: {item['pubDate'].strftime('%m-%d %H:%M')} | 🔗 <a href="{item['link']}" target="_blank">阅读原文</a></div>
         </div>
 """
 
