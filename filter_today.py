@@ -17,9 +17,13 @@ for p in papers:
     summary = p['summary'].lower()
     text = title + " " + summary
     
+    # Exclude multi-modal, image, video, audio papers since the user only wants text/pure LLM related topics.
+    if any(k in text for k in ["video", "image", "visual", "vision", "multi-modal", "multimodal", "audio", "pixel"]):
+        continue
+    
     if "medical" in text or "clinical" in text or "patient" in text or "health" in text:
         categories["Medical LLMs"].append(p)
-    elif "reinforcement" in text or "ppo" in text or "rlhf" in text or "alignment" in text or "dpo" in text:
+    elif any(k in text for k in ["reinforcement", "ppo", "rlhf", "alignment", "dpo", "rlaif", "exploration", "reward"]):
         categories["LLM RL & Alignment"].append(p)
     elif "agent" in text or "tool" in text or "planning" in text or "reasoning" in text:
         categories["LLM Agent"].append(p)
