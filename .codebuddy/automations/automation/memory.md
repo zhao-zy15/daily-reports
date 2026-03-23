@@ -38,3 +38,12 @@
   - Updated `index.html` navigation page.
   - Performed pre-generation reflection on strict timeliness and URL validity.
 - **Outcome**: Saved to `iran-commodity/report-2026-03-23-1028.html`, updated `index.html`, and successfully pushed to GitHub.
+
+## 2026-03-23 10:54
+- **Action**: Refactored the UI and content rating logic for the Daily Iran & Commodity Report (2026-03-23 10:54).
+- **Process**:
+  - Discarded the binary "Military/Diplomatic" classification.
+  - Grouped 8 selected news items into three tiered levels: "核心焦点新闻 (Top 4, with detailed summaries)", "周边冲突与地区动态 (Brief)", and "国际视野与社会反响 (Brief)".
+  - Translated all contents to Chinese and ensured all URLs remain valid.
+  - Generated a new HTML report with the upgraded UI layout.
+- **Outcome**: Saved to `iran-commodity/report-2026-03-23-1054.html` and updated `index.html`.
