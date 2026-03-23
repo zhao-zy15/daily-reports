@@ -1,59 +1,51 @@
 import json
-import re
+import random
 
-with open("arxiv_today.json", "r", encoding="utf-8") as f:
+with open("arxiv_today.json", "r") as f:
     papers = json.load(f)
 
 categories = {
-    "LLM": [],
-    "RL_Alignment": [],
-    "Agent": [],
-    "Medical": [],
-    "IR": []
+    "Pure Text LLMs": [],
+    "LLM RL & Alignment": [],
+    "LLM Agent": [],
+    "Medical LLMs": [],
+    "IR & Medical Retrieval": []
 }
 
-def classify(title, summary):
-    text = (title + " " + summary).lower()
-    if any(k in text for k in ["medical", "clinical", "health", "ehr", "diagnosis", "doctor"]):
-        return "Medical"
-    if any(k in text for k in ["retrieval", "rag", "dense retrieval", "rerank", "bm25"]):
-        return "IR"
-    if any(k in text for k in ["agent", "tool use", "planning", "multi-agent", "action space"]):
-        return "Agent"
-    if any(k in text for k in ["ppo", "dpo", "rlhf", "rlaif", "reinforcement learning", "alignment", "human feedback", "preference"]):
-        return "RL_Alignment"
-    if any(k in text for k in ["llm", "language model", "moe", "pre-train", "transformer", "context length"]):
-        return "LLM"
-    return None
-
 for p in papers:
-    cat = classify(p["title"], p["summary"])
-    if cat:
-        categories[cat].append(p)
+    title = p['title'].lower()
+    summary = p['summary'].lower()
+    text = title + " " + summary
+    
+    if "medical" in text or "clinical" in text or "patient" in text or "health" in text:
+        categories["Medical LLMs"].append(p)
+    elif "reinforcement" in text or "ppo" in text or "rlhf" in text or "alignment" in text or "dpo" in text:
+        categories["LLM RL & Alignment"].append(p)
+    elif "agent" in text or "tool" in text or "planning" in text or "reasoning" in text:
+        categories["LLM Agent"].append(p)
+    elif "retrieval" in text or "rag" in text or "rerank" in text or "dense" in text or "search" in text:
+        categories["IR & Medical Retrieval"].append(p)
+    elif "llm" in text or "language model" in text or "transformer" in text or "attention" in text:
+        categories["Pure Text LLMs"].append(p)
 
 selected = []
 for cat, lst in categories.items():
-    # Take up to 3 from each category to get around 15
-    for p in lst[:3]:
-        p["category"] = cat
+    if len(lst) >= 2:
+        for p in lst[:2]:
+            p['category'] = cat
+            selected.append(p)
+    else:
+        for p in lst:
+            p['category'] = cat
+            selected.append(p)
+
+# If less than 10, fill up to 10 from other text LLMs
+while len(selected) < 10:
+    p = random.choice(categories["Pure Text LLMs"])
+    if p not in selected:
+        p['category'] = "Pure Text LLMs"
         selected.append(p)
 
-# Adjust to be between 10 and 15
-if len(selected) > 15:
-    selected = selected[:15]
-elif len(selected) < 10:
-    # Need to add more
-    for p in papers:
-        cat = classify(p["title"], p["summary"])
-        if cat and p not in selected:
-            p["category"] = cat
-            selected.append(p)
-        if len(selected) == 10:
-            break
-
-with open("selected_12.json", "w", encoding="utf-8") as f:
-    json.dump(selected, f, indent=2, ensure_ascii=False)
-
+with open("selected_10.json", "w") as f:
+    json.dump(selected, f, indent=2)
 print(f"Selected {len(selected)} papers.")
-for p in selected:
-    print(p["category"], ":", p["title"])
