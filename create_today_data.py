@@ -1,4 +1,43 @@
-{
+import json
+import re
+
+html_path = "/Users/seanzyzhao/WorkBuddy/daily-reports/iran-commodity/report-2026-03-23-1054.html"
+with open(html_path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+def extract_array(pattern):
+    m = re.search(pattern, content)
+    return json.loads(m.group(1))
+
+labels = extract_array(r"labels:\s*(\[[^\]]+\])")
+brent_data = extract_array(r"label:\s*'Brent 原油[^']*',\s*data:\s*(\[[^\]]+\])")
+wti_data = extract_array(r"label:\s*'WTI 原油[^']*',\s*data:\s*(\[[^\]]+\])")
+ng_data = extract_array(r"label:\s*'Natural Gas[^']*',\s*data:\s*(\[[^\]]+\])")
+gold_data = extract_array(r"label:\s*'Gold[^']*',\s*data:\s*(\[[^\]]+\])")
+silver_data = extract_array(r"label:\s*'Silver[^']*',\s*data:\s*(\[[^\]]+\])")
+
+labels = labels[1:] + ["2026-03-24"]
+brent_data = brent_data[1:] + [98.96]
+wti_data = wti_data[1:] + [91.19]
+ng_data = ng_data[1:] + [2.926]
+gold_data = gold_data[1:] + [4429.65]
+silver_data = silver_data[1:] + [69.16]
+
+yf_data = {
+    "Brent": {"latest": "98.96", "dates": labels, "closes": brent_data},
+    "WTI": {"latest": "91.19", "dates": labels, "closes": wti_data},
+    "Natural Gas": {"latest": "2.926", "dates": labels, "closes": ng_data},
+    "Gold": {"latest": "4429.65", "dates": labels, "closes": gold_data},
+    "Silver": {"latest": "69.16", "dates": labels, "closes": silver_data},
+    "S&P 500": {"latest": "6581.00"},
+    "USD/IRR": {"latest": "1,313,798"},
+    "USD/CNY": {"latest": "6.8900"}
+}
+
+with open("yf_data.json", "w", encoding="utf-8") as f:
+    json.dump(yf_data, f, ensure_ascii=False, indent=4)
+
+news_zh = {
     "focus": [
         {
             "title": "特朗普声称伊朗“想达成协议”以结束冲突",
@@ -55,3 +94,6 @@
         }
     ]
 }
+
+with open("news_zh.json", "w", encoding="utf-8") as f:
+    json.dump(news_zh, f, ensure_ascii=False, indent=4)

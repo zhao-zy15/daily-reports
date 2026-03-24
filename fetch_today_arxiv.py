@@ -8,7 +8,7 @@ categories = ["cs.CL", "cs.AI", "cs.LG", "cs.IR"]
 query = "+OR+".join([f"cat:{cat}" for cat in categories])
 
 # Fetch latest 100 papers
-url = f"http://export.arxiv.org/api/query?search_query={query}&sortBy=submittedDate&sortOrder=descending&max_results=100"
+url = f"http://export.arxiv.org/api/query?search_query={query}&sortBy=submittedDate&sortOrder=descending&max_results=300"
 
 try:
     response = urllib.request.urlopen(url)

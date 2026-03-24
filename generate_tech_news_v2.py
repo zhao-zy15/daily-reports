@@ -185,7 +185,7 @@ with open(index_path, "r", encoding="utf-8") as f:
 # Replace latest report
 index_html = re.sub(
     r'<div class="latest-report">.*?<a href="([^"]+)".*?</div>\s*</div>',
-    f'<div class="latest-report">\\n            <div class="info">\\n                <div class="label">📅 最新报告 (全领域版)</div>\\n                <div class="title">{report_date}</div>\\n            </div>\\n            <a href="report-{report_date}-v2.html" class="btn">\\n                查看完整报告 →\\n            </a>\\n        </div>',
+    f'<div class="latest-report">\\n            <div class="info">\\n                <div class="label">📅 最新报告 (全领域版)</div>\\n                <div class="title">{report_date}</div>\\n            </div>\\n            <a href="report-{report_date}.html" class="btn">\\n                查看完整报告 →\\n            </a>\\n        </div>',
     index_html,
     flags=re.DOTALL
 )
@@ -193,7 +193,7 @@ index_html = re.sub(
 # Prepend to history
 history_item = f"""            <ul class="history-list">
                 <li>
-                    <a href="report-{report_date}-v2.html">
+                    <a href="report-{report_date}.html">
                         <div class="date-info">
                             <span class="date">{report_date}</span>
                             <span class="weekday">全领域版</span>

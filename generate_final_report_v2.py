@@ -94,8 +94,8 @@ for asset in ['Brent', 'WTI', 'Natural Gas', 'Gold', 'Silver', 'S&P 500', 'USD/I
     market_table += f"<tr><td>{asset}</td><td>{price}</td></tr>"
 market_table += "</table>"
 
-now_str = "2026-03-23 10:54"
-file_name = "report-2026-03-23-1054.html"
+now_str = "2026-03-24 14:25"
+file_name = "report-2026-03-24-1425.html"
 
 html_content = f"""<!DOCTYPE html>
 <html lang="zh-CN">

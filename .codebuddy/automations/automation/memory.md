@@ -47,3 +47,14 @@
   - Translated all contents to Chinese and ensured all URLs remain valid.
   - Generated a new HTML report with the upgraded UI layout.
 - **Outcome**: Saved to `iran-commodity/report-2026-03-23-1054.html` and updated `index.html`.
+
+## 2026-03-24 14:25
+- **Action**: Resumed and completed Daily Iran & Commodity Report after morning failure.
+- **Process**:
+  - The morning automation at 10:00 failed due to Yahoo Finance and Sina API blocking/rate limits.
+  - User prompted "砸了" to resume/fix.
+  - Extracted historical 10-day prices from previous HTML report.
+  - Used Sina Finance API (with specific referers) to get live quotes for Crude, Natural Gas, Gold, Silver, S&P 500, USD/CNY, USD/IRR.
+  - Searched and processed latest 24h news.
+  - Generated `report-2026-03-24-1425.html` and updated `index.html`.
+- **Outcome**: Successfully recovered the task and pushed to GitHub.
