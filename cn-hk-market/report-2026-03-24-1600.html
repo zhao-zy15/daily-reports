@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股收盘复盘 · 2026年3月24日</title>
+    <style>
+        :root {
+            --bg: #f8f9fc; --card: #ffffff; --text: #1a1a2e; --text2: #5a5a7a;
+            --border: #e8eaf0; --red: #ef4444; --red-bg: #fef2f2; --red-light: #fca5a5;
+            --green: #22c55e; --green-bg: #f0fdf4; --green-light: #86efac;
+            --blue: #3b82f6; --blue-bg: #eff6ff; --orange: #f59e0b; --orange-bg: #fffbeb;
+            --purple: #8b5cf6; --purple-bg: #f5f3ff;
+            --shadow: 0 2px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0a0a14; --card: #12122a; --text: #e8e8f0; --text2: #8888aa;
+                --border: #2a2a44; --red: #f87171; --red-bg: #1a0f0f; --red-light: #991b1b;
+                --green: #4ade80; --green-bg: #0f1a0f; --green-light: #166534;
+                --blue: #60a5fa; --blue-bg: #0f1524; --orange: #fbbf24; --orange-bg: #1a1508;
+                --purple: #a78bfa; --purple-bg: #150f24;
+                --shadow: 0 2px 12px rgba(0,0,0,0.3);
+                --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7; min-height: 100vh;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
+        .back { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); text-decoration: none; font-size: 0.9rem; margin-bottom: 16px; }
+        .back:hover { text-decoration: underline; }
+        
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+            border-radius: 20px; padding: 36px 40px; margin-bottom: 28px; color: white;
+            position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        }
+        .hero-tag { background: rgba(255,255,255,0.2); padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; display: inline-block; margin-bottom: 12px; }
+        .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+        .hero .subtitle { opacity: 0.9; font-size: 1rem; }
+        .hero .market-flash { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
+        .hero .flash-item { background: rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 12px; min-width: 140px; backdrop-filter: blur(8px); }
+        .hero .flash-label { font-size: 0.78rem; opacity: 0.85; }
+        .hero .flash-val { font-size: 1.3rem; font-weight: 700; }
+        .hero .flash-chg { font-size: 0.85rem; }
+
+        /* Section */
+        .section { margin-bottom: 28px; }
+        .section-title {
+            font-size: 1.2rem; font-weight: 700; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 10px;
+            padding-bottom: 10px; border-bottom: 2px solid var(--border);
+        }
+        .section-icon { font-size: 1.4rem; }
+
+        /* Cards */
+        .card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 22px; margin-bottom: 16px; box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .card h3 { font-size: 1.05rem; margin-bottom: 10px; font-weight: 700; }
+        .card p { color: var(--text2); font-size: 0.92rem; margin-bottom: 6px; }
+
+        /* Tables */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 12px 0; }
+        .data-table th {
+            background: var(--bg); padding: 10px 14px; text-align: left; font-weight: 600;
+            border-bottom: 2px solid var(--border); font-size: 0.82rem; color: var(--text2);
+        }
+        .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        .data-table tr:hover { background: var(--bg); }
+        .up { color: var(--red); font-weight: 600; }
+        .down { color: var(--green); font-weight: 600; }
+
+        /* Tags */
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; margin: 2px; }
+        .tag-red { background: var(--red-bg); color: var(--red); }
+        .tag-green { background: var(--green-bg); color: var(--green); }
+        .tag-blue { background: var(--blue-bg); color: var(--blue); }
+        .tag-orange { background: var(--orange-bg); color: var(--orange); }
+        .tag-purple { background: var(--purple-bg); color: var(--purple); }
+
+        /* Hotspot Grid */
+        .hotspot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .hotspot-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 20px; box-shadow: var(--shadow); border-left: 4px solid var(--red);
+        }
+        .hotspot-card h4 { font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .hotspot-card p { font-size: 0.88rem; color: var(--text2); margin-bottom: 4px; }
+
+        /* Stock Row */
+        .stock-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+        .stock-row:last-child { border-bottom: none; }
+        .stock-name { font-weight: 600; font-size: 0.95rem; }
+        .stock-code { font-size: 0.82rem; color: var(--text2); }
+        .stock-price { font-size: 1.1rem; font-weight: 700; }
+        .stock-chg { font-size: 0.9rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+        .chg-up { background: var(--red-bg); color: var(--red); }
+        .chg-down { background: var(--green-bg); color: var(--green); }
+
+        /* Source link */
+        .source { font-size: 0.78rem; color: var(--blue); text-decoration: none; }
+        .source:hover { text-decoration: underline; }
+        .source-block { margin-top: 8px; font-size: 0.8rem; color: var(--text2); }
+        .source-block a { color: var(--blue); }
+
+        /* Footer */
+        footer { text-align: center; padding: 30px 0; color: var(--text2); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px; }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, var(--red-bg), var(--orange-bg));
+            border: 1px solid var(--red-light);
+            border-radius: 12px; padding: 18px 22px; margin: 12px 0;
+        }
+        .highlight-box.blue {
+            background: linear-gradient(135deg, var(--blue-bg), var(--purple-bg));
+            border-color: var(--blue);
+        }
+
+        @media (max-width: 640px) {
+            .hero { padding: 24px 20px; }
+            .hero h1 { font-size: 1.5rem; }
+            .hero .market-flash { gap: 10px; }
+            .hero .flash-item { min-width: 120px; padding: 10px 14px; }
+            .hotspot-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="index.html" class="back">← 返回报告列表</a>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-tag">📊 16:00 收盘复盘</div>
+        <h1>A股港股全线反弹 · 超5100股飘红</h1>
+        <p class="subtitle">2026年3月24日（周二）| 中东战事恐慌消退，午后深V反转，算力军工绿电领涨</p>
+        <div class="market-flash">
+            <div class="flash-item">
+                <div class="flash-label">上证指数</div>
+                <div class="flash-val">3,881.28</div>
+                <div class="flash-chg">▲ +1.78%</div>
+            </div>
+            <div class="flash-item">
+                <div class="flash-label">深证成指</div>
+                <div class="flash-val">13,536.56</div>
+                <div class="flash-chg">▲ +1.43%</div>
+            </div>
+            <div class="flash-item">
+                <div class="flash-label">创业板指</div>
+                <div class="flash-val">3,251.55</div>
+                <div class="flash-chg">▲ +0.50%</div>
+            </div>
+            <div class="flash-item">
+                <div class="flash-label">恒生指数</div>
+                <div class="flash-val">25,063.71</div>
+                <div class="flash-chg">▲ +2.79%</div>
+            </div>
+            <div class="flash-item">
+                <div class="flash-label">恒生科技</div>
+                <div class="flash-val">4,830.89</div>
+                <div class="flash-chg">▲ +2.51%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 第一模块：大盘全景概览 ====== -->
+    <div class="section">
+        <div class="section-title"><span class="section-icon">📈</span> 大盘全景概览</div>
+        
+        <div class="card">
+            <h3>核心指数收盘数据</h3>
+            <p>在经历了昨日（3/23）受中东局势升级和美股大跌冲击导致的暴跌（沪指-3.63%，深成指-3.76%）后，今日A股终结三连跌，午后上演深"V"反转行情，全市场超5100只个股飘红，130余股涨停。市场呈现"缩量普涨"格局。</p>
+            <table class="data-table">
+                <thead>
+                    <tr><th>指数</th><th>收盘点位</th><th>涨跌幅</th><th>涨跌额</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>上证指数</strong></td><td>3,881.28</td><td class="up">+1.78%</td><td class="up">+68.00</td><td>收复3850关口</td></tr>
+                    <tr><td><strong>深证成指</strong></td><td>13,536.56</td><td class="up">+1.43%</td><td class="up">+191.04</td><td>止跌反弹</td></tr>
+                    <tr><td><strong>创业板指</strong></td><td>3,251.55</td><td class="up">+0.50%</td><td class="up">+16.33</td><td>缩量微涨</td></tr>
+                    <tr><td><strong>恒生指数</strong></td><td>25,063.71</td><td class="up">+2.79%</td><td class="up">+681.24</td><td>强势反弹收复25000</td></tr>
+                    <tr><td><strong>恒生科技指数</strong></td><td>4,830.89</td><td class="up">+2.51%</td><td class="up">+118.41</td><td>科技股普涨</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>成交额与资金流向</h3>
+            <table class="data-table">
+                <thead><tr><th>项目</th><th>数据</th><th>变化</th></tr></thead>
+                <tbody>
+                    <tr><td>沪市成交额</td><td>约 9,314 亿元</td><td>较昨日缩量</td></tr>
+                    <tr><td>沪深两市合计</td><td>约 2.08 万亿元</td><td>较昨日 2.45 万亿缩量约 3,700 亿</td></tr>
+                    <tr><td>南向资金（3/23 T+2）</td><td>大幅净流入</td><td>盈富基金 +127亿、恒生中企 +39亿、南方恒科 +31亿</td></tr>
+                    <tr><td>ETF资金</td><td>218亿逆势入场</td><td>宽基ETF成首选"避风港"</td></tr>
+                </tbody>
+            </table>
+            <div class="source-block">
+                数据来源：<a href="https://quote.eastmoney.com/ZS000001.html" target="_blank">东方财富</a> · 
+                <a href="https://www.zhitongcaijing.com/content/detail/1417746.html" target="_blank">智通财经(南向资金)</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 第二模块：专属自选追踪 ====== -->
+    <div class="section">
+        <div class="section-title"><span class="section-icon">⭐</span> 专属自选追踪</div>
+        
+        <div class="card">
+            <h3>港股自选 · 全线反弹</h3>
+            <p>昨日因中东战事恐慌遭遇普跌后，今日港股自选个股全部收涨，泡泡玛特和蜜雪冰城领涨。</p>
+            
+            <div class="stock-row">
+                <div><div class="stock-name">泡泡玛特</div><div class="stock-code">9992.HK</div></div>
+                <div class="stock-price">HK$ 217.20</div>
+                <div class="stock-chg chg-up">+7.42%</div>
+            </div>
+            <div class="stock-row">
+                <div><div class="stock-name">蜜雪冰城</div><div class="stock-code">2097.HK</div></div>
+                <div class="stock-price">HK$ 341.80</div>
+                <div class="stock-chg chg-up">+5.95%</div>
+            </div>
+            <div class="stock-row">
+                <div><div class="stock-name">美团</div><div class="stock-code">3690.HK</div></div>
+                <div class="stock-price">HK$ 79.00</div>
+                <div class="stock-chg chg-up">+3.20%</div>
+            </div>
+            <div class="stock-row">
+                <div><div class="stock-name">腾讯控股</div><div class="stock-code">0700.HK</div></div>
+                <div class="stock-price">HK$ 514.00</div>
+                <div class="stock-chg chg-up">+3.13%</div>
+            </div>
+            <div class="stock-row">
+                <div><div class="stock-name">阿里巴巴</div><div class="stock-code">9988.HK</div></div>
+                <div class="stock-price">HK$ 123.20</div>
+                <div class="stock-chg chg-up">+2.92%</div>
+            </div>
+            <div class="stock-row">
+                <div><div class="stock-name">小米集团</div><div class="stock-code">1810.HK</div></div>
+                <div class="stock-price">HK$ 32.68</div>
+                <div class="stock-chg chg-up">+1.93%</div>
+            </div>
+            
+            <div class="source-block">
+                数据来源：<a href="https://finance.sina.com.cn/stock/" target="_blank">新浪财经实时行情</a>（2026-03-24 16:08）
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>A股自选 · 宁德时代小幅回调</h3>
+            <div class="stock-row">
+                <div><div class="stock-name">宁德时代</div><div class="stock-code">300750.SZ</div></div>
+                <div class="stock-price">¥ 396.99</div>
+                <div class="stock-chg chg-down">-1.24%</div>
+            </div>
+            <p style="margin-top:10px;">宁德时代今日高开后震荡回落，盘中最高411.90，最低388.00，振幅5.95%。在昨日暴跌-2.67%后，市场分歧加大，短线获利盘兑现意愿较强。锂电板块今日涨跌互现，但碳酸锂期货大涨6.11%，为后续板块提供支撑。</p>
+            <div class="source-block">
+                数据来源：<a href="https://stock.10jqka.com.cn/" target="_blank">同花顺</a> · akshare
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>自选行业简评</h3>
+            <div style="margin-bottom: 14px;">
+                <strong>🤖 机器人板块</strong>
+                <span class="tag tag-red">关注</span>
+                <p>经历昨日大跌后今日随大盘反弹，但弹性弱于AI算力板块。兵装重组概念涨7.80%提振军工智能方向。机器人板块关注后续华为新一代算力芯片催化。</p>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <strong>💊 创新药（含恒生医疗）</strong>
+                <span class="tag tag-blue">回暖</span>
+                <p>CRO概念集体走强，行业供需显著改善，融资客最新抢筹。创新药板块在前期调整后出现资金回流，部分头部Biotech个股反弹幅度可观。</p>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <strong>🔬 芯片半导体</strong>
+                <span class="tag tag-red">强势</span>
+                <p>阿里大动作+算力硬件产业链全线回暖带动半导体板块走强。元件涨4.03%、通信设备涨3.74%领涨。华为新一代算力芯片发布在即，叠加国产替代逻辑持续强化。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 第三模块：市场核心热点 ====== -->
+    <div class="section">
+        <div class="section-title"><span class="section-icon">🔥</span> 市场核心热点与资金风口</div>
+
+        <div class="hotspot-grid">
+            <!-- 热点1：绿色电力 -->
+            <div class="hotspot-card">
+                <h4>⚡ 绿色电力（绿电）<span class="tag tag-red">涨停潮</span></h4>
+                <p><strong>驱动原因：</strong>两部门"点名"支持绿色电力+"算电协同"迎新进展，政策定调叠加能源转型逻辑。</p>
+                <p><strong>重点个股：</strong>拓日新能(+10.02%，龙虎榜净买4.45亿)、金开新能(+10.04%)等多股涨停。</p>
+                <p><strong>持续性：</strong><span class="tag tag-orange">★★★★</span> 政策驱动+算力需求双轮驱动，中期主线逻辑清晰。</p>
+            </div>
+
+            <!-- 热点2：军工 -->
+            <div class="hotspot-card">
+                <h4>🚀 军工/国防<span class="tag tag-red">强势</span></h4>
+                <p><strong>驱动原因：</strong>中东战事持续紧张+兵装重组概念大涨7.80%，地缘冲突催化国防军工需求预期。</p>
+                <p><strong>重点个股：</strong>兵装重组概念涨停潮，军工ETF资金大幅流入。</p>
+                <p><strong>持续性：</strong><span class="tag tag-orange">★★★★</span> 地缘风险溢价+国防预算增长双重支撑。</p>
+            </div>
+
+            <!-- 热点3：算力AI -->
+            <div class="hotspot-card">
+                <h4>🧠 算力硬件/AI芯片<span class="tag tag-red">全线回暖</span></h4>
+                <p><strong>驱动原因：</strong>阿里重大动作催化+华为新算力芯片发布在即+产业链全线回暖。</p>
+                <p><strong>重点个股：</strong>元件涨4.03%、通信设备涨3.74%、IT服务涨2.81%。汉缆股份涨停(龙虎榜净买3.81亿)。</p>
+                <p><strong>持续性：</strong><span class="tag tag-red">★★★★★</span> AI主升浪核心赛道，回调即是买入机会。</p>
+            </div>
+
+            <!-- 热点4：CRO/医药 -->
+            <div class="hotspot-card">
+                <h4>💊 CRO/创新药<span class="tag tag-blue">资金抢筹</span></h4>
+                <p><strong>驱动原因：</strong>行业供需显著改善，CRO订单触底回升，融资客最新加仓。</p>
+                <p><strong>重点个股：</strong>CRO概念集体走强，头部公司反弹明显。</p>
+                <p><strong>持续性：</strong><span class="tag tag-blue">★★★</span> 行业基本面拐点确认中，但短期博弈资金偏多。</p>
+            </div>
+
+            <!-- 热点5：通用设备/高端制造 -->
+            <div class="hotspot-card">
+                <h4>⚙️ 通用设备/高端制造<span class="tag tag-red">涨3.47%</span></h4>
+                <p><strong>驱动原因：</strong>节能装备高质量发展实施方案(2026-2028)出台+制造业PMI数据改善预期。</p>
+                <p><strong>重点个股：</strong>比亚迪主力净流入13.59亿领涨。</p>
+                <p><strong>持续性：</strong><span class="tag tag-orange">★★★</span> 政策催化+产业升级，中期偏多。</p>
+            </div>
+
+            <!-- 热点6：非白酒/消费 -->
+            <div class="hotspot-card">
+                <h4>🍺 非白酒消费<span class="tag tag-red">涨3.16%</span></h4>
+                <p><strong>驱动原因：</strong>超跌反弹+消费复苏预期回暖。大跌后消费龙头估值进入合理区间，抄底资金介入。</p>
+                <p><strong>重点个股：</strong>板块内龙头股普涨，资金从避险板块向消费回流。</p>
+                <p><strong>持续性：</strong><span class="tag tag-blue">★★★</span> 主要是超跌反弹逻辑，持续性有待观察。</p>
+            </div>
+        </div>
+
+        <div class="source-block" style="margin-top: 12px;">
+            数据来源：<a href="https://stock.eastmoney.com/" target="_blank">东方财富网(板块涨跌幅+龙虎榜)</a> ·
+            <a href="https://stock.10jqka.com.cn/" target="_blank">同花顺行业排名</a>
+        </div>
+    </div>
+
+    <!-- ====== 第四模块：跨市场联动 ====== -->
+    <div class="section">
+        <div class="section-title"><span class="section-icon">🔗</span> 跨市场联动追踪</div>
+
+        <div class="card">
+            <h3>商品期货市场（3月24日收盘）</h3>
+            <p>中东战事背景下，原油暴跌超8%成为全场焦点，碳酸锂大涨6.11%领涨。黑色系和有色金属普遍承压。</p>
+            <table class="data-table">
+                <thead><tr><th>品种</th><th>最新价</th><th>昨结算</th><th>涨跌幅</th><th>备注</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>沪金（AU0）</strong></td><td>581.58</td><td>574.94</td><td class="up">+1.15%</td><td>避险需求回升</td></tr>
+                    <tr><td><strong>沪银（AG0）</strong></td><td>8,131</td><td>8,159</td><td class="down">-0.34%</td><td>昨日暴跌后企稳</td></tr>
+                    <tr><td><strong>原油（SC0）</strong></td><td>606.50</td><td>612.30</td><td class="down">-0.95%</td><td>战事不确定性</td></tr>
+                    <tr><td><strong>螺纹钢（RB0）</strong></td><td>3,487</td><td>3,541</td><td class="down">-1.53%</td><td>黑色系承压</td></tr>
+                    <tr><td><strong>铁矿石（I0）</strong></td><td>805</td><td>824</td><td class="down">-2.31%</td><td>需求预期弱化</td></tr>
+                    <tr><td><strong>沪铜（CU0）</strong></td><td>78,500</td><td>79,280</td><td class="down">-0.98%</td><td>有色承压</td></tr>
+                    <tr><td><strong>沪铝（AL0）</strong></td><td>19,740</td><td>19,860</td><td class="down">-0.60%</td><td>—</td></tr>
+                    <tr><td><strong>沪锌（ZN0）</strong></td><td>23,735</td><td>24,295</td><td class="down">-2.30%</td><td>跌幅较大</td></tr>
+                    <tr><td><strong>焦煤（JM0）</strong></td><td>1,555</td><td>1,571</td><td class="down">-1.02%</td><td>—</td></tr>
+                    <tr><td><strong>焦炭（J0）</strong></td><td>2,232</td><td>2,288</td><td class="down">-2.45%</td><td>黑色系领跌</td></tr>
+                    <tr><td><strong>豆粕（M0）</strong></td><td>3,111</td><td>3,084</td><td class="up">+0.88%</td><td>农产品偏强</td></tr>
+                </tbody>
+            </table>
+            <div class="source-block">数据来源：<a href="https://finance.sina.com.cn/futures/" target="_blank">新浪期货实时行情</a></div>
+        </div>
+
+        <div class="card">
+            <h3>人民币汇率</h3>
+            <table class="data-table">
+                <thead><tr><th>品种</th><th>最新报价</th><th>备注</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>美元/人民币（在岸 CNY）</strong></td><td>6.8903</td><td>小幅贬值，日内波动约100点</td></tr>
+                    <tr><td><strong>美元/离岸人民币（CNH）</strong></td><td>6.8934</td><td>在岸离岸价差极窄</td></tr>
+                </tbody>
+            </table>
+            <p style="margin-top: 10px;">人民币今日小幅贬值，受美元指数走强影响（美联储鹰派信号叠加中东冲突避险美元需求）。在岸6.89关口附近拉锯，对A股外资流向的短期负面影响有限——市场更关注国内政策面和技术性反弹。</p>
+            <div class="source-block">数据来源：<a href="https://finance.sina.com.cn/money/forex/hq/CNHUSD.shtml" target="_blank">新浪外汇(2026-03-24 18:07)</a></div>
+        </div>
+
+        <div class="card">
+            <h3>外围市场信号</h3>
+            <p>上周五美股三大指数大幅下挫，受中东伊朗战事升级和美联储偏鹰表态压制。道琼斯跌破40000点心理关口，标普500和纳斯达克均跌超2%。但亚太市场今日普遍反弹，日经225和韩国KOSPI也录得正收益，全球恐慌情绪有所消退。</p>
+            <p><strong>关键观察：</strong>美股期货在亚洲交易时段企稳回升，若今晚美股止跌反弹，将对明日A股港股构成正面支撑。</p>
+        </div>
+    </div>
+
+    <!-- ====== 第五模块：核心点评与展望 ====== -->
+    <div class="section">
+        <div class="section-title"><span class="section-icon">💡</span> 核心点评与明日展望</div>
+
+        <div class="highlight-box">
+            <h3 style="margin-bottom: 10px;">📋 今日行情定性：<span class="up">恐慌后技术性反弹 + 缩量止跌</span></h3>
+            <p>今日行情属于典型的<strong>"恐慌出清后的技术性反弹"</strong>。昨日三大指数暴跌3.5%以上，成交放量至2.45万亿，恐慌盘集中释放后，今日出现缩量反弹（约2.08万亿），5100+股飘红，属于超跌修复行情。</p>
+            <p style="margin-top: 8px;"><strong>核心逻辑：</strong></p>
+            <ul style="padding-left: 20px; margin-top: 6px; color: var(--text2);">
+                <li>昨日暴跌后恐慌盘出清，技术面超卖信号明显</li>
+                <li>218亿ETF资金逆势入场托底，表明机构看好反弹</li>
+                <li>中东局势虽紧张但未进一步恶化，市场消化利空能力增强</li>
+                <li>港股反弹强于A股（恒指+2.79% vs 沪指+1.78%），外资风险偏好边际改善</li>
+            </ul>
+        </div>
+
+        <div class="highlight-box blue">
+            <h3 style="margin-bottom: 10px;">🔮 明日操作策略建议</h3>
+            <ol style="padding-left: 20px; color: var(--text2);">
+                <li><strong>短线策略：</strong>今日缩量反弹后，明日需关注<strong>3900点</strong>能否有效突破。若放量上攻站稳3900则确认短线反转，否则仍需防范二次探底。</li>
+                <li><strong>核心持仓：</strong>算力/AI硬件是中期主线，回调后可逐步加仓元件、通信设备等方向。绿电板块政策催化明确，可关注低位标的。</li>
+                <li><strong>港股自选：</strong>泡泡玛特(+7.42%)和蜜雪冰城(+5.95%)弹性最大，但需注意短线获利盘抛压。腾讯(+3.13%)修复至514港元，趋势偏多。</li>
+                <li><strong>风险管控：</strong>宁德时代(-1.24%)逆势回调需密切关注388元支撑位，若破位则需减仓。期货市场黑色系和有色金属承压，对相关板块形成拖累。</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h3>⚠️ 明日重点催化剂事件</h3>
+            <ul style="padding-left: 20px; color: var(--text2);">
+                <li><strong>中东局势最新进展：</strong>伊朗战事是否出现缓和信号，直接影响全球风险偏好</li>
+                <li><strong>美股今晚走势：</strong>道琼斯能否企稳40000点上方，决定A股明日高开或低开</li>
+                <li><strong>华为算力芯片发布：</strong>新一代算力芯片即将发布，可能引爆算力/半导体板块</li>
+                <li><strong>碳酸锂期货异动：</strong>今日大涨6.11%，关注对宁德时代等锂电龙头的传导效应</li>
+                <li><strong>四部门节能装备方案：</strong>《节能装备高质量发展实施方案(2026-2028)》持续催化高端制造</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>本报告由 WorkBuddy 自动生成于 2026年3月24日 16:00</p>
+        <p>数据来源：同花顺 · 东方财富 · 新浪财经 · 智通财经 · akshare | 仅供参考，不构成投资建议</p>
+    </footer>
+</div>
+</body>
+</html>
