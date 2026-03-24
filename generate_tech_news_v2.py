@@ -106,36 +106,182 @@ html_content = f"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>科技与财经每日动态 (多领域版) - {datetime.now().strftime('%Y-%m-%d')}</title>
-    <style>
-        body {{ font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1a1a2e; line-height: 1.6; padding: 20px; }}
-        .container {{ max-width: 900px; margin: 0 auto; background-color: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }}
-        h1 {{ color: #0f172a; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; font-size: 28px; margin-bottom: 30px; }}
-        h2 {{ color: #1e293b; margin-top: 40px; font-size: 22px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }}
-        .top-card {{ background: linear-gradient(to right, #f8fafc, #eff6ff); border-left: 5px solid #3b82f6; padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.1); }}
-        .top-card .title {{ font-size: 18px; font-weight: bold; color: #0f172a; margin-bottom: 10px; }}
-        .top-card .detail {{ font-size: 15px; color: #475569; margin-bottom: 10px; }}
-        .flash-card {{ padding: 12px 0; border-bottom: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px; }}
+    <title>科技与财经每日动态 - {datetime.now().strftime('%Y-%m-%d')}</title>
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        :root {{
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --tag-bg: #e0f2fe;
+            --tag-text: #0369a1;
+            --danger-bg: #fef2f2;
+            --danger-text: #dc2626;
+        }}
+        @media (prefers-color-scheme: dark) {{
+            :root {{
+                --primary: #3b82f6;
+                --primary-light: #1e3a8a;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --bg-body: #0f172a;
+                --bg-card: #1e293b;
+                --border-color: #334155;
+                --tag-bg: #0c4a6e;
+                --tag-text: #38bdf8;
+                --danger-bg: #7f1d1d;
+                --danger-text: #fca5a5;
+            }}
+        }}
+        body {{ 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-main); 
+            line-height: 1.7; 
+            padding: 2rem 1rem; 
+            margin: 0;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }}
+        .container {{ 
+            max-width: 860px; 
+            margin: 0 auto; 
+            background-color: var(--bg-card); 
+            padding: 2.5rem 3.5rem; 
+            border-radius: 24px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.05); 
+            transition: background-color 0.3s ease;
+        }}
+        h1 {{ 
+            color: var(--text-main); 
+            font-size: 2.25rem; 
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }}
+        .header-divider {{
+            height: 4px;
+            width: 80px;
+            background: var(--primary);
+            margin: 0 auto 3rem auto;
+            border-radius: 4px;
+        }}
+        h2 {{ 
+            color: var(--text-main); 
+            margin-top: 3.5rem; 
+            font-size: 1.5rem; 
+            font-weight: 700;
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            border-bottom: 2px solid var(--border-color); 
+            padding-bottom: 1rem; 
+            letter-spacing: -0.01em;
+        }}
+        .top-card {{ 
+            background: linear-gradient(135deg, var(--bg-card), var(--primary-light));
+            border-left: 5px solid var(--primary); 
+            padding: 1.75rem; 
+            border-radius: 0 16px 16px 0; 
+            margin-bottom: 1.5rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }}
+        .top-card:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }}
+        .top-card .title {{ 
+            font-size: 1.25rem; 
+            font-weight: 700; 
+            color: var(--text-main); 
+            margin-bottom: 0.75rem; 
+            line-height: 1.4;
+        }}
+        .top-card .detail {{ 
+            font-size: 1rem; 
+            color: var(--text-muted); 
+            margin-bottom: 1rem; 
+        }}
+        .flash-card {{ 
+            padding: 1.5rem 0; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.5rem; 
+        }}
         .flash-card:last-child {{ border-bottom: none; }}
-        .flash-card .title {{ font-weight: 600; color: #334155; font-size: 16px; }}
-        .tag {{ display: inline-block; background: #e0f2fe; color: #0284c7; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }}
-        .tag-important {{ background: #fef08a; color: #854d0e; }}
-        .source {{ font-size: 13px; color: #64748b; margin-top: 5px; }}
-        a {{ color: #2563eb; text-decoration: none; word-break: break-all; }}
-        a:hover {{ text-decoration: underline; }}
-        .reflection {{ background: #fef3c7; color: #92400e; padding: 20px; border-radius: 10px; margin-bottom: 30px; font-size: 14px; border: 1px solid #fde68a; }}
+        .flash-card .summary {{
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            line-height: 1.6;
+        }}
+        .flash-card .title {{ 
+            font-weight: 600; 
+            color: var(--text-main); 
+            font-size: 1.1rem; 
+            line-height: 1.5;
+        }}
+        .tag {{ 
+            display: inline-flex; 
+            align-items: center;
+            background: var(--tag-bg); 
+            color: var(--tag-text); 
+            padding: 0.25rem 0.75rem; 
+            border-radius: 9999px; 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }}
+        .tag-important {{ 
+            background: var(--danger-bg); 
+            color: var(--danger-text); 
+        }}
+        .source {{ 
+            font-size: 0.85rem; 
+            color: var(--text-muted); 
+            margin-top: 0.5rem; 
+        }}
+        a {{ 
+            color: var(--primary); 
+            text-decoration: none; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }}
+        a:hover {{ 
+            color: #1d4ed8; 
+            text-decoration: underline; 
+            text-underline-offset: 4px;
+        }}
+        .reflection {{ 
+            background: var(--bg-body); 
+            color: var(--text-muted); 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            margin-bottom: 2rem; 
+            font-size: 0.95rem; 
+            border: 1px dashed var(--border-color); 
+        }}
+        @media (max-width: 640px) {{
+            .container {{ padding: 1.5rem; border-radius: 16px; }}
+            h1 {{ font-size: 1.75rem; }}
+            h2 {{ font-size: 1.25rem; }}
+            .top-card .title {{ font-size: 1.1rem; }}
+        }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🌐 科技与财经全领域动态 ({datetime.now().strftime('%Y-%m-%d')})</h1>
-        
-        <div class="reflection">
-            <strong>&lt;Reflection&gt; 生成前自我反思:</strong><br>
-            1. <b>总数与分类：</b>总共抓取并筛选了 20+ 篇过去24小时内的新闻，按照用户要求的最新分类（大模型、脑机接口、具身智能、视频生成、自动驾驶、巨头、创投）进行了重新组织。<br>
-            2. <b>重要性分级：</b>甄选了 5 篇跨领域的最重要新闻作为核心焦点（深度讲解），其余 15+ 篇作为各垂直赛道的前沿快讯。<br>
-            3. <b>时效与信源：</b>全部基于自动化 RSS 聚合自过去 24h 的全网真实资讯，每条均附带可打开的 URL。反思通过！
-        </div>
+        <h1>🌐 科技与财经每日动态</h1>
+        <p style="text-align:center;color:var(--text-muted);font-size:1rem;margin-top:-1rem;margin-bottom:0.5rem;">{datetime.now().strftime('%Y-%m-%d')} · 七大垂直赛道 · 精选动态</p>
+        <div class="header-divider"></div>
 
         <h2>🌟 核心焦点 (Top 5 深度解析)</h2>
 """
@@ -146,7 +292,7 @@ for item in top_5:
         <div class="top-card">
             <div class="title"><span class="tag tag-important">🔥 重磅</span> <span class="tag">{item['category']}</span> {item['clean_title']}</div>
             <div class="detail"><b>事件深度解析：</b>过去 24 小时内，该领域迎来了关键性突破/动向。此事件不仅代表了技术或商业层面的重要进展，更将直接影响 {item['category']} 赛道的未来走势和资本市场预期。我们强烈建议关注其后续的产业化落地情况。</div>
-            <div class="source">🔗 来源：<a href="{item['link']}" target="_blank">{item['link']}</a></div>
+            <div class="source">🔗 来源：<a href="{item['link']}" target="_blank">查看原文 →</a></div>
         </div>
 """
 
@@ -159,8 +305,8 @@ for cat in CATEGORIES.keys():
         html_content += f"""
         <div class="flash-card">
             <div class="title">{item['clean_title']}</div>
-            {f'<div class="summary" style="font-size: 14px; color: #475569; margin-top: 5px;">{item["summary"][:120]}...</div>' if item.get('summary') else ''}
-            <div class="source" style="margin-top: 8px;">发布时间: {item['pubDate'].strftime('%m-%d %H:%M')} | 🔗 <a href="{item['link']}" target="_blank">阅读原文</a></div>
+            {f'<div class="summary">{item["summary"][:120]}...</div>' if item.get('summary') else ''}
+            <div class="source">发布时间: {item['pubDate'].strftime('%m-%d %H:%M')} | 🔗 <a href="{item['link']}" target="_blank">阅读原文</a></div>
         </div>
 """
 
@@ -171,7 +317,7 @@ html_content += """
 """
 
 report_date = datetime.now().strftime('%Y-%m-%d')
-report_path = f"/Users/seanzyzhao/WorkBuddy/daily-reports/tech-news/report-{report_date}-v2.html"
+report_path = f"/Users/seanzyzhao/WorkBuddy/daily-reports/tech-news/report-{report_date}.html"
 with open(report_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
