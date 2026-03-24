@@ -7,382 +7,438 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --bg: #0a0a14;
-            --bg2: #12121f;
-            --bg3: #1a1a2e;
-            --text: #e8e8f0;
-            --text2: #9898b0;
-            --accent: #38bdf8;
-            --accent2: #818cf8;
-            --gold: #f59e0b;
-            --green: #22c55e;
-            --red: #ef4444;
-            --border: #2a2a40;
-            --card-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --bg: #0a0a12; --bg2: #12121e; --bg3: #1a1a2e;
+            --text: #e8e8f0; --text2: #9898b0; --accent: #6366f1;
+            --accent2: #818cf8; --border: #2d2d44;
+            --red: #ef4444; --green: #22c55e; --amber: #f59e0b;
+            --cyan: #06b6d4; --purple: #a855f7; --pink: #ec4899;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.75;
         }
-        .container { max-width: 960px; margin: 0 auto; padding: 30px 20px 60px; }
-        
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--accent2); text-decoration: none; font-size: 0.9rem;
+            padding: 8px 16px; background: var(--bg2); border-radius: 8px;
+            border: 1px solid var(--border); transition: all 0.3s; margin-bottom: 24px;
+        }
+        .back-link:hover { background: var(--accent); color: white; }
+
         /* Hero */
         .hero {
-            text-align: center;
-            padding: 50px 30px;
-            background: linear-gradient(135deg, #0f0f2a 0%, #1a1a3e 50%, #12122e 100%);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            margin-bottom: 35px;
-            position: relative;
-            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a3e 0%, #0a0a20 50%, #1a0a2e 100%);
+            border-radius: 20px; padding: 50px 40px; margin-bottom: 40px;
+            border: 1px solid var(--border); position: relative; overflow: hidden;
         }
         .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.06) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 50%, rgba(129,140,248,0.06) 0%, transparent 50%);
+            content: ''; position: absolute; top: -50%; right: -30%; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
         }
-        .hero-date { font-size: 0.85rem; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; position: relative; }
-        .hero h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 10px; position: relative; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { color: var(--text2); font-size: 0.95rem; position: relative; }
-        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; margin-bottom: 20px; padding: 8px 16px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); transition: all 0.3s; }
-        .back-link:hover { background: var(--accent); color: #000; }
+        .hero-tag {
+            display: inline-block; background: rgba(99,102,241,0.2); color: var(--accent2);
+            padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; letter-spacing: 1px;
+            text-transform: uppercase; margin-bottom: 16px;
+        }
+        .hero h1 { font-size: 2.4rem; font-weight: 800; line-height: 1.3; margin-bottom: 12px; }
+        .hero h1 span { background: linear-gradient(135deg, var(--accent2), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero .meta { color: var(--text2); font-size: 0.95rem; }
+        .hero .stats { display: flex; gap: 30px; margin-top: 24px; flex-wrap: wrap; }
+        .hero .stat { text-align: center; }
+        .hero .stat-num { font-size: 1.8rem; font-weight: 700; color: var(--accent2); }
+        .hero .stat-label { font-size: 0.8rem; color: var(--text2); }
+
+        /* TOC */
+        .toc {
+            background: var(--bg2); border-radius: 16px; padding: 24px 30px;
+            margin-bottom: 40px; border: 1px solid var(--border);
+        }
+        .toc h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent2); }
+        .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .toc a { color: var(--text); text-decoration: none; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; transition: all 0.2s; display: block; }
+        .toc a:hover { background: var(--bg3); color: var(--accent2); }
+        .toc a .num { color: var(--accent2); font-weight: 700; margin-right: 8px; }
 
         /* Section */
-        .section { margin-bottom: 40px; }
-        .section-title {
-            font-size: 1.35rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .section { margin-bottom: 50px; }
+        .section-header {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
+            padding-bottom: 16px; border-bottom: 2px solid var(--border);
         }
-        .section-title .emoji { font-size: 1.4rem; }
+        .section-icon { font-size: 1.8rem; }
+        .section-title { font-size: 1.6rem; font-weight: 700; }
+        .section-subtitle { color: var(--text2); font-size: 0.9rem; }
 
-        /* Top5 Card */
+        /* Top 5 cards */
         .top-card {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px;
-            margin-bottom: 20px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: var(--bg2); border-radius: 16px; padding: 30px;
+            margin-bottom: 24px; border: 1px solid var(--border);
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .top-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow); }
+        .top-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
         .top-card .card-rank {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 12px;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; background: var(--accent); color: white;
+            border-radius: 8px; font-weight: 700; font-size: 0.9rem; margin-bottom: 14px;
         }
-        .rank-1 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-        .rank-2 { background: linear-gradient(135deg, #38bdf8, #818cf8); }
-        .rank-3 { background: linear-gradient(135deg, #22c55e, #38bdf8); }
-        .rank-4 { background: linear-gradient(135deg, #a855f7, #ec4899); }
-        .rank-5 { background: linear-gradient(135deg, #f97316, #f59e0b); }
-        .top-card h3 { font-size: 1.15rem; margin-bottom: 10px; color: #fff; }
-        .top-card .tag {
-            display: inline-block;
-            font-size: 0.72rem;
-            padding: 2px 10px;
-            border-radius: 20px;
-            margin-right: 6px;
-            margin-bottom: 10px;
-            background: rgba(56,189,248,0.12);
-            color: var(--accent);
-            border: 1px solid rgba(56,189,248,0.2);
+        .top-card .card-tag {
+            display: inline-block; background: rgba(99,102,241,0.15); color: var(--accent2);
+            padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; margin-left: 10px;
+            vertical-align: middle;
         }
-        .top-card .body { color: var(--text2); font-size: 0.92rem; line-height: 1.8; }
-        .top-card .body p { margin-bottom: 8px; }
-        .top-card .source { margin-top: 12px; font-size: 0.8rem; }
-        .top-card .source a { color: var(--accent); text-decoration: none; word-break: break-all; }
-        .top-card .source a:hover { text-decoration: underline; }
-        .highlight { color: var(--gold); font-weight: 600; }
-        .highlight-blue { color: var(--accent); font-weight: 600; }
+        .top-card h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; line-height: 1.4; }
+        .top-card .summary { color: var(--text2); font-size: 0.95rem; margin-bottom: 16px; }
+        .top-card .detail { font-size: 0.92rem; line-height: 1.85; }
+        .top-card .detail p { margin-bottom: 10px; }
+        .top-card .source-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--cyan); font-size: 0.85rem; text-decoration: none;
+            margin-top: 12px; padding: 6px 14px; background: rgba(6,182,212,0.1);
+            border-radius: 8px; transition: all 0.2s;
+        }
+        .top-card .source-link:hover { background: rgba(6,182,212,0.2); }
+        .highlight { color: var(--amber); font-weight: 600; }
+        .highlight-green { color: var(--green); font-weight: 600; }
+        .highlight-red { color: var(--red); font-weight: 600; }
+        .highlight-purple { color: var(--purple); font-weight: 600; }
 
-        /* Quick News */
-        .track-section { margin-bottom: 28px; }
-        .track-title {
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: var(--accent2);
-            margin-bottom: 14px;
-            padding-left: 14px;
-            border-left: 3px solid var(--accent2);
+        /* Flash news */
+        .vertical-section { margin-bottom: 36px; }
+        .vertical-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 18px; padding: 10px 16px;
+            background: var(--bg3); border-radius: 10px;
         }
-        .quick-item {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 18px 22px;
-            margin-bottom: 12px;
-            transition: border-color 0.2s;
+        .vertical-header .dot {
+            width: 10px; height: 10px; border-radius: 50%;
         }
-        .quick-item:hover { border-color: var(--accent); }
-        .quick-item h4 { font-size: 0.95rem; color: #fff; margin-bottom: 6px; }
-        .quick-item h4 a { color: #fff; text-decoration: none; }
-        .quick-item h4 a:hover { color: var(--accent); }
-        .quick-item .desc { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
-        .quick-item .meta { margin-top: 8px; font-size: 0.78rem; color: var(--text2); }
-        .quick-item .meta a { color: var(--accent); text-decoration: none; }
+        .vertical-header h3 { font-size: 1.05rem; font-weight: 600; }
+        .flash-item {
+            background: var(--bg2); border-radius: 12px; padding: 18px 22px;
+            margin-bottom: 12px; border: 1px solid var(--border);
+            transition: border-color 0.3s;
+        }
+        .flash-item:hover { border-color: var(--accent); }
+        .flash-item .flash-title {
+            font-weight: 600; font-size: 0.98rem; margin-bottom: 6px;
+        }
+        .flash-item .flash-title a {
+            color: var(--text); text-decoration: none; transition: color 0.2s;
+        }
+        .flash-item .flash-title a:hover { color: var(--accent2); }
+        .flash-item .flash-desc { color: var(--text2); font-size: 0.88rem; line-height: 1.6; }
 
         /* Footer */
-        .footer {
-            text-align: center;
-            padding: 30px 20px;
-            margin-top: 40px;
-            color: var(--text2);
-            font-size: 0.85rem;
-            border-top: 1px solid var(--border);
+        .report-footer {
+            text-align: center; padding: 40px 20px; margin-top: 60px;
+            border-top: 1px solid var(--border); color: var(--text2); font-size: 0.85rem;
         }
-        .footer a { color: var(--accent); text-decoration: none; }
+        .report-footer a { color: var(--accent2); text-decoration: none; }
 
         @media (max-width: 768px) {
+            .hero { padding: 30px 20px; }
             .hero h1 { font-size: 1.6rem; }
+            .hero .stats { gap: 16px; }
+            .toc-grid { grid-template-columns: 1fr; }
             .top-card { padding: 20px; }
-            .container { padding: 15px 12px 40px; }
+            .top-card h3 { font-size: 1.1rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="./" class="back-link">← 返回报告列表</a>
+        <a href="./" class="back-link">← 返回科技动态首页</a>
 
+        <!-- Hero -->
         <div class="hero">
-            <div class="hero-date">📅 2026年3月24日 · 星期二</div>
-            <h1>科技与财经每日动态</h1>
-            <p>七大垂直赛道深度追踪 · 覆盖大模型、具身智能、脑机接口、自动驾驶等全领域</p>
-        </div>
-
-        <!-- ═══════════ TOP 5 核心焦点 ═══════════ -->
-        <div class="section">
-            <div class="section-title">
-                <span class="emoji">🌟</span> 核心焦点（Top 5 深度解析）
-            </div>
-
-            <!-- TOP 1 -->
-            <div class="top-card">
-                <div class="card-rank rank-1">1</div>
-                <span class="tag">大模型与基础AI</span>
-                <span class="tag">全球格局</span>
-                <h3>中国 AI 大模型周调用量 4.69 万亿 Token，连续第二周超越美国</h3>
-                <div class="body">
-                    <p>据全球最大 AI 模型 API 聚合平台 OpenRouter 最新数据，截至 3 月 15 日，中国 AI 大模型的<span class="highlight">周调用量达到 4.69 万亿 Token</span>，连续第二周超越美国，全球调用量前三名均为中国模型（MiniMax M2.5 连续五周蝉联全球冠军）。</p>
-                    <p><strong>产业影响：</strong>摩根大通预测中国 AI 推理 Token 消耗量到 2030 年将增长约 370 倍。极高性价比是核心竞争力——国产模型价格仅为同级海外模型的十分之一。算力需求暴涨使得阿里云、百度智能云等近期上调算力价格，涨幅最高达 34%。电费占算力成本 70%-80%，中国稳定能源供应构成成本护城河。</p>
-                    <p><strong>资本信号：</strong>Token 调用爆发直接拉动算力产业链。5000 张算力卡同时运行可每分钟产生约 3 万元经济价值，部分紧俏算力产品已售罄。</p>
+            <div class="hero-tag">Daily Tech & Finance Briefing</div>
+            <h1>科技与财经 <span>每日动态</span></h1>
+            <p class="meta">2026年3月24日 · 星期二 · 18:00 更新</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num">24</div>
+                    <div class="stat-label">新闻追踪</div>
                 </div>
-                <div class="source">🔗 <a href="https://news.cctv.com/2026/03/23/ARTIY9NK61T7g6W0jjQighKR260323.shtml" target="_blank">央视网</a></div>
-            </div>
-
-            <!-- TOP 2 -->
-            <div class="top-card">
-                <div class="card-rank rank-2">2</div>
-                <span class="tag">脑机接口</span>
-                <span class="tag">医疗突破</span>
-                <h3>全球首款侵入式脑机接口获批上市，两天内即获医保编码赋码</h3>
-                <div class="body">
-                    <p>3 月 13 日，全球首款<span class="highlight">侵入式脑机接口医疗器械</span>（植入式脑机接口手部运动功能代偿系统 NEO）正式获批上市。3 月 15 日，国家医保局即完成医保编码赋码，打通"获批上市→临床应用"的最后一公里。</p>
-                    <p><strong>技术原理：</strong>在患者颅内植入硬币大小的微创装置，实时解码脑电信号，患者可凭"意念"控制外部气动手套完成抓握、取物、喝水等动作，术后一个月即可居家操作。</p>
-                    <p><strong>市场空间：</strong>我国因脊髓损伤导致的高位截瘫患者累计超 <span class="highlight">370 万人</span>，且每年新增约 9 万人。脑机接口首次被写入今年政府工作报告，并纳入"十五五"规划纲要前瞻布局重点，产业正式进入落地快车道。</p>
+                <div class="stat">
+                    <div class="stat-num">7</div>
+                    <div class="stat-label">垂直赛道</div>
                 </div>
-                <div class="source">🔗 <a href="https://www.nhsa.gov.cn/art/2026/3/22/art_14_19989.html" target="_blank">国家医保局</a> · <a href="https://shmc.fudan.edu.cn/news/2026/0318/c1893a148434/page.htm" target="_blank">华山医院</a></div>
-            </div>
-
-            <!-- TOP 3 -->
-            <div class="top-card">
-                <div class="card-rank rank-3">3</div>
-                <span class="tag">具身智能</span>
-                <span class="tag">创投热潮</span>
-                <h3>具身智能三个月超 30 笔融资、总额约 200 亿元，百亿估值公司达 13 家</h3>
-                <div class="body">
-                    <p>据每日经济新闻报道，2026 年开年至今，国内具身智能企业已披露融资超过 <span class="highlight">30 起</span>，总金额约 <span class="highlight">200 亿元</span>，百亿元估值公司数量扩充至 13 家。资金供给远大于需求，FOMO 情绪弥漫。</p>
-                    <p><strong>行业现状：</strong>行业仍处于极早期，尚未出现类似 ChatGPT 的验证时刻。技术路线分化为"模型派"（物理世界大模型）、"制造派"（机器人产业延伸）和"折中派"三大阵营。估值多基于"信仰投票"和市场对标法，而非传统 PE/PS。</p>
-                    <p><strong>泡沫预警：</strong>业内人士预测，目前百亿估值的公司中<span class="highlight">一半以上最终会死掉</span>。随着港股下半年解禁潮来临，2026H2 至 2027H1 可能反向冲击一级市场。但由于资金充裕且技术门槛较大模型低，多数公司短期内仍可存活。</p>
+                <div class="stat">
+                    <div class="stat-num">5</div>
+                    <div class="stat-label">深度解析</div>
                 </div>
-                <div class="source">🔗 <a href="https://www.nbd.com.cn/articles/2026-03-23/4304698.html" target="_blank">每日经济新闻</a></div>
-            </div>
-
-            <!-- TOP 4 -->
-            <div class="top-card">
-                <div class="card-rank rank-4">4</div>
-                <span class="tag">自动驾驶</span>
-                <span class="tag">转折之年</span>
-                <h3>自动驾驶迎来转折之年：轻舟智航 D 轮 1 亿美元，文远知行营收翻倍</h3>
-                <div class="body">
-                    <p>3 月 23 日，自动驾驶行业在同一天迎来两大消息：<span class="highlight-blue">轻舟智航</span>宣布完成 D 轮 1 亿美元融资，其智能辅助驾驶搭载车型已突破 100 万台、合作头部车企近 10 家；<span class="highlight-blue">文远知行</span>公布 2025 财年成绩单——全年营收 6.9 亿元（同比 +90%），Robotaxi 收入突破 1.5 亿元（同比 +209.6%），Q4 注册用户单季激增超 900%。</p>
-                    <p><strong>规模化加速：</strong>文远知行计划 2026 年交付 2600 辆 Robotaxi（当前 1125 辆），小马智行目标 3000 辆。如祺出行超百辆新一代广汽埃安 Robotaxi 已正式上路。滴滴自动驾驶 R2 获北京路测牌照，行业正式进入"千辆级"规模竞速期。</p>
+                <div class="stat">
+                    <div class="stat-num">19</div>
+                    <div class="stat-label">前沿快讯</div>
                 </div>
-                <div class="source">🔗 <a href="https://www.itbear.com.cn/html/2026-03/1228629.html" target="_blank">ITBear·文远知行</a> · <a href="https://t.10jqka.com.cn/pid_604990305.shtml" target="_blank">同花顺·行业分析</a></div>
-            </div>
-
-            <!-- TOP 5 -->
-            <div class="top-card">
-                <div class="card-rank rank-5">5</div>
-                <span class="tag">科技巨头</span>
-                <span class="tag">芯片</span>
-                <h3>阿里 AI 全栈加速：平头哥 47 万片芯片交付，五年千亿美元营收目标</h3>
-                <div class="body">
-                    <p>阿里巴巴 2026 财年 Q3 财报显示，AI 相关产品收入<span class="highlight">连续十个季度三位数增长</span>。CEO 吴泳铭宣布 AI 战略商业目标：五年内云和 AI 商业化年收入从千亿元大幅增长至超 <span class="highlight">1000 亿美元</span>。平头哥自研 GPU 芯片累计交付规模超 47 万片，年化营收已达百亿元级。</p>
-                    <p><strong>最新动态：</strong>达摩院今日（3 月 24 日）在上海举办"2026 玄铁 RISC-V 生态大会"，预计发布重要芯片新品，直指 AI Agent 算力需求。吴泳铭判断"未来 3-5 年 AI 算力将非常紧缺"，阿里将打造最强模型作为第一优先级任务。</p>
-                </div>
-                <div class="source">🔗 <a href="https://www.ithome.com/0/930/887.htm" target="_blank">IT之家</a> · <a href="https://www.36kr.com/p/3735459789242375" target="_blank">36氪</a></div>
             </div>
         </div>
 
-        <!-- ═══════════ 前沿快讯 ═══════════ -->
-        <div class="section">
-            <div class="section-title">
-                <span class="emoji">📍</span> 前沿快讯（按赛道分类）
+        <!-- TOC -->
+        <div class="toc">
+            <h2>📑 目录导航</h2>
+            <div class="toc-grid">
+                <a href="#top5"><span class="num">01</span> 🌟 核心焦点 · Top 5 深度解析</a>
+                <a href="#ai"><span class="num">02</span> 🧠 大模型与基础AI</a>
+                <a href="#bio"><span class="num">03</span> 🧬 脑机接口与生物科技</a>
+                <a href="#robot"><span class="num">04</span> 🤖 具身智能与机器人</a>
+                <a href="#video"><span class="num">05</span> 🎬 视频与多模态生成</a>
+                <a href="#auto"><span class="num">06</span> 🚗 自动驾驶与出行</a>
+                <a href="#giant"><span class="num">07</span> 🏢 科技巨头动态</a>
+                <a href="#vc"><span class="num">08</span> 💰 创投与融资</a>
             </div>
+        </div>
 
-            <!-- 赛道1: 大模型 -->
-            <div class="track-section">
-                <div class="track-title">🧠 大模型与基础 AI</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.winzheng.com/lab/reports/deepseek-v3-surpasses-gpt5-china-us-ai-competition" target="_blank">DeepSeek V3 基准测试多项指标超越 GPT-5</a></h4>
-                    <div class="desc">3月22日，DeepSeek 发布基准测试报告显示 V3 模型在 MMLU（92.7% vs 91.2%）和 HumanEval（89.3% vs 87.8%）等关键指标上超越 GPT-5，采用稀疏注意力和动态路由专家网络，计算效率提升约 40%。</div>
-                </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://openatom.openatom.tech/explore/journalism/detail/558821865548812288" target="_blank">OpenAI 公布"全自动 AI 研究员"计划</a></h4>
-                    <div class="desc">OpenAI 首席科学家 Jakub Pachocki 将构建完全自动化 AI 研究员系统描述为公司未来数年的"北极星"目标，旨在让 AI 自主完成从假设生成到实验验证的全链条科研工作。</div>
-                </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://k.sina.com.cn/article_7857201856_1d45362c001903ivxa.html" target="_blank">国家数据局宣布 2026 为"数据价值释放年"</a></h4>
-                    <div class="desc">局长刘烈宏宣布实施强基扩容、标注攻坚等六大行动。数据显示中国日均 Token 调用量已突破 140 万亿，两年增长超千倍，聚焦数据赋能 AI 创新。</div>
-                </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://k.sina.com.cn/article_7857201856_1d45362c001903ivxa.html" target="_blank">百度智能云 DuMate 全量上线：国内首个企业级 AI Agent 产品</a></h4>
-                    <div class="desc">3月22日正式对外开放，定位国内首个国产企业级 AI Agent 产品，支持本地部署和安全合规使用，面向企业智能化办公与业务流程自动化场景。</div>
+        <!-- ==================== Top 5 ==================== -->
+        <div class="section" id="top5">
+            <div class="section-header">
+                <span class="section-icon">🌟</span>
+                <div>
+                    <div class="section-title">核心焦点 · Top 5 深度解析</div>
+                    <div class="section-subtitle">全行业最具影响力的跨界事件</div>
                 </div>
             </div>
 
-            <!-- 赛道2: 脑机接口 -->
-            <div class="track-section">
-                <div class="track-title">🧬 脑机接口与生物科技</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.cas.cn/cm/202603/t20260323_5104850.shtml" target="_blank">中科院院士专家科普脑机接口最新进展</a></h4>
-                    <div class="desc">3月20日"科学与中国"活动聚焦脑机接口前沿，神经外科院士赵继宗与脑虎科技创始人联合解读侵入式与非侵入式技术路线的产业化前景。</div>
+            <!-- Top 1 -->
+            <div class="top-card">
+                <span class="card-rank">1</span>
+                <span class="card-tag">自动驾驶 × 资本</span>
+                <h3>Uber × Rivian 达成 12.5 亿美元机器人出租车战略合作</h3>
+                <div class="summary">出行巨头 Uber 联手电动车新势力 Rivian，计划部署 5 万辆全自动驾驶 R2 机器人出租车，这是自动驾驶商业化进程中迄今最大规模的合作协议之一。</div>
+                <div class="detail">
+                    <p><strong>事件背景：</strong>3月19日，Uber 宣布将在 2031 年前以里程碑式投资向 Rivian 注入最高 <span class="highlight">12.5 亿美元</span>，双方将合作打造基于 Rivian R2 SUV 平台的全自动驾驶机器人出租车。首批 <span class="highlight-green">10,000 辆</span> 全自动 R2 将于 2028 年在旧金山和迈阿密开启商业运营，最终目标扩展至全球 25 个城市、5 万辆规模。</p>
+                    <p><strong>技术规格：</strong>R2 机器人出租车搭载第三代自动驾驶平台，配备双 RAP1 芯片（<span class="highlight-purple">1600 TOPS AI 算力</span>）、11 个摄像头、5 个雷达和 1 个激光雷达，专注于无监督 L4 级自动驾驶，售价约 4.5 万美元。</p>
+                    <p><strong>产业影响：</strong>此交易标志着 Uber 从 "网约车平台" 向 "自动驾驶运营商" 的战略转型。对 Rivian 而言，这笔资金为其在 2024 年以来的亏损处境提供了重要的现金流注入。整个自动驾驶行业将因此加速从技术验证走向大规模商业化部署。</p>
                 </div>
+                <a href="https://www.cnbc.com/2026/03/19/uber-rivian-robotaxi.html" target="_blank" class="source-link">📰 CNBC 原文 →</a>
+                <a href="https://techcrunch.com/2026/03/19/uber-taps-rivian-to-build-robotaxis-in-deal-worth-up-to-1-25b/" target="_blank" class="source-link">📰 TechCrunch →</a>
+            </div>
 
-                <div class="quick-item">
-                    <h4><a href="https://www.163.com/dy/article/KONAEJ5G051191D6.html" target="_blank">强脑科技创始人韩璧丞：脑机接口几年内可解决脑疾病问题</a></h4>
-                    <div class="desc">"杭州六小龙"之一的强脑科技创始人在中国发展高层论坛上表示，脑机接口技术有望在数年内实现对帕金森等脑疾病的突破性治疗。</div>
+            <!-- Top 2 -->
+            <div class="top-card">
+                <span class="card-rank">2</span>
+                <span class="card-tag">大模型 × 产业竞争</span>
+                <h3>中国 AI 大模型周调用量达 4.69 万亿 Token，连续两周超越美国</h3>
+                <div class="summary">OpenRouter 数据显示，中国 AI 大模型调用量连续第二周登顶全球，全球前三均为中国模型，标志着 "技术迭代 → 成本下降 → 应用爆发" 飞轮效应已形成。</div>
+                <div class="detail">
+                    <p><strong>数据亮点：</strong>全球最大 AI 模型 API 聚合平台 OpenRouter 显示，截至 3 月 15 日，中国 AI 大模型的周调用量达到 <span class="highlight">4.69 万亿 Token</span>，连续第二周超越美国。全球调用量排名前三的位置被中国模型包揽（DeepSeek、Qwen 系列等）。</p>
+                    <p><strong>背后逻辑：</strong>央视财经分析指出，这一突破背后是 "技术迭代—成本下降—应用爆发" 的正循环。中国模型在推理成本上做到了美国竞品的 <span class="highlight-green">1/10 到 1/5</span>，使得中小企业和开发者大量涌入，形成了规模效应。</p>
+                    <p><strong>产业意义：</strong>这不仅仅是调用量的竞争，更是 AI 生态和应用层的话语权之争。中国在大模型 API 层的领先，意味着全球开发者生态正在向中国模型倾斜，这将深刻影响未来 AI 产业链的格局。</p>
+                </div>
+                <a href="https://news.cctv.com/2026/03/23/ARTIY9NK61T7g6W0jjQighKR260323.shtml" target="_blank" class="source-link">📰 央视财经原文 →</a>
+                <a href="https://www.ithome.com/0/931/481.htm" target="_blank" class="source-link">📰 IT之家 →</a>
+            </div>
+
+            <!-- Top 3 -->
+            <div class="top-card">
+                <span class="card-rank">3</span>
+                <span class="card-tag">AI × 操作系统</span>
+                <h3>Anthropic 推出 Claude Cowork Dispatch：AI 直接操控你的 Mac</h3>
+                <div class="summary">Anthropic 正式发布 Claude 的计算机操控功能 Cowork Dispatch，允许 Claude 像人类一样远程操作 Mac 桌面，标志着 AI 从 "对话助手" 向 "数字员工" 的重大转变。</div>
+                <div class="detail">
+                    <p><strong>功能详情：</strong>3 月 23 日，Anthropic 发布了 Claude Cowork Dispatch，允许 Claude 直接控制用户的 Mac 电脑——包括移动鼠标、点击按钮、输入文字、操作应用程序等。此功能基于 Claude 的 "Computer Use" 能力，经过数月预览后正式面向消费者。</p>
+                    <p><strong>应用场景：</strong>用户可以让 Claude 自动完成复杂的多步骤操作，如 <span class="highlight">跨应用的数据整理、报表生成、邮件回复</span> 等。Anthropic 在 YouTube 演示中展示了 Claude 独立完成一系列桌面操作流程的能力。</p>
+                    <p><strong>行业判断：</strong>这是 AI Agent 从 "聊天框" 走向 "操作系统层" 的标志性一步。Anthropic 坦承该功能仍处于早期阶段，但它与 OpenAI 的 "OpenClaw"、NVIDIA 的 "NemoClaw" 形成了 AI 代理的三方竞争格局，"<span class="highlight-purple">数字员工</span>" 正从概念走向现实。</p>
+                </div>
+                <a href="https://9to5mac.com/2026/03/23/anthropic-is-giving-claude-the-ability-to-use-your-mac-for-you/" target="_blank" class="source-link">📰 9to5Mac →</a>
+                <a href="https://siliconangle.com/2026/03/23/anthropics-claude-gets-computer-use-capabilities-preview/" target="_blank" class="source-link">📰 SiliconAngle →</a>
+            </div>
+
+            <!-- Top 4 -->
+            <div class="top-card">
+                <span class="card-rank">4</span>
+                <span class="card-tag">芯片 × 开源架构</span>
+                <h3>阿里达摩院发布倚天 C950：全球最高性能 RISC-V 服务器 CPU</h3>
+                <div class="summary">阿里巴巴达摩院发布 5nm 制程的倚天 C950 服务器芯片，主频高达 3.2GHz，号称 "全球性能最高的 RISC-V CPU"，同日举办的玄铁 RISC-V 生态大会吸引数百家企业参与。</div>
+                <div class="detail">
+                    <p><strong>技术规格：</strong>倚天 C950 采用 <span class="highlight">5nm 先进制程</span>，主频 3.2GHz，是达摩院倚天系列的最新力作。该芯片基于 RISC-V 开源指令集架构，在多线程性能、能效比等关键指标上均实现了显著突破。路透社率先报道了这一消息。</p>
+                    <p><strong>生态布局：</strong>3 月 24 日，达摩院在上海举办 2026 玄铁 RISC-V 生态大会，主题为 "开放·连接"，全景呈现 RISC-V 在 AI 大模型时代的技术跃迁与落地成果。数百家企业和机构参与，涵盖操作系统、EDA 工具、云计算等产业链全环节。</p>
+                    <p><strong>战略意义：</strong>在美国对华芯片出口管制持续收紧的背景下，RISC-V 作为开源指令集不受出口管制限制，成为中国芯片产业的 <span class="highlight-green">战略突围方向</span>。倚天 C950 的发布证明 RISC-V 架构已具备服务器级性能，将加速中国在高端计算领域的 "去 x86 化" 进程。</p>
+                </div>
+                <a href="https://reportify.cn/social-media/786661041464136" target="_blank" class="source-link">📰 玄铁大会详情 →</a>
+            </div>
+
+            <!-- Top 5 -->
+            <div class="top-card">
+                <span class="card-rank">5</span>
+                <span class="card-tag">芯片 × AI推理</span>
+                <h3>NVIDIA GTC 2026 深度余震：200 亿美元 "收购" Groq，推理王国全面扩张</h3>
+                <div class="summary">SemiAnalysis 深度分析文揭示 NVIDIA 在 GTC 2026 后的完整布局：以 200 亿美元引入 Groq LPU 团队，结合 GPU+LPU 混合推理架构，全面扩张推理算力疆域。</div>
+                <div class="detail">
+                    <p><strong>核心交易：</strong>NVIDIA 以 <span class="highlight">200 亿美元</span> 通过 "知识产权许可 + 核心团队雇佣" 的方式实质收购了 Groq，规避了反垄断审查。Groq 的第三代 LPU（LP30）采用三星 SF4 工艺，拥有 500MB 片上 SRAM，提供 1.2 PFLOPs FP8 算力。</p>
+                    <p><strong>技术创新：</strong>NVIDIA 引入 "AFD（Attention FFN Disaggregation）" 架构——将 <span class="highlight-purple">GPU 负责注意力机制、LPU 负责前馈网络</span>，实现混合推理。GPU 的 HBM 全部分配给 KV Cache 以增加上下文长度，FFN 在 LPU 上以极低延迟运行。</p>
+                    <p><strong>全栈布局：</strong>从 Vera Rubin 计算平台、Feynman 下一代架构预览，到 Vera ETL256 高密度 CPU 机架（单机架 256 个 Vera CPU）、CMX 推理上下文内存存储——NVIDIA 正在构建从训练到推理、从芯片到机架的 <span class="highlight-green">完整 AI 基础设施帝国</span>。</p>
+                </div>
+                <a href="https://newsletter.semianalysis.com/p/nvidia-the-inference-kingdom-expands" target="_blank" class="source-link">📰 SemiAnalysis 深度分析 →</a>
+                <a href="https://blogs.nvidia.com/blog/gtc-2026-news/" target="_blank" class="source-link">📰 NVIDIA GTC 官方 →</a>
+            </div>
+        </div>
+
+        <!-- ==================== Flash News ==================== -->
+        <div class="section" id="flash">
+            <div class="section-header">
+                <span class="section-icon">📍</span>
+                <div>
+                    <div class="section-title">前沿快讯 · 七大赛道追踪</div>
+                    <div class="section-subtitle">按垂直领域分类的最新动态</div>
                 </div>
             </div>
 
-            <!-- 赛道3: 具身智能 -->
-            <div class="track-section">
-                <div class="track-title">🤖 具身智能与机器人</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://news.qq.com/rain/a/20260323A0475000" target="_blank">华为具身智能"1号员工"周顺波离职创业，成立欧拉万象</a></h4>
-                    <div class="desc">华为云物理智能创新Lab负责人周顺波3月初正式离职，创立消费级具身智能公司"欧拉万象"，五年间从零搭建了华为最大具身智能团队。</div>
+            <!-- 大模型与基础AI -->
+            <div class="vertical-section" id="ai">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--accent);"></div>
+                    <h3>🧠 大模型与基础AI</h3>
                 </div>
 
-                <div class="quick-item">
-                    <h4><a href="https://news.cctv.cn/2026/03/23/ARTIxflEzQeg53ZdQDVf9fFh260323.shtml" target="_blank">2026 北京亦庄人形机器人半马：300 余台机器人 4 月 19 日开跑</a></h4>
-                    <div class="desc">来自全国 13 个省份、76 家主体、超百支队伍的 300 余台人形机器人将参赛。北京经开区还同步推进万台级具身智能超级工厂和"机器人大世界"建设。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://creati.ai/ai-news/2026-03-21/alibaba-qwen35-max-preview-tops-chinese-ai-lmarena-lags-us-rivals-2026/" target="_blank">阿里 Qwen3.5-Max-Preview 登顶中国 AI 排名，数学推理全球第 5</a></div>
+                    <div class="flash-desc">阿里巴巴最新旗舰模型 Qwen3.5-Max-Preview 在 LMArena 排行榜上位列全球第 15、中国第 1，数学推理能力跻身全球前五，展现了中国专有模型的突破性实力。</div>
                 </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.36kr.com/p/3735459789242375" target="_blank">LG 电子宣布全力推进机器人业务</a></h4>
-                    <div class="desc">LG 电子 CEO 吕宰哲表示将重点布局机器人、制冷解决方案、智能工厂和智能家居四大领域，并计划自主生产机器人执行器以降低约 40% 的生产成本。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.caixin.com/2026-03-20/102425462.html" target="_blank">小米发布三款自研大模型 MiMo-V2，雷军称 2026 年 AI 投入超 160 亿</a></div>
+                    <div class="flash-desc">小米于 3 月 19 日凌晨推出旗舰基座模型 MiMo-V2-Pro、全模态基座 MiMo-V2-Omni 及语音合成 MiMo-V2-TTS，加速手机 + AIoT 全场景 AI 化布局。</div>
                 </div>
-            </div>
-
-            <!-- 赛道4: 视频与多模态 -->
-            <div class="track-section">
-                <div class="track-title">🎬 视频与多模态生成</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.qbitai.com/2026/03/389146.html" target="_blank">天工 AI SkyReels-V4 登顶全球视频模型榜，超越 Veo 3.1 和 Sora 2</a></h4>
-                    <div class="desc">天工 AI 旗下 SkyReels-V4 在 Artificial Analysis 文转视频榜登顶全球第一。支持 1080p 电影级画质和 15 秒含音效输出，其短剧平台 DramaWave 月活已突破 8000 万。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.indexbox.io/blog/openai-urges-uk-to-add-chatgpt-to-google-search-choice-screens/" target="_blank">OpenAI 请愿英国监管：将 AI 聊天机器人纳入 Chrome 默认搜索选项</a></div>
+                    <div class="flash-desc">OpenAI 向英国 CMA 提交公开意见，建议在 Google Chrome 和 Android 的搜索选择屏幕中加入具有搜索功能的 AI 聊天机器人，直接挑战 Google 搜索垄断地位。</div>
                 </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://xueqiu.com/3338215700/379787002" target="_blank">爱诗科技 3 亿美元 C 轮融资，跻身独角兽行列</a></h4>
-                    <div class="desc">AI 视频生成赛道里程碑事件：爱诗科技完成 3 亿美元 C 轮，由鼎晖投资旗下多支基金联合领投，中国儒意、三七互娱等产业资本参投，刷新亚洲 AI 视频融资纪录。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://llm-stats.com/ai-news" target="_blank">MIT 团队研发 "谦逊 AI"：让医疗诊断 AI 学会说 "我不确定"</a></div>
+                    <div class="flash-desc">MIT 领导的团队正在设计能主动表达不确定性的医疗 AI 系统，通过协作机制和坦率输出改进现有诊断辅助工具，避免 AI "过度自信" 导致的误诊风险。</div>
                 </div>
             </div>
 
-            <!-- 赛道5: 自动驾驶 -->
-            <div class="track-section">
-                <div class="track-title">🚗 自动驾驶与出行</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.sznews.com/news/content/2026-03/19/content_31983091.htm" target="_blank">如祺出行超百辆新一代 Robotaxi 正式上路运营</a></h4>
-                    <div class="desc">3月19日，由小马智行交付的超百辆广汽埃安霸王龙 Robotaxi 加入如祺车队，标志着行业进入"千辆级"规模化竞速期。</div>
+            <!-- 脑机接口与生物科技 -->
+            <div class="vertical-section" id="bio">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--green);"></div>
+                    <h3>🧬 脑机接口与生物科技</h3>
                 </div>
 
-                <div class="quick-item">
-                    <h4><a href="https://www.21jingji.com/article/20260318/herald/ef63d03e03285e95b7744d74374e9270.html" target="_blank">滴滴 Robotaxi R2 获北京智能网联汽车路测牌照</a></h4>
-                    <div class="desc">滴滴自动驾驶与广汽埃安联合打造的新一代 Robotaxi R2 继 1 月获广州牌照后再获北京路测资质，双城推进自动驾驶商业化落地。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.techtimes.com/articles/315318/20260321/could-brain-computer-interfaces-make-keyboards-screens-obsolete-2026.htm" target="_blank">脑机接口能否让键盘和屏幕成为历史？2026 年前沿探讨</a></div>
+                    <div class="flash-desc">TechTimes 深度报道分析了 BCI 技术如何革新人机交互范式，指出思维控制设备和无障碍辅助正在取得突破，但完全替代传统输入方式仍需数年演进。</div>
                 </div>
-            </div>
-
-            <!-- 赛道6: 科技巨头 -->
-            <div class="track-section">
-                <div class="track-title">🏢 科技巨头与财报</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://www.21jingji.com/article/20260322/herald/f2f02266c7171cb7dd8df262da8920ef.html" target="_blank">阿里豪赌 AI：吴泳铭宣布 Agentic 新时代战略</a></h4>
-                    <div class="desc">阿里 CEO 表示"AI 进入 Agentic 驱动的新时代"，ATH 事业群统帅三大业务线（阿里云+通义+盒马），打造最强模型作为集团第一优先级，五年目标千亿美元年收入。</div>
-                </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://k.sina.com.cn/article_7857201856_1d45362c001903ivxa.html" target="_blank">广东发布 53 个新赛道 + 105 个应用场景清单</a></h4>
-                    <div class="desc">广东印发产业培育规划，重点布局智能链接等六大领域 53 个新赛道，目标到 2030 年培育多个万亿元级赛道；同步发布 22 领域 105 项具体 AI 应用场景。</div>
-                </div>
-
-                <div class="quick-item">
-                    <h4><a href="https://events.siemens.com.cn/tech-summit-china/" target="_blank">西门子首届科技大会在京举办</a></h4>
-                    <div class="desc">3月23-24日在北京举行，汇聚上千位行业领袖，聚焦工业 AI、数字孪生、智能制造等前沿议题，标志着国际工业巨头加速布局中国 AI 市场。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://jingdaily.com/posts/top-8-china-tech-breakthroughs-in-2026" target="_blank">中国 2026 年八大科技突破盘点：脑机接口获批、量子计算、AI 医院</a></div>
+                    <div class="flash-desc">Jing Daily 盘点中国 2026 年最具代表性的技术突破，包括全球首个脑机接口植入物获中国批准上市、量子计算商用化、AI 驱动的智慧医院等。</div>
                 </div>
             </div>
 
-            <!-- 赛道7: 创投 -->
-            <div class="track-section">
-                <div class="track-title">💰 创投与融资</div>
-
-                <div class="quick-item">
-                    <h4><a href="https://k.sina.com.cn/article_7857201856_1d45362c001903ivxa.html" target="_blank">微博上线首个 AI 社区"硅基茶水间"</a></h4>
-                    <div class="desc">国内首个 AI 社交媒体社区正式上线，支持各类 AI Agent 入驻发布动态和互动，探索 AI 原生社交新形态，或将重塑社交媒体内容生态。</div>
+            <!-- 具身智能与机器人 -->
+            <div class="vertical-section" id="robot">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--amber);"></div>
+                    <h3>🤖 具身智能与机器人</h3>
                 </div>
 
-                <div class="quick-item">
-                    <h4><a href="https://k.sina.com.cn/article_7857201856_1d45362c001903ivxa.html" target="_blank">海南落地首单数据知识产权及 AI 侵权保险</a></h4>
-                    <div class="desc">全国首创的数据知识产权侵权损失保险和生成式 AI 内容侵权责任保险在海南落地，为数字资产保护和 AI 内容合规提供保险解决方案。</div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.ecns.cn/news/sci-tech/2026-03-21/detail-ihfaunkv7716550.shtml" target="_blank">合肥人形机器人 "灵枢" 进入工厂产线：搬运半导体精度达工业级</a></div>
+                    <div class="flash-desc">合肥一家工厂中，1.66 米高的人形机器人 "灵枢" 已实现对超薄半导体晶圆的精准搬运和放置，具身智能正从实验室加速走向真实工业场景。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://roboticsandautomationnews.com/2026/03/22/china-sets-national-standards-for-humanoid-robots-to-support-industry-scale-up/100022/" target="_blank">中国发布人形机器人国家标准体系，加速产业规模化</a></div>
+                    <div class="flash-desc">中国正式发布首个涵盖人形机器人与具身 AI 的国家标准框架，为产业从实验走向大规模部署提供制度保障，涉及安全认证、接口协议等关键环节。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://cntechpost.com/2026/03/19/china-embodied-ai-robot-sales-rise-13-pct/" target="_blank">中国具身 AI 机器人销量前两月飙升 13%，人形机器人企业数暴增</a></div>
+                    <div class="flash-desc">在春晚人形机器人表演带动下，中国具身 AI 机器人在 2026 年前两个月销量同比增长 13%，人形机器人相关企业数量也大幅攀升。</div>
+                </div>
+            </div>
+
+            <!-- 视频与多模态生成 -->
+            <div class="vertical-section" id="video">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--pink);"></div>
+                    <h3>🎬 视频与多模态生成</h3>
+                </div>
+
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://ai2.work/blog/deepseek-v4-china-s-trillion-parameter-multimodal-ai-rival-in-2026" target="_blank">DeepSeek V4 即将发布：万亿参数多模态系统，可生成文本、图像和视频</a></div>
+                    <div class="flash-desc">DeepSeek 即将推出其最具野心的 V4 模型——一个万亿参数的统一多模态系统，具备文本、图像和视频生成能力，标志着中国 AI 从编程工具走向全能创作平台。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://qwen.ai/blog?id=qwen3.5" target="_blank">Qwen3.5 发布原生多模态 Agent 能力，397B 参数 MoE 架构</a></div>
+                    <div class="flash-desc">通义千问 Qwen3.5-397B 采用原生视觉语言模型架构，在推理、编程、Agent 能力和多模态理解等全方位基准测试中均表现优异，向 "原生多模态 Agent" 迈进。</div>
+                </div>
+            </div>
+
+            <!-- 自动驾驶与出行 -->
+            <div class="vertical-section" id="auto">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--cyan);"></div>
+                    <h3>🚗 自动驾驶与出行</h3>
+                </div>
+
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://apnews.com/article/tesla-selfdriving-musk-regulators-7edce5705e93775e1b8bb77b5dd54007" target="_blank">NHTSA 升级 Tesla FSD 调查：260 万辆车受影响，无方向盘车型面临压力</a></div>
+                    <div class="flash-desc">美国 NHTSA 将 Tesla 全自动驾驶调查升级为工程分析，覆盖 260 万辆车辆，审查在雾天、强光和扬尘中的碰撞事故，恰逢 Tesla 准备销售无方向盘车型。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.prnewswire.com/news-releases/ponyai-and-chenqi-mobility-launch-joint-robotaxi-fleet-with-initial-delivery-of-over-100-gen-7-vehicles-302718155.html" target="_blank">小马智行向陈吉移动交付 100+ 辆第 7 代机器人出租车</a></div>
+                    <div class="flash-desc">Pony.ai 在广州启动向陈吉移动的首批 100 多辆第 7 代 Robotaxi 交付，硬件套件成本降低 70%，设计使用寿命 60 万公里，目标 2026 年底部署超 3000 辆。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://selfdrivenews.com/pony-ai-weride-join-tencents-wechat-robotaxi-platform/" target="_blank">小马智行、文远知行入驻腾讯微信出行 Robotaxi 平台</a></div>
+                    <div class="flash-desc">中国两大自动驾驶公司 Pony.ai 和 WeRide 同时接入腾讯出行服务的微信小程序入口，用户可直接在微信中叫到无人驾驶出租车，流量入口效应巨大。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.autoconnectedcar.com/2026/03/autonomous-self-driving-vehicle-news-aurora-uber-rivian-tier-iv-pony-ai-waymo-kodiak-ai-kandi-weride/" target="_blank">Aurora 报告：自动驾驶货运到 2035 年将为美国 GDP 贡献 700 亿美元</a></div>
+                    <div class="flash-desc">Aurora 委托的分析显示，自动驾驶卡车行业已支持 1.7 万个就业岗位，预计到 2035 年可每年减少约 490 人死亡、节省 57 亿美元物流成本。</div>
+                </div>
+            </div>
+
+            <!-- 科技巨头动态 -->
+            <div class="vertical-section" id="giant">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--red);"></div>
+                    <h3>🏢 科技巨头动态</h3>
+                </div>
+
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://www.cnbc.com/2026/02/06/google-microsoft-meta-amazon-ai-cash.html" target="_blank">科技巨头 2026 年 AI 资本支出逼近 7000 亿美元，现金流承压</a></div>
+                    <div class="flash-desc">Google、Microsoft、Meta、Amazon 四大巨头宣布大幅增加 2026 年资本开支，AI 基础设施投资合计接近 7000 亿美元，投资者开始担忧现金消耗速度。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://llm-stats.com/ai-news" target="_blank">美议员 Warren & Banks 呼吁暂停英伟达对华 AI 芯片出口许可</a></div>
+                    <div class="flash-desc">美国参议员 Warren 和 Banks 致信要求暂停英伟达向中国及东南亚的 AI 芯片出口许可，此举发生在 Supermicro 联合创始人 Wally Liaw 被起诉之后。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://llm-stats.com/ai-news" target="_blank">NVIDIA 向 Kubernetes 社区捐赠 GPU 动态资源分配驱动</a></div>
+                    <div class="flash-desc">为推进开源 AI 生态，NVIDIA 向 Kubernetes 社区贡献了 GPU 动态资源分配驱动程序，使企业在 K8s 集群上运行 AI 推理工作负载更加高效灵活。</div>
+                </div>
+            </div>
+
+            <!-- 创投与融资 -->
+            <div class="vertical-section" id="vc">
+                <div class="vertical-header">
+                    <div class="dot" style="background: var(--purple);"></div>
+                    <h3>💰 创投与融资</h3>
+                </div>
+
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://llm-stats.com/ai-news" target="_blank">欧洲 VC Hummingbird 募集 8 亿美元新基金，总 AUM 达 20 亿</a></div>
+                    <div class="flash-desc">欧洲风投机构 Hummingbird 完成 8 亿美元新一轮募资，总资产管理规模达约 20 亿美元。此前曾投资 Kraken 和 AI 编码初创公司 Lovable 等明星项目。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://sergeytereshkin.com/publications/startup-and-venture-investment-news-march-23-2026-ai-mega-rounds-and-global-vc-market" target="_blank">AMI Labs "世界模型" 研究融资超 10 亿美元</a></div>
+                    <div class="flash-desc">专注于 "世界模型" 和深度机器逻辑的 AMI Labs 融资超过 10 亿美元，投资者将其视为购买未来 AI 基础设施标准的入场券，而非仅仅是单一产品投资。</div>
+                </div>
+                <div class="flash-item">
+                    <div class="flash-title"><a href="https://robohorizon.com/en-us/news/2026/03/china-floods-humanoid-ai-with-5b-in-60-days-averaging-70m-daily/" target="_blank">中国人形机器人 60 天融资超 50 亿美元，日均 7000 万</a></div>
+                    <div class="flash-desc">2026 年初，中国人形机器人赛道经历前所未有的融资井喷，60 天内融资额超 50 亿美元（日均约 7000 万美元），国家背景基金大规模入场。</div>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="footer">
-            <p>📊 本报告收录 <strong>22 条</strong>科技与财经动态 · 覆盖七大垂直赛道</p>
-            <p style="margin-top: 8px;">由 <a href="../">WorkBuddy 每日报告中心</a> 自动生成 · 数据仅供参考 · 信源链接可点击验证</p>
-            <p style="margin-top: 6px; font-size: 0.8rem;">生成时间：2026-03-24 15:17 CST</p>
+        <div class="report-footer">
+            <p>📊 本报告由 WorkBuddy 自动生成 · 2026-03-24 18:00</p>
+            <p style="margin-top: 8px;">数据来源：CNBC · TechCrunch · AP News · Reuters · 央视财经 · IT之家 · SemiAnalysis · Nature 等</p>
+            <p style="margin-top: 8px;">免责声明：信息仅供参考，不构成投资建议</p>
+            <p style="margin-top: 16px;"><a href="./">← 返回科技动态首页</a></p>
         </div>
     </div>
 </body>
