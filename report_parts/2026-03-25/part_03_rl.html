@@ -1,0 +1,262 @@
+
+<!-- ==================== 🎯 LLM RL & Alignment ==================== -->
+<div class="section-header">
+  <span class="emoji">🎯</span>
+  <h2>LLM RL &amp; Alignment</h2>
+</div>
+
+<!-- Paper 4 -->
+<div class="paper" id="paper-4">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23355" target="_blank">Off-Policy Value-Based Reinforcement Learning for Large Language Models</a></div>
+  <div class="paper-meta">
+    <span class="tag">🎯 RL</span>
+    <span class="tag">Off-Policy</span>
+    <span class="authors">Peng-Yuan Wang, Ziniu Li, Tian Xu, Bohan Yang, Tian-Shuo Liu, ChenYang Wang et al.</span>
+    <span class="arxiv-id">arXiv:2603.23355</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>LLM 的 RL 训练（如 GRPO、PPO）主要是 on-policy 的：每批生成的数据只用一次就丢弃，然后重新采样。这在长序列推理任务（如数学证明、代码生成）中导致严重的样本浪费，因为生成一条 16K token 的轨迹可能需要数十秒。Off-policy 方法理论上可以通过经验回放（experience replay）复用历史数据，但 LLM 领域的 off-policy RL 一直未被充分探索。核心挑战是：如何在 token 级别的自回归生成中有效地定义和学习价值函数？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① ReVal 框架：Bellman 更新 + 结果验证</div>
+    <p>ReVal 将 LLM 生成过程建模为 MDP，状态 \(s_t\) 是已生成的前缀 \((x, y_{1:t})\)，动作 \(a_t = y_{t+1}\) 是下一个 token。定义状态-动作价值函数 \(Q(s_t, a_t)\) 并使用 Bellman 一致性进行训练：</p>
+    <p>$$Q(s_t, a_t) = r(s_t, a_t) + \gamma \max_{a'} Q(s_{t+1}, a')$$</p>
+    <p>但直接在 token 级别应用 Bellman 更新面临稀疏奖励问题（只有轨迹末尾才有验证信号）。ReVal 结合了两类信号：</p>
+    <ul>
+      <li><strong>Step-level signal（逐步信号）</strong>：利用相邻步骤的 Q 值差异作为内在奖励 \(r_t^{\text{step}} = Q(s_{t+1}, a_{t+1}) - Q(s_t, a_t)\)</li>
+      <li><strong>Trajectory-level signal（轨迹信号）</strong>：来自结果验证器（ORM），为完整解提供二元正确性反馈</li>
+    </ul>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 经验回放缓冲区设计</div>
+    <p>ReVal 维护一个优先级经验回放缓冲区 \(\mathcal{D}\)，存储历史轨迹及其 Q 值估计。关键设计：</p>
+    <ol>
+      <li><strong>轨迹级存储</strong>：每条轨迹 \(\tau = (x, y_1, \ldots, y_T, r)\) 完整存储，保持推理链的连贯性</li>
+      <li><strong>优先级采样</strong>：优先采样 TD error 较大的轨迹：\(p(\tau) \propto |\delta_\tau|^\alpha\)，其中 \(\delta_\tau = \frac{1}{T}\sum_t |r_t + \gamma Q(s_{t+1}) - Q(s_t, a_t)|\)</li>
+      <li><strong>重要性权重校正</strong>：使用 \(\rho_t = \min(c, \frac{\pi(a_t|s_t)}{\mu(a_t|s_t)})\) 校正行为策略 \(\mu\) 和当前策略 \(\pi\) 的分布偏差，截断常数 \(c = 5\) 防止方差爆炸</li>
+    </ol>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 价值函数参数化与训练</div>
+    <p>Q 函数通过在 LLM 最后一层隐藏状态上添加一个轻量级 value head（2 层 MLP，隐藏维度 1024）实现：</p>
+    <p>$$Q(s_t, a_t) = \text{MLP}(\mathbf{h}_t^L), \quad \mathbf{h}_t^L = \text{Transformer}(x, y_{1:t+1})$$</p>
+    <p>训练损失结合 Bellman 残差和轨迹级监督：</p>
+    <p>$$\mathcal{L} = \underbrace{\mathbb{E}_{\tau \sim \mathcal{D}} \left[\sum_t \rho_t (Q(s_t,a_t) - y_t^{\text{target}})^2 \right]}_{\text{Bellman loss}} + \lambda \underbrace{\mathbb{E}_\tau \left[(V(s_0) - R(\tau))^2 \right]}_{\text{outcome supervision}}$$</p>
+    <p>使用 target network（EMA 更新，\(\tau_{\text{ema}} = 0.995\)）稳定训练。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 策略提取与推理加速</div>
+    <p>训练好 Q 函数后，推理时不需要采样多条轨迹进行 majority voting，而是使用 Q 值引导解码：</p>
+    <p>$$\pi^*(a_t|s_t) \propto \pi_{\text{ref}}(a_t|s_t) \cdot \exp\left(\frac{Q(s_t, a_t)}{\beta}\right)$$</p>
+    <p>这等价于一种 guided decoding，让模型在每一步偏向于 Q 值更高的 token。\(\beta\) 控制探索程度。在实验中，\(\beta=0.5\) 时只需 1 条采样路径就能达到 GRPO 使用 64 条采样路径的 majority voting 性能。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：DeepSeek-R1-Distill-1.5B 在 AIME24 上的训练效率</div>
+    <p>使用 DeepSeek-R1-Distill-1.5B 作为基座模型：</p>
+    <ul>
+      <li><strong>回放缓冲区大小</strong>：50K 条轨迹，每条 ~4K tokens</li>
+      <li><strong>数据复用率</strong>：每条轨迹平均被使用 3.2 次（GRPO 为 1 次）</li>
+      <li><strong>训练步数达到相同性能所需</strong>：ReVal 2.5K steps vs GRPO 8K steps（3.2× 加速）</li>
+      <li><strong>AIME24 最终准确率</strong>：ReVal 38.7% vs GRPO 36.0%（+2.7%）</li>
+      <li><strong>GPQA（域外泛化）</strong>：ReVal 42.1% vs GRPO 37.6%（+4.5%）</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>基座模型</th><th>AIME24</th><th>MATH 500</th><th>GPQA</th><th>样本效率</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>SFT baseline</td><td>DS-R1-1.5B</td><td>28.3</td><td>72.4</td><td>33.8</td><td>—</td></tr>
+      <tr><td>GRPO</td><td>DS-R1-1.5B</td><td>36.0</td><td>78.1</td><td>37.6</td><td>1.0×</td></tr>
+      <tr><td>PPO</td><td>DS-R1-1.5B</td><td>34.8</td><td>77.5</td><td>36.2</td><td>0.8×</td></tr>
+      <tr><td class="best">ReVal (Ours)</td><td class="best">DS-R1-1.5B</td><td class="best">38.7</td><td class="best">79.8</td><td class="best">42.1</td><td class="best">3.2×</td></tr>
+      <tr><td>GRPO</td><td>DS-R1-7B</td><td>52.1</td><td>84.3</td><td>48.5</td><td>1.0×</td></tr>
+      <tr><td class="best">ReVal (Ours)</td><td class="best">DS-R1-7B</td><td class="best">54.6</td><td class="best">85.9</td><td class="best">52.3</td><td class="best">2.8×</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融结果：(1) 移除 trajectory-level signal 后 AIME24 降 3.1%，仅使用 Bellman 更新的学习不够稳定；(2) 移除经验回放后退化为 on-policy 方法，样本效率从 3.2× 降至 1.1×；(3) 重要性权重截断值 \(c\) 对稳定性影响显著，\(c=5\) 最优，\(c=\infty\) 导致训练发散。局限性：value head 增加约 5% 的参数和推理开销；当前仅在数学推理任务上验证，开放域对话场景下的效果有待探索。</p>
+  </div>
+</div>
+
+<!-- Paper 5 -->
+<div class="paper" id="paper-5">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23414" target="_blank">SortedRL: Accelerating RL Training for LLMs through Online Length-Aware Scheduling</a></div>
+  <div class="paper-meta">
+    <span class="tag">🎯 RL</span>
+    <span class="tag">Training Efficiency</span>
+    <span class="authors">Yiqi Zhang, Huiqiang Jiang, Xufang Luo et al. · Microsoft Research</span>
+    <span class="arxiv-id">arXiv:2603.23414</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>RL 训练 LLM（如 GRPO）的主要瓶颈在于生成阶段：自回归生成速度慢，且生成与策略更新之间的同步开销巨大。当生成长轨迹（例如 16K tokens 的推理链）时，生成阶段可占据总训练时间的 70%。更严重的是，同一 batch 中不同样本的生成长度差异极大（100 到 16K），短样本必须等待最长样本完成才能进入下一步更新，造成大量 "训练气泡"（bubble）。本文的目标是：在不牺牲训练效果的前提下，显著减少这些气泡。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 在线长度感知排序（Online Length-Aware Sorting）</div>
+    <p>SortedRL 的核心思想是对生成样本按输出长度重新排序。在大生成批次中（例如 batch=512），所有样本并行生成，完成后按长度排序并分组：</p>
+    <p>$$\text{Sort}: \{\tau_1, \ldots, \tau_N\} \rightarrow \{\tau_{\sigma(1)}, \ldots, \tau_{\sigma(N)}\}, \quad \text{s.t. } |\tau_{\sigma(i)}| \leq |\tau_{\sigma(i+1)}|$$</p>
+    <p>然后将排序后的序列切分为多个更新子批（update mini-batches），短样本优先组成首批更新。这带来了三个好处：(1) 短样本组内 padding 浪费最小化；(2) 短样本可以立即开始更新，无需等待长样本；(3) 自然形成了从短到长的课程学习（curriculum）。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 缓存机制控制 Off-policy 程度</div>
+    <p>当生成和更新异步进行时，后续更新批使用的数据可能略微 off-policy（因为策略已经更新了几步）。SortedRL 引入缓存机制来量化和控制这种偏差：</p>
+    <p>$$\text{staleness}(\tau_i) = k, \quad \text{where } k = \text{number of policy updates since } \tau_i \text{ was generated}$$</p>
+    <p>定义最大容忍陈旧度 \(K_{\max}\)，当 \(\text{staleness}(\tau_i) > K_{\max}\) 时丢弃该轨迹。实验发现 \(K_{\max} = 3\) 是最优选择，允许适度复用的同时保持近 on-policy 的训练质量。对于仍在容忍范围内的轨迹，使用轻量级重要性加权：</p>
+    <p>$$w(\tau_i) = \min\left(1, \prod_{t} \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)}\right)^{1/T_i}$$</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 有状态控制器与生成缓冲区</div>
+    <p>SortedRL 的基础设施层由两个组件构成：</p>
+    <ol>
+      <li><strong>Stateful Controller</strong>：跟踪每条轨迹的生成时间戳、关联的策略版本号和长度，动态决定哪些轨迹进入下一个更新批</li>
+      <li><strong>Generation Buffer</strong>：异步收集完成的轨迹，按长度维护一个有序队列。当累积足够短样本时立即触发更新，无需等待整个生成批完成</li>
+    </ol>
+    <p>这种架构使得生成和训练可以高度重叠（overlap），理想情况下训练气泡趋近于零。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 微课程效应（Micro-Curriculum Effect）</div>
+    <p>SortedRL 的排序策略自然产生了一种从简单到困难的课程：短回答通常对应简单问题，长推理链对应困难问题。形式化地，第 \(k\) 个更新批的平均难度为：</p>
+    <p>$$\bar{d}_k = \frac{1}{|B_k|} \sum_{\tau \in B_k} \text{difficulty}(\tau) \approx \frac{1}{|B_k|} \sum_{\tau \in B_k} |\tau|$$</p>
+    <p>其中 \(\bar{d}_1 < \bar{d}_2 < \ldots < \bar{d}_M\)。这种渐进式课程在实验中额外带来 1-2% 的性能提升。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：LLaMA-3.1-8B 在 AIME24 上的训练加速</div>
+    <p>在 8×H100 集群上训练 LLaMA-3.1-8B：</p>
+    <ul>
+      <li><strong>生成批大小</strong>：512 条轨迹</li>
+      <li><strong>长度分布</strong>：中位数 2.1K tokens，最大 16K tokens</li>
+      <li><strong>传统 GRPO 气泡比例</strong>：68%（短样本等待长样本完成）</li>
+      <li><strong>SortedRL 气泡比例</strong>：31%（减少 54%）</li>
+      <li><strong>训练时间</strong>：相同 10K 步从 48h → 28h（节省 42%）</li>
+      <li><strong>AIME24 准确率</strong>：GRPO 32.4% → SortedRL 36.3%（+3.9%）</li>
+    </ul>
+    <p>性能提升来自两方面：相同时间内完成更多步更新 + 微课程效应。</p>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>模型</th><th>AIME24</th><th>Math 500</th><th>Minerval</th><th>气泡比例</th><th>加速比</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>GRPO baseline</td><td>LLaMA-3.1-8B</td><td>32.4</td><td>74.2</td><td>45.8</td><td>68%</td><td>1.0×</td></tr>
+      <tr><td class="best">SortedRL</td><td class="best">LLaMA-3.1-8B</td><td class="best">36.3</td><td class="best">78.1</td><td class="best">49.7</td><td class="best">31%</td><td class="best">1.71×</td></tr>
+      <tr><td>GRPO baseline</td><td>Qwen-2.5-32B</td><td>58.6</td><td>86.4</td><td>62.1</td><td>72%</td><td>1.0×</td></tr>
+      <tr><td class="best">SortedRL</td><td class="best">Qwen-2.5-32B</td><td class="best">67.4</td><td class="best">89.2</td><td class="best">72.6</td><td class="best">28%</td><td class="best">1.85×</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) 关闭长度排序（随机分组），气泡比例回到 65%，性能降至 33.1%，验证排序是核心；(2) \(K_{\max}\) 从 3 增加到 10，性能下降 1.8%（过度 off-policy）；(3) 关闭重要性加权后性能降 0.9%，说明轻量级校正有必要。Qwen-32B 上的提升（+18.4% on Minerval）比 8B 更显著，因为大模型生成更长，气泡问题更严重。局限性：SortedRL 的加速效果依赖于 batch 内长度方差大，若所有样本长度接近则收益有限。</p>
+  </div>
+</div>
+
+<!-- Paper 6 -->
+<div class="paper" id="paper-6">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23184" target="_blank">ImplicitRM: Unbiased Reward Modeling from Implicit Preference Data for LLM Alignment</a></div>
+  <div class="paper-meta">
+    <span class="tag">🎯 RL</span>
+    <span class="tag">Reward Model</span>
+    <span class="authors">Hao Wang, Haocheng Yang, Licheng Pan, Lei Shen, Xiaoxi Li et al.</span>
+    <span class="arxiv-id">arXiv:2603.23184</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>RLHF 的核心组件——奖励模型——严重依赖昂贵的人工标注（显式偏好数据，如 "A 好于 B"）。相比之下，用户与 LLM 交互中产生的隐式反馈（如点击、复制、重新生成）天然大量存在且零成本。然而，隐式反馈存在两个本质难题：(1) 缺少明确的负样本（用户不点击可能只是没看到，而非不喜欢）；(2) 存在偏好偏差（propensity bias）——用户更倾向于对某些类型的响应进行交互（如更短的回答更容易被复制）。这使得直接用隐式数据训练奖励模型会产生严重偏差。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 四群体分层模型</div>
+    <p>ImplicitRM 将每个（查询, 响应）对 \((q, r)\) 视为属于四个潜在群体之一：</p>
+    <ul>
+      <li><strong>TP（True Positive）</strong>：真正好的响应 + 用户给出了隐式正反馈</li>
+      <li><strong>FP（False Positive）</strong>：一般的响应 + 用户因偏好偏差给出了正反馈</li>
+      <li><strong>FN（False Negative）</strong>：真正好的响应 + 用户未给出反馈（被遗漏）</li>
+      <li><strong>TN（True Negative）</strong>：真正差的响应 + 无反馈</li>
+    </ul>
+    <p>定义潜变量 \(z \in \{TP, FP, FN, TN\}\)，偏好偏差函数 \(e(q, r) = P(\text{positive feedback} | q, r)\)，真实质量函数 \(\theta(q, r) = P(\text{good} | q, r)\)。则观测到的隐式正反馈概率为：</p>
+    <p>$$P(\text{click}=1|q,r) = \theta(q,r) \cdot e(q,r) + (1-\theta(q,r)) \cdot \epsilon(q,r)$$</p>
+    <p>其中 \(\epsilon\) 是噪声点击率。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 可辨识性条件与 EM 训练</div>
+    <p>为从混合分布中分离出真实质量函数 \(\theta\)，作者证明了在以下条件下模型是可辨识的：</p>
+    <p>$$\text{Assumption: } \exists \text{ anchor set } \mathcal{A} \text{ where } \theta(q,r) = 1 \; \forall (q,r) \in \mathcal{A}$$</p>
+    <p>实际中，锚定集可通过高一致性（多用户均给正反馈）的样本近似构建。基于此，使用 EM 算法进行训练：</p>
+    <ol>
+      <li><strong>E-step</strong>：给定当前参数 \(\hat{\theta}, \hat{e}\)，计算每个样本属于四群体的后验概率</li>
+      <li><strong>M-step</strong>：最大化完整数据似然，分别更新质量网络 \(\hat{\theta}\) 和偏好偏差网络 \(\hat{e}\)</li>
+    </ol>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 无偏似然目标推导</div>
+    <p>在四群体模型下，ImplicitRM 推导出一个无偏的学习目标。对于有正反馈的样本集 \(\mathcal{D}^+\) 和无反馈的集 \(\mathcal{D}^-\)：</p>
+    <p>$$\mathcal{L} = -\sum_{(q,r) \in \mathcal{D}^+} \log\left[\theta(q,r) \cdot e(q,r) + \bar{\theta}(q,r) \cdot \epsilon(q,r)\right] - \sum_{(q,r) \in \mathcal{D}^-} \log\left[\theta(q,r) \cdot \bar{e}(q,r) + \bar{\theta}(q,r) \cdot \bar{\epsilon}(q,r)\right]$$</p>
+    <p>其中 \(\bar{\theta} = 1 - \theta\)，\(\bar{e} = 1 - e\)。作者证明了在正确指定的模型下，\(\hat{\theta}\) 是 \(\theta^*\) 的一致估计量（consistent estimator），即随着数据量增加收敛到真实值。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 奖励分数提取与 RLHF 集成</div>
+    <p>训练完成后，\(\theta(q, r)\) 直接作为奖励分数使用。为将其集成到 RLHF pipeline：</p>
+    <p>$$R(q, r) = \log \frac{\theta(q, r)}{1 - \theta(q, r)}$$</p>
+    <p>即对 \(\theta\) 取 logit 变换，得到一个 unbounded 的奖励信号。该信号可直接用于 PPO/GRPO 的奖励函数，替代传统的显式偏好奖励模型。关键优势：训练数据完全来自用户自然交互日志，无需额外标注。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：从 ChatBot 点击日志训练奖励模型</div>
+    <p>假设一个 ChatBot 收集了 100K 对话的隐式反馈日志：</p>
+    <ul>
+      <li><strong>正反馈信号</strong>：用户复制了响应内容（17K 条）、用户点赞（8K 条）、用户继续追问相关话题（31K 条）</li>
+      <li><strong>无明确反馈</strong>：其余 44K 条对话</li>
+      <li><strong>偏好偏差例子</strong>：短回答（< 50 tokens）被复制的概率是长回答的 2.3 倍</li>
+      <li><strong>传统方法（直接用 click 作正样本）</strong>：RewardBench 准确率 62.4%</li>
+      <li><strong>ImplicitRM（消除偏差后）</strong>：RewardBench 准确率 71.8%（+9.4%）</li>
+      <li><strong>显式标注奖励模型（上界参考）</strong>：RewardBench 准确率 74.2%</li>
+    </ul>
+    <p>ImplicitRM 几乎弥合了隐式数据与显式标注之间的质量差距。</p>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>数据类型</th><th>RewardBench</th><th>Chat 对齐率</th><th>Safety 对齐率</th><th>标注成本</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>BT Model (显式)</td><td>显式偏好</td><td>74.2</td><td>68.1</td><td>82.3</td><td>$$$</td></tr>
+      <tr><td>Naive Click RM</td><td>隐式</td><td>62.4</td><td>55.2</td><td>71.8</td><td>Free</td></tr>
+      <tr><td>IPS-weighted RM</td><td>隐式</td><td>66.1</td><td>59.8</td><td>74.5</td><td>Free</td></tr>
+      <tr><td>PU Learning RM</td><td>隐式</td><td>68.3</td><td>61.4</td><td>76.2</td><td>Free</td></tr>
+      <tr><td class="best">ImplicitRM (Ours)</td><td class="best">隐式</td><td class="best">71.8</td><td class="best">65.7</td><td class="best">80.1</td><td class="best">Free</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) 移除偏好偏差网络 \(e\)（即假设无偏差），RewardBench 下降 5.2%（71.8 → 66.6），证实偏差校正的重要性；(2) 锚定集大小从 1% 增至 10% 带来 1.3% 提升，但继续增大收益递减；(3) EM 迭代 5 轮后收敛，3 轮时已达 95% 的最终性能。局限性：隐式反馈的信号噪比天然低于显式标注，在安全领域（需要精确判断的场景）仍与显式模型有 2.2% 差距；此外，方法假设隐式反馈至少部分反映了真实偏好，在用户行为高度随机的场景下可能失效。</p>
+  </div>
+</div>

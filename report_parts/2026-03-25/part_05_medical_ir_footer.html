@@ -1,0 +1,382 @@
+
+<!-- ==================== ⚕️ Medical LLMs ==================== -->
+<div class="section-header">
+  <span class="emoji">⚕️</span>
+  <h2>Medical LLMs</h2>
+</div>
+
+<!-- Paper 10 -->
+<div class="paper" id="paper-10">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.22767" target="_blank">Can LLM Agents Generate Real-World Evidence? Evaluating Observational Studies in Medical Databases</a></div>
+  <div class="paper-meta">
+    <span class="tag">⚕️ Medical</span>
+    <span class="tag">RWE</span>
+    <span class="authors">Dubai Li, Yuxiang He, Yan Hu, Yu Tian, Jingsong Li</span>
+    <span class="arxiv-id">arXiv:2603.22767</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>观察性研究（observational studies）是产生真实世界证据（Real-World Evidence, RWE）的重要途径，但在真实医疗数据库上执行这些研究是一个高度开放性的任务——需要在队列构建（cohort construction）、统计分析（analysis）、报告撰写（reporting）之间做出连贯的决策链。现有对 LLM Agent 的评估往往只考察孤立步骤或单一问题的回答，忽略了生成完整"证据包"的系统性质量。核心问题是：LLM Agent 能否端到端地在真实医疗数据库上执行观察性研究，并产出可信的证据报告？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① RWE-bench 基准构建</div>
+    <p>RWE-bench 基于 MIMIC-IV 数据库构建，参考已发表的同行评审观察性研究，构建了 162 项研究任务。每项任务包含：</p>
+    <ul>
+      <li><strong>研究方案（Protocol）</strong>：定义纳排标准、暴露/结局变量、分析方法（如 Cox 回归、Kaplan-Meier 曲线）</li>
+      <li><strong>参考标准</strong>：来自原始论文的关键统计结果（HR、CI、p-value）</li>
+      <li><strong>评估维度</strong>：不仅检查最终数值，还评估证据包的内部一致性（如队列大小与报告是否匹配）</li>
+    </ul>
+    <p>任务涵盖心血管、重症监护、感染性疾病等多个临床领域。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 树状证据包生成范式</div>
+    <p>Agent 需要生成一个树状结构的证据包 \(\mathcal{E}\)，层次为：</p>
+    <p>$$\mathcal{E} = \{\text{Protocol} \rightarrow \text{Cohort} \rightarrow \text{Analysis} \rightarrow \text{Results} \rightarrow \text{Report}\}$$</p>
+    <p>每一层的输出是下一层的输入，且必须保持内部一致性：</p>
+    <ol>
+      <li><strong>Protocol → SQL 查询</strong>：将纳排标准转化为 MIMIC-IV 上的 SQL 查询</li>
+      <li><strong>SQL → 队列数据</strong>：执行查询获取患者队列</li>
+      <li><strong>队列 → 统计分析</strong>：应用指定的统计方法（生存分析、倾向性评分匹配等）</li>
+      <li><strong>分析 → 报告</strong>：将结果整理为结构化医学报告</li>
+    </ol>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 自动化队列评估方法</div>
+    <p>为快速定位 agent 的错误来源，提出了自动化队列验证：</p>
+    <ul>
+      <li><strong>Schema Validator</strong>：检查 SQL 查询是否符合 MIMIC-IV 的表结构和命名规范</li>
+      <li><strong>Cohort Size Check</strong>：队列大小应在参考论文的 \(\pm 20\%\) 范围内</li>
+      <li><strong>Covariate Balance Check</strong>：倾向性评分匹配后各协变量的标准化均值差 \(|SMD| < 0.1\)</li>
+      <li><strong>Result Plausibility</strong>：Hazard Ratio 的方向（保护/风险因素）应与参考一致</li>
+    </ul>
+    <p>通过逐层验证，可以精确定位是"SQL 错误"还是"统计方法选择错误"还是"结果解读错误"。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 故障模式分类学</div>
+    <p>对 6 个 LLM × 3 个 Agent 框架的失败案例进行了系统化分类：</p>
+    <ol>
+      <li><strong>Schema Hallucination（28%）</strong>：Agent 引用了 MIMIC-IV 中不存在的表或字段</li>
+      <li><strong>Cohort Leakage（19%）</strong>：纳排标准执行不严格，将不符合条件的患者纳入</li>
+      <li><strong>Method Mismatch（22%）</strong>：使用了不适合研究设计的统计方法</li>
+      <li><strong>Numerical Drift（15%）</strong>：中间计算步骤的累积误差导致最终结果偏差</li>
+      <li><strong>Report Inconsistency（16%）</strong>：报告中的数值与实际计算结果不匹配</li>
+    </ol>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：Agent 执行"ICU 患者早期活动对死亡率影响"的观察性研究</div>
+    <ul>
+      <li><strong>任务</strong>：复现一项研究——ICU 住院 >48h 的患者中，入院 48h 内开始物理治疗是否降低 28 天死亡率</li>
+      <li><strong>参考结果</strong>：HR = 0.72 (95% CI: 0.58-0.89)，早期活动为保护因素</li>
+      <li><strong>GPT-4 + ReAct 框架</strong>：成功生成 SQL 查询、构建队列（n=3,847 vs 参考 n=4,012），执行 Cox 回归得 HR = 0.68 (0.54-0.86)——方向正确但偏差略大（cohort 差异导致）</li>
+      <li><strong>Claude-3.5 + Plan-and-Solve</strong>：SQL 查询正确但倾向性评分匹配后队列过小（n=1,203），统计功效不足</li>
+      <li><strong>Llama-3-70B + ReAct</strong>：在 SQL 阶段引用了不存在的字段 <code>mobility_score</code>（Schema Hallucination），任务失败</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>LLM</th><th>Agent 框架</th><th>任务成功率</th><th>SQL 正确率</th><th>统计方法正确率</th><th>报告一致性</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="best">GPT-4o</td><td>ReAct</td><td class="best">39.9%</td><td class="best">68.2%</td><td class="best">55.1%</td><td class="best">72.4%</td></tr>
+      <tr><td>Claude-3.5</td><td>Plan-Solve</td><td>36.2%</td><td>64.8%</td><td>52.3%</td><td>69.8%</td></tr>
+      <tr><td>GPT-4o</td><td>Reflexion</td><td>34.1%</td><td>65.5%</td><td>48.7%</td><td>67.2%</td></tr>
+      <tr><td>Llama-3-70B</td><td>ReAct</td><td>30.4%</td><td>55.1%</td><td>44.2%</td><td>61.5%</td></tr>
+      <tr><td>Qwen-2.5-72B</td><td>ReAct</td><td>28.7%</td><td>52.8%</td><td>42.1%</td><td>58.9%</td></tr>
+      <tr><td>Mistral-Large</td><td>ReAct</td><td>24.3%</td><td>48.5%</td><td>38.6%</td><td>55.2%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>关键发现：(1) Agent 框架的选择影响巨大——同一 LLM 在不同框架下性能差异可达 30%+；(2) SQL 正确率是主要瓶颈，只有 ~65% 的查询能正确映射到 MIMIC-IV schema；(3) 即使 SQL 正确，统计方法选择的正确率仅 ~50%，说明 LLM 对研究方法论的理解有限。局限性：RWE-bench 仅基于 MIMIC-IV（ICU 数据），对门诊数据、多中心数据的泛化性有待验证；39.9% 的最高成功率说明距离临床实用仍有很大差距；自动化评估本身可能存在偏差（如对"合理但不同"的分析方法过于严格）。</p>
+  </div>
+</div>
+
+<!-- Paper 11 -->
+<div class="paper" id="paper-11">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.22752" target="_blank">CLiGNet: Clinical Label-Interaction Graph Network for Medical Specialty Classification</a></div>
+  <div class="paper-meta">
+    <span class="tag">⚕️ Medical</span>
+    <span class="tag">Clinical NLP</span>
+    <span class="authors">Pronob Kumar Barman, Pronoy Kumar Barman</span>
+    <span class="arxiv-id">arXiv:2603.22752</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>将临床文本自动分类到医学专科（如心内科、骨科、精神科）对于诊疗路由和编码至关重要。然而，广泛使用的 MTSamples 基准存在严重的数据泄漏问题——先前研究在训练-测试划分之前应用了 SMOTE 过采样，导致测试集中混入了合成的训练样本，虚高了准确率。此外，40 个医学专科之间存在极端的类别不均衡（最大/最小类比 181:1），以及标签之间的语义关联（如"心脏外科"和"心内科"高度相关）。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 无泄漏基准建立</div>
+    <p>首先修正数据泄漏问题：严格执行"先划分、后过采样"：</p>
+    <ol>
+      <li>将 4,966 条记录按 80/20 分层随机划分为训练/测试集</li>
+      <li>仅在训练集上应用 SMOTE（如需要），测试集保持原始分布</li>
+      <li>对比修正前后：先前报告的准确率 ~95% 降至修正后的 ~25%（Macro F1），揭示了任务的真实难度</li>
+    </ol>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② BioClinicalBERT + 标签图网络架构</div>
+    <p>CLiGNet 包含两个平行分支：</p>
+    <ul>
+      <li><strong>文本分支</strong>：使用 BioClinicalBERT 编码临床文本，得到文档表示 \(\mathbf{d} \in \mathbb{R}^{768}\)</li>
+      <li><strong>标签图分支</strong>：构建一个 40 节点的医学专科图，节点特征为标签名称的 embedding，边权重基于两种信号：</li>
+    </ul>
+    <p>$$w_{ij} = \alpha \cdot \cos(\mathbf{e}_i, \mathbf{e}_j) + (1-\alpha) \cdot \mathbb{1}[\text{ICD-10 chapter}(i) = \text{ICD-10 chapter}(j)]$$</p>
+    <p>两层 GCN 传播标签间的关联信息：\(\mathbf{H}^{(l+1)} = \sigma(\hat{\mathbf{A}} \mathbf{H}^{(l)} \mathbf{W}^{(l)})\)，得到标签表示 \(\mathbf{L} \in \mathbb{R}^{40 \times 768}\)。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 逐标签注意力门控融合</div>
+    <p>将文档表示与标签图表示通过注意力门控融合：</p>
+    <p>$$\mathbf{g}_j = \sigma\left(\mathbf{W}_g [\mathbf{d}; \mathbf{l}_j] + \mathbf{b}_g\right)$$</p>
+    <p>$$\hat{y}_j = \sigma\left(\mathbf{W}_o (\mathbf{g}_j \odot \mathbf{d} + (1-\mathbf{g}_j) \odot \mathbf{l}_j)\right)$$</p>
+    <p>其中 \(\mathbf{l}_j\) 是第 \(j\) 个标签的 GCN 输出表示，\(\mathbf{g}_j\) 是门控权重。这允许模型对不同标签动态调整"文本特征"和"标签关系特征"的贡献比例。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 焦点损失 + Platt Scaling 校准</div>
+    <p>使用焦点二元交叉熵损失处理极端类别不均衡：</p>
+    <p>$$\mathcal{L}_{\text{focal}} = -\frac{1}{C}\sum_{j=1}^{40} \left[(1-\hat{y}_j)^\gamma y_j \log \hat{y}_j + \hat{y}_j^\gamma (1-y_j) \log(1-\hat{y}_j)\right]$$</p>
+    <p>其中 \(\gamma = 2\) 使模型更关注困难/稀有类别。训练后使用 Platt Scaling 进行概率校准，通过在验证集上学习标量参数 \(a, b\) 将 logits 映射为校准概率：\(P_{\text{cal}} = \sigma(a \cdot z + b)\)。校准后期望校准误差（ECE）仅 0.007。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：心脏手术报告的分类</div>
+    <p>一份包含"冠状动脉搭桥术后...主动脉瓣置换..."的手术记录：</p>
+    <ul>
+      <li><strong>真实标签</strong>：Cardiovascular / Cardiothoracic Surgery</li>
+      <li><strong>BioClinicalBERT alone</strong>：预测 "General Surgery"（混淆类别）</li>
+      <li><strong>CLiGNet</strong>：标签图中 "Cardiothoracic Surgery" 和 "Cardiovascular" 的强连接提升了正确类别的得分，最终正确预测</li>
+      <li><strong>关键</strong>：标签图的 GCN 传播使得模型能利用"如果可能是心血管相关，那么也更可能是心胸外科"这种先验关系</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>Macro F1</th><th>Micro F1</th><th>ECE</th><th>参数量</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>TF-IDF + LR</td><td>0.148</td><td>0.412</td><td>0.085</td><td>—</td></tr>
+      <tr><td>BioBERT</td><td>0.195</td><td>0.468</td><td>0.062</td><td>110M</td></tr>
+      <tr><td>BioClinicalBERT</td><td>0.213</td><td>0.489</td><td>0.054</td><td>110M</td></tr>
+      <tr><td>Clinical Longformer</td><td>0.228</td><td>0.501</td><td>0.048</td><td>149M</td></tr>
+      <tr><td class="best">CLiGNet (Ours)</td><td class="best">0.279</td><td class="best">0.538</td><td class="best">0.007</td><td class="best">112M</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) GCN 标签图贡献最大的单项提升，移除后 Macro F1 从 0.279 降至 0.213（-0.066）；(2) ICD-10 先验边（vs 纯语义边）额外带来 0.018 提升；(3) Platt Scaling 不影响排序性能但大幅改善校准（ECE 从 0.048 降至 0.007）。局限性：40 类分类的绝对 F1 仍然较低（0.279），主要受限于数据集规模（4,966 条）和极端不均衡；图结构是预定义的，未来可探索动态图学习；仅在英文临床文本上评估。</p>
+  </div>
+</div>
+
+<!-- ==================== 🔍 IR & Retrieval ==================== -->
+<div class="section-header">
+  <span class="emoji">🔍</span>
+  <h2>IR &amp; Retrieval</h2>
+</div>
+
+<!-- Paper 12 -->
+<div class="paper" id="paper-12">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23125" target="_blank">From Questions to Trust Reports: A LLM-IR Framework for the TREC 2025 DRAGUN Track</a></div>
+  <div class="paper-meta">
+    <span class="tag">🔍 IR</span>
+    <span class="tag">Trust & Credibility</span>
+    <span class="authors">Ignacy Alwasiak, Kene Nnolim, Jaclyn Thi, Samy Ateia, Markus Bink et al.</span>
+    <span class="arxiv-id">arXiv:2603.23125</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>在线新闻的可信度评估是一个日益紧迫的问题。TREC 2025 DRAGUN Track 针对此需求设立了两个任务：Task 1 生成用于评估新闻可信度的"关键问题"（critical questions），Task 2 基于检索到的证据生成结构化的可信度报告（trust report）。这要求系统同时具备问题生成、大规模检索、重排序和报告综合生成能力。核心挑战是：如何将 LLM 的生成能力与传统 IR 的检索能力有效结合？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① LLM 驱动的关键问题生成（Task 1）</div>
+    <p>给定一篇新闻文章 \(d\)，系统生成一组关键问题 \(\{q_1, \ldots, q_n\}\)，帮助用户评估其可信度。流程包括：</p>
+    <ol>
+      <li><strong>初始生成</strong>：使用 LLM 生成 20+ 候选问题，覆盖来源可靠性、事实准确性、偏见、逻辑一致性等维度</li>
+      <li><strong>语义过滤</strong>：计算问题间的 pairwise cosine similarity，移除冗余问题（\(\text{sim} > 0.85\)）</li>
+      <li><strong>多样性聚类</strong>：对剩余问题使用 K-Means 聚类（\(K=8\)），每个 cluster 选择最具代表性的问题</li>
+    </ol>
+    <p>最终输出 8-10 个覆盖多维度的关键问题。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 多策略查询扩展与检索</div>
+    <p>为从 MS MARCO V2.1 语料库中检索支持可信度判断的证据，使用多种查询扩展策略：</p>
+    <ul>
+      <li><strong>Chain-of-Thought (CoT) 扩展</strong>：LLM 对每个关键问题进行推理，生成扩展查询 \(q' = \text{LLM}(\text{CoT\_prompt}, q)\)</li>
+      <li><strong>Entity-based 扩展</strong>：从文章中提取关键实体，与问题组合形成复合查询</li>
+      <li><strong>Paraphrase 扩展</strong>：生成问题的多种表述变体，增加召回覆盖</li>
+    </ul>
+    <p>使用 BM25 + dense retrieval (E5-large) 的 hybrid 检索，初始返回 top-1000 候选文档。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ monoT5 重排序 + 领域可信度过滤</div>
+    <p>对检索到的候选文档进行两阶段精排：</p>
+    <ol>
+      <li><strong>monoT5 相关性重排序</strong>：使用 fine-tuned monoT5-3B 对 (query, document) pair 打分，选择 top-50</li>
+      <li><strong>LLM 相关性判断</strong>：对 top-50 进一步使用 LLM 评估相关性（0-3 分），阈值过滤保留 ≥2 分的文档</li>
+      <li><strong>领域可信度评估</strong>：利用预构建的域名可信度数据集，对来源进行可信度加权：\(\text{final\_score}_i = \text{relevance}_i \times \text{domain\_trust}_i\)</li>
+    </ol>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 检索增强可信度报告生成（Task 2）</div>
+    <p>将筛选后的证据文档 + 关键问题 + 原始文章输入 LLM，生成结构化可信度报告：</p>
+    <ul>
+      <li><strong>摘要</strong>：一句话概括文章可信度判断</li>
+      <li><strong>逐问题分析</strong>：针对每个关键问题，引用具体证据文档给出分析</li>
+      <li><strong>可信度评分</strong>：1-5 分的综合评分及理由</li>
+      <li><strong>引用</strong>：每个分析点标注来源文档 ID，确保可追溯性</li>
+    </ul>
+    <p>报告生成使用 few-shot prompting + 结构化输出约束（JSON schema 引导）。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：评估一篇关于"新型疗法显著延长癌症生存期"的新闻</div>
+    <ul>
+      <li><strong>生成的关键问题</strong>：(1) 该研究是否经过同行评审？(2) 样本量和对照组设计如何？(3) "显著延长"的具体数值是什么？(4) 是否有利益冲突声明？</li>
+      <li><strong>检索到的证据</strong>：找到原始论文摘要（Phase II, n=87, 中位 OS 提升 2.3 个月）、一篇质疑该研究方法的评论、制药公司的 SEC 文件（显示研究资助关系）</li>
+      <li><strong>可信度报告结论</strong>：评分 2/5——报道夸大了效果（2.3 个月 vs "显著延长"），且未披露资助关系</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>策略</th><th>Q-Gen (NDCG@10)</th><th>Retrieval (MAP)</th><th>Domain Trust (Prec@5)</th><th>Report Quality</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>BM25 only</td><td>—</td><td>0.182</td><td>0.43</td><td>2.1/5</td></tr>
+      <tr><td>BM25 + monoT5</td><td>—</td><td>0.256</td><td>0.58</td><td>2.8/5</td></tr>
+      <tr><td>Hybrid + monoT5</td><td>—</td><td>0.301</td><td>0.65</td><td>3.2/5</td></tr>
+      <tr><td class="best">Hybrid + monoT5 + CoT expansion</td><td class="best">0.412</td><td class="best">0.348</td><td class="best">0.72</td><td class="best">3.7/5</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>官方评估结果表明：(1) CoT 查询扩展是最大的单项提升（MAP 从 0.301 → 0.348），推理链帮助生成更精准的检索查询；(2) 多样性聚类在问题生成中贡献显著，无聚类时多个问题高度冗余导致检索效率下降；(3) 领域可信度过滤在 Precision@5 上提升 7%，但在 Recall 上略有损失。局限性：问题生成的质量评分为"中等"，仍有改进空间——生成的问题有时过于通用，缺乏针对特定文章的精确性；依赖预构建的域名可信度数据集，无法评估新出现的来源。</p>
+  </div>
+</div>
+
+<!-- Paper 13 -->
+<div class="paper" id="paper-13">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23183" target="_blank">SIDReasoner: Reasoning over Semantic IDs Enhances Generative Recommendation</a></div>
+  <div class="paper-meta">
+    <span class="tag">🔍 IR</span>
+    <span class="tag">Recommendation</span>
+    <span class="authors">Yingzhi He, Yan Sun, Junfei Tan, Yuxin Chen, Xiaoyu Kong et al.</span>
+    <span class="arxiv-id">arXiv:2603.23183</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>生成式推荐将序列推荐表述为自回归 token 生成——每个物品用一组离散 token（Semantic IDs, SIDs）表示，LLM 在语言 token 和物品 token 的统一空间中做自回归预测。SID 使得 LLM 可以高效解码大规模物品库。然而，LLM 推理能力的爆发式增长虽然带来了新机遇，但对 SID 的有效推理仍未被探索。核心挑战是：物品 token 对 LLM 来说本质上无意义（不像语言 token 有语义），且面向推荐的推理轨迹极难获取标注。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① SID-语言对应强化（SID-Language Alignment）</div>
+    <p>为让 LLM 理解物品 token 的语义，SIDReasoner 第一阶段在丰富的以 SID 为中心的语料上进行多任务训练：</p>
+    <ul>
+      <li><strong>SID → Description</strong>：给定 SID 序列，生成物品描述文本</li>
+      <li><strong>Description → SID</strong>：给定物品描述，预测其 SID 序列</li>
+      <li><strong>SID-SID Relation</strong>：给定两个物品的 SID，判断其语义关系（互补/替代/无关）</li>
+    </ul>
+    <p>训练语料由更强的教师模型合成。多任务目标为：</p>
+    <p>$$\mathcal{L}_{\text{align}} = \sum_{k} \lambda_k \mathcal{L}_k = \lambda_1 \mathcal{L}_{\text{S2D}} + \lambda_2 \mathcal{L}_{\text{D2S}} + \lambda_3 \mathcal{L}_{\text{S2S}}$$</p>
+    <p>经过对齐训练后，LLM 的 SID embedding 空间与语言 embedding 空间对齐。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 结果驱动的强化优化（Outcome-Driven RL）</div>
+    <p>第二阶段使用 RL 优化推荐推理能力。关键设计是不需要显式的推理标注——仅使用推荐结果作为奖励信号：</p>
+    <p>$$R(\tau, y^*) = \begin{cases} 1 & \text{if predicted SID matches } y^* \\ \text{partial}(\hat{y}, y^*) & \text{if first } k \text{ tokens match} \\ 0 & \text{otherwise} \end{cases}$$</p>
+    <p>其中 \(\text{partial}\) 提供部分匹配奖励（前缀匹配越长，奖励越高），缓解稀疏奖励问题。使用 GRPO 作为策略优化算法，鼓励模型在生成 SID 之前产生推理 token（如"用户之前买了耳机和手机壳 → 可能对数据线感兴趣 → SID:[34,12,7]"）。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 推理增强的解码策略</div>
+    <p>推理时，SIDReasoner 采用"先推理后预测"的模式：</p>
+    <ol>
+      <li>模型先生成一段自由形式的推理文本（reasoning trace），分析用户历史行为模式</li>
+      <li>基于推理文本，预测目标物品的 SID token 序列</li>
+      <li>使用 constrained beam search 确保生成的 SID 对应真实物品（通过 SID trie 约束）</li>
+    </ol>
+    <p>推理文本长度通过 length penalty \(\alpha_{\text{len}}\) 控制，实验中最优长度为 30-50 tokens。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 跨域泛化能力</div>
+    <p>SIDReasoner 的一个意外发现是其跨域泛化能力。在域 A（如电子产品）上训练的推理能力可以迁移到域 B（如书籍）：</p>
+    <p>$$\text{Transfer Performance} = (1 - \delta) \cdot \text{In-domain} + \delta \cdot \text{Random}$$</p>
+    <p>实验中 \(\delta \approx 0.15\)，即跨域性能仅损失约 15%——远好于无推理的基线（损失 30-40%）。这表明推理能力捕获了领域无关的用户行为模式（如"互补购买"、"品牌忠诚"等抽象规律）。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：SIDReasoner 的推理链示例</div>
+    <p>用户历史：[无线耳机 SID:14,8,3] → [手机保护壳 SID:22,5,1] → [充电宝 SID:9,12,6]</p>
+    <ul>
+      <li><strong>推理文本</strong>："用户近期购买了多个手机配件（耳机、保护壳、充电宝），显示出对手机配件类目的集中兴趣。考虑到已有的配件组合，用户可能还需要数据线或手机支架等互补产品。基于 SID 空间中的近邻关系..."</li>
+      <li><strong>预测</strong>：SID:[18,3,9]（对应"USB-C 快充数据线"）✓ 命中</li>
+      <li><strong>无推理基线预测</strong>：SID:[14,8,5]（对应另一款无线耳机）✗——简单的序列模式匹配倾向于重复已有类别</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>Amazon-Beauty R@10</th><th>Amazon-Sports R@10</th><th>Steam R@10</th><th>跨域 R@10</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>SASRec</td><td>0.048</td><td>0.032</td><td>0.071</td><td>—</td></tr>
+      <tr><td>TIGER (SID-based)</td><td>0.061</td><td>0.041</td><td>0.085</td><td>0.029</td></tr>
+      <tr><td>LLM4Rec (no SID)</td><td>0.055</td><td>0.038</td><td>0.078</td><td>0.035</td></tr>
+      <tr><td>LETTER (SID+LLM)</td><td>0.068</td><td>0.046</td><td>0.092</td><td>0.038</td></tr>
+      <tr><td class="best">SIDReasoner (Ours)</td><td class="best">0.082</td><td class="best">0.055</td><td class="best">0.108</td><td class="best">0.052</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) 移除 Stage 1 SID-语言对齐后，R@10 下降 22%（0.082 → 0.064），说明对齐训练是推理的基础；(2) 移除 RL 阶段后下降 15%（0.082 → 0.070），推理质量显著下降但仍优于无推理基线；(3) 推理长度限制为 0（即禁用推理）后退化到与 LETTER 相当水平。跨域泛化是最有价值的发现——暗示推理增强推荐的潜力不仅在于精度提升，更在于知识迁移。局限性：推理增加了约 30-50 tokens 的延迟开销，在实时推荐场景中需要权衡；RL 训练的稳定性在物品库快速更新时可能受到影响。</p>
+  </div>
+</div>
+
+<!-- ==================== Reflection ==================== -->
+<div class="reflection">
+  <h3>📝 编辑反思</h3>
+  <p><strong>今日亮点</strong>：RL for LLM 方向继续火热——ReVal 提出了 off-policy 替代方案解决样本效率问题，SortedRL 则从系统层面优化训练基础设施，ImplicitRM 开辟了从隐式反馈学习奖励模型的新路线。三篇论文分别从<strong>算法</strong>、<strong>系统</strong>和<strong>数据</strong>三个维度推进 LLM RL，体现了这个方向的多元发展。</p>
+  <p><strong>效率主题</strong>：Sparser Faster Lighter 和 EchoKV 分别攻克了模型参数稀疏和 KV Cache 压缩两大推理效率瓶颈，且都强调了 "灵活切换"——可以在精度和效率之间动态权衡，这对实际部署非常关键。CMM 用动力系统理论证明了"小而美"的推理模型的可行性，5M 参数超越 27M。</p>
+  <p><strong>Agent 进化</strong>：MemCollab 的跨 Agent 记忆共享、Polaris 的策略级别自我修复、c-CRAB 的代码审查评测——Agent 研究正在从"能做什么"转向"做得有多好以及如何持续改进"。</p>
+  <p><strong>医疗方向值得关注</strong>：RWE-bench 的 39.9% 任务成功率看似不高，但首次系统评估了 LLM Agent 在医疗证据生成中的端到端能力，为未来改进建立了清晰的基线和失败模式分类学。</p>
+</div>
+
+<footer>
+  <p>📊 报告自动生成于 2026-03-25 · 数据源：<a href="https://arxiv.org">arXiv.org</a> API</p>
+  <p>🔬 覆盖领域：cs.CL · cs.AI · cs.IR · cs.LG · 共 13 篇论文</p>
+  <p>⚙️ Generated by arXiv AI Daily Report Automation</p>
+</footer>
+
+</div><!-- end container -->
+</body>
+</html>

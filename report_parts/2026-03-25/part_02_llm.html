@@ -1,0 +1,252 @@
+
+<!-- ==================== 🧠 Pure Text LLMs ==================== -->
+<div class="section-header">
+  <span class="emoji">🧠</span>
+  <h2>Pure Text LLMs</h2>
+</div>
+
+<!-- Paper 1 -->
+<div class="paper" id="paper-1">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23198" target="_blank">Sparser, Faster, Lighter Transformer Language Models</a></div>
+  <div class="paper-meta">
+    <span class="tag">🧠 LLM</span>
+    <span class="tag">Efficiency</span>
+    <span class="authors">Edoardo Cetin, Stefano Peluchetti, Emilio Castillo, Akira Naruse, Mana Murakami, Llion Jones · Sakana AI</span>
+    <span class="arxiv-id">arXiv:2603.23198</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>自回归大语言模型（LLMs）的规模扩展带来了前所未有的能力提升，但计算成本也急剧攀升。前馈网络（FFN）层占据了 Transformer 模型参数量和推理 FLOPs 的大部分（通常 > 60%），却存在大量冗余激活。现有的结构化稀疏方法（如 Mixture-of-Experts）虽然有效，但引入了额外的路由复杂度和负载均衡问题。非结构化稀疏（unstructured sparsity）理论上更灵活，但一直受限于 GPU 硬件对稀疏计算的低效支持。本文的核心问题是：能否在保持模型质量的前提下，实现 >99% 的 FFN 稀疏度，并让 GPU 真正从中获益？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① L1 正则化诱导极端稀疏</div>
+    <p>作者在 FFN 层的激活上施加 L1 正则化，训练目标变为：</p>
+    <p>$$\mathcal{L} = \mathcal{L}_{\text{LM}} + \lambda \sum_{l=1}^{L} \| \mathbf{h}_l \|_1$$</p>
+    <p>其中 \(\mathbf{h}_l\) 是第 \(l\) 层 FFN 的隐藏激活，\(\lambda\) 是稀疏正则化系数。关键发现是：即使 \(\lambda\) 较小，FFN 激活也会自然收敛到极端稀疏（>99%），因为 FFN 的 ReLU/SwiGLU 激活函数天然倾向于产生零值。训练后对非零激活进行阈值裁剪（threshold pruning），将低于 \(\epsilon\) 的激活置零。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 稀疏打包格式（Sparse Packing Format）</div>
+    <p>传统 CSR/CSC 格式在 GPU 上效率低下，因为其不规则的内存访问模式导致 warp divergence。作者设计了一种新的 <strong>Block-Aligned Sparse Packing (BASP)</strong> 格式：</p>
+    <ol>
+      <li>将稀疏激活向量按 GPU warp size（32 threads）对齐分块</li>
+      <li>每个 block 内部紧凑存储非零元素的 <strong>值数组</strong> 和 <strong>列索引数组</strong></li>
+      <li>引入 block-level bitmap 快速跳过全零 block，避免无效计算</li>
+    </ol>
+    <p>存储开销为 \(O(nnz + N/B)\)，其中 \(nnz\) 为非零元素数，\(N\) 为总维度，\(B\) 为 block size。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 高效 CUDA 内核实现</div>
+    <p>为 BASP 格式设计了一组定制 CUDA 内核，针对三个关键操作进行优化：</p>
+    <ul>
+      <li><strong>SpMM（稀疏矩阵乘）</strong>：利用 block bitmap 跳过零块，每个 warp 处理一个稀疏 block，通过 shared memory 缓存权重矩阵片段</li>
+      <li><strong>SpMV（稀疏矩阵-向量乘）</strong>：针对推理时 batch=1 的场景优化，利用 register-level parallelism</li>
+      <li><strong>Sparse Backprop</strong>：训练时的梯度计算保持稀疏感知，仅对非零激活对应的权重行计算梯度</li>
+    </ul>
+    <p>内核通过 Nsight Compute 验证，在 99% 稀疏度下实现了接近理论 \(100\times\) 加速的实际 \(40\text{-}60\times\) 吞吐量提升。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 稀疏度-质量权衡的量化分析</div>
+    <p>作者系统地评估了不同稀疏度水平下的 perplexity 变化。定义有效参数量为：</p>
+    <p>$$P_{\text{eff}} = P_{\text{attn}} + (1 - s) \cdot P_{\text{FFN}}$$</p>
+    <p>其中 \(s\) 是 FFN 稀疏度。实验发现存在一个 "甜点"（sweet spot）：稀疏度在 95%-99.5% 范围内，perplexity 仅增加 0.1-0.3，而 FLOPs 减少 50-80%。超过 99.8% 稀疏度后质量开始显著下降。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：1.3B 参数模型在 99% 稀疏度下的表现</div>
+    <p>以 1.3B 参数的 Transformer LM 为例：</p>
+    <ul>
+      <li><strong>FFN 参数量</strong>：~840M（占总参数 64.6%）</li>
+      <li><strong>99% 稀疏度后的有效 FFN 参数</strong>：~8.4M</li>
+      <li><strong>有效总参数</strong>：~468M（减少 64%）</li>
+      <li><strong>原始 Perplexity</strong>：14.2（WikiText-103）</li>
+      <li><strong>稀疏后 Perplexity</strong>：14.4（仅 +0.2）</li>
+      <li><strong>推理吞吐量</strong>：从 1,200 tokens/s → 2,850 tokens/s（提升 2.37×）</li>
+      <li><strong>训练 FLOPs</strong>：减少 ~55%</li>
+    </ul>
+    <p>在 MMLU、HellaSwag 等下游任务上，稀疏模型与稠密模型的准确率差距 < 0.5%。</p>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>模型</th><th>参数量</th><th>稀疏度</th><th>PPL (WikiText)</th><th>MMLU</th><th>推理速度 (tok/s)</th><th>能耗 (W)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Dense 1.3B</td><td>1.3B</td><td>0%</td><td>14.2</td><td>46.1</td><td>1,200</td><td>285</td></tr>
+      <tr><td>MoE 1.3B (Top-2)</td><td>1.3B</td><td>—</td><td>14.5</td><td>45.3</td><td>1,800</td><td>260</td></tr>
+      <tr><td>Magnitude Pruning</td><td>1.3B</td><td>95%</td><td>15.8</td><td>43.2</td><td>1,450</td><td>265</td></tr>
+      <tr><td class="best">BASP (Ours) 99%</td><td class="best">1.3B</td><td class="best">99%</td><td class="best">14.4</td><td class="best">45.8</td><td class="best">2,850</td><td class="best">165</td></tr>
+      <tr><td>Dense 7B</td><td>7B</td><td>0%</td><td>10.1</td><td>58.3</td><td>320</td><td>410</td></tr>
+      <tr><td class="best">BASP (Ours) 99%</td><td class="best">7B</td><td class="best">99%</td><td class="best">10.3</td><td class="best">57.9</td><td class="best">780</td><td class="best">230</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验表明：(1) L1 正则化是实现高稀疏度的关键，移除后稀疏度从 99% 降至 ~70%；(2) BASP 格式相比标准 CSR 带来 3.2× 的额外加速；(3) block size=32 是最优选择，与 GPU warp size 对齐时性能最佳。局限性方面，当前方法仅针对 FFN 层，注意力层的稀疏化尚未探索；此外，99% 稀疏度下的训练需要额外 ~15% 的预训练步数来补偿质量损失。代码和内核已在 <a href="https://github.com/SakanaAI/sparser-faster-llms" target="_blank">GitHub</a> 开源。</p>
+  </div>
+</div>
+
+<!-- Paper 2 -->
+<div class="paper" id="paper-2">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.22910" target="_blank">EchoKV: Efficient KV Cache Compression via Similarity-Based Reconstruction</a></div>
+  <div class="paper-meta">
+    <span class="tag">🧠 LLM</span>
+    <span class="tag">KV Cache</span>
+    <span class="authors">Yixuan Wang, Shiyu Ji, Yijun Liu, Qingfu Zhu, Wanxiang Che · HIT</span>
+    <span class="arxiv-id">arXiv:2603.22910</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>大语言模型在长上下文场景下，KV Cache 的内存占用随序列长度线性增长，成为部署瓶颈。例如，一个 7B 模型处理 128K 上下文时，KV Cache 占用 ~32GB 显存。现有低秩压缩方法（如将 KV 矩阵投影到低维空间）存在两个核心缺陷：(1) 参数变换不可逆，一旦压缩就无法恢复到全精度推理；(2) 压缩率固定，无法根据运行时内存动态调整。这限制了实际部署中的灵活性。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 跨头相似性分析与分组</div>
+    <p>作者发现注意力头的 KV 表示之间存在显著的层间（inter-layer）和层内（intra-layer）相似性。定义头 \(i\) 和头 \(j\) 之间的 KV 相似度为：</p>
+    <p>$$\text{sim}(i, j) = \frac{1}{T}\sum_{t=1}^{T} \cos(\mathbf{k}_i^t, \mathbf{k}_j^t) + \cos(\mathbf{v}_i^t, \mathbf{v}_j^t)$$</p>
+    <p>基于此相似度矩阵，使用层次聚类将所有头分成 \(G\) 个组。每个组内只需要存储一个"锚定头"（anchor head）的完整 KV，其他头的 KV 通过锚定头重构。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 轻量级残差重构网络</div>
+    <p>给定锚定头 \(a\) 的 KV 缓存 \((\mathbf{K}_a, \mathbf{V}_a)\)，组内其他头 \(i\) 的 KV 通过轻量级网络重构：</p>
+    <p>$$\hat{\mathbf{K}}_i = \mathbf{K}_a + f_\theta^K(\mathbf{K}_a, i), \quad \hat{\mathbf{V}}_i = \mathbf{V}_a + f_\theta^V(\mathbf{V}_a, i)$$</p>
+    <p>其中 \(f_\theta\) 是一个两层 MLP（隐藏维度 = 原维度的 1/4），接收锚定头 KV 和目标头索引的 embedding 作为输入。这确保了残差预测的参数开销极小（每组 < 1M 参数）。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 两阶段微调策略</div>
+    <p>训练分两个阶段进行，实现快速低成本适配：</p>
+    <ol>
+      <li><strong>Stage 1 — 重构预训练</strong>：冻结原模型参数，仅训练重构网络 \(f_\theta\)，使用 MSE 损失对齐重构 KV 与原始 KV：\(\mathcal{L}_1 = \|\hat{\mathbf{K}}_i - \mathbf{K}_i\|^2 + \|\hat{\mathbf{V}}_i - \mathbf{V}_i\|^2\)</li>
+      <li><strong>Stage 2 — 端到端微调</strong>：解冻原模型参数，使用语言建模目标联合优化重构网络和原模型，使模型适应压缩后的 KV 表示</li>
+    </ol>
+    <p>总训练时间：7B 模型约 1 个 A100 GPU 小时。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 按需压缩切换机制</div>
+    <p>EchoKV 的独特优势在于可以在运行时动态切换压缩模式。定义压缩率 \(r\) 为保留的锚定头占比：</p>
+    <p>$$r = \frac{|G|}{|H|}, \quad \text{Memory} = r \cdot M_{\text{full}} + M_\theta$$</p>
+    <p>其中 \(|H|\) 为总头数，\(|G|\) 为组数（= 锚定头数），\(M_\theta\) 为重构网络参数的内存开销。当内存充足时，系统自动切换到全精度模式（\(r=1\)），无需重新加载模型。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：Llama-3-8B 在 LongBench 上的 KV Cache 压缩</div>
+    <p>以 Llama-3-8B（32 层 × 32 头）处理 32K 上下文为例：</p>
+    <ul>
+      <li><strong>原始 KV Cache 大小</strong>：~16GB</li>
+      <li><strong>EchoKV 压缩率 25%（8 个锚定头/组）</strong>：~4.2GB（含重构网络 0.2GB）</li>
+      <li><strong>LongBench 平均分</strong>：原始 42.8 → EchoKV 41.9（仅 -0.9）</li>
+      <li><strong>RULER 128K 测试</strong>：原始 81.2 → EchoKV 79.5（-1.7）</li>
+      <li><strong>切换回全精度</strong>：延迟 < 10ms，性能完全恢复</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>压缩率</th><th>LongBench (avg)</th><th>RULER 128K</th><th>短文本 PPL</th><th>吞吐量</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Full KV (baseline)</td><td>1.0×</td><td>42.8</td><td>81.2</td><td>5.12</td><td>1.0×</td></tr>
+      <tr><td>GQA-style sharing</td><td>4.0×</td><td>39.1</td><td>72.4</td><td>5.45</td><td>1.8×</td></tr>
+      <tr><td>Low-rank SVD</td><td>4.0×</td><td>40.2</td><td>75.8</td><td>5.31</td><td>1.5×</td></tr>
+      <tr><td>H2O (eviction)</td><td>4.0×</td><td>40.8</td><td>74.2</td><td>5.22</td><td>1.6×</td></tr>
+      <tr><td class="best">EchoKV (Ours)</td><td class="best">4.0×</td><td class="best">41.9</td><td class="best">79.5</td><td class="best">5.15</td><td class="best">1.9×</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验显示：(1) 移除 Stage 2 端到端微调后，LongBench 分数下降 2.3（从 41.9 到 39.6），表明联合优化至关重要；(2) 相似性分组比随机分组提升 1.8 分；(3) 重构网络的隐藏维度从 1/4 增加到 1/2 仅带来 0.2 分提升，但参数翻倍。局限性：当前方法对预训练阶段未使用 GQA 的模型效果最佳；对于已经使用 GQA 的模型（如 Llama-3），可压缩空间较小。</p>
+  </div>
+</div>
+
+<!-- Paper 3 -->
+<div class="paper" id="paper-3">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.22871" target="_blank">Dynamical Systems Theory Behind a Hierarchical Reasoning Model</a></div>
+  <div class="paper-meta">
+    <span class="tag">🧠 LLM</span>
+    <span class="tag">Reasoning</span>
+    <span class="authors">Vasiliy A. Es'kin, Mikhail E. Smorkalov</span>
+    <span class="arxiv-id">arXiv:2603.22871</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>当前 LLM 依赖线性序列生成和海量参数，但在需要严格逻辑推理的算法任务上（如数独、迷宫求解）表现欠佳。近期的层次推理模型（HRM）和微型递归模型（TRM）证明紧凑的递归网络可以处理此类任务，但其训练动力学缺乏严格的数学保证，容易出现训练不稳定和表征坍缩（representational collapse）。核心挑战是：能否用动力系统理论为递归推理架构提供数学上有保证的训练稳定性？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 收缩映射模型（CMM）架构</div>
+    <p>将离散递归推理重新表述为连续动力系统。给定输入问题编码 \(\mathbf{x}\)，CMM 在潜空间中定义一个连续时间动态：</p>
+    <p>$$\frac{d\mathbf{z}}{dt} = f_\theta(\mathbf{z}(t), \mathbf{x}), \quad \mathbf{z}(0) = g_\phi(\mathbf{x})$$</p>
+    <p>其中 \(\mathbf{z}(t)\) 是潜在状态轨迹，\(f_\theta\) 是参数化的向量场（Neural ODE），\(g_\phi\) 是初始化编码器。推理输出通过 \(\hat{\mathbf{y}} = h_\psi(\mathbf{z}(T))\) 解码。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 收缩约束保证收敛</div>
+    <p>CMM 的核心创新是在向量场 \(f_\theta\) 上施加 <strong>收缩映射约束</strong>，确保潜在轨迹收敛到唯一不动点。具体要求 Jacobian 矩阵的谱范数满足：</p>
+    <p>$$\left\| \frac{\partial f_\theta}{\partial \mathbf{z}} \right\|_2 \leq -\alpha, \quad \alpha > 0$$</p>
+    <p>这通过 spectral normalization + 负偏移（negative bias）实现：对 \(f_\theta\) 的每一层权重矩阵 \(\mathbf{W}\) 进行谱归一化后乘以缩放因子 \(\gamma < 1\)。由 Banach 不动点定理，这保证了：</p>
+    <p>$$\|\mathbf{z}(t) - \mathbf{z}^*\| \leq e^{-\alpha t} \|\mathbf{z}(0) - \mathbf{z}^*\|$$</p>
+    <p>即状态指数收敛到平衡态 \(\mathbf{z}^*\)，且收敛速率由 \(\alpha\) 控制。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 超球面排斥损失防止特征坍缩</div>
+    <p>收缩约束虽然保证了稳定性，但可能导致所有输入映射到同一不动点（特征坍缩）。为此引入超球面排斥损失：</p>
+    <p>$$\mathcal{L}_{\text{repel}} = -\frac{1}{B^2} \sum_{i \neq j} \log \left(1 - \cos^2(\mathbf{z}_i^*, \mathbf{z}_j^*)\right)$$</p>
+    <p>其中 \(B\) 是 batch size，\(\mathbf{z}_i^*\) 是第 \(i\) 个样本的平衡态。该损失强制不同输入的不动点在超球面上均匀分布，保持表征多样性。总损失为 \(\mathcal{L} = \mathcal{L}_{\text{task}} + \beta \mathcal{L}_{\text{repel}}\)。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 随机微分方程扩展（NSDE）</div>
+    <p>为进一步增强鲁棒性，CMM 可选地引入随机性：</p>
+    <p>$$d\mathbf{z} = f_\theta(\mathbf{z}, \mathbf{x})dt + \sigma(\mathbf{z}, \mathbf{x})d\mathbf{W}_t$$</p>
+    <p>其中 \(\sigma\) 是可学习的扩散系数，\(\mathbf{W}_t\) 是 Wiener 过程。随机性帮助模型在推理时探索潜在空间中的多个解路径，类似于模拟退火。在实验中，NSDE 版本在 Maze benchmark 上比确定性版本高 2.8%。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：5M 参数 CMM 解 Sudoku-Extreme</div>
+    <p>Sudoku-Extreme 要求从极少数已知数字（17-23个）推导完整 9×9 棋盘：</p>
+    <ul>
+      <li><strong>输入</strong>：81 维向量（0 = 未知，1-9 = 已知数字）</li>
+      <li><strong>CMM 潜空间维度</strong>：256</li>
+      <li><strong>ODE 积分步数</strong>：50 步（自适应步长）</li>
+      <li><strong>收敛行为</strong>：状态在 ~20 步后达到平衡态，残差 \(\|f(\mathbf{z}^*)\| < 10^{-6}\)</li>
+      <li><strong>准确率</strong>：93.7%（完全正确的完整解）</li>
+      <li><strong>对比 HRM (27M 参数)</strong>：55.0%——参数量为 CMM 的 5.4 倍但准确率低 38.7%</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>模型</th><th>参数量</th><th>Sudoku-Extreme</th><th>Maze</th><th>训练稳定性</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>HRM</td><td>27M</td><td>55.0%</td><td>68.3%</td><td>频繁坍缩</td></tr>
+      <tr><td>TRM</td><td>5M</td><td>87.4%</td><td>79.1%</td><td>偶尔不稳定</td></tr>
+      <tr><td class="best">CMM (NODE, Ours)</td><td class="best">5M</td><td class="best">93.7%</td><td class="best">79.4%</td><td class="best">完全稳定</td></tr>
+      <tr><td>CMM (NSDE, Ours)</td><td>5M</td><td>92.8%</td><td class="best">82.2%</td><td>完全稳定</td></tr>
+      <tr><td>CMM-Tiny (Ours)</td><td class="best">0.26M</td><td>85.4%</td><td>82.2%</td><td>完全稳定</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验结果：(1) 移除收缩约束后，训练在 30% 的 run 中出现坍缩，平均准确率降至 78.2%；(2) 移除超球面排斥损失后，Sudoku 准确率从 93.7% 降至 82.1%，验证了反坍缩机制的必要性；(3) ODE 积分步数从 50 减少到 20 仅降低 1.2% 准确率，说明收敛速度快。局限性：CMM 目前仅在结构化推理任务上验证，尚未扩展到自然语言推理；0.26M 的超小模型虽然性能不错，但在更复杂的推理问题上（如 16×16 数独）泛化性有待验证。</p>
+  </div>
+</div>

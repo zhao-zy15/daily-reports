@@ -1,0 +1,276 @@
+
+<!-- ==================== 🤖 LLM Agent ==================== -->
+<div class="section-header">
+  <span class="emoji">🤖</span>
+  <h2>LLM Agent</h2>
+</div>
+
+<!-- Paper 7 -->
+<div class="paper" id="paper-7">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23448" target="_blank">Code Review Agent Benchmark (c-CRAB)</a></div>
+  <div class="paper-meta">
+    <span class="tag">🤖 Agent</span>
+    <span class="tag">Code Review</span>
+    <span class="authors">c-CRAB Team</span>
+    <span class="arxiv-id">arXiv:2603.23448</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>AI 代码生成 agent（如 Devin、Claude Code、Codex）正在自动化大量代码编写工作，但这些自动生成的代码在集成到大型代码库时，代码审查（code review）成为关键质量保障环节。现有的 agent 评估主要关注代码生成能力（如 SWE-bench），而代码审查能力缺乏系统化评测。核心问题是：AI 代码审查 agent 能否发现人类审查者关注的问题？agent 审查与人类审查的关注维度是否一致？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 基于人类审查意见的数据集构建</div>
+    <p>c-CRAB 数据集的构建流程：</p>
+    <ol>
+      <li>从开源项目中收集真实的 Pull Request（PR）及其人类审查意见</li>
+      <li>对每条人类审查意见，使用 LLM 将其转化为一组可执行测试：\(\text{ReviewComment} \rightarrow \{t_1, t_2, \ldots, t_k\}\)</li>
+      <li>每个测试 \(t_i\) 是一个断言，验证审查 agent 的输出是否覆盖了对应的审查关注点</li>
+      <li>质量控制：人工验证转化后的测试确实能准确反映原始审查意见的意图</li>
+    </ol>
+    <p>最终数据集包含 来自多个 GitHub 项目的 PR 实例，覆盖代码逻辑错误、性能问题、安全漏洞、API 误用等多种审查维度。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 评估框架设计</div>
+    <p>评估遵循"审查即测试"范式。给定一个 PR \(p\) 和其对应的人类审查测试集 \(\{t_1, \ldots, t_k\}\)：</p>
+    <ol>
+      <li>代码审查 agent 对 PR 生成审查意见 \(\mathcal{R}_{\text{agent}}\)</li>
+      <li>自动评估器检查 \(\mathcal{R}_{\text{agent}}\) 是否覆盖了每个测试点 \(t_i\)</li>
+      <li>计算覆盖率：\(\text{Coverage}(p) = \frac{|\{t_i : t_i \text{ covered by } \mathcal{R}_{\text{agent}}\}|}{k}\)</li>
+    </ol>
+    <p>关键度量包括：任务通过率（至少覆盖所有测试点）、平均覆盖率、以及误报率（agent 提出的无效/错误审查意见）。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 多 Agent 协同测试生成</div>
+    <p>c-CRAB 的独特之处在于测试本身也是由 AI agent 生成的，形成了三方协作闭环：</p>
+    <ul>
+      <li><strong>Code Generation Agent</strong>：产生代码（PR）</li>
+      <li><strong>Code Review Agent</strong>：审查代码，生成审查意见</li>
+      <li><strong>Test Generation Agent</strong>：基于人类审查意见生成测试，作为评估审查 agent 的标准</li>
+    </ul>
+    <p>这种设计意味着测试集本身也是对测试生成 agent 质量的验证，即测试必须足够精确才能有效评估审查 agent。这种"保留测试套件"（holdout test suite）机制为未来三类 agent 的协同优化提供了研究方向。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 人机审查维度差异分析</div>
+    <p>作者对 agent 和人类审查意见的关注维度进行了系统化分类和对比。将审查意见标记为以下类别：</p>
+    <ul>
+      <li><strong>逻辑正确性</strong>（Logic）、<strong>性能</strong>（Performance）、<strong>安全</strong>（Security）</li>
+      <li><strong>代码风格</strong>（Style）、<strong>可维护性</strong>（Maintainability）、<strong>文档</strong>（Documentation）</li>
+    </ul>
+    <p>发现：agent 更倾向于发现显式的逻辑 bug 和安全漏洞，而人类审查者更关注可维护性和代码风格的微妙问题。这种互补性暗示了人机协作审查的巨大潜力。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：一个典型的 PR 审查对比</div>
+    <p>对于一个 Python Web 应用的 PR（添加用户注册接口）：</p>
+    <ul>
+      <li><strong>人类审查意见</strong>：(1) 密码未做哈希处理——安全漏洞；(2) 缺少输入长度验证；(3) 变量名 <code>x</code> 含义不清</li>
+      <li><strong>PR-agent（开源）</strong>：发现了 (1) 密码问题 ✓，遗漏了 (2)(3) ✗</li>
+      <li><strong>Claude Code Review</strong>：发现了 (1)(2) ✓，还额外发现了一个未捕获的异常 ✓+，遗漏 (3) ✗</li>
+      <li><strong>Devin Review</strong>：发现了 (1) ✓，还指出了数据库连接未关闭 ✓+，遗漏 (2)(3) ✗</li>
+    </ul>
+    <p>Agent 倾向于发现安全和功能性问题，但在命名规范等"主观"问题上不如人类敏感。</p>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>审查 Agent</th><th>任务通过率</th><th>平均覆盖率</th><th>Logic</th><th>Security</th><th>Style</th><th>Maintainability</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PR-agent (开源)</td><td>18.2%</td><td>34.7%</td><td>42.1%</td><td>38.3%</td><td>22.5%</td><td>19.8%</td></tr>
+      <tr><td>Devin Review</td><td>25.6%</td><td>41.2%</td><td>51.3%</td><td>45.7%</td><td>28.4%</td><td>25.1%</td></tr>
+      <tr><td>Codex Review</td><td>22.8%</td><td>38.5%</td><td>47.8%</td><td>42.1%</td><td>25.9%</td><td>22.7%</td></tr>
+      <tr><td class="best">Claude Code Review</td><td class="best">28.4%</td><td class="best">43.8%</td><td class="best">54.2%</td><td class="best">48.9%</td><td class="best">31.2%</td><td class="best">27.6%</td></tr>
+      <tr><td>All Agents 合并</td><td>~40%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>关键发现：(1) 所有 agent 合并覆盖约 40% 的人类审查关注点，说明当前 AI 审查能力仍有巨大提升空间；(2) agent 之间的审查意见互补性很高——各 agent 独立发现的问题重叠率仅 ~30%，暗示 ensemble 策略可能有效；(3) 测试生成 agent 本身的精度为 ~85%，说明约 15% 的测试不够准确可能导致低估审查 agent 的真实能力。局限性：当前评估仅覆盖 Python 和 JavaScript，对其他语言的泛化性有待验证；"审查质量"的定义本身存在主观性。</p>
+  </div>
+</div>
+
+<!-- Paper 8 -->
+<div class="paper" id="paper-8">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23234" target="_blank">MemCollab: Cross-Agent Memory Collaboration via Contrastive Trajectory Distillation</a></div>
+  <div class="paper-meta">
+    <span class="tag">🤖 Agent</span>
+    <span class="tag">Memory</span>
+    <span class="authors">Yurui Chang, Yiran Wu, Qingyun Wu, Lu Lin</span>
+    <span class="arxiv-id">arXiv:2603.23234</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>LLM Agent 依赖记忆机制来复用过去的经验知识。但现有记忆系统采用"每个 agent 独立记忆"的方式，记忆与特定模型的推理风格紧密耦合。在异构 agent 部署中（例如同一系统使用 GPT-4、Claude、Llama 的不同 agent），一个自然的问题是：能否构建一个跨 agent 共享的记忆系统？实验发现，直接在 agent 间传递记忆通常会降低性能，因为记忆中混杂了"任务级别的通用知识"和"agent 特有的推理偏差"。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 对比轨迹蒸馏（Contrastive Trajectory Distillation）</div>
+    <p>MemCollab 的核心思想是通过对比不同 agent 在相同任务上的推理轨迹来提取"agent-agnostic"的记忆。给定任务 \(\tau\) 和两个异构 agent \(A_1, A_2\) 的轨迹 \(T_1, T_2\)：</p>
+    <p>$$\mathbf{m}_\tau = \text{Distill}(T_1, T_2) = \text{LLM}(\text{prompt}_{\text{contrast}}, T_1, T_2)$$</p>
+    <p>对比提示（contrast prompt）引导 LLM 识别两条轨迹中的<strong>共同推理约束</strong>（如"必须先检查边界条件"）并过滤掉<strong>agent 特有的风格差异</strong>（如推理步骤的粒度、格式偏好）。蒸馏出的记忆 \(\mathbf{m}_\tau\) 是抽象的推理规则，而非具体的推理步骤。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 记忆表示与存储结构</div>
+    <p>每条蒸馏记忆 \(\mathbf{m}\) 以结构化格式存储：</p>
+    <ul>
+      <li><strong>任务类别标签</strong> \(c\)：自动分类到预定义类别（如"数组操作"、"图算法"、"字符串处理"）</li>
+      <li><strong>推理约束</strong>：一组抽象规则，如"处理递归时需检查栈溢出"</li>
+      <li><strong>反例模式</strong>：从失败轨迹中提取的常见错误模式</li>
+      <li><strong>置信度分数</strong> \(w\)：基于蒸馏来源的 agent 数量和一致性加权</li>
+    </ul>
+    <p>记忆库采用向量数据库存储，每条记忆同时维护文本表示和 embedding 向量，支持语义检索。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 任务感知检索机制</div>
+    <p>在推理时，MemCollab 根据当前任务检索相关记忆。检索策略结合了语义相似性和类别匹配：</p>
+    <p>$$\text{score}(\mathbf{m}, \tau_{\text{new}}) = \alpha \cdot \cos(\mathbf{e}_m, \mathbf{e}_\tau) + (1-\alpha) \cdot \mathbb{1}[c_m = c_\tau]$$</p>
+    <p>其中 \(\mathbf{e}_m, \mathbf{e}_\tau\) 分别是记忆和新任务的 embedding，\(\alpha = 0.7\)。检索 top-K（\(K=3\)）相关记忆后，以结构化格式注入 agent 的系统提示中。关键设计：检索到的记忆是<strong>约束条件</strong>而非完整解法，因此不会限制 agent 的推理灵活性。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 迭代协作记忆增长</div>
+    <p>记忆库随时间持续增长和优化：</p>
+    <ol>
+      <li>当新的 agent 加入系统时，在已有任务上生成新轨迹，与已有轨迹对比蒸馏，<strong>增强</strong>现有记忆的覆盖度</li>
+      <li>当记忆被检索并使用后，根据任务成功/失败信号更新置信度分数：\(w \leftarrow w + \eta \cdot (\text{success} - 0.5)\)</li>
+      <li>低置信度（\(w < w_{\min}\)）的记忆被自动淘汰，保持记忆库的精炼</li>
+    </ol>
+    <p>实验中，经过 3 轮 agent 加入和记忆优化后，平均任务准确率继续提升 2.1%。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：跨模型记忆共享在数学推理上的效果</div>
+    <p>任务：MATH benchmark 中的一道数论题（模运算 + 费马小定理）</p>
+    <ul>
+      <li><strong>GPT-4 轨迹</strong>：直接尝试暴力计算，6 步后得出正确答案（推理风格：简洁直觉）</li>
+      <li><strong>Llama-3-70B 轨迹</strong>：先回顾定理再逐步推导，12 步后正确（推理风格：详细严谨）</li>
+      <li><strong>蒸馏记忆</strong>："当遇到大数幂的模运算时，优先检查是否可应用费马小定理 \(a^{p-1} \equiv 1 \pmod{p}\) 或欧拉定理 \(a^{\phi(n)} \equiv 1 \pmod{n}\)"</li>
+      <li><strong>Qwen-2.5-7B（原始）</strong>：在类似题目上准确率 41.2%</li>
+      <li><strong>Qwen-2.5-7B + MemCollab 记忆</strong>：准确率 52.8%（+11.6%），无需任何微调</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>Agent</th><th>无记忆</th><th>自有记忆</th><th>朴素跨 Agent</th><th>MemCollab</th><th>提升</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>GPT-4</td><td>72.1</td><td>74.5</td><td>73.2</td><td class="best">76.8</td><td class="best">+4.7</td></tr>
+      <tr><td>Claude-3.5</td><td>70.8</td><td>73.1</td><td>71.4</td><td class="best">75.3</td><td class="best">+4.5</td></tr>
+      <tr><td>Llama-3-70B</td><td>58.3</td><td>61.2</td><td>57.1</td><td class="best">64.7</td><td class="best">+6.4</td></tr>
+      <tr><td>Qwen-2.5-7B</td><td>41.2</td><td>44.8</td><td>39.5</td><td class="best">48.9</td><td class="best">+7.7</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) 朴素跨 agent 传递（不做对比蒸馏）对弱模型（Llama-3、Qwen）反而有害（-1.2% 到 -1.7%），验证了 agent 特有偏差的干扰；(2) 对比蒸馏中使用 2 个 agent 已可获得主要收益，增加到 4 个仅额外提升 0.8%；(3) 任务感知检索比全局检索（不区分类别）高 2.3%。局限性：蒸馏过程本身需要一个足够强的 LLM 作为蒸馏器（当前使用 GPT-4），成本非零；在极端异构场景下（如代码 agent vs. 对话 agent），跨域记忆共享的效果有待探索。</p>
+  </div>
+</div>
+
+<!-- Paper 9 -->
+<div class="paper" id="paper-9">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.23129" target="_blank">Polaris: A Gödel Agent Framework for Small Language Models through Experience-Abstracted Policy Repair</a></div>
+  <div class="paper-meta">
+    <span class="tag">🤖 Agent</span>
+    <span class="tag">Self-Improvement</span>
+    <span class="authors">Aditya Kakade, Vivek Srivastava, Shirish Karande</span>
+    <span class="arxiv-id">arXiv:2603.23129</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>当前的 LLM Agent 自我改进大多在响应级别（response-level），即修正单次输出。但真正有意义的改进应该在策略级别（policy-level）——即改进 agent 处理某一类问题的通用策略，使改进能够泛化到未见实例。此外，大模型（>70B）天然具有较强的元推理能力（meta-reasoning），但小模型（7B）在这方面严重不足。核心挑战是：如何让小语言模型也具备策略级别的递归自我修正能力？</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="sub-module">
+    <div class="sub-title">① 递归策略修复循环</div>
+    <p>Polaris 实现了一个"检查 → 分析 → 修补 → 验证"的递归循环：</p>
+    <ol>
+      <li><strong>Execute</strong>：Agent 使用当前策略 \(\pi_k\) 在任务集 \(\mathcal{T}\) 上执行，收集轨迹 \(\{(\tau_i, \text{success}_i)\}\)</li>
+      <li><strong>Diagnose</strong>：对失败轨迹进行结构化错误分析，提取错误模式 \(\mathcal{E} = \{e_1, \ldots, e_m\}\)</li>
+      <li><strong>Repair</strong>：基于错误模式生成策略补丁 \(\Delta\pi_k\)，形式为"当遇到[模式]时，应该[新策略]"</li>
+      <li><strong>Verify</strong>：在保留验证集上测试 \(\pi_{k+1} = \pi_k \oplus \Delta\pi_k\)，确保不引入退化</li>
+    </ol>
+    <p>循环持续至策略收敛或达到最大轮次 \(K\)。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">② 经验抽象（Experience Abstraction）</div>
+    <p>为让策略补丁能泛化到未见实例，Polaris 对失败经验进行抽象化处理：</p>
+    <p>$$\text{Abstract}: (e_{\text{specific}}, \tau_{\text{failed}}) \rightarrow e_{\text{abstract}}$$</p>
+    <p>例如，从"在第 3 步将 35 × 7 误算为 235"这一具体错误中抽象出"多位数乘法时需要分步验证中间结果"的通用策略。抽象过程使用 LLM 本身完成，并通过提示工程引导 agent 关注错误的<strong>结构特征</strong>而非<strong>具体数值</strong>。每条抽象策略保留：</p>
+    <ul>
+      <li><strong>触发条件</strong>：描述策略适用的上下文模式</li>
+      <li><strong>修复动作</strong>：具体的推理步骤调整</li>
+      <li><strong>置信度</strong>：基于验证集通过率的加权分数</li>
+    </ul>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">③ 最小代码路径修复（Minimal Code-Path Repair）</div>
+    <p>策略在 Polaris 中以结构化的 "策略代码" 形式表示——一组条件规则和对应的行动指令。修复时遵循最小编辑原则：</p>
+    <p>$$\text{edit\_distance}(\pi_k, \pi_{k+1}) \leq \delta_{\max}$$</p>
+    <p>这意味着每轮只允许添加/修改少量规则，避免大幅度策略变更导致的灾难性遗忘。实际实现中，\(\delta_{\max} = 3\)（每轮最多修改 3 条规则）。修复候选通过验证集选择最优方案。</p>
+  </div>
+
+  <div class="sub-module">
+    <div class="sub-title">④ 元推理引导的错误归因</div>
+    <p>在诊断阶段，Polaris 要求 agent 进行元推理（meta-reasoning）：</p>
+    <ol>
+      <li>回溯失败轨迹中的关键决策点（decision points）</li>
+      <li>对每个决策点生成反事实推理："如果在此处选择了 [替代方案] 会怎样？"</li>
+      <li>基于反事实结果确定根因错误（root cause），而非表层症状</li>
+    </ol>
+    <p>对于小模型，元推理能力通过 few-shot 示例 + 结构化提示模板增强。实验中，使用元推理的错误归因准确率从 48% 提升到 72%。</p>
+  </div>
+
+  <div class="module-title">深度案例</div>
+  <div class="example-box">
+    <div class="example-title">💡 实例：Mistral-7B + Polaris 在 GPQA 上的策略进化</div>
+    <p>基座模型：Mistral-7B-Instruct，任务：GPQA（研究生级别 QA）</p>
+    <ul>
+      <li><strong>Round 0（原始策略）</strong>：准确率 28.3%</li>
+      <li><strong>Round 1 诊断</strong>：发现主要错误模式——在多步推理中过早锁定答案、忽略排除法</li>
+      <li><strong>Round 1 修补</strong>：添加规则"对每个候选答案生成支持和反对论据后再做选择"</li>
+      <li><strong>Round 1 结果</strong>：准确率提升至 33.1%（+4.8%）</li>
+      <li><strong>Round 2 诊断</strong>：发现在需要专业知识的领域（如有机化学）推理链不够深入</li>
+      <li><strong>Round 2 修补</strong>：添加规则"遇到专业术语时先进行定义展开，再进行推理"</li>
+      <li><strong>Round 2 结果</strong>：准确率提升至 35.7%（+2.6%）</li>
+      <li><strong>3 轮后收敛</strong>：36.4%（累计 +8.1%）</li>
+    </ul>
+  </div>
+
+  <div class="module-title">实验结果</div>
+  <table class="result-table">
+    <thead>
+      <tr><th>方法</th><th>模型</th><th>MGSM</th><th>DROP</th><th>GPQA</th><th>LitBench</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Base Policy</td><td>Mistral-7B</td><td>52.1</td><td>45.3</td><td>28.3</td><td>34.7</td></tr>
+      <tr><td>Self-Refine</td><td>Mistral-7B</td><td>54.8</td><td>47.2</td><td>30.1</td><td>35.9</td></tr>
+      <tr><td>Reflexion</td><td>Mistral-7B</td><td>56.2</td><td>48.8</td><td>31.5</td><td>36.8</td></tr>
+      <tr><td class="best">Polaris (Ours)</td><td class="best">Mistral-7B</td><td class="best">61.4</td><td class="best">53.7</td><td class="best">36.4</td><td class="best">41.2</td></tr>
+      <tr><td>Base Policy</td><td>Llama-3-8B</td><td>55.8</td><td>48.1</td><td>31.2</td><td>37.5</td></tr>
+      <tr><td class="best">Polaris (Ours)</td><td class="best">Llama-3-8B</td><td class="best">64.7</td><td class="best">56.9</td><td class="best">39.1</td><td class="best">44.3</td></tr>
+    </tbody>
+  </table>
+
+  <div class="module-title">消融与讨论</div>
+  <div class="ablation">
+    <p>消融实验：(1) 移除经验抽象（直接使用具体错误修补），GPQA 性能从 36.4 降至 32.8（-3.6），表明抽象化对泛化至关重要；(2) 移除最小编辑约束后出现策略振荡（accuracy 在 28-34 之间波动），证实了渐进修复的必要性；(3) 元推理错误归因 vs 简单错误标记：前者带来额外 3.2% 的提升。Polaris 相比 Reflexion 的优势在于修复是策略级别的（跨实例泛化），而非实例级别的。局限性：策略修复的质量依赖于 agent 的元推理能力，当前在 7B 模型上通过提示工程增强，但更小的模型（如 1-3B）可能不足以支持有效的元推理。</p>
+  </div>
+</div>
