@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股收盘总结 · 2026-03-25</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #f0f2f5; --card: #ffffff; --text: #1a1a2e; --text2: #5a5a7a;
+            --red: #e53e3e; --green: #38a169; --blue: #3182ce; --gold: #d69e2e;
+            --border: #e2e8f0; --shadow: rgba(0,0,0,0.08);
+            --tag-bg: #f7fafc; --highlight: #fffbeb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d1117; --card: #161b22; --text: #e6edf3; --text2: #8b949e;
+                --red: #f87171; --green: #4ade80; --blue: #60a5fa; --gold: #fbbf24;
+                --border: #30363d; --shadow: rgba(0,0,0,0.4);
+                --tag-bg: #21262d; --highlight: #1c1917;
+            }
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); text-decoration: none; font-size: 0.9rem; margin-bottom: 16px; padding: 6px 14px; background: var(--card); border-radius: 8px; border: 1px solid var(--border); }
+        .back-link:hover { background: var(--blue); color: #fff; }
+
+        /* Hero */
+        .hero { background: linear-gradient(135deg, #c53030, #e53e3e); border-radius: 16px; padding: 32px; color: #fff; margin-bottom: 24px; position: relative; overflow: hidden; }
+        .hero::after { content: ''; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+        .hero-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.85; margin-bottom: 8px; }
+        .hero h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+        .hero .sub { opacity: 0.9; font-size: 0.95rem; }
+        .hero .stats { display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap; }
+        .hero .stat { background: rgba(255,255,255,0.15); border-radius: 10px; padding: 12px 18px; min-width: 140px; }
+        .hero .stat .label { font-size: 0.75rem; opacity: 0.8; }
+        .hero .stat .value { font-size: 1.3rem; font-weight: 700; }
+
+        /* Cards */
+        .section { margin-bottom: 24px; }
+        .section-title { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+        .card { background: var(--card); border-radius: 14px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px var(--shadow); }
+        .card-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: var(--tag-bg); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: var(--tag-bg); }
+        .up { color: var(--red); font-weight: 600; }
+        .down { color: var(--green); font-weight: 600; }
+
+        /* Tags */
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; margin-right: 6px; margin-bottom: 4px; }
+        .tag-red { background: rgba(229,62,62,0.12); color: var(--red); }
+        .tag-green { background: rgba(56,161,105,0.12); color: var(--green); }
+        .tag-blue { background: rgba(49,130,206,0.12); color: var(--blue); }
+        .tag-gold { background: rgba(214,158,46,0.12); color: var(--gold); }
+
+        /* Hotspot */
+        .hotspot { background: var(--card); border-radius: 14px; border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 2px 8px var(--shadow); }
+        .hotspot-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .hotspot-name { font-size: 1.05rem; font-weight: 700; }
+        .hotspot-driver { font-size: 0.8rem; }
+        .hotspot p { font-size: 0.9rem; color: var(--text2); line-height: 1.7; margin-bottom: 6px; }
+        .hotspot .stocks { margin-top: 8px; }
+
+        /* Outlook */
+        .outlook-box { background: linear-gradient(135deg, var(--highlight), var(--card)); border-radius: 14px; border: 1px solid var(--gold); padding: 20px; }
+        .outlook-box h4 { color: var(--gold); margin-bottom: 10px; }
+        .outlook-box ul { padding-left: 20px; color: var(--text2); }
+        .outlook-box li { margin-bottom: 6px; }
+
+        /* Links */
+        .source { font-size: 0.78rem; color: var(--blue); }
+        a { color: var(--blue); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 1.4rem; }
+            .hero .stats { gap: 12px; }
+            .hero .stat { min-width: 120px; padding: 10px 14px; }
+            table { font-size: 0.82rem; }
+            th, td { padding: 8px; }
+        }
+
+        .footer { text-align: center; padding: 30px 16px; color: var(--text2); font-size: 0.85rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="index.html" class="back-link">← 返回报告列表</a>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-label">📈 A股港股收盘总结</div>
+        <h1>2026年3月25日（周三）· 收盘报告</h1>
+        <div class="sub">连续第二日普涨 · 沪指重回3900点 · 美团暴涨近14% · 泡泡玛特财报后闪崩22%</div>
+        <div class="stats">
+            <div class="stat">
+                <div class="label">上证指数</div>
+                <div class="value">3,931.84 <span style="font-size:0.8rem">+1.30%</span></div>
+            </div>
+            <div class="stat">
+                <div class="label">恒生指数</div>
+                <div class="value">25,335.95 <span style="font-size:0.8rem">+1.09%</span></div>
+            </div>
+            <div class="stat">
+                <div class="label">两市成交</div>
+                <div class="value">≈2.1万亿</div>
+            </div>
+            <div class="stat">
+                <div class="label">南向净买入</div>
+                <div class="value">223亿港元</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. 大盘全景概览 -->
+    <div class="section">
+        <div class="section-title">📈 大盘全景概览</div>
+        <div class="card">
+            <div class="card-title">核心指数收盘数据</div>
+            <table>
+                <thead>
+                    <tr><th>指数</th><th>收盘点位</th><th>涨跌幅</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>上证指数</strong></td><td>3,931.84</td><td class="up">+1.30%</td><td>重回3900点上方</td></tr>
+                    <tr><td><strong>深证成指</strong></td><td>13,801.00</td><td class="up">+1.95%</td><td>中小盘强势</td></tr>
+                    <tr><td><strong>创业板指</strong></td><td>3,316.97</td><td class="up">+2.01%</td><td>连续两日领涨</td></tr>
+                    <tr><td><strong>沪深300</strong></td><td>4,537.47</td><td class="up">+1.40%</td><td>权重股回暖</td></tr>
+                    <tr><td><strong>中证500</strong></td><td>7,767.67</td><td class="up">+2.24%</td><td>中盘股最强</td></tr>
+                    <tr><td><strong>科创50</strong></td><td>1,315.41</td><td class="up">+1.91%</td><td>科技成长修复</td></tr>
+                    <tr><td><strong>上证50</strong></td><td>2,859.53</td><td class="up">+1.01%</td><td>蓝筹稳健</td></tr>
+                    <tr><td style="border-top:2px solid var(--border)"><strong>恒生指数</strong></td><td style="border-top:2px solid var(--border)">25,335.95</td><td style="border-top:2px solid var(--border)" class="up">+1.09%</td><td style="border-top:2px solid var(--border)">科网午后爆发</td></tr>
+                    <tr><td><strong>恒生科技</strong></td><td>4,922.94</td><td class="up">+1.91%</td><td>美团京东领涨</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📊 市场情绪与资金</div>
+            <div class="grid-2">
+                <div>
+                    <p><strong>两市成交额：</strong>约 <span class="up">2.1万亿元</span>，较昨日缩量约3,500亿，但仍处万亿上方</p>
+                    <p><strong>涨跌比：</strong>上涨 <span class="up">5,136家</span> vs 下跌 329家</p>
+                    <p><strong>涨停/跌停：</strong>涨停 <span class="up">105家</span>（连续两日百股涨停）/ 跌停 8家</p>
+                </div>
+                <div>
+                    <p><strong>北向资金（沪深股通）：</strong>额度充足，当日收盘</p>
+                    <p><strong>南向资金净买入：</strong><span class="up">223亿港元</span>，大幅流入港股</p>
+                    <p><strong>港股通(沪)净买额：</strong>-171.24亿（净卖出）</p>
+                    <p><strong>港股通(深)净买额：</strong>-102.37亿（净卖出）</p>
+                </div>
+            </div>
+            <p class="source" style="margin-top:10px">数据来源：<a href="https://quote.eastmoney.com/ZS000001.html" target="_blank">东方财富</a> · <a href="https://finance.sina.com.cn/stock/" target="_blank">新浪财经</a> · <a href="https://www.nbd.com.cn/articles/2026-03-25/4307911.html" target="_blank">每日经济新闻</a></p>
+        </div>
+    </div>
+
+    <!-- 2. 专属自选追踪 -->
+    <div class="section">
+        <div class="section-title">⭐ 专属自选追踪</div>
+
+        <div class="card">
+            <div class="card-title">个股今日表现</div>
+            <table>
+                <thead>
+                    <tr><th>股票</th><th>收盘价</th><th>涨跌幅</th><th>核心驱动</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>美团 (3690.HK)</strong></td>
+                        <td>90.00 HKD</td>
+                        <td class="up">+13.92% 🔥</td>
+                        <td>明日发布年报 + 经济日报《外卖大战该结束了》利好</td>
+                    </tr>
+                    <tr>
+                        <td><strong>阿里巴巴 (9988.HK)</strong></td>
+                        <td>128.90 HKD</td>
+                        <td class="up">+4.63%</td>
+                        <td>外卖平台利好带动互联网板块共振</td>
+                    </tr>
+                    <tr>
+                        <td><strong>宁德时代 (300750.SZ)</strong></td>
+                        <td>397.81 CNY</td>
+                        <td class="up">+0.21%</td>
+                        <td>电池龙头窄幅整理，成交额105.4亿</td>
+                    </tr>
+                    <tr>
+                        <td><strong>小米 (1810.HK)</strong></td>
+                        <td>32.52 HKD</td>
+                        <td class="down">-0.49%</td>
+                        <td>卢伟冰回应内存涨价：不排除涨价可能</td>
+                    </tr>
+                    <tr>
+                        <td><strong>腾讯 (0700.HK)</strong></td>
+                        <td>505.50 HKD</td>
+                        <td class="down">-1.65%</td>
+                        <td>大盘轮动中相对弱势，南向资金净买入7.49亿</td>
+                    </tr>
+                    <tr>
+                        <td><strong>蜜雪集团 (2097.HK)</strong></td>
+                        <td>322.00 HKD</td>
+                        <td class="down">-5.79%</td>
+                        <td>2025年报营收335.6亿(+35.2%)，利润59.3亿(+33.1%)，增速放缓</td>
+                    </tr>
+                    <tr style="background:rgba(229,62,62,0.05)">
+                        <td><strong>泡泡玛特 (9992.HK)</strong></td>
+                        <td>168.30 HKD</td>
+                        <td class="down">-22.51% ⚠️</td>
+                        <td>财报炸裂(营收+185%/净利+309%)但增速展望仅20%引崩盘</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="source" style="margin-top:10px">
+                数据来源：<a href="https://finance.sina.com.cn/" target="_blank">新浪财经实时行情</a> ·
+                新闻参考：<a href="https://news.qq.com/rain/a/20260325A05BSZ00" target="_blank">泡泡玛特闪崩</a> ·
+                <a href="https://www.nbd.com.cn/articles/2026-03-25/4307911.html" target="_blank">美团暴涨</a> ·
+                <a href="https://www.21jingji.com/article/20260325/herald/57e2ae8b404b7a21e0ceb782527fc0b5.html" target="_blank">蜜雪/小米</a>
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🏭 自选行业近况</div>
+            <div style="margin-bottom:14px">
+                <strong>🤖 机器人板块</strong>
+                <span class="tag tag-blue">震荡修复</span>
+                <p style="font-size:0.9rem;color:var(--text2);margin-top:4px">经历前期深度调整后随大盘温和反弹，人形机器人概念分化。上周五中东冲突引发的恐慌性抛售逐步消化，但板块量能尚未明显恢复。长期逻辑（特斯拉Optimus量产、国内政策催化）仍在，短期以修复性反弹为主。</p>
+            </div>
+            <div style="margin-bottom:14px">
+                <strong>💊 创新药/恒生医疗</strong>
+                <span class="tag tag-red">偏强</span>
+                <p style="font-size:0.9rem;color:var(--text2);margin-top:4px">CRO概念和创新药板块今日活跃。港股食品饮料、医药等消费防守板块获资金青睐，恒生医疗保健指数跟随大盘反弹。近期多家创新药企年报超预期，板块估值处于历史低位区间。</p>
+            </div>
+            <div>
+                <strong>🔬 芯片半导体</strong>
+                <span class="tag tag-red">强势</span>
+                <p style="font-size:0.9rem;color:var(--text2);margin-top:4px">半导体板块今日表现强劲。存储芯片涨价周期持续（国际DRAM/NAND价格连续上涨），小米卢伟冰确认内存涨价压力。科创50涨+1.91%受益于半导体权重股走强。长光华芯涨超14%领涨光芯片细分赛道。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 市场核心热点 -->
+    <div class="section">
+        <div class="section-title">🔥 市场核心热点与资金风口</div>
+
+        <!-- 热点1: 外卖平台 -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">1️⃣ 外卖/互联网平台</span>
+                <span class="tag tag-red">政策驱动 + 业绩预期</span>
+            </div>
+            <p><strong>驱动原因：</strong>国家市场监督管理总局官网转载经济日报文章《外卖大战该结束了》，明确指出价格战"不补贴就死、一补贴就乱"的恶性循环应当终结，市场预期外卖行业从"烧钱竞争"转向"效率提升"。同时美团明日公布年报，业绩预期向好。</p>
+            <div class="stocks">
+                <span class="tag tag-red">美团 +13.92%</span>
+                <span class="tag tag-red">京东 +4.98%</span>
+                <span class="tag tag-red">阿里巴巴 +4.63%</span>
+                <span class="tag tag-red">智谱 +16%</span>
+            </div>
+            <p><strong>趋势判断：</strong>政策信号明确利好平台利润率回升。美团明日年报将是关键验证窗口，若业绩超预期，外卖三巨头有望继续上行。但需警惕"买预期卖事实"风险。</p>
+            <p class="source"><a href="https://www.nbd.com.cn/articles/2026-03-25/4307911.html" target="_blank">每日经济新闻</a> · <a href="https://t.10jqka.com.cn/pid_605658093.shtml" target="_blank">同花顺异动解读</a></p>
+        </div>
+
+        <!-- 热点2: 电力 -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">2️⃣ 电力/绿电</span>
+                <span class="tag tag-gold">产业逻辑 + 政策驱动</span>
+            </div>
+            <p><strong>驱动原因：</strong>能源安全需求持续升温，中东地缘冲突推动各国加速电气化和可再生能源布局。电力板块已连续多日领涨，十余只成分股涨停。绿电方面，政策催化（碳交易扩容、新型电力系统建设）叠加AI算力耗电需求暴增。</p>
+            <div class="stocks">
+                <span class="tag tag-red">华电辽能 8连板</span>
+                <span class="tag tag-red">韶能股份 6天5板</span>
+                <span class="tag tag-red">粤电力A 6天4板</span>
+                <span class="tag tag-red">华银电力 涨停</span>
+            </div>
+            <p><strong>趋势判断：</strong>中期逻辑扎实（AI用电+能源安全），但短线连板个股积累了较高的获利盘，注意分化风险。中国广核、中国核电等龙头可持续关注。</p>
+            <p class="source"><a href="https://paper.cnstock.com/html/2026-03/25/content_2191971.htm" target="_blank">上海证券报</a></p>
+        </div>
+
+        <!-- 热点3: 航天军工 -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">3️⃣ 航天军工</span>
+                <span class="tag tag-blue">资金博弈 + 地缘催化</span>
+            </div>
+            <p><strong>驱动原因：</strong>午后突然爆发，地缘冲突持续（中东局势未完全缓和）叠加国防预算提升预期。航天装备、军工电子等细分赛道资金集中流入。</p>
+            <div class="stocks">
+                <span class="tag tag-red">长城军工 涨停</span>
+                <span class="tag tag-red">湖南天雁 2连板</span>
+                <span class="tag tag-red">北方长龙 +8%+</span>
+                <span class="tag tag-red">洪都航空 +8%+</span>
+                <span class="tag tag-red">建设工业 +8%+</span>
+            </div>
+            <p><strong>趋势判断：</strong>军工板块前期超跌明显，地缘催化下有修复空间。但持续性取决于后续地缘事件演绎。建议关注航天装备及军工电子细分龙头。</p>
+            <p class="source"><a href="https://news.qq.com/rain/a/20260325A04YKP00" target="_blank">21世纪经济报道</a></p>
+        </div>
+
+        <!-- 热点4: 光通信/CPO -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">4️⃣ 光通信/CPO + 算力租赁</span>
+                <span class="tag tag-gold">产业逻辑突破</span>
+            </div>
+            <p><strong>驱动原因：</strong>AI算力基建持续推进，光通信和CPO（共封装光学）作为AI数据中心核心基础设施，受益于全球超大规模数据中心建设。算力租赁概念同步活跃，反映市场对AI算力需求爆发的定价。</p>
+            <div class="stocks">
+                <span class="tag tag-red">通鼎互联 涨停</span>
+                <span class="tag tag-red">长飞光纤 涨停</span>
+                <span class="tag tag-red">长光华芯 +14%</span>
+                <span class="tag tag-red">天孚通信 +6%</span>
+                <span class="tag tag-red">中际旭创 +4%</span>
+                <span class="tag tag-red">二六三 涨停</span>
+            </div>
+            <p><strong>趋势判断：</strong>AI算力产业链是本轮科技牛市的核心主线之一。CPO技术路线确定性强，中际旭创、天孚通信等龙头回调后具备中期配置价值。</p>
+            <p class="source"><a href="https://paper.cnstock.com/html/2026-03/25/content_2191971.htm" target="_blank">上海证券报</a></p>
+        </div>
+
+        <!-- 热点5: 福建本地股 -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">5️⃣ 福建本地股</span>
+                <span class="tag tag-blue">政策驱动</span>
+            </div>
+            <p><strong>驱动原因：</strong>福建省国资委印发《实施"五大行动"推动所出资企业向新向优发展工作方案（2026—2028年）》，政策催化下板块集体拉升。</p>
+            <div class="stocks">
+                <span class="tag tag-red">平潭发展 涨停</span>
+                <span class="tag tag-red">海峡创新 跟涨</span>
+                <span class="tag tag-red">漳州发展 跟涨</span>
+                <span class="tag tag-red">福建水泥 跟涨</span>
+            </div>
+            <p><strong>趋势判断：</strong>地方国企改革是阶段性主题，政策落地后持续性有限。短线博弈为主，关注具体受益标的的基本面支撑。</p>
+            <p class="source"><a href="https://news.qq.com/rain/a/20260325A04YKP00" target="_blank">21世纪经济报道</a></p>
+        </div>
+
+        <!-- 热点6: 航运 -->
+        <div class="hotspot">
+            <div class="hotspot-header">
+                <span class="hotspot-name">6️⃣ 航运/油运</span>
+                <span class="tag tag-gold">产业逻辑 + 地缘催化</span>
+            </div>
+            <p><strong>驱动原因：</strong>中东地缘冲突导致全球供应链重构，油运周期持续上行。机构预计2026年龙头油运公司利润创新高。板块估值仍处于合理区间。</p>
+            <div class="stocks">
+                <span class="tag tag-red">招商南油 涨停</span>
+                <span class="tag tag-red">中远海能 跟涨</span>
+                <span class="tag tag-red">招商轮船 跟涨</span>
+            </div>
+            <p><strong>趋势判断：</strong>油运周期股逻辑扎实，但需关注伊朗局势演变对运费和原油价格的双向影响。中长期看好龙头。</p>
+            <p class="source"><a href="https://paper.cnstock.com/html/2026-03/25/content_2191971.htm" target="_blank">上海证券报</a></p>
+        </div>
+
+        <div class="card" style="background:var(--tag-bg)">
+            <div class="card-title">📉 今日领跌板块</div>
+            <p style="font-size:0.9rem;color:var(--text2)">石油、天然气、煤炭板块跌幅居前——洲际油气跌超5%、蓝焰控股跌超5%、中国海油跌超3%。原油期货大幅回调（上海原油-3.7%）拖累传统能源股。</p>
+        </div>
+    </div>
+
+    <!-- 4. 跨市场联动 -->
+    <div class="section">
+        <div class="section-title">🔗 跨市场联动追踪</div>
+
+        <div class="card">
+            <div class="card-title">商品期货市场</div>
+            <table>
+                <thead>
+                    <tr><th>品种</th><th>收盘价</th><th>涨跌</th><th>板块</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>沪金 AU</strong></td><td>1,013.96 元/克</td><td class="up">+3.78%</td><td>贵金属</td></tr>
+                    <tr><td><strong>沪银 AG</strong></td><td>18,111 元/千克</td><td class="up">+7.16%</td><td>贵金属</td></tr>
+                    <tr><td><strong>沪铜 CU</strong></td><td>95,590 元/吨</td><td class="up">+2.12%</td><td>有色金属</td></tr>
+                    <tr><td><strong>沪铝 AL</strong></td><td>23,860 元/吨</td><td class="up">+0.87%</td><td>有色金属</td></tr>
+                    <tr><td><strong>沪镍 NI</strong></td><td>136,130 元/吨</td><td class="up">+1.65%</td><td>有色金属</td></tr>
+                    <tr><td><strong>沪锌 ZN</strong></td><td>22,935 元/吨</td><td class="up">+0.26%</td><td>有色金属</td></tr>
+                    <tr style="background:rgba(56,161,105,0.05)"><td><strong>上海原油 SC</strong></td><td>723.90 元/桶</td><td class="down">-3.72%</td><td>能源</td></tr>
+                    <tr><td><strong>螺纹钢 RB</strong></td><td>3,132 元/吨</td><td class="down">-0.48%</td><td>黑色系</td></tr>
+                    <tr><td><strong>铁矿石 I</strong></td><td>806.50 元/吨</td><td class="down">-2.00%</td><td>黑色系</td></tr>
+                    <tr><td><strong>焦炭 J</strong></td><td>1,776 元/吨</td><td class="down">-1.25%</td><td>黑色系</td></tr>
+                    <tr><td><strong>棉花 CF</strong></td><td>15,340 元/吨</td><td class="up">+0.89%</td><td>农产品</td></tr>
+                    <tr><td><strong>豆粕 M</strong></td><td>2,932 元/吨</td><td class="down">-0.81%</td><td>农产品</td></tr>
+                    <tr><td><strong>菜油 OI</strong></td><td>9,707 元/吨</td><td class="down">-1.00%</td><td>农产品</td></tr>
+                </tbody>
+            </table>
+            <p class="source" style="margin-top:10px">数据来源：<a href="https://finance.sina.com.cn/" target="_blank">新浪期货实时行情</a></p>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">💱 人民币汇率</div>
+                <table>
+                    <tr><td><strong>美元/人民币（在岸）</strong></td><td>6.8913</td></tr>
+                    <tr><td>日内区间</td><td>6.8815 - 6.8995</td></tr>
+                </table>
+                <p style="font-size:0.85rem;color:var(--text2);margin-top:8px">人民币日内窄幅波动，整体保持稳定。美元指数走弱背景下，人民币小幅升值，有利于外资回流A股和港股。</p>
+            </div>
+            <div class="card">
+                <div class="card-title">🌐 国际原油</div>
+                <table>
+                    <tr><td><strong>布伦特原油</strong></td><td class="down">94.88 美元 (-5.33%)</td></tr>
+                    <tr><td><strong>WTI原油</strong></td><td class="down">87.45 美元 (-5.34%)</td></tr>
+                </table>
+                <p style="font-size:0.85rem;color:var(--text2);margin-top:8px">原油价格大幅回落，中东局势缓和预期+美国释放战略储备消息共同打压油价。原油下跌利好航空、化工等下游行业，但拖累石油股。</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📡 跨市场联动分析</div>
+            <ul style="padding-left:20px;color:var(--text2);font-size:0.9rem">
+                <li><strong>贵金属暴涨：</strong>沪金+3.78%、沪银+7.16%，避险资金持续涌入。COMEX黄金站上4,600美元/盎司，反映全球不确定性仍高。白银弹性更大，工业+避险双重属性叠加。</li>
+                <li><strong>有色金属强势：</strong>沪铜+2.12%，受益于全球制造业回暖预期和新能源需求（电动车用铜量是燃油车3-4倍）。镍镍+1.65%受不锈钢及新能源电池双重需求支撑。</li>
+                <li><strong>黑色系走弱：</strong>螺纹钢/铁矿/焦炭集体下跌，房地产需求端仍疲弱，钢厂利润空间承压。</li>
+                <li><strong>原油暴跌对A股影响：</strong>石油石化板块领跌（中国海油-3%+），但航空、化工等下游受益。原油下跌也缓解了输入性通胀压力，对货币政策空间形成利好。</li>
+                <li><strong>南向资金大幅流入223亿港元：</strong>内资借道港股通抄底互联网平台股（美团+阿里），同时净买入腾讯7.49亿、泡泡玛特6.48亿（逆势加仓）。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 5. 核心点评 -->
+    <div class="section">
+        <div class="section-title">💡 核心点评与明日展望</div>
+
+        <div class="card">
+            <div class="card-title">📝 今日行情定性</div>
+            <p style="font-size:0.95rem;line-height:1.8">
+                今日市场延续昨日反弹势头，<strong>四大指数全线飘红</strong>，超4800股上涨、105股涨停，属于<span class="tag tag-red">放量修复 + 结构性轮动</span>行情。
+            </p>
+            <p style="font-size:0.9rem;color:var(--text2);margin-top:8px">
+                <strong>核心特征：</strong><br>
+                ① <strong>情绪修复确认：</strong>连续两日百股涨停，市场恐慌情绪基本消退，3月20日暴跌形成的"恐慌底"得到确认；<br>
+                ② <strong>热点快速轮动：</strong>从昨日的电力/算力到今日的航天军工/外卖平台/福建本地股，主线不明确，资金仍在寻找方向；<br>
+                ③ <strong>缩量是隐忧：</strong>较昨日缩量约3,500亿至2.1万亿，说明追高意愿有限，增量资金尚未大规模入场；<br>
+                ④ <strong>港股分化剧烈：</strong>美团暴涨14%与泡泡玛特暴跌22%同时出现，个股事件驱动主导港股日内走势。
+            </p>
+        </div>
+
+        <div class="outlook-box">
+            <h4>🔮 明日操作策略建议</h4>
+            <ul>
+                <li><strong>大方向：</strong>反弹窗口仍在，但缩量制约上攻空间。沪指在3950-4000点区间面临密集套牢盘压力，突破需放量配合。</li>
+                <li><strong>仓位策略：</strong>维持6-7成仓位，以科技成长（光通信/CPO/半导体）+ 电力/能源安全为双主线配置。</li>
+                <li><strong>短线机会：</strong>关注美团年报（3月26日公布）后互联网板块的验证行情；电力板块若出现分歧可关注低位跟风补涨标的。</li>
+                <li><strong>风险提示：</strong>泡泡玛特暴跌或传导至消费股情绪；中东局势反复仍是最大外部风险变量；原油暴跌可能打压上游资源股。</li>
+            </ul>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+            <div class="card-title">📅 明日重点催化剂事件</div>
+            <table>
+                <thead><tr><th>时间</th><th>事件</th><th>影响</th></tr></thead>
+                <tbody>
+                    <tr><td>3月26日</td><td><strong>美团公布2025年全年财报</strong></td><td class="up">核心关注：外卖/即时零售利润率、海外扩张进展</td></tr>
+                    <tr><td>3月26日</td><td>*ST景峰撤销退市风险警示复牌</td><td>关注壳资源概念</td></tr>
+                    <tr><td>持续</td><td>中东局势演变（伊朗/以色列）</td><td>影响原油、军工、避险资产定价</td></tr>
+                    <tr><td>持续</td><td>存储芯片涨价周期</td><td>利好半导体设备/材料/封测</td></tr>
+                    <tr><td>本周</td><td>多家A股/港股公司年报集中披露</td><td>业绩验证期，个股分化加剧</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+            <div class="card-title">🏛️ 机构观点速递</div>
+            <div style="font-size:0.9rem;color:var(--text2)">
+                <p><strong>中金公司：</strong>当前或为A股中期相对低点，深度调整带来布局良机。沪深300股权风险溢价处于2010年以来42%分位，股债性价比具优势。</p>
+                <p style="margin-top:8px"><strong>瑞银证券（孟磊）：</strong>短期"去风险化"或接近尾声。A股盈利一致预期近期显著上修，预计2026年全部A股盈利增速提升至8%。55-60万亿元到期存款有望通过保险、理财等渠道间接入市。</p>
+            </div>
+            <p class="source" style="margin-top:8px"><a href="https://paper.cnstock.com/html/2026-03/25/content_2191971.htm" target="_blank">上海证券报</a></p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>⚠️ 本报告仅供参考，不构成投资建议。投资有风险，入市需谨慎。</p>
+        <p>报告生成时间：2026-03-25 17:00 · 由 WorkBuddy 自动生成</p>
+        <p style="margin-top:8px">数据来源：新浪财经 · 东方财富 · 每日经济新闻 · 上海证券报 · 同花顺 · 21经济网</p>
+    </div>
+</div>
+</body>
+</html>
