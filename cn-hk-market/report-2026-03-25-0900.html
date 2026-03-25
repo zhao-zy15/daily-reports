@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026-03-25</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0b0e17; --bg2: #141929; --bg3: #1c2238;
+            --text: #e8eaf0; --text2: #9ca3bf; --text3: #6b7394;
+            --red: #ef4444; --red-bg: rgba(239,68,68,0.1); --red-border: rgba(239,68,68,0.25);
+            --green: #22c55e; --green-bg: rgba(34,197,94,0.1); --green-border: rgba(34,197,94,0.25);
+            --gold: #f59e0b; --gold-bg: rgba(245,158,11,0.1); --gold-border: rgba(245,158,11,0.25);
+            --blue: #3b82f6; --blue-bg: rgba(59,130,246,0.1); --blue-border: rgba(59,130,246,0.25);
+            --purple: #a855f7; --purple-bg: rgba(168,85,247,0.1);
+            --border: #252d45; --accent: #ef4444;
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f0f2f7; --bg2: #ffffff; --bg3: #f8f9fc;
+                --text: #1a1d2e; --text2: #5a6080; --text3: #8890aa;
+                --border: #e0e4ef;
+            }
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; margin-bottom: 20px; padding: 6px 14px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); transition: all 0.3s; }
+        .back-link:hover { background: var(--accent); color: #fff; }
+
+        /* Hero */
+        .hero { background: linear-gradient(135deg, #1e1145 0%, #0f172a 50%, #0c1e0c 100%); border-radius: 20px; padding: 40px 36px; margin-bottom: 28px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -40%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(239,68,68,0.15) 0%, transparent 70%); }
+        .hero-tag { display: inline-block; background: var(--red); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; margin-bottom: 14px; letter-spacing: 1px; }
+        .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #fff, #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero .sub { color: rgba(255,255,255,0.65); font-size: 0.95rem; }
+        .hero .timestamp { color: rgba(255,255,255,0.4); font-size: 0.82rem; margin-top: 12px; }
+
+        /* Section */
+        .section { background: var(--bg2); border-radius: 16px; border: 1px solid var(--border); padding: 28px; margin-bottom: 20px; }
+        .section-icon { font-size: 1.5rem; margin-right: 10px; }
+        .section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; }
+        .section h3 { font-size: 1.05rem; font-weight: 700; margin: 18px 0 10px; color: var(--text); }
+
+        /* Index Table */
+        .idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .idx-card { background: var(--bg3); border-radius: 12px; padding: 16px; border: 1px solid var(--border); }
+        .idx-card .name { font-size: 0.85rem; color: var(--text2); margin-bottom: 4px; }
+        .idx-card .val { font-size: 1.25rem; font-weight: 700; }
+        .idx-card .chg { font-size: 0.9rem; font-weight: 600; margin-left: 6px; }
+        .up { color: var(--red); }
+        .down { color: var(--green); }
+
+        /* Stock cards */
+        .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .stock-card { background: var(--bg3); border-radius: 14px; padding: 18px; border: 1px solid var(--border); transition: transform 0.2s; }
+        .stock-card:hover { transform: translateY(-2px); }
+        .stock-card .ticker { font-size: 0.8rem; color: var(--text3); }
+        .stock-card .sname { font-size: 1.05rem; font-weight: 700; margin: 2px 0 8px; }
+        .stock-card .news-tag { display: inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
+        .tag-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+        .tag-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+        .tag-gold { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-border); }
+        .tag-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+        .stock-card .desc { font-size: 0.88rem; color: var(--text2); margin-top: 8px; line-height: 1.65; }
+        .stock-card .source { font-size: 0.78rem; color: var(--text3); margin-top: 8px; }
+        .stock-card .source a { color: var(--blue); text-decoration: none; }
+
+        /* Hotspot */
+        .hot-item { background: var(--bg3); border-radius: 14px; padding: 20px; margin-bottom: 14px; border: 1px solid var(--border); }
+        .hot-item .hot-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .hot-item .hot-num { background: var(--red); color: #fff; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; }
+        .hot-item .logic { font-size: 0.88rem; color: var(--text2); margin-bottom: 8px; line-height: 1.7; }
+        .hot-item .stocks { font-size: 0.88rem; color: var(--gold); margin-bottom: 6px; }
+        .hot-item .strategy { font-size: 0.85rem; color: var(--text3); padding: 8px 12px; background: var(--bg); border-radius: 8px; }
+        .hot-item .source { font-size: 0.78rem; color: var(--text3); margin-top: 8px; }
+        .hot-item .source a { color: var(--blue); text-decoration: none; }
+
+        /* Summary Box */
+        .summary-box { background: linear-gradient(135deg, var(--red-bg), var(--gold-bg)); border-radius: 16px; padding: 24px; border: 1px solid var(--red-border); }
+        .summary-box h3 { color: var(--red); margin-top: 0; }
+        .summary-box p { font-size: 0.92rem; color: var(--text2); line-height: 1.75; }
+
+        /* Risk */
+        .risk-box { background: var(--bg3); border-left: 4px solid var(--gold); border-radius: 0 12px 12px 0; padding: 16px 20px; margin-bottom: 10px; }
+        .risk-box .risk-title { font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+        .risk-box p { font-size: 0.88rem; color: var(--text2); }
+
+        /* Industry */
+        .ind-card { background: var(--bg3); border-radius: 14px; padding: 18px; border: 1px solid var(--border); margin-bottom: 12px; }
+        .ind-card .ind-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+        .ind-card .ind-desc { font-size: 0.88rem; color: var(--text2); line-height: 1.7; }
+        .ind-card .source { font-size: 0.78rem; color: var(--text3); margin-top: 8px; }
+        .ind-card .source a { color: var(--blue); text-decoration: none; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.88rem; }
+        th { background: var(--bg3); color: var(--text2); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: var(--bg3); }
+
+        footer { text-align: center; padding: 30px 20px; color: var(--text3); font-size: 0.82rem; }
+        footer a { color: var(--blue); text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .hero { padding: 28px 20px; }
+            .hero h1 { font-size: 1.5rem; }
+            .section { padding: 20px 16px; }
+            .idx-grid { grid-template-columns: repeat(2, 1fr); }
+            .stock-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="index.html" class="back-link">← 返回报告中心</a>
+
+    <!-- Hero -->
+    <div class="hero">
+        <span class="hero-tag">🔥 盘前晨报 MORNING BRIEF</span>
+        <h1>美伊谈判"罗生门" · 小米财报炸裂 · 光通信异动</h1>
+        <p class="sub">美股小幅收跌 | A50夜盘微涨 | 油价先扬后挫 | 黄金再创新高 | 泡泡玛特今日放榜</p>
+        <p class="timestamp">📅 2026年3月25日 周三 09:00 · 数据截至北京时间08:30</p>
+    </div>
+
+    <!-- 🌍 隔夜外围 -->
+    <div class="section">
+        <h2><span class="section-icon">🌍</span> 隔夜外围与宏观定调</h2>
+
+        <h3>美股三大指数（3月24日收盘）</h3>
+        <div class="idx-grid">
+            <div class="idx-card">
+                <div class="name">道琼斯工业指数</div>
+                <div><span class="val">46,124</span> <span class="chg down">-0.18%</span></div>
+            </div>
+            <div class="idx-card">
+                <div class="name">标普500指数</div>
+                <div><span class="val">6,556</span> <span class="chg down">-0.37%</span></div>
+            </div>
+            <div class="idx-card">
+                <div class="name">纳斯达克综合</div>
+                <div><span class="val">21,762</span> <span class="chg down">-0.84%</span></div>
+            </div>
+            <div class="idx-card">
+                <div class="name">科技七巨头指数</div>
+                <div><span class="val">—</span> <span class="chg down">-1.29%</span></div>
+            </div>
+        </div>
+
+        <h3>关键资产表现</h3>
+        <table>
+            <thead><tr><th>资产</th><th>收盘/最新</th><th>涨跌幅</th><th>备注</th></tr></thead>
+            <tbody>
+                <tr><td>富时中国A50期指（夜盘）</td><td>14,442</td><td class="up">+0.24%</td><td>盘中一度冲高+2%后回落</td></tr>
+                <tr><td>恒生科技指数期货</td><td>—</td><td class="up">+2.30%</td><td>中概科技情绪偏暖</td></tr>
+                <tr><td>纳斯达克中国金龙指数</td><td>6,771</td><td class="down">-0.43%</td><td>禾赛科技跌超14%拖累</td></tr>
+                <tr><td>WTI原油</td><td>$92.35→亚太$88.57</td><td style="color:var(--gold)">先+4.79%后跌4%</td><td>美伊停火传闻引爆剧烈波动</td></tr>
+                <tr><td>布伦特原油</td><td>$104.49</td><td class="up">+4.55%</td><td>亚太盘同步回落</td></tr>
+                <tr><td>现货黄金</td><td>$4,474</td><td class="up">+1.53%</td><td>地缘避险持续推升，再创历史新高</td></tr>
+                <tr><td>现货白银</td><td>$73+</td><td class="up">+3%+</td><td>站上73美元/盎司，日内涨2.6%</td></tr>
+                <tr><td>10Y美债收益率</td><td>4.39%</td><td>—</td><td>维持高位</td></tr>
+                <tr><td>美元/离岸人民币</td><td>6.89</td><td>—</td><td>汇率平稳</td></tr>
+            </tbody>
+        </table>
+
+        <h3>🔑 核心宏观逻辑</h3>
+        <p style="color:var(--text2);font-size:0.9rem;line-height:1.75;">
+            <b>① 美伊谈判"罗生门"主导全球情绪：</b>特朗普3月24日称已指示暂停对伊朗能源基础设施军事打击5天，声称"美伊对话非常良好且富有成效"；但伊朗外交部打脸否认有直接沟通。市场选择性相信利好，油价先涨后崩。美国通过巴基斯坦向伊朗提出15项条件的结束冲突方案，正考虑推动为期一个月的停火。<br>
+            <b>② 美股科技板块分化：</b>谷歌重挫-3.85%、甲骨文-4%、微软-2.68%，但光通信概念逆市暴涨（AAOI+10%+、Lumentum+10%+、康宁+8%+），能源板块+2.05%领涨。<br>
+            <b>③ 美联储维持利率不变概率90.7%：</b>4月维持利率不变已被市场完全定价。<br>
+            <b>④ 小米、蜜雪冰城财报夜超预期：</b>小米总收入4573亿、净利润392亿均创历史新高；蜜雪冰城营收335.6亿，净利58.8亿，均增超三成。
+        </p>
+        <p style="font-size:0.78rem;color:var(--text3);margin-top:10px;">
+            信源：<a href="http://news.10jqka.com.cn/20260325/c675521219.shtml" target="_blank">同花顺全球要闻</a> · 
+            <a href="https://finance.eastmoney.com/a/202603253683192730.html" target="_blank">东方财富</a> · 
+            <a href="https://news.qq.com/rain/a/20260325A01TH100" target="_blank">CNMO/腾讯新闻</a> · 
+            <a href="https://www.nbd.com.cn/articles/2026-03-25/4306930.html" target="_blank">每经网</a>
+        </p>
+    </div>
+
+    <!-- ⭐ 专属自选推演 -->
+    <div class="section">
+        <h2><span class="section-icon">⭐</span> 专属自选推演</h2>
+
+        <h3>📊 个股盘前消息面</h3>
+        <div class="stock-grid">
+            <!-- 腾讯 -->
+            <div class="stock-card">
+                <div class="ticker">0700.HK</div>
+                <div class="sname">腾讯控股</div>
+                <span class="news-tag tag-red">利好</span><span class="news-tag tag-blue">AI战略</span>
+                <div class="desc">腾讯近期密集挖来多位原字节Seed团队核心骨干（视觉AI平台负责人肖学锋、Infra团队张弛等），直接向首席AI科学家姚顺雨汇报。AI Infra部正加速扩张，信号明确：腾讯在基础模型赛道全力追赶。昨日美股中概盘，腾讯ADR微跌。</div>
+                <div class="source">📌 <a href="https://m.36kr.com/newsflashes/3736946595315975" target="_blank">36氪</a> · <a href="https://www.163.com/dy/article/KOQIQBB605118DFD.html" target="_blank">网易</a></div>
+            </div>
+            <!-- 阿里巴巴 -->
+            <div class="stock-card">
+                <div class="ticker">9988.HK / BABA</div>
+                <div class="sname">阿里巴巴</div>
+                <span class="news-tag tag-red">利好</span><span class="news-tag tag-gold">AI + 外卖</span>
+                <div class="desc">① 阿里3月17日发布企业级AI智能体平台"悟空"，接入钉钉生态，"让AI用钉钉工作"。② 隔夜美股阿里ADR涨2.99%。③ 外卖反垄断调查推进中，监管已进驻平台，但短期利空基本消化。④ 2025财年年报：全年营收9963亿，净利润1259亿，同比+77%。</div>
+                <div class="source">📌 <a href="https://new.qq.com/rain/a/20260325A01Z7D00" target="_blank">腾讯新闻</a> · <a href="https://k.sina.com.cn/article_7879848900_1d5acf3c401902v6va.html" target="_blank">新浪</a></div>
+            </div>
+            <!-- 美团 -->
+            <div class="stock-card">
+                <div class="ticker">3690.HK</div>
+                <div class="sname">美团</div>
+                <span class="news-tag tag-green">利空</span><span class="news-tag tag-gold">监管</span>
+                <div class="desc">市场监管总局披露外卖平台反垄断调查最新进展，已进驻相关平台开展现场调查。"外卖大战必须熄火"——监管明确传递信号。短期承压，但中期利好行业利润修复。大众点评重启"品质外卖"反击。</div>
+                <div class="source">📌 <a href="https://new.qq.com/rain/a/20260325A01JTH00" target="_blank">腾讯新闻</a></div>
+            </div>
+            <!-- 蜜雪冰城 -->
+            <div class="stock-card">
+                <div class="ticker">2097.HK</div>
+                <div class="sname">蜜雪冰城</div>
+                <span class="news-tag tag-red">利好</span><span class="news-tag tag-blue">年报+换帅</span>
+                <div class="desc">① 3月24日披露2025年业绩：年营收335.6亿元，归母净利润58.8亿元，同比均增超三成。② 创始人张红甫卸任CEO转任联席董事长，35岁清华金融硕士张渊接任CEO。③ 全球化+多品牌战略加速，拉美首店火爆。④ 昨日港股收涨5.95%报341.8港元，市值接近1300亿港元。</div>
+                <div class="source">📌 <a href="https://news.qq.com/rain/a/20260324A071VT00" target="_blank">腾讯新闻</a></div>
+            </div>
+            <!-- 宁德时代 -->
+            <div class="stock-card">
+                <div class="ticker">300750.SZ</div>
+                <div class="sname">宁德时代</div>
+                <span class="news-tag tag-red">利好</span><span class="news-tag tag-gold">百亿分红</span>
+                <div class="desc">2025年报披露在即，已确认拟分红超百亿元，跻身A股分红潮五巨头之列（与中国石化、工业富联、中信银行、紫金矿业并列）。同时增资博裕资本（40亿规模），联手泡泡玛特、腾讯产业基金等布局股权投资。高股息+储能龙头双重属性加持。</div>
+                <div class="source">📌 <a href="https://www.sohu.com/a/998889211_122066678" target="_blank">搜狐财经</a></div>
+            </div>
+            <!-- 泡泡玛特 -->
+            <div class="stock-card">
+                <div class="ticker">9992.HK</div>
+                <div class="sname">泡泡玛特</div>
+                <span class="news-tag tag-red">重大催化</span><span class="news-tag tag-gold">今日放榜</span>
+                <div class="desc"><b>今日（3/25）发布2025全年业绩！</b>市场预期：全年营收379.9亿元（+191%），EPS 9.44元（+300%）。Q3海外收入增长365-370%，美洲增长1265%。昨日港股涨6.33%报215港元抢跑。申万宏源看好多IP矩阵（星星人、三丽鸥联名）打消单IP波动担忧。</div>
+                <div class="source">📌 <a href="https://www.zhitongcaijing.com/content/detail/1417933.html" target="_blank">智通财经</a> · <a href="https://finance.eastmoney.com/a/202603243682849084.html" target="_blank">东方财富</a></div>
+            </div>
+            <!-- 小米 -->
+            <div class="stock-card">
+                <div class="ticker">1810.HK</div>
+                <div class="sname">小米集团</div>
+                <span class="news-tag tag-red">超级利好</span><span class="news-tag tag-blue">财报炸裂</span>
+                <div class="desc"><b>3月24日盘后发布2025年报，全面炸裂：</b><br>
+                • 总收入4573亿（+25%），首破4000亿大关<br>
+                • 经调整净利润392亿（+43.8%），创历史新高<br>
+                • 汽车业务收入首破千亿达1061亿（+224%），年度首次扭亏<br>
+                • 未来3年AI投入至少600亿元<br>
+                • 手机毛利率跌至8.3%，卢伟冰暗示涨价"不可避免"<br>
+                • 人形机器人5年后可批量在小米工厂落地<br>
+                • 汽车出海首站欧洲，选址招商已启动<br>
+                ⚠️ Q4净利同比-23.7%，内存成本上涨压力需关注</div>
+                <div class="source">📌 <a href="https://news.qq.com/rain/a/20260325A01SCY00" target="_blank">腾讯新闻</a> · <a href="https://www.stcn.com/article/detail/3696217.html" target="_blank">证券时报</a> · <a href="https://paper.cnstock.com/html/2026-03/25/content_2191697.htm" target="_blank">上证报</a> · <a href="https://www.nbd.com.cn/articles/2026-03-24/4306774.html" target="_blank">每经网</a></div>
+            </div>
+        </div>
+
+        <h3 style="margin-top:28px;">🏭 自选行业盘前梳理</h3>
+        <div class="ind-card">
+            <div class="ind-name">🤖 机器人（人形机器人）</div>
+            <div class="ind-desc">
+                <b>产业化拐点已至：</b>IDC预测2026年中国人形机器人市场规模突破200亿元，年复合增长率超80%。3月以来，魔法原子、灵初智能先后披露融资，银河通用完成25亿融资，资本持续"跑步"入场。小米财报明确表态"5年后人形机器人可批量在小米工厂落地"。<br>
+                <b>今日催化：</b>小米财报中人形机器人规划提振产业链预期；十五五规划将机器人列为战略新兴产业。<br>
+                <b>关注：</b>绿的谐波、汇川技术、拓普集团、优必选。
+            </div>
+            <div class="source">📌 <a href="https://news.qq.com/rain/a/20260324A05IVT00" target="_blank">腾讯新闻</a> · <a href="https://www.ithome.com/0/928/417.htm" target="_blank">IT之家</a></div>
+        </div>
+        <div class="ind-card">
+            <div class="ind-name">💊 创新药 / 恒生医疗</div>
+            <div class="ind-desc">
+                <b>估值修复进行时：</b>3月24日恒生港股通创新药指数大涨3.47%，恒瑞医药+3.48%、信达生物+5.23%、百济神州+2.90%。恒瑞医药3月21日获药品注册批准公告。<br>
+                <b>政策催化：</b>两会政策精神明确医药改革方向，CXO海外订单回暖，机构预计2026年创新药行业迎改善拐点。<br>
+                <b>关注：</b>恒瑞医药、百济神州、信达生物、翰森制药。
+            </div>
+            <div class="source">📌 <a href="https://xueqiu.com/8545727982/380906729" target="_blank">雪球</a> · <a href="https://news.qq.com/rain/a/20260324A02SUP00" target="_blank">腾讯新闻</a></div>
+        </div>
+        <div class="ind-card">
+            <div class="ind-name">🔬 芯片半导体</div>
+            <div class="ind-desc">
+                <b>AI推理算力占比首超70%：</b>SEMI、中信建投3月24日研报指出，2026年全球AI推理规模快速扩张，带动光互联、先进封装等细分赛道高景气。<br>
+                <b>十五五规划加持：</b>半导体（集成电路）被列为战略性新兴支柱产业。涨价潮延续，3月1日多家芯片厂涨价令正式生效。<br>
+                <b>美股映射：</b>光通信概念昨夜暴涨（AAOI+10%、Lumentum+10%、康宁+8%），A股光模块板块有望联动。<br>
+                <b>关注：</b>中际旭创、新易盛、天孚通信、长飞光纤（港股昨涨9.39%）。
+            </div>
+            <div class="source">📌 <a href="https://www.mrchip.cn/newsDetail/36999" target="_blank">芯片日报</a> · <a href="https://finance.sina.com.cn/tech/roll/2026-03-17/doc-inhrhavu5457742.shtml" target="_blank">新浪财经</a></div>
+        </div>
+    </div>
+
+    <!-- 🎯 潜力热点 -->
+    <div class="section">
+        <h2><span class="section-icon">🎯</span> 趋势推演与潜力热点</h2>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">1</span> 光通信 / 光模块（★★★★★ 最强共振）</div>
+            <div class="logic">
+                <b>为什么看好？</b>美股光通信概念3月24日集体暴涨（AAOI+10%、Lumentum+10%、Coherent+5%、康宁+8%），叠加OFC 2026大会释放强烈需求信号。AI推理规模爆发→光互联需求指数级增长。港股长飞光纤昨涨9.39%已先行启动。<br>
+                <b>催化剂：</b>① 美股映射效应 ② AI推理算力占比首超70% ③ OFC 2026大会热度延续 ④ 十五五规划光通信产业链国产替代
+            </div>
+            <div class="stocks">🔥 重点关注：中际旭创、新易盛、天孚通信、光迅科技、太辰光、长飞光纤</div>
+            <div class="strategy">📋 策略：开盘可适度追强，优选有海外客户验证的光模块龙头。若高开过大（>3%），等缩量回踩后再介入。</div>
+            <div class="source">📌 <a href="https://hk.stockstar.com/RB2026032400014037.shtml" target="_blank">证券之星</a> · <a href="https://www.mrjjxw.com/articles/2026-03-24/4306815.html" target="_blank">每经网</a></div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">2</span> AI应用 / AI Agent（★★★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>国产AI正从"对话"走向"执行"——阿里"悟空"、小米MiClaw AI手机智能体、OpenAI基金会10亿美元投资AI生态。腾讯疯狂挖字节Seed骨干，大厂AI军备竞赛白热化。AI Agent被认为是2026年最大产业风口。<br>
+                <b>催化剂：</b>① 阿里悟空发布 ② 小米600亿AI投入 ③ OpenAI 10亿美元基金会 ④ 腾讯AI人才争夺
+            </div>
+            <div class="stocks">🔥 重点关注：科大讯飞、金山办公、用友网络、虹软科技、萤石网络</div>
+            <div class="strategy">📋 策略：优选有真实AI产品落地能力的标的，规避纯概念炒作。关注小米产业链AI相关供应商。</div>
+            <div class="source">📌 <a href="https://new.qq.com/rain/a/20260325A01Z7D00" target="_blank">腾讯新闻</a> · <a href="https://k.sina.com.cn/article_5953189932_162d6782c06703zdkq.html" target="_blank">新浪</a></div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">3</span> 高股息 / 红利资产（★★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>A股进入2025年报密集披露期，宁德时代、中国石化等五巨头拟分红超百亿。在地缘风险+利率高企的环境下，高股息资产成为资金避风港。机构主动配置比例持续提升。<br>
+                <b>催化剂：</b>① 年报分红潮加速 ② 地缘不确定性推升防御需求 ③ 险资增配权益比例
+            </div>
+            <div class="stocks">🔥 重点关注：中国神华、长江电力、工商银行、中国石化、宁德时代</div>
+            <div class="strategy">📋 策略：底仓配置，回调时加仓。关注年报超预期分红的标的。</div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">4</span> 黄金 / 贵金属（★★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>现货黄金涨1.53%报4474美元再创历史新高，白银站上73美元。美伊冲突悬而未决、霍尔木兹海峡通航仍受阻、美联储降息预期延后——多重因素支撑贵金属牛市。<br>
+                <b>催化剂：</b>① 美伊停火不确定性 ② 全球央行购金 ③ 避险情绪升温
+            </div>
+            <div class="stocks">🔥 重点关注：山东黄金、紫金矿业、中金黄金、银泰黄金、盛达资源</div>
+            <div class="strategy">📋 策略：趋势未破，逢回调可加仓。金银比价处于历史低位，白银弹性更大。</div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">5</span> 新能源汽车 / 智能驾驶（★★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>小米汽车2025年创收1061亿并首次扭亏，2026年冲击55万辆交付目标，出海欧洲启动。隔夜中概新能源车股集体大涨（小鹏+7.52%、蔚来+7.0%、理想+2.57%）。产业景气度高企。<br>
+                <b>催化剂：</b>① 小米汽车财报超预期 ② 中概新能源车股暴涨映射 ③ 智能驾驶政策持续加码
+            </div>
+            <div class="stocks">🔥 重点关注：比亚迪、宁德时代、拓普集团、德赛西威、华阳集团</div>
+            <div class="strategy">📋 策略：小米产业链（拓普集团、文灿股份等）今日有望受财报催化表现强势。智能驾驶软件方向更优。</div>
+            <div class="source">📌 <a href="https://www.nbd.com.cn/articles/2026-03-24/4306774.html" target="_blank">每经网</a></div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">6</span> 消费出海 / 潮玩经济（★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>泡泡玛特今日放榜，市场预期全年营收+191%。蜜雪冰城年报超预期+拉美出海火爆。名创优品、泡泡玛特等中国新消费品牌海外扩张加速。<br>
+                <b>催化剂：</b>① 泡泡玛特今日发布年报 ② 蜜雪冰城昨涨5.95% ③ 出海叙事持续升温
+            </div>
+            <div class="stocks">🔥 重点关注：泡泡玛特(9992.HK)、蜜雪冰城(2097.HK)、名创优品</div>
+            <div class="strategy">📋 策略：泡泡玛特业绩若超预期，盘后可能跳空高开——观察开盘价再定策略。蜜雪冰城关注换帅后的市场消化。</div>
+            <div class="source">📌 <a href="https://finance.eastmoney.com/a/202603243682849084.html" target="_blank">东方财富</a></div>
+        </div>
+
+        <div class="hot-item">
+            <div class="hot-title"><span class="hot-num">7</span> 军工国防（★★★）</div>
+            <div class="logic">
+                <b>为什么看好？</b>美伊冲突第25天仍未实质停火，美国第82空降师师长已接到部署中东命令。地缘紧张持续为军工板块提供催化，卫星互联网、无人机等新域新质装备方向更具弹性。<br>
+                <b>催化剂：</b>① 美军增兵中东 ② 冲突久拖不决 ③ 国防预算持续增长
+            </div>
+            <div class="stocks">🔥 重点关注：中航沈飞、航天电器、中航光电、北方导航、航天彩虹</div>
+            <div class="strategy">📋 策略：逢回调布局，不追高。关注卫星互联网和无人机细分赛道。</div>
+        </div>
+    </div>
+
+    <!-- 💡 今日投资总基调 -->
+    <div class="section">
+        <h2><span class="section-icon">💡</span> 今日投资总基调</h2>
+        <div class="summary-box">
+            <h3>📍 结构性机会 > 系统性行情 —— "财报催化 + 外围分化"格局</h3>
+            <p>
+                <b>大盘研判：</b>A50夜盘仅微涨0.24%（盘中+2%后大幅回落），叠加美股收跌，今日A股大盘预计<b>小幅高开后震荡</b>，难以出现普涨。上证3月23日暴跌3.63%后昨日已完成技术性反弹，缩量环境下需警惕冲高回落。<br><br>
+                <b>风格判断：</b><br>
+                ✅ <b>科技成长 > 大盘价值：</b>小米财报+光通信暴涨+AI应用落地三大催化齐聚，科技方向是今日最强主线。<br>
+                ✅ <b>港股弹性 > A股：</b>恒生科技期货+2.3%，小米、泡泡玛特今日港股可能走出独立行情。<br>
+                ✅ <b>防御配置不可或缺：</b>美伊局势不确定性极高（停火信号真假难辨），黄金+高股息底仓不松手。<br><br>
+                <b>操作建议：</b>仓位控制在6-7成，核心仓位配置光通信+AI应用+小米产业链，卫星仓参与泡泡玛特业绩博弈和黄金股。不追缺口高开超过3%的标的。
+            </p>
+        </div>
+    </div>
+
+    <!-- ⚠️ 风险提示 -->
+    <div class="section">
+        <h2><span class="section-icon">⚠️</span> 风险提示</h2>
+
+        <div class="risk-box">
+            <div class="risk-title">🔴 美伊冲突反复——最大不确定性</div>
+            <p>特朗普"停火5天"声明被伊朗打脸否认，冲突已进入第25天。美国仍在权衡是否派遣第82空降师全师进行地面作战。任何局势恶化都可能导致油价再度飙升、全球股市暴跌。密切关注未来5天四大关键信号。</p>
+        </div>
+
+        <div class="risk-box">
+            <div class="risk-title">🟡 外卖反垄断——美团短期承压</div>
+            <p>市场监管总局已进驻平台调查，研究处置措施。美团/阿里/京东外卖业务均可能面临罚款或行为限制。美团今日盘面可能承压。</p>
+        </div>
+
+        <div class="risk-box">
+            <div class="risk-title">🟡 小米Q4利润下滑——警惕利好出尽</div>
+            <p>虽然全年数据炸裂，但Q4经调整净利润同比-23.7%，手机毛利率跌至8.3%。内存成本上涨压力可能导致"利好出尽"式回调，追高需谨慎。</p>
+        </div>
+
+        <div class="risk-box">
+            <div class="risk-title">🟡 大盘缩量隐患</div>
+            <p>3月24日沪深成交额2.08万亿，较前一日缩量3487亿。"缩量止跌"后需"放量上行"确认反弹，否则还会回调。富时A50期指收盘低于MA250均线。</p>
+        </div>
+
+        <div class="risk-box">
+            <div class="risk-title">🟢 解禁压力</div>
+            <p>本周关注邮储银行54.05亿股非公开发行股份上市流通（占比超70%），虽为控股股东持有减持概率低，但心理压力不可忽视。其他解禁规模相对可控。</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>📊 本报告由 WorkBuddy AI 自动生成 · 数据截至 2026-03-25 08:30</p>
+        <p>⚠️ 本报告仅供参考，不构成投资建议。市场有风险，投资需谨慎。</p>
+        <p style="margin-top:8px;">信源覆盖：<a href="https://www.10jqka.com.cn" target="_blank">同花顺</a> · <a href="https://www.eastmoney.com" target="_blank">东方财富</a> · <a href="https://www.stcn.com" target="_blank">证券时报</a> · <a href="https://www.nbd.com.cn" target="_blank">每经网</a> · <a href="https://www.36kr.com" target="_blank">36氪</a> · <a href="https://xueqiu.com" target="_blank">雪球</a></p>
+    </footer>
+</div>
+</body>
+</html>
