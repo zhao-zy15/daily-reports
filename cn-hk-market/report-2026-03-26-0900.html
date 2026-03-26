@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026年3月26日</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-secondary: #12121f;
+            --bg-card: #1a1a2e;
+            --bg-card-alt: #16162a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9a9ab8;
+            --text-muted: #6a6a88;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --border: #2a2a44;
+            --gradient-fire: linear-gradient(135deg, #ef4444, #f97316);
+            --gradient-gold: linear-gradient(135deg, #f59e0b, #eab308);
+            --gradient-blue: linear-gradient(135deg, #3b82f6, #6366f1);
+            --gradient-green: linear-gradient(135deg, #22c55e, #10b981);
+            --gradient-purple: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-primary: #f5f7fa;
+                --bg-secondary: #ffffff;
+                --bg-card: #ffffff;
+                --bg-card-alt: #f8f9fc;
+                --text-primary: #1a1a2e;
+                --text-secondary: #4a4a6a;
+                --text-muted: #8a8aaa;
+                --border: #e5e7eb;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+        /* Header */
+        .report-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f2a 50%, #1a0a2e 100%);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .report-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            transition: color 0.3s;
+        }
+        .report-header .back-link:hover { color: var(--accent-red); }
+        .header-badge {
+            display: inline-block;
+            background: var(--gradient-fire);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .report-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 30%, #f87171 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .report-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        .header-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            padding: 5px 12px;
+            border-radius: 8px;
+        }
+
+        /* Section Card */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 20px 24px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .section-body { padding: 0 24px 24px; }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.9rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .up { color: var(--accent-red); font-weight: 600; }
+        .down { color: var(--accent-green); font-weight: 600; }
+        .neutral { color: var(--text-secondary); }
+
+        /* Stock Cards */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            margin: 14px 0;
+        }
+        .stock-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .stock-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-blue);
+        }
+        .stock-card .stock-name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .stock-card .stock-code {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .stock-card .stock-signal {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        .stock-card .stock-signal strong {
+            color: var(--text-primary);
+        }
+
+        /* Hotspot Cards */
+        .hotspot-item {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .hotspot-item .hotspot-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hotspot-item .hotspot-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: white;
+            flex-shrink: 0;
+        }
+        .hotspot-item .logic { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 8px; line-height: 1.65; }
+        .hotspot-item .stocks-tag {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .hotspot-item .tag {
+            background: rgba(59,130,246,0.12);
+            color: var(--accent-blue);
+            font-size: 0.78rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .strategy-tag {
+            display: inline-block;
+            background: rgba(239,68,68,0.1);
+            color: var(--accent-red);
+            font-size: 0.78rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* Tone Box */
+        .tone-box {
+            background: linear-gradient(135deg, rgba(239,68,68,0.06), rgba(245,158,11,0.06));
+            border: 1px solid rgba(239,68,68,0.15);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin: 12px 0;
+        }
+        .tone-box h3 {
+            color: var(--accent-gold);
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+        .tone-box p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* Risk Box */
+        .risk-box {
+            background: rgba(239,68,68,0.04);
+            border: 1px solid rgba(239,68,68,0.12);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin: 10px 0;
+        }
+        .risk-item {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .risk-item .icon { flex-shrink: 0; }
+
+        /* Source Link */
+        .source-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 0.78rem;
+            opacity: 0.8;
+        }
+        .source-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* Industry Card */
+        .industry-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+        }
+        .industry-card h4 {
+            font-size: 0.98rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .industry-card p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            line-height: 1.65;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        footer .disclaimer {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 12px 10px; }
+            .report-header { padding: 24px 18px; }
+            .report-header h1 { font-size: 1.5rem; }
+            .section-body { padding: 0 16px 16px; }
+            .stock-grid { grid-template-columns: 1fr; }
+            .header-meta { flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="report-header">
+            <a href="index.html" class="back-link">← 返回报告列表</a>
+            <div class="header-badge">🔥 晨会盘前 · MORNING BRIEF</div>
+            <h1>A股港股盘前前瞻</h1>
+            <p class="subtitle">2026年3月26日 周四 · 泡泡玛特暴跌23%后反弹博弈 / 算电协同持续发酵 / 油价重回100美元</p>
+            <div class="header-meta">
+                <span class="meta-tag">📅 2026-03-26 09:00</span>
+                <span class="meta-tag">📊 信源：同花顺 · 财联社 · 新浪财经 · 36氪</span>
+                <span class="meta-tag">⚡ 美伊第四周 · 霍尔木兹海峡</span>
+            </div>
+        </div>
+
+        <!-- 🌍 隔夜外围 -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--gradient-blue);">🌍</div>
+                <h2>隔夜外围与宏观定调</h2>
+            </div>
+            <div class="section-body">
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
+                    北京时间3月26日凌晨，美股三大指数<strong>再度回落</strong>，回吐周一涨幅。中东增兵与停火谈判信号交错，市场情绪犹豫不决；油价重回100美元上方，避险资金推升黄金再创新高区间。
+                </p>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>收盘/最新</th>
+                            <th>涨跌幅</th>
+                            <th>信号</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>道琼斯工业指数</strong></td>
+                            <td>46,124.06</td>
+                            <td class="down">-0.18%</td>
+                            <td>小幅调整</td>
+                        </tr>
+                        <tr>
+                            <td><strong>纳斯达克综合指数</strong></td>
+                            <td>21,761.89</td>
+                            <td class="down">-0.84%</td>
+                            <td>科技股领跌</td>
+                        </tr>
+                        <tr>
+                            <td><strong>标普500指数</strong></td>
+                            <td>6,556.37</td>
+                            <td class="down">-0.37%</td>
+                            <td>中位回撤</td>
+                        </tr>
+                        <tr>
+                            <td><strong>纳斯达克中国金龙指数</strong></td>
+                            <td>—</td>
+                            <td class="down">-0.43%</td>
+                            <td>中概分化</td>
+                        </tr>
+                        <tr>
+                            <td><strong>布伦特原油</strong></td>
+                            <td>103.04 美元/桶</td>
+                            <td class="up">+3.00%</td>
+                            <td>重回100上方</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WTI原油</strong></td>
+                            <td>91.82 美元/桶</td>
+                            <td class="up">+4.20%</td>
+                            <td>海峡紧张</td>
+                        </tr>
+                        <tr>
+                            <td><strong>现货黄金</strong></td>
+                            <td>4,459.60 美元/盎司</td>
+                            <td class="up">+1.00%</td>
+                            <td>避险强势</td>
+                        </tr>
+                        <tr>
+                            <td><strong>COMEX黄金期货</strong></td>
+                            <td>4,492.30 美元/盎司</td>
+                            <td class="up">+1.19%</td>
+                            <td>盘后拉升</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 14px;">
+                    <strong>🔑 核心逻辑：</strong>美伊战争进入第四周，特朗普声称与伊朗"对话良好"，但伊朗官方否认有直接会谈。美军拟增派约2000名第82空降师士兵+5000名海军陆战队前往中东。霍尔木兹海峡伊朗开始向商船收取通行费，"非敌对"船只可协调通过。市场处于"战争溢价 vs 停火预期"的拉锯之中。
+                </p>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 8px;">
+                    <strong>💰 央行操作：</strong>3月25日央行开展5000亿元MLF操作（1年期、固定数量），同时175亿元7天逆回购（利率1.40%），流动性维持充裕。
+                </p>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 8px;">
+                    <strong>📊 A股昨日（3/25）：</strong>三大指数全线收涨，上证 <span class="up">+1.25%</span>（3929.81），深成指 <span class="up">+1.98%</span>（13804.81），创业板 <span class="up">+2.09%</span>（3319.56），科创50 <span class="up">+2.04%</span>，超5100只个股上涨，市场做多情绪高涨。
+                </p>
+                <p style="margin-top: 8px;">
+                    <a href="https://news.qq.com/rain/a/20260325A01HD900" class="source-link" target="_blank">📎 财联社：美股收盘详情</a> ·
+                    <a href="https://www.topnews.cn/news/145CD5E544BB4C74" class="source-link" target="_blank">📎 新浪财经：隔夜要闻汇总</a> ·
+                    <a href="https://news.10jqka.com.cn/20260325/c675521228.shtml" class="source-link" target="_blank">📎 同花顺金融早报</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- ⭐ 自选推演 -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--gradient-gold);">⭐</div>
+                <h2>专属自选推演</h2>
+            </div>
+            <div class="section-body">
+                <h3 style="font-size: 0.95rem; color: var(--accent-gold); margin-bottom: 14px;">📌 个股盘前消息面解读</h3>
+
+                <div class="stock-grid">
+                    <!-- 腾讯 -->
+                    <div class="stock-card">
+                        <div class="stock-name">🟣 腾讯控股</div>
+                        <div class="stock-code">0700.HK</div>
+                        <div class="stock-signal">
+                            <strong>云计算涨价潮来袭：</strong>3月以来腾讯云、阿里云、百度智能云接连宣布云服务涨价，算力租赁进入"卖方市场"。混元3.0大模型确认4月发布，AI商业化加速。此前挖角字节Seed团队也引发关注。<br>
+                            <strong>开盘预期：</strong>AI算力商业化逻辑增强，云业务提价有望推动利润率改善。预计港股震荡偏强。
+                            <br><a href="https://xueqiu.com/S/00700/" class="source-link" target="_blank">📎 雪球：腾讯最新讨论</a>
+                        </div>
+                    </div>
+                    <!-- 阿里 -->
+                    <div class="stock-card">
+                        <div class="stock-name">🟠 阿里巴巴</div>
+                        <div class="stock-code">9988.HK</div>
+                        <div class="stock-signal">
+                            <strong>两大利空承压：</strong>①股价从高点暴跌三分之一，蒸发超1万亿港元；②财报不及预期引发抛售。<strong>边际利好：</strong>达摩院发布新一代玄铁RISC-V服务器芯片，AI推理效率提升40%；淘宝闪购即时零售收入同比增56%；千问内测打车服务。<br>
+                            <strong>开盘预期：</strong>短期承压明显，但AI+消费双主线催化下有超跌反弹空间。
+                            <br><a href="https://news.qq.com/rain/a/20260324A062PT00" class="source-link" target="_blank">📎 腾讯新闻：阿里蒸发1万亿</a>
+                        </div>
+                    </div>
+                    <!-- 美团 -->
+                    <div class="stock-card">
+                        <div class="stock-name">🟡 美团</div>
+                        <div class="stock-code">3690.HK</div>
+                        <div class="stock-signal">
+                            <strong>无人机配送扩至15城：</strong>累计完成500万单，平均配送12分钟（效率提升40%），计划年底前拓展至30城。3月25日美团<span class="up">暴涨14%</span>，成为当日港股最大亮点。淘宝闪购三地试水到店团购，外卖"三国杀"格局形成。<br>
+                            <strong>开盘预期：</strong>强势后的短期获利盘抛压需关注，但无人机+即时零售逻辑中长期确定性高。
+                            <br><a href="https://www.iimedia.cn/c1088/110305.html" class="source-link" target="_blank">📎 艾媒：美团无人机15城</a>
+                        </div>
+                    </div>
+                    <!-- 蜜雪冰城 -->
+                    <div class="stock-card">
+                        <div class="stock-name">🧊 蜜雪集团</div>
+                        <div class="stock-code">2097.HK</div>
+                        <div class="stock-signal">
+                            <strong>年报发布：</strong>2025年营收335.6亿元（+35.2%），归母净利58.8亿元（+32.7%），全球门店接近6万家。2026年计划上新28系列61款产品，品牌营销预算3亿元。新CEO到任，战略从扩张转向深耕供应链。<br>
+                            <strong>开盘预期：</strong>业绩稳健增长，但增速较市场高预期略有差距，预计窄幅震荡。
+                            <br><a href="https://www.iimedia.cn/c1088/110305.html" class="source-link" target="_blank">📎 艾媒：蜜雪营收335.6亿</a>
+                        </div>
+                    </div>
+                    <!-- 宁德时代 -->
+                    <div class="stock-card">
+                        <div class="stock-name">🔋 宁德时代</div>
+                        <div class="stock-code">300750.SZ</div>
+                        <div class="stock-signal">
+                            <strong>固态电池量产倒计时：</strong>全固态电池量产时间提前至2026年装车，"充电10分钟续航1000公里"。东吴证券3月22日发布深度研报给出"买入"评级，看好技术迭代+盈利规模共振。昨日A股固态电池板块异动拉升，圣阳股份涨停。<br>
+                            <strong>开盘预期：</strong>固态电池催化叠加东吴研报助推，预计偏强震荡，关注前期高点397.60附近压力。
+                            <br><a href="https://finance.sina.com.cn/jjxw/2026-03-18/doc-inhrmpqe4602810.shtml" class="source-link" target="_blank">📎 新浪财经：宁德固态电池</a>
+                        </div>
+                    </div>
+                    <!-- 泡泡玛特 -->
+                    <div class="stock-card" style="border-color: rgba(239,68,68,0.3);">
+                        <div class="stock-name">🎪 泡泡玛特 <span style="background:rgba(239,68,68,0.15);color:var(--accent-red);font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-left:6px;">⚡ 重点关注</span></div>
+                        <div class="stock-code">9992.HK</div>
+                        <div class="stock-signal">
+                            <strong>财报炸裂但股价暴跌23%：</strong>2025年营收371.2亿元（+184.7%），经调整净利130.8亿元（+284.5%），毛利率72.1%。LABUBU单IP收入141.6亿元（+365.7%），成为首个百亿级IP。<strong>暴跌原因：</strong>①未达市场400亿+的高预期；②MOLLY增速仅+38.4%远低于其他头部IP；③新IP（Supertutu、Merodi等）反响不佳。王宁表示2026年增长目标"不低于20%"，被市场解读为增速大幅放缓。3月25日沪港通成交额第一（96.4亿元）。<br>
+                            <strong>开盘预期：</strong>短期情绪面极度悲观后存在技术性反弹需求，但中期需观察新IP孵化能力。今日博弈激烈，不建议追涨。
+                            <br><a href="https://www.36kr.com/p/3738206967070722" class="source-link" target="_blank">📎 36氪：泡泡玛特年报深度</a> ·
+                            <a href="https://www.nbd.com.cn/articles/2026-03-25/4307586.html" class="source-link" target="_blank">📎 每经：股价暴跌</a>
+                        </div>
+                    </div>
+                    <!-- 小米 -->
+                    <div class="stock-card">
+                        <div class="stock-name">📱 小米集团</div>
+                        <div class="stock-code">1810.HK</div>
+                        <div class="stock-signal">
+                            <strong>多重催化密集：</strong>①SU7 Ultra年度交付目标从2.5万台上调至3.5万台，高端化战略获正向反馈；②今年AI领域研发+资本投入预计超160亿元；③广东省省长孟凡利会见雷军，深化新能源汽车等合作。Q4经调整净利63.49亿元（-23.7%），但汽车业务有望年内实现单月盈亏平衡。<br>
+                            <strong>开盘预期：</strong>汽车盈利拐点临近+AI投入加码，预计维持偏强格局。
+                            <br><a href="https://www.iimedia.cn/c1088/110305.html" class="source-link" target="_blank">📎 艾媒：SU7 Ultra目标上调</a>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 0.95rem; color: var(--accent-gold); margin: 20px 0 14px;">📌 自选行业盘前梳理</h3>
+
+                <div class="industry-card">
+                    <h4>🤖 机器人（人形机器人）</h4>
+                    <p>
+                        <strong>核心催化：</strong>①<strong>宇树科技IPO获上交所受理</strong>（3月20日），拟募资42亿冲击"A股人形机器人第一股"，招股书揭示量产突围路径；②<strong>特斯拉Optimus 3</strong>马斯克确认今夏投产，明年进入高产量阶段；③中信建投研报指出板块进入"配置区间"，2026年有望成为人形垂类应用大年。3月23日宇树概念股逆势走强（金发科技、中大力德涨停），国产机器人占全球份额超70%。<br>
+                        <strong>今日逻辑：</strong>IPO催化+产业化提速，板块有持续做多动能，关注宇树核心供应链标的。
+                    </p>
+                    <p style="margin-top:6px;">
+                        <a href="https://field.10jqka.com.cn/20260324/c675506473.shtml" class="source-link" target="_blank">📎 华源证券：宇树IPO获受理</a> ·
+                        <a href="https://finance.sina.com.cn/wm/2026-03-19/doc-inhrnktu4278997.shtml" class="source-link" target="_blank">📎 新浪：Optimus 3今夏投产</a>
+                    </p>
+                </div>
+
+                <div class="industry-card">
+                    <h4>💊 创新药 / 恒生医疗</h4>
+                    <p>
+                        <strong>近期动态：</strong>A股CRO板块3月25日出现反弹迹象，同花顺早报提示环保+CRO+体育产业等题材反弹。恒生医疗指数此前连续调整后估值回到历史低位区间，配置性价比凸显。"十五五"规划纲要对医药创新支持力度预期加大。<br>
+                        <strong>今日逻辑：</strong>超跌修复+政策预期，关注CRO龙头和港股创新药龙头的估值修复机会。
+                    </p>
+                </div>
+
+                <div class="industry-card">
+                    <h4>🔬 芯片半导体</h4>
+                    <p>
+                        <strong>近期动态：</strong>①阿里达摩院发布新一代<strong>玄铁RISC-V服务器芯片</strong>，AI推理效率较上代提升40%，聚焦大模型推理与边缘计算；②佰维存储签订15亿美元采购合同；③全球投资主题热力排行中"半导体/芯片"热度排名第三，国产替代+先进封装+HBM需求持续催化。<br>
+                        <strong>今日逻辑：</strong>AI算力需求强劲驱动半导体周期向上，国产替代确定性高，关注先进封装、HBM、光模块等细分。
+                    </p>
+                    <p style="margin-top:6px;">
+                        <a href="https://www.iimedia.cn/c1088/110305.html" class="source-link" target="_blank">📎 艾媒：阿里玄铁新芯片</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🎯 趋势推演与潜力热点 -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--gradient-fire);">🎯</div>
+                <h2>趋势推演与潜力热点</h2>
+            </div>
+            <div class="section-body">
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">基于隔夜信息发酵与近期资金动向，筛选以下<strong>6个</strong>重点潜力方向：</p>
+
+                <!-- 热点1 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: var(--gradient-fire);">1</span>
+                        算电协同 / AI算力基建
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>国家数据局局长明确"AI发展到哪里，高质量数据集建设就到哪里"，算电协同纳入国家战略。3月以来腾讯云、阿里云、百度智能云集体涨价，算力租赁正式进入<strong>"卖方市场"</strong>，Token每一次调用都在推高算力溢价。智谱AI逆势涨价20%且客户仍买单，验证了AI算力需求的刚性。3月25日算电协同板块领涨，新能泰山、华电辽能等涨停。<br>
+                        <strong>催化剂：</strong>云厂商涨价函密集落地 + "十五五"规划对算力基建的支持 + AI五层架构推进。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">新能泰山</span>
+                        <span class="tag">华电辽能</span>
+                        <span class="tag">科华数据</span>
+                        <span class="tag">润泽科技</span>
+                        <span class="tag">光环新网</span>
+                    </div>
+                    <div class="strategy-tag">🔥 策略：板块连续强势，可逢回调介入数据中心+绿电运营标的</div>
+                    <p style="margin-top:6px;">
+                        <a href="https://xueqiu.com/3496600556/381053280" class="source-link" target="_blank">📎 雪球：算力租赁卖方市场</a> ·
+                        <a href="https://news.10jqka.com.cn/20260325/c675521228.shtml" class="source-link" target="_blank">📎 同花顺早报</a>
+                    </p>
+                </div>
+
+                <!-- 热点2 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: var(--gradient-gold);">2</span>
+                        固态电池 / 新能源车
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>2026年被业界称为"固态元年"——宁德时代确认今年装车量产，广汽、丰田等企业明确时间表。3月25日A股固态电池板块午后异动拉升，圣阳股份直线涨停，维科技术此前涨停。东吴证券最新深度研报对宁德时代给出"买入"评级。地方新能源汽车补贴政策持续落地。<br>
+                        <strong>催化剂：</strong>固态电池量产节点临近 + 东吴证券买入评级 + 政策补贴。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">宁德时代</span>
+                        <span class="tag">圣阳股份</span>
+                        <span class="tag">维科技术</span>
+                        <span class="tag">嘉元新能</span>
+                        <span class="tag">万润新能</span>
+                    </div>
+                    <div class="strategy-tag">🔋 策略：固态电池主线确定性高，重点关注宁德产业链</div>
+                    <p style="margin-top:6px;">
+                        <a href="https://max.book118.com/html/2026/0323/5013203333013140.shtm" class="source-link" target="_blank">📎 东吴证券：宁德时代深度</a>
+                    </p>
+                </div>
+
+                <!-- 热点3 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: var(--gradient-blue);">3</span>
+                        人形机器人产业链
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>宇树科技科创板IPO获受理（拟募42亿元），被市场解读为A股"人形机器人第一股"信号。特斯拉Optimus 3确认今夏投产。国产机器人占全球份额超70%，2026年有望成为人形垂类应用大年。3月23日概念股逆势走强（金发科技、中大力德涨停），中信建投明确"进入配置区间"。<br>
+                        <strong>催化剂：</strong>宇树IPO进程 + Optimus 3投产预期 + 中信建投研报背书。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">金发科技</span>
+                        <span class="tag">中大力德</span>
+                        <span class="tag">卧龙电驱</span>
+                        <span class="tag">长盛轴承</span>
+                        <span class="tag">奥比中光</span>
+                    </div>
+                    <div class="strategy-tag">🤖 策略：围绕宇树供应链和核心零部件（减速器/传感器/电机）布局</div>
+                    <p style="margin-top:6px;">
+                        <a href="https://robot.ofweek.com/2026-03/ART-898890-8420-30683547.html" class="source-link" target="_blank">📎 OFweek：宇树招股书透视</a> ·
+                        <a href="https://www.donews.com/news/detail/8/6480536.html" class="source-link" target="_blank">📎 DoNews：产业化关键年</a>
+                    </p>
+                </div>
+
+                <!-- 热点4 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: var(--gradient-green);">4</span>
+                        商业航天 / 太空光伏
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>马斯克引爆太空光伏热潮，多家光伏企业加速切入商业航天赛道。SpaceX IPO消息持续发酵，3月25日润贝航科、江顺科技、再升科技涨停，长光华芯涨超15%。光伏企业（钧达股份等）参与卫星项目及融资，试图开辟第二增长曲线。<br>
+                        <strong>催化剂：</strong>SpaceX IPO预期 + 光伏企业跨界 + 国内商业航天政策支持。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">润贝航科</span>
+                        <span class="tag">江顺科技</span>
+                        <span class="tag">再升科技</span>
+                        <span class="tag">长光华芯</span>
+                        <span class="tag">钧达股份</span>
+                    </div>
+                    <div class="strategy-tag">🚀 策略：题材弹性大但持续性需验证，轻仓博弈，及时止盈</div>
+                </div>
+
+                <!-- 热点5 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: var(--gradient-purple);">5</span>
+                        石油/有色金属 · 通胀交易
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>美伊冲突第四周，霍尔木兹海峡航行受限推动油价重回100美元上方（布伦特+3%、WTI+4.2%）。美联储加息概率上升（10月会议约50%概率加息25bp），通胀交易逻辑增强。黄金持续创新高（现货4459美元/盎司），白银68美元区间。有色金属/钢铁板块3月25日走强。<br>
+                        <strong>催化剂：</strong>霍尔木兹海峡通行费 + 美联储加息预期 + 避险需求。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">中国石油</span>
+                        <span class="tag">山东黄金</span>
+                        <span class="tag">紫金矿业</span>
+                        <span class="tag">洛阳钼业</span>
+                        <span class="tag">嘉实原油(QDII)</span>
+                    </div>
+                    <div class="strategy-tag">💰 策略：地缘溢价持续，黄金/原油多头逻辑未破，适合防御型配置</div>
+                </div>
+
+                <!-- 热点6 -->
+                <div class="hotspot-item">
+                    <div class="hotspot-title">
+                        <span class="hotspot-num" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">6</span>
+                        绿色电力 / 算电一体
+                    </div>
+                    <div class="logic">
+                        <strong>深度逻辑：</strong>"十五五"规划纲要首提"耐心资本"，绿色电力受政策直接提及后表现亮眼。AI数据中心用电需求爆发式增长，绿电运营商的长期合同锁定收入确定性，与算力基建形成"算电一体"闭环。3月25日绿色电力板块涨幅靠前。<br>
+                        <strong>催化剂：</strong>政策写入 + AI用电需求 + ESG投资偏好。<br>
+                        <strong>关注个股：</strong>
+                    </div>
+                    <div class="stocks-tag">
+                        <span class="tag">三峡能源</span>
+                        <span class="tag">龙源电力</span>
+                        <span class="tag">太阳能</span>
+                        <span class="tag">节能风电</span>
+                    </div>
+                    <div class="strategy-tag">⚡ 策略：中长线配置品种，适合底仓持有</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 💡 今日投资总基调 -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--gradient-gold);">💡</div>
+                <h2>今日投资总基调</h2>
+            </div>
+            <div class="section-body">
+                <div class="tone-box">
+                    <h3>📊 大盘风格预判：成长占优，题材活跃</h3>
+                    <p>
+                        昨日A股三大指数全线收涨，超5100只个股上涨，做多情绪显著回暖。隔夜美股虽小幅回调，但幅度有限（道指仅-0.18%），且A股已提前反映了前期调整压力。中金公司认为当下或为A股中期相对低点，高盛维持中国股票高配建议，机构综合信号评分+48.3偏积极。
+                    </p>
+                    <p style="margin-top: 12px;">
+                        <strong>预判：</strong>今日A股大概率延续震荡偏强格局。<strong>创业板和科创板</strong>弹性更大，成长风格占优。重点关注<strong>算电协同</strong>（政策+涨价双催化）、<strong>固态电池</strong>（量产倒计时）、<strong>人形机器人</strong>（宇树IPO推进）三条确定性最高的主线。
+                    </p>
+                    <p style="margin-top: 12px;">
+                        <strong>港股方面：</strong>泡泡玛特暴跌后的反弹博弈将是今日最大看点。美团强势后注意获利盘压力。腾讯、小米受AI催化维持偏多。阿里短期承压但存在超跌反弹窗口。
+                    </p>
+                    <p style="margin-top: 12px;">
+                        <strong>投资建议：</strong>仓位可适度提升至6-7成。核心配置AI算力+固态电池+机器人三大主线；防御配置黄金/绿电；对泡泡玛特可小仓位博弈反弹但严格止损。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ⚠️ 风险提示 -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">⚠️</div>
+                <h2>风险提示</h2>
+            </div>
+            <div class="section-body">
+                <div class="risk-box">
+                    <div class="risk-item">
+                        <span class="icon">🔴</span>
+                        <span><strong>地缘风险（高）：</strong>美伊战争第四周，美军拟增派7000人至中东，霍尔木兹海峡通行受限推升油价。若局势进一步升级，将冲击全球风险资产。嘉实原油(QDII)已因溢价过高临时停牌，追高原油ETF需谨慎。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🔴</span>
+                        <span><strong>泡泡玛特情绪面（高）：</strong>财报后暴跌23%，3月25日沪港通成交额第一（96.4亿），资金博弈极为激烈。新IP孵化失败忧虑+2026年仅20%增长目标，短期多空分歧巨大。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🟡</span>
+                        <span><strong>阿里巴巴持续调整（中）：</strong>股价两个月蒸发超1万亿，趋势性下行尚未企稳。AI+消费催化能否扭转颓势仍需观察。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🟡</span>
+                        <span><strong>流动性风险（中）：</strong>DR007持续高于政策利率，虽然央行5000亿MLF对冲，但短端资金面偏紧格局未改。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🟡</span>
+                        <span><strong>TCL中环巨额减值（中）：</strong>2025年计提资产减值准备46.22亿元，光伏行业产能过剩压力需持续关注。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🟡</span>
+                        <span><strong>美联储加息预期升温（中）：</strong>市场已计入10月加息约50%概率，若油价持续高企推升通胀，加息预期可能提前，利空成长股。</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="icon">🔵</span>
+                        <span><strong>金融反腐扰动（低）：</strong>金融监管总局副局长周亮被查，短期对金融板块情绪有一定扰动。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="disclaimer">
+                ⚠️ 本报告基于公开信息整理，由AI自动生成，仅供参考学习，<strong>不构成任何投资建议</strong>。市场有风险，投资需谨慎。
+            </div>
+            <p>WorkBuddy · A股港股盘前前瞻 · 2026-03-26 09:00 生成</p>
+        </footer>
+    </div>
+</body>
+</html>
