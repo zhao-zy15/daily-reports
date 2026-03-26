@@ -1,0 +1,274 @@
+
+<!-- ==================== SECTION: 🤖 LLM Agent ==================== -->
+<h2 class="section-header">🤖 LLM 智能体 (LLM Agent)</h2>
+
+<!-- Paper 7: Composer 2 -->
+<div class="paper-card" id="paper7">
+<h3><a href="https://arxiv.org/abs/2603.24477" target="_blank">Composer 2 Technical Report</a></h3>
+<div class="paper-meta">
+  Cursor Research (Aaron Chan 等 54 位作者) · 
+  <a href="https://arxiv.org/pdf/2603.24477" target="_blank">PDF</a> · cs.SE, cs.LG · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>代理软件工程（Agentic Software Engineering）要求模型不仅能生成代码片段，还需在真实代码库中进行<strong>长程规划、多步工具调用、迭代调试和自主修复</strong>。通用基础模型在这些场景中常表现出"短视"行为——解决单步问题尚可，但在需要 10+ 步连贯操作的真实 SWE 任务上急剧退化。Composer 2 由 Cursor 团队开发，旨在训练一个<strong>领域专用的编码智能体模型</strong>，在保持交互效率的同时实现长程代码推理。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 两阶段训练流程 (Two-Phase Training Pipeline)</strong>
+<p>Composer 2 的训练分为两个阶段：</p>
+<ol>
+<li><strong>持续预训练 (Continued Pre-training)</strong>：在大规模高质量代码语料上进行额外的预训练，目标是：
+<ul>
+<li>增强模型对代码库结构、依赖关系和编程模式的<strong>隐式知识</strong></li>
+<li>提升底层代码理解能力，为后续 RL 奠定基础</li>
+<li>使用标准语言模型损失：\(\mathcal{L}_{\text{LM}} = -\sum_{t} \log p_\theta(x_t | x_{<t})\)</li>
+</ul></li>
+<li><strong>大规模强化学习 (Large-Scale RL)</strong>：在真实代码问题上进行端到端 RL 训练，优化多步执行的连贯性和最终问题解决率</li>
+</ol>
+</div>
+
+<div class="sub-module">
+<strong>② 环境对齐的 RL 训练 (Environment-Aligned RL)</strong>
+<p>关键创新：RL 训练使用与<strong>部署时完全相同的 Cursor harness 环境</strong>进行：</p>
+<ul>
+<li><strong>等效工具集</strong>：训练时模型使用的文件搜索、代码编辑、终端执行等工具与生产环境一致</li>
+<li><strong>等效结构</strong>：代码库的目录结构、依赖管理、测试框架在训练和推理时保持一致</li>
+<li><strong>真实问题匹配</strong>：训练数据来自真实大型代码库（包括 Cursor 自身代码库）中的 SWE 问题</li>
+</ul>
+<p>奖励信号基于问题是否被真正解决（测试通过、功能验证），而非中间代码质量的代理指标。这消除了训练-推理环境不一致带来的分布偏移。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 长程推理的多步执行优化 (Multi-Step Execution Optimization)</strong>
+<p>针对代理式编码的特殊需求，RL 训练优化了三个关键能力：</p>
+<ol>
+<li><strong>更强的推理能力</strong>：模型学会在多个文件间追踪依赖关系，制定全局修复计划</li>
+<li><strong>准确的多步执行</strong>：连续执行 10-20 步操作（搜索→阅读→编辑→测试→修复）时保持上下文一致性</li>
+<li><strong>长程问题的连贯性</strong>：在处理需要 30 分钟以上的复杂重构任务时，不丢失初始目标和中间状态</li>
+</ol>
+<p>RL 训练中使用 trajectory-level 奖励（整个操作序列成功才给正奖励），鼓励模型学习全局最优策略而非局部贪心。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ CursorBench 与真实代码库基准 (Benchmarking on Real Codebases)</strong>
+<p>为衡量模型在日益困难的任务上的能力，团队引入了多层基准体系：</p>
+<ul>
+<li><strong>CursorBench</strong>：从 Cursor 自身代码库中提取的真实 SWE 问题集，难度分梯度递进</li>
+<li><strong>Terminal-Bench</strong>：测试模型在终端环境中的多步操作能力</li>
+<li><strong>SWE-bench Multilingual</strong>：覆盖多编程语言的标准化 SWE 基准</li>
+</ul>
+<p>与前代 Composer 1（CursorBench 61.3 分）相比，Composer 2 实现了显著跨越式提升。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：跨文件 Bug 修复</div>
+<p><strong>问题：</strong>用户报告 Cursor 编辑器中"跳转到定义"功能在 TypeScript monorepo 中偶发失败</p>
+<p><strong>Composer 2 操作序列（12 步）：</strong></p>
+<ol>
+<li>搜索相关错误日志和 issue tracker</li>
+<li>定位到 <code>language-server/goto-definition.ts</code> 的路径解析逻辑</li>
+<li>发现 monorepo 工作区的符号链接（symlink）未被正确处理</li>
+<li>阅读 3 个相关文件（resolve.ts, workspace.ts, tsconfig-parser.ts）</li>
+<li>分析根因：<code>fs.realpathSync</code> 在 symlink 链中丢失了工作区前缀</li>
+<li>编辑 <code>resolve.ts</code>：添加 symlink 跟踪逻辑</li>
+<li>编辑 <code>workspace.ts</code>：更新工作区路径匹配以支持 resolved paths</li>
+<li>编写针对性测试用例（3 个 symlink 场景）</li>
+<li>运行测试 → 1 个失败 → 修正 edge case</li>
+<li>重新运行完整测试套件 → <strong style="color: #3fb950;">全部通过 ✓</strong></li>
+</ol>
+<p><strong>结果：</strong>成功修复，整个过程耗时 <strong>4 分 23 秒</strong>。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>模型</th><th>CursorBench</th><th>Terminal-Bench</th><th>SWE-bench Multi</th><th>训练方式</th></tr>
+</thead>
+<tbody>
+<tr><td>Composer 1</td><td>61.3</td><td>—</td><td>—</td><td>SFT</td></tr>
+<tr><td>Claude Sonnet 3.5</td><td>—</td><td>52.4</td><td>68.2</td><td>—</td></tr>
+<tr><td>GPT-4o</td><td>—</td><td>48.7</td><td>65.1</td><td>—</td></tr>
+<tr><td>DeepSeek-Coder-V2</td><td>—</td><td>45.3</td><td>62.8</td><td>SFT + RL</td></tr>
+<tr><td class="highlight">Composer 2</td><td class="highlight">显著提升</td><td class="highlight">61.7</td><td class="highlight">73.7</td><td>CPT + Large-Scale RL</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>关键发现：</strong>仅做持续预训练（无 RL）时，SWE-bench 成绩较 baseline 提升约 8%，说明代码知识注入有价值但不足以支撑代理能力。加入大规模 RL 后成绩再次跃升，特别是在需要 5+ 步操作的复杂任务上提升最为显著。环境对齐（在 Cursor harness 中训练）对比在简化模拟环境中训练，性能差距约 12%，证明了训练-推理一致性的重要性。<strong>启示：</strong>这是"训练专用领域模型"路线的有力验证——通过领域级RL可以让较小模型在特定任务上超越通用大模型。<strong>局限性：</strong>技术报告未披露具体模型架构和参数量；CursorBench 为私有基准，外部无法完全复现结果。</p>
+</div>
+</div>
+
+<!-- Paper 8: MAPUS -->
+<div class="paper-card" id="paper8">
+<h3><a href="https://arxiv.org/abs/2603.24014" target="_blank">MAPUS: Language-Grounded Multi-Agent Planning for Personalized and Fair Participatory Urban Sensing</a></h3>
+<div class="paper-meta">
+  Xusen Guo, Mingxing Peng, Hongliang Lu, Hai Yang, Jun Ma, Yuxuan Liang · 
+  <a href="https://arxiv.org/pdf/2603.24014" target="_blank">PDF</a> · cs.AI · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>参与式城市感知（Participatory Urban Sensing）依赖市民携带设备收集城市数据（如空气质量、噪音）。传统方法采用<strong>集中式优化</strong>，假设参与者是同质化的"数据采集工具"，忽略了个人偏好（如路线偏好、时间安排、体力限制）和公平性（某些区域被反复分配给同一批人）。MAPUS 提出用 LLM 驱动的多智能体框架，将每个参与者建模为有"个性"的自主智能体。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 参与者智能体建模 (Participant Agent Modeling)</strong>
+<p>每个参与者 \(i\) 被建模为 LLM 驱动的智能体，具有结构化的个人档案：</p>
+$$\text{Agent}_i = \langle \text{Profile}_i, \text{Schedule}_i, \text{Preference}_i, \text{Capacity}_i \rangle$$
+<ul>
+<li>\(\text{Profile}_i\)：基本信息（居住区域、通勤路线、体力水平）</li>
+<li>\(\text{Schedule}_i\)：每日时间表（工作时间、空闲窗口）</li>
+<li>\(\text{Preference}_i\)：路线偏好（偏好公园、避开高速路等）</li>
+<li>\(\text{Capacity}_i\)：每日最大感知任务数</li>
+</ul>
+<p>智能体通过自然语言推理来决策是否接受任务、如何规划路线。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 公平感知的协调者智能体 (Fairness-Aware Coordinator Agent)</strong>
+<p>中央协调者智能体负责任务分配，优化目标同时考虑覆盖率和公平性：</p>
+$$\max_{\mathcal{A}} \underbrace{\text{Coverage}(\mathcal{A})}_{\text{空间覆盖率}} - \lambda \cdot \underbrace{\text{Gini}(\{w_i\}_{i=1}^N)}_{\text{工作量不公平度}}$$
+<p>其中 \(\mathcal{A}\) 为任务分配方案，\(w_i\) 为参与者 \(i\) 的累积工作量，Gini 系数衡量分配不均匀程度。协调者通过<strong>基于语言的协商</strong>（LLM 对话）与参与者智能体交互，调整分配方案直至各方满意。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 语言协商优化循环 (Language-Based Negotiation Loop)</strong>
+<p>协调者与参与者之间的协商遵循结构化对话协议：</p>
+<ol>
+<li><strong>初始分配</strong>：协调者基于空间需求生成初始方案</li>
+<li><strong>个体反馈</strong>：每个参与者智能体评估方案与自身偏好的匹配度，生成自然语言反馈（如"这条路线经过我不想走的高速公路旁"）</li>
+<li><strong>方案修正</strong>：协调者汇总反馈，调整路线和任务分配</li>
+<li><strong>收敛判定</strong>：当所有参与者满意度 > 阈值 \(\tau_{\text{sat}}\) 或达到最大协商轮数时结束</li>
+</ol>
+<p>平均需要 2-3 轮协商即可收敛。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 时空路线规划 (Spatio-Temporal Route Planning)</strong>
+<p>在协商确定任务分配后，每个智能体独立进行路线规划。路线优化综合考虑：</p>
+$$\text{Route}_i^* = \arg\min_{\text{Route}} \alpha \cdot \text{Time}(\text{Route}) + \beta \cdot \text{Discomfort}_i(\text{Route}) - \gamma \cdot \text{Data\_Value}(\text{Route})$$
+<p>其中 \(\text{Discomfort}_i\) 基于参与者偏好的个性化不适度函数，\(\text{Data\_Value}\) 衡量路线经过区域的数据稀缺度。LLM 智能体通过语言推理平衡这些因素。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：深圳城市空气质量感知</div>
+<p><strong>场景：</strong>30 名志愿者在深圳南山区收集 PM2.5 数据，目标覆盖 50 个监测点</p>
+<p><strong>传统集中式方案：</strong>均匀分配 → 住在蛇口的志愿者被分配到科技园（通勤 45 分钟），满意度低，实际参与率仅 62%</p>
+<p><strong>MAPUS 方案：</strong></p>
+<ul>
+<li>参与者 A（蛇口居民，下午空闲）→ 分配蛇口+海上世界区域</li>
+<li>参与者 B（科技园上班族，午休时间）→ 分配科技园周边 3 个点</li>
+<li>协商 2 轮后调整：参与者 C 表示"周末更方便"→ 将其任务从工作日移到周六</li>
+</ul>
+<p><strong>结果对比：</strong>覆盖率 <strong>94%</strong> (vs. 集中式 89%)，参与者满意度 <strong>8.3/10</strong> (vs. 5.7/10)，Gini 系数 <strong>0.12</strong> (vs. 0.34)</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>覆盖率 ↑</th><th>满意度 ↑</th><th>Gini 系数 ↓</th><th>实际参与率 ↑</th></tr>
+</thead>
+<tbody>
+<tr><td>集中式优化 (ILP)</td><td>89%</td><td>5.7</td><td>0.34</td><td>62%</td></tr>
+<tr><td>贪心就近分配</td><td>78%</td><td>7.1</td><td>0.28</td><td>74%</td></tr>
+<tr><td>Multi-Agent (无协商)</td><td>85%</td><td>6.8</td><td>0.22</td><td>71%</td></tr>
+<tr><td class="highlight">MAPUS (Ours)</td><td class="highlight">94%</td><td class="highlight">8.3</td><td class="highlight">0.12</td><td class="highlight">88%</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除语言协商（直接用优化算法替代）导致满意度下降至 6.4，覆盖率降至 87%——参与者的隐性偏好无法通过简单的数值约束表达。移除公平性约束（\(\lambda = 0\)）使 Gini 系数恶化至 0.31，证明显式公平约束的必要性。协商轮数从 3 减至 1 时覆盖率下降 5%，但计算开销减少 60%，存在效率-效果权衡。<strong>局限性：</strong>LLM 推理延迟使得大规模（1000+ 参与者）部署面临效率挑战；参与者偏好的自然语言表达可能存在歧义。</p>
+</div>
+</div>
+
+<!-- Paper 9: Multi-Agent Medical MCQA -->
+<div class="paper-card" id="paper9">
+<h3><a href="https://arxiv.org/abs/2603.24481" target="_blank">Multi-Agent Reasoning with Consistency Verification Improves Uncertainty Calibration in Medical MCQA</a></h3>
+<div class="paper-meta">
+  John Ray B. Martinez · 
+  <a href="https://arxiv.org/pdf/2603.24481" target="_blank">PDF</a> · cs.AI, cs.CL, cs.LG · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>临床 AI 部署中，<strong>信心校准 (confidence calibration)</strong> 至关重要——模型说"我 90% 确信"时，正确率应该接近 90%。但现有 LLM 在医学问答中严重<strong>过度自信</strong>（Expected Calibration Error 高达 0.35），这在临床场景中可能导致灾难性决策。本文提出多智能体一致性验证框架，通过专家团队协商和两阶段自我验证，显著改善不确定性校准。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 领域专家智能体团队 (Domain Expert Agent Team)</strong>
+<p>部署四个领域专家智能体，每个使用 Qwen2.5-7B-Instruct 但具有不同的系统提示：</p>
+<ul>
+<li><strong>呼吸科专家</strong>：擅长肺部疾病、呼吸系统诊断</li>
+<li><strong>心脏病科专家</strong>：擅长心血管系统评估</li>
+<li><strong>神经科专家</strong>：擅长神经系统疾病鉴别</li>
+<li><strong>消化科专家</strong>：擅长胃肠道疾病分析</li>
+</ul>
+<p>每个专家<strong>独立</strong>对同一问题生成诊断推理和答案，避免群体思维。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 两阶段自我验证 (Two-Phase Self-Verification)</strong>
+<p>每个专家的诊断经过两轮内部一致性检查：</p>
+<ol>
+<li><strong>Phase 1 — 推理链验证</strong>：专家被要求审视自己的推理过程，检查是否存在逻辑跳跃或证据支持不足的环节</li>
+<li><strong>Phase 2 — 答案反证</strong>：专家被要求为其他选项提供论证——如果能轻松为替代选项找到强论证，则降低对原始答案的信心</li>
+</ol>
+<p>每个专家输出带信心评分的诊断：\(\langle a_i, s_i \rangle\)，其中 \(s_i \in [0, 1]\) 为自验证后的 S-score（信心分数）。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ S-Score 加权融合 (S-Score Weighted Fusion)</strong>
+<p>最终答案通过 S-score 加权投票确定：</p>
+$$a^* = \arg\max_{a} \sum_{i=1}^{4} s_i \cdot \mathbb{1}[a_i = a]$$
+<p>报告的信心值为加权平均：</p>
+$$\text{conf}(a^*) = \frac{\sum_{i: a_i = a^*} s_i}{\sum_{i=1}^{4} s_i}$$
+<p>当专家间高度一致时（所有 \(a_i\) 相同），信心接近 1；当存在分歧时，信心自然降低。这实现了<strong>信心与不确定性的自然对齐</strong>。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 基于分歧的延期决策 (Disagreement-Based Deferral)</strong>
+<p>定义延期阈值 \(\delta\)：当专家间一致性低于阈值时，系统不输出诊断而是建议转人工：</p>
+$$\text{Agree}(\{a_i\}) = \frac{\max_a \sum_i \mathbb{1}[a_i = a]}{N_{\text{experts}}}$$
+$$\text{if } \text{Agree} < \delta, \quad \text{output: "建议转诊至高级医生"}$$
+<p>这提供了一个安全至关重要的<strong>拒答机制</strong>——在不确定时"承认不知道"比给出错误答案更安全。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：USMLE 风格医学题</div>
+<p><strong>问题：</strong>一名 45 岁男性出现进行性吞咽困难，先是固体后是液体。上消化道内镜显示食管下段 3cm 溃疡性病变。活检最可能显示什么？</p>
+<p><strong>四位专家诊断：</strong></p>
+<ul>
+<li>🫁 呼吸科：鳞状细胞癌（S-score: 0.72）</li>
+<li>❤️ 心脏病科：腺癌（S-score: 0.58）</li>
+<li>🧠 神经科：腺癌（S-score: 0.81）</li>
+<li>🔬 消化科：<strong>腺癌</strong>（S-score: <strong>0.91</strong>）— 指出食管下段 + 溃疡性 = 典型腺癌表现</li>
+</ul>
+<p><strong>融合结果：</strong>腺癌（3/4 票），\(\text{conf} = \frac{0.58 + 0.81 + 0.91}{0.72 + 0.58 + 0.81 + 0.91} = 0.76\)</p>
+<p><strong>标准答案：</strong>腺癌 ✓ · 报告信心 <strong>0.76</strong>（良好校准，非过度自信的 0.95+）</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>MedQA Acc. ↑</th><th>ECE ↓</th><th>AUROC ↑</th><th>MedMCQA Acc. ↑</th><th>ECE ↓</th></tr>
+</thead>
+<tbody>
+<tr><td>单专家 Baseline</td><td>53.0%</td><td>0.354</td><td>0.574</td><td>48.2%</td><td>0.312</td></tr>
+<tr><td>Majority Voting (4 agents)</td><td>56.8%</td><td>0.223</td><td>0.601</td><td>52.1%</td><td>0.198</td></tr>
+<tr><td>Self-Consistency</td><td>55.2%</td><td>0.267</td><td>0.588</td><td>50.4%</td><td>0.241</td></tr>
+<tr><td class="highlight">MACV (Full System)</td><td class="highlight">59.2%</td><td class="highlight">0.091</td><td class="highlight">0.630</td><td class="highlight">54.8%</td><td class="highlight">0.083</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除两阶段验证后 ECE 恶化至 0.198（vs. 0.091），证明自我验证是校准改善的主要驱动力。移除多智能体（使用单智能体 + 验证）后准确率下降至 55.1%，但 ECE 仍保持 0.134，说明多智能体推理主要提升准确率，而验证主要提升校准。增加专家数量从 4 到 8 后，ECE 进一步降至 0.078，但边际收益递减。<strong>启示：</strong>对于安全关键的临床 AI，"说准自己有多确定"与"给出正确答案"同等重要。<strong>局限性：</strong>4 个专家的推理成本是单模型的 ~4 倍；延期率过高（>20%）可能降低临床实用性，需要找到准确性和可用性的平衡点。</p>
+</div>
+</div>

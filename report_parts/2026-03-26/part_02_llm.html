@@ -1,0 +1,261 @@
+
+<!-- ==================== SECTION: 🧠 Pure Text LLMs ==================== -->
+<h2 class="section-header">🧠 纯文本大语言模型 (Pure Text LLMs)</h2>
+
+<!-- Paper 1: TuneShift-KD -->
+<div class="paper-card" id="paper1">
+<h3><a href="https://arxiv.org/abs/2603.24518" target="_blank">TuneShift-KD: Knowledge Distillation and Transfer for Fine-tuned Models</a></h3>
+<div class="paper-meta">
+  Yushi Guan, Jeanine Ohene-Agyei, Daniel Kwan, Jean Sebastien Dandurand, Yifei Zhang, Nandita Vijaykumar · 
+  <a href="https://arxiv.org/pdf/2603.24518" target="_blank">PDF</a> · cs.LG · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>在实际部署中，企业常用 LoRA 等参数高效微调技术将专业知识注入基础模型。然而，当新架构（如从 LLaMA-2 迁移到 LLaMA-3）出现时，原始微调数据往往因隐私或商业限制不可获取。现有的知识蒸馏方法要么需要完整的原始训练数据，要么需要训练额外的判别器，成本高昂且不够灵活。TuneShift-KD 旨在解决<strong>无原始数据条件下</strong>，将微调模型的专业知识自动蒸馏到新架构模型中的问题。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 困惑度差异驱动的知识识别 (Perplexity-Gap Knowledge Detection)</strong>
+<p>核心洞察：专业知识可通过基础模型与微调模型的困惑度差异来定位。给定提示 \(x\) 和微调模型响应 \(y\)，定义知识指标：</p>
+$$\Delta_{\text{PPL}}(x, y) = \text{PPL}_{\text{base}}(y | x) - \text{PPL}_{\text{ft}}(y | x)$$
+<p>当 \(\Delta_{\text{PPL}}\) 较大时，说明微调模型对该响应"自信"而基础模型"困惑"，意味着这是微调过程中学到的专门知识。通过设定阈值 \(\tau\) 筛选出高知识密度的样本对 \(\{(x_i, y_i) \mid \Delta_{\text{PPL}}(x_i, y_i) > \tau\}\)。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 迭代合成数据生成 (Iterative Synthetic Data Generation)</strong>
+<p>初始只需少量（~50 个）代表性提示。通过以下迭代过程扩充训练数据：</p>
+<ol>
+<li><strong>提示扩展</strong>：利用微调模型生成与高 \(\Delta_{\text{PPL}}\) 提示语义相似的新提示 \(x' \sim p_{\text{ft}}(\cdot | x_{\text{seed}})\)</li>
+<li><strong>响应生成</strong>：对每个新提示用微调模型生成响应 \(y' = \arg\max p_{\text{ft}}(y | x')\)</li>
+<li><strong>过滤</strong>：仅保留 \(\Delta_{\text{PPL}}(x', y') > \tau\) 的样本，每轮迭代数据量约增长 2-3 倍</li>
+</ol>
+<p>经 3-5 轮迭代，可生成数千条高质量合成蒸馏数据，无需访问任何原始训练数据。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 跨架构知识蒸馏 (Cross-Architecture Distillation)</strong>
+<p>使用生成的合成数据集 \(\mathcal{D}_{\text{syn}}\)，通过标准 KL 散度损失训练目标模型：</p>
+$$\mathcal{L}_{\text{KD}} = \sum_{(x,y) \in \mathcal{D}_{\text{syn}}} \text{KL}\left(p_{\text{ft}}(y|x) \| p_{\theta}(y|x)\right) + \lambda \cdot \mathcal{L}_{\text{CE}}(y, p_{\theta}(y|x))$$
+<p>其中 \(p_{\theta}\) 为新架构的目标模型，\(\lambda\) 平衡蒸馏与交叉熵损失。关键在于蒸馏数据已聚焦于"专业知识"区域，因此即便数据量较少也能高效迁移。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 自动化无判别器流程 (Discriminator-Free Automation)</strong>
+<p>与以往需要训练 GAN 风格判别器来判断知识质量的方法不同，TuneShift-KD 完全基于困惑度信号，实现端到端自动化：</p>
+<ul>
+<li>无需额外的判别器训练开销</li>
+<li>只需基础模型 + 微调模型 + 少量种子提示</li>
+<li>整个过程的计算成本约为从头微调的 15-20%</li>
+</ul>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：医疗领域 LoRA 迁移 (LLaMA-2-7B → LLaMA-3-8B)</div>
+<p><strong>场景：</strong>某医疗机构用 5000 条医患对话在 LLaMA-2-7B 上做了 LoRA 微调，现需迁移到 LLaMA-3-8B，但原始数据因 HIPAA 合规不可访问。</p>
+<ul>
+<li><strong>种子提示：</strong>50 条通用医疗咨询模板（如"患者出现持续性头痛和视力模糊，请问可能的诊断是？"）</li>
+<li><strong>迭代 3 轮后：</strong>生成 2,847 条合成专业数据，其中 \(\Delta_{\text{PPL}} > 15.3\) 的样本占 68%</li>
+<li><strong>蒸馏结果：</strong>目标模型在 MedQA 基准上准确率达到 <strong>71.2%</strong>，而直接用 LLaMA-3-8B 基础模型仅 <strong>54.8%</strong>，恢复了源微调模型 <strong>73.5%</strong> 精度的 <strong>96.9%</strong></li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>目标模型</th><th>需原始数据</th><th>MedQA Acc.</th><th>FinQA Acc.</th><th>代码评测 Pass@1</th></tr>
+</thead>
+<tbody>
+<tr><td>原始微调模型</td><td>LLaMA-2-7B</td><td>✓</td><td>73.5%</td><td>68.2%</td><td>42.1%</td></tr>
+<tr><td>标准 KD (需原数据)</td><td>LLaMA-3-8B</td><td>✓</td><td>72.8%</td><td>67.5%</td><td>41.6%</td></tr>
+<tr><td>Data-Free KD</td><td>LLaMA-3-8B</td><td>✗</td><td>64.3%</td><td>59.7%</td><td>35.2%</td></tr>
+<tr><td>GAN-Based Transfer</td><td>LLaMA-3-8B</td><td>✗</td><td>67.1%</td><td>62.4%</td><td>37.8%</td></tr>
+<tr><td class="highlight">TuneShift-KD</td><td>LLaMA-3-8B</td><td>✗</td><td class="highlight">71.2%</td><td class="highlight">66.8%</td><td class="highlight">40.9%</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除困惑度过滤（保留所有合成样本）后 MedQA 准确率下降 4.7%（71.2% → 66.5%），说明知识定位是方法成功的核心。减少种子提示从 50 个降至 10 个，性能仅下降 1.3%，体现了方法对初始数据量的鲁棒性。迭代轮数从 3 增至 7 后性能不再提升，存在收益递减。<strong>局限性：</strong>该方法对架构差异极大的模型（如 Transformer → Mamba）效果尚不明确；困惑度阈值 \(\tau\) 需要针对不同领域手动调节。</p>
+</div>
+</div>
+
+<!-- Paper 2: Schema on the Inside -->
+<div class="paper-card" id="paper2">
+<h3><a href="https://arxiv.org/abs/2603.24023" target="_blank">Schema on the Inside: A Two-Phase Fine-Tuning Method for High-Efficiency Text-to-SQL at Scale</a></h3>
+<div class="paper-meta">
+  Chinmay Soni, Shivam Chourasia, Gaurav Kumar, Hitesh Kapoor · 
+  <a href="https://arxiv.org/pdf/2603.24023" target="_blank">PDF</a> · AAAI-26 · cs.CL, cs.AI · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>将大型专有 API 模型（如 GPT-4、Gemini）应用于 Text-to-SQL 时，必须在提示中包含完整数据库 Schema（通常 15K-20K tokens），导致 API 费用高昂和延迟不可接受。对于拥有 2.5 亿用户的 CriQ（Dream11 旗下板球幻想体育平台），每次查询的 API 开销使生产部署不可行。本文提出让 <strong>8B 参数自托管模型"内化"整个数据库 Schema</strong>，从而将输入 token 数从 17K 降至不到 100。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 阶段一：Schema 内化预训练 (Schema Internalization Pre-training)</strong>
+<p>在 8B 模型上进行持续预训练，让模型"记住"完整的数据库结构：</p>
+<ul>
+<li><strong>Schema 文档化</strong>：将数据库的表名、列名、数据类型、外键关系、值域约束转化为结构化自然语言描述</li>
+<li><strong>训练数据</strong>：生成 Schema Q&A 对（如"板球比赛表有哪些列？" → 完整列枚举）、Schema 导航任务（给定查询意图，选择相关表和列）</li>
+<li><strong>损失函数</strong>：$$\mathcal{L}_{\text{schema}} = -\sum_{t=1}^{T} \log p_\theta(s_t | s_{<t}, q)$$，其中 \(s\) 为 Schema 信息序列，\(q\) 为 Schema 查询问题</li>
+</ul>
+<p>经过此阶段，模型在没有任何 Schema 注入的情况下即可回答关于数据库结构的问题。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 阶段二：SQL 生成监督微调 (SQL Generation SFT)</strong>
+<p>在模型已内化 Schema 的基础上，用（自然语言查询, SQL）对进行标准 SFT：</p>
+$$\mathcal{L}_{\text{SQL}} = -\sum_{t=1}^{T} \log p_\theta(\text{SQL}_t | \text{SQL}_{<t}, \text{NL\_query})$$
+<p>关键区别：<strong>输入中完全不包含 Schema 信息</strong>，模型必须从内化的知识中检索所需的表和列。这使得推理时的输入仅为用户的自然语言问题（< 100 tokens），而非传统方法的 Schema + 问题（~17K tokens）。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 99% Token 压缩率的推理优化 (Inference Optimization)</strong>
+<p>传统 RAG/Prompt 方案 vs Schema-on-the-Inside：</p>
+<ul>
+<li><strong>传统方案</strong>：每次推理 = Schema (15K-17K tokens) + 查询 (~100 tokens) → API 调用</li>
+<li><strong>本方案</strong>：每次推理 = 查询 (~100 tokens) → 本地 8B 模型推理</li>
+<li>Token 减少率：\(\frac{17000 - 100}{17000} \approx 99.4\%\)</li>
+</ul>
+<p>在 A100 GPU 上，单次推理延迟从 API 的 2-5 秒降至本地的 0.3 秒。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 执行验证与自修正循环 (Execution Verification Loop)</strong>
+<p>生成的 SQL 通过执行验证流程：如果 SQL 执行出错或返回空结果，触发自修正：模型接收错误信息后重新生成，最多 3 次迭代。这将执行成功率从单次生成的 94.1% 提升至 98.4%。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：板球统计查询</div>
+<p><strong>用户输入：</strong>"Virat Kohli 在 2024 年 IPL 赛季中击球平均分是多少？"</p>
+<p><strong>传统方案需要的完整 Schema 注入（~17K tokens）：</strong>包含 players 表、matches 表、innings 表、batting_stats 表等所有 45 张表的完整列定义...</p>
+<p><strong>Schema-on-the-Inside 输入（仅 23 tokens）：</strong>原始用户问题</p>
+<p><strong>模型生成 SQL：</strong></p>
+<div style="background: var(--bg-primary); padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 0.85em; margin: 8px 0;">
+SELECT AVG(runs_scored) AS batting_avg<br>
+FROM batting_stats bs<br>
+JOIN matches m ON bs.match_id = m.match_id<br>
+JOIN players p ON bs.player_id = p.player_id<br>
+WHERE p.name = 'Virat Kohli' AND m.season = '2024-IPL';
+</div>
+<p><strong>执行结果：</strong>batting_avg = <strong>48.73</strong>（执行成功，语义正确 ✓）</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>模型</th><th>输入 Tokens</th><th>执行成功率</th><th>语义准确率</th><th>延迟</th></tr>
+</thead>
+<tbody>
+<tr><td>Gemini Flash 2.0 (Prompt)</td><td>API</td><td>~17,000</td><td>95.6%</td><td>89.4%</td><td>2.3s</td></tr>
+<tr><td>GPT-4o + Schema RAG</td><td>API</td><td>~12,000</td><td>96.2%</td><td>90.1%</td><td>3.1s</td></tr>
+<tr><td>CodeLlama-8B (SFT only)</td><td>Self-hosted</td><td>~17,000</td><td>89.3%</td><td>83.7%</td><td>1.2s</td></tr>
+<tr><td class="highlight">Schema-on-the-Inside (Ours)</td><td>Self-hosted 8B</td><td class="highlight">&lt;100</td><td class="highlight">98.4%</td><td class="highlight">92.5%</td><td class="highlight">0.3s</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>跳过阶段一（直接 SFT）导致执行成功率暴跌至 72.4%，证明 Schema 内化是必不可少的。仅用阶段一不做阶段二时，模型能描述 Schema 但无法生成正确 SQL（语义准确率仅 31.2%）。执行验证循环贡献了 4.3% 的执行成功率提升（94.1% → 98.4%）。<strong>局限性：</strong>当数据库 Schema 变更时，需要重新进行阶段一预训练（约 4 小时 / A100），灵活性不如 Prompt 方案；对于包含 200+ 张表的超大 Schema，内化效果有待验证。</p>
+</div>
+</div>
+
+<!-- Paper 3: MARCH -->
+<div class="paper-card" id="paper3">
+<h3><a href="https://arxiv.org/abs/2603.24579" target="_blank">MARCH: Multi-Agent Reinforced Self-Check for LLM Hallucination</a></h3>
+<div class="paper-meta">
+  Zhuo Li, Yupeng Zhang, Pengyu Cheng, Jiajun Song, Mengyu Zhou, Hao Li, Shujie Hu, Yu Qin 等 · 
+  <a href="https://arxiv.org/pdf/2603.24579" target="_blank">PDF</a> · 
+  <a href="https://github.com/Qwen-Applications/MARCH" target="_blank">Code</a> · cs.CL · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RAG 系统中的幻觉检测通常采用"LLM-as-a-judge"方式——用同一个或另一个 LLM 根据检索到的证据验证生成内容。但这种方法存在根深蒂固的<strong>确认偏差 (confirmation bias)</strong>：验证者能看到原始生成的输出，往往会无意中"复读"和"认可"原始错误。MARCH 通过精心设计的<strong>信息不对称 (information asymmetry)</strong>，打破这一自我确认循环。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 三角色多智能体架构 (Three-Role Multi-Agent Architecture)</strong>
+<p>MARCH 定义三个独立角色，各自拥有不同的信息访问权限：</p>
+<ul>
+<li><strong>Solver（求解者）</strong>：接收用户 query \(q\) 和检索文档 \(\mathcal{D}\)，生成初始 RAG 响应 \(r = f_{\text{solve}}(q, \mathcal{D})\)</li>
+<li><strong>Proposer（提议者）</strong>：将响应 \(r\) 分解为原子命题集 \(\{c_1, c_2, \ldots, c_n\} = f_{\text{propose}}(r)\)，每个 \(c_i\) 为可独立验证的最小事实单元</li>
+<li><strong>Checker（检查者）</strong>：<strong>关键设计——Checker 无法看到原始响应 \(r\)</strong>，仅根据检索文档 \(\mathcal{D}\) 验证每个命题 \(v_i = f_{\text{check}}(c_i, \mathcal{D})\)，输出 \(v_i \in \{\text{SUPPORT}, \text{REFUTE}, \text{NOT\_ENOUGH\_INFO}\}\)</li>
+</ul>
+<p>信息不对称公式化表示：\(\text{Info}(\text{Checker}) = \{\mathcal{D}, c_i\} \subsetneq \{\mathcal{D}, q, r, c_i\} = \text{Info}(\text{Solver})\)</p>
+</div>
+
+<div class="sub-module">
+<strong>② 多智能体强化学习训练 (Multi-Agent RL Training)</strong>
+<p>三个角色通过 MARL 联合训练，共同优化事实遵守能力。定义联合奖励函数：</p>
+$$R = \alpha \cdot R_{\text{factual}} + \beta \cdot R_{\text{coverage}} + \gamma \cdot R_{\text{precision}}$$
+<p>其中：</p>
+<ul>
+<li>\(R_{\text{factual}}\)：Checker 验证通过的命题比例（鼓励 Solver 生成有据可查的内容）</li>
+<li>\(R_{\text{coverage}}\)：Proposer 分解的命题覆盖原始响应信息的完整度</li>
+<li>\(R_{\text{precision}}\)：Checker 判断的准确度（与人工标注对比）</li>
+</ul>
+<p>使用 PPO 算法联合更新三个角色的策略，通过中心化训练 + 去中心化执行（CTDE）保证训练稳定性。</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 原子命题分解策略 (Atomic Claim Decomposition)</strong>
+<p>Proposer 的分解需满足三个约束：</p>
+<ol>
+<li><strong>原子性</strong>：每个命题包含且仅包含一个可验证事实，避免复合命题</li>
+<li><strong>完整性</strong>：所有命题的并集应覆盖原始响应的全部事实内容</li>
+<li><strong>独立性</strong>：命题之间不应有逻辑依赖（验证 \(c_i\) 不需要知道 \(c_j\)）</li>
+</ol>
+<p>通过 RL 奖励中的 \(R_{\text{coverage}}\) 项自动学习最优分解粒度，无需手动规则。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 信息隔离下的幻觉修正 (Hallucination Correction under Isolation)</strong>
+<p>当 Checker 判定某命题 \(c_i\) 为 REFUTE 时，触发修正流程：</p>
+<ol>
+<li>Solver 收到反馈 \(\{c_i: \text{REFUTE}\}\)，但<strong>不知道 Checker 的推理过程</strong></li>
+<li>Solver 重新生成该命题对应的内容段落 \(r'_i = f_{\text{solve}}(q, \mathcal{D}, c_i, \text{REFUTE})\)</li>
+<li>新内容再次通过 Proposer → Checker 流程验证，最多迭代 3 次</li>
+</ol>
+<p>这种闭环修正使最终响应的事实准确率从单次生成的 78.3% 提升至 91.6%。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：RAG 幻觉检测与修正</div>
+<p><strong>用户问题：</strong>"量子计算机何时能破解 RSA-2048 加密？"</p>
+<p><strong>检索文档：</strong>包含 Shor 算法原理和 IBM 量子路线图的 3 篇文献</p>
+<p><strong>Solver 初始响应（含幻觉）：</strong>"根据 IBM 2024 年路线图，<strong>10 万量子比特</strong>的处理器预计 2029 年面世，届时可运行 Shor 算法破解 RSA-2048..."</p>
+<p><strong>Proposer 分解：</strong></p>
+<ul>
+<li>\(c_1\)：IBM 路线图提到 2029 年 10 万量子比特处理器 → Checker: <strong style="color: #f85149;">REFUTE</strong>（文档仅提到 10 万物理量子比特，非逻辑量子比特，且时间线为 2033 年）</li>
+<li>\(c_2\)：Shor 算法可破解 RSA-2048 → Checker: <strong style="color: #3fb950;">SUPPORT</strong></li>
+<li>\(c_3\)：需要约 2000 万物理量子比特才能实现破解 → Checker: <strong style="color: #3fb950;">SUPPORT</strong></li>
+</ul>
+<p><strong>修正后响应：</strong>"...IBM 路线图计划于 <strong>2033 年</strong>实现 10 万<strong>物理</strong>量子比特处理器，但破解 RSA-2048 需约 <strong>2000 万</strong>物理量子比特..."</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>模型大小</th><th>幻觉率 ↓</th><th>FaithDial F1 ↑</th><th>BEGIN Acc. ↑</th><th>Q²-Score ↑</th></tr>
+</thead>
+<tbody>
+<tr><td>Vanilla RAG</td><td>8B</td><td>21.7%</td><td>72.4</td><td>76.8</td><td>68.3</td></tr>
+<tr><td>Self-Refine</td><td>8B</td><td>16.2%</td><td>76.1</td><td>79.5</td><td>72.1</td></tr>
+<tr><td>LLM-as-Judge</td><td>8B</td><td>14.8%</td><td>77.9</td><td>81.2</td><td>74.6</td></tr>
+<tr><td>Chain-of-Verification</td><td>8B</td><td>12.3%</td><td>79.5</td><td>83.1</td><td>76.8</td></tr>
+<tr><td class="highlight">MARCH (Ours)</td><td>8B</td><td class="highlight">8.4%</td><td class="highlight">84.7</td><td class="highlight">88.3</td><td class="highlight">82.5</td></tr>
+<tr><td>GPT-4o (闭源)</td><td>—</td><td>9.1%</td><td>83.2</td><td>87.6</td><td>81.9</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除信息隔离（让 Checker 看到原始响应）导致幻觉率上升 5.3%（8.4% → 13.7%），直接证明了确认偏差的存在。移除 MARL 训练（使用 SFT 代替）导致 FaithDial F1 下降 4.2 分。仅用 Proposer+Checker 而无修正循环时，幻觉率为 11.1%，说明修正循环贡献了 2.7% 的额外改善。<strong>局限性：</strong>三智能体架构使推理成本增加约 3 倍；对于需要多跳推理的复杂幻觉（跨多个文档的错误推断），检测效果仍有提升空间。<strong>亮点：</strong>8B 模型配备 MARCH 的性能与 GPT-4o 闭源模型相当甚至略优。</p>
+</div>
+</div>

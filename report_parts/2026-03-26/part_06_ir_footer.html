@@ -1,0 +1,299 @@
+
+<!-- ==================== SECTION: 🔍 IR & Medical Retrieval ==================== -->
+<h2 class="section-header">🔍 信息检索与医学检索 (IR &amp; Retrieval)</h2>
+
+<!-- Paper 13: VILLA -->
+<div class="paper-card" id="paper13">
+<h3><a href="https://arxiv.org/abs/2603.23849" target="_blank">VILLA: Versatile Information Retrieval From Scientific Literature Using Large Language Models</a></h3>
+<div class="paper-meta">
+  Blessy Antony, Amartya Dutta, Sneha Aggarwal, Vasu Gatne, Ozan Gökdemir 等 · 
+  <a href="https://arxiv.org/pdf/2603.23849" target="_blank">PDF</a> · Submitted to ACM KDD 2026 · cs.IR · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>科学信息提取（SIE）是构建高质量 ML 训练数据集的关键途径。然而，现有的基于 LLM 的 SIE 方法主要集中在<strong>生物医学和化学</strong>等成熟领域，以选择类任务（如命名实体识别）为主，且只处理格式规范的短文本。在<strong>开放性、复杂性更高</strong>的科学文献中（如需要从完整论文中提取影响病毒-宿主相互作用的突变信息），现有方法力不从心。VILLA 专门针对这类挑战性更强的 SIE 任务设计了多步 RAG 框架。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 多步检索增强生成 (Multi-Step RAG Pipeline)</strong>
+<p>VILLA 的核心是一个<strong>多步骤</strong>的 RAG 流程，而非传统的单次检索+生成：</p>
+<ol>
+<li><strong>Step 1 — 文档级筛选</strong>：从候选论文集中识别包含目标信息的论文。使用 LLM 评估论文摘要与查询的相关性：\(s_{\text{doc}} = f_{\text{LLM}}(\text{abstract}, q)\)</li>
+<li><strong>Step 2 — 段落级检索</strong>：在相关论文中，检索包含具体信息的段落。使用密集检索 + BM25 混合策略</li>
+<li><strong>Step 3 — 信息抽取与结构化</strong>：从检索到的段落中提取结构化信息（如突变名称、宿主、影响类型）</li>
+<li><strong>Step 4 — 交叉验证与去重</strong>：对提取结果进行跨文档一致性验证和去重</li>
+</ol>
+<p>每个步骤的输出作为下一步的输入，逐步收窄搜索范围并提高精度。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 病毒突变提取任务设计 (Viral Mutation Extraction Task)</strong>
+<p>选择了一个此前被忽视的 SIE 领域——<strong>病毒学</strong>中的突变提取：</p>
+<ul>
+<li><strong>目标</strong>：从科学论文中提取改变甲型流感病毒与宿主相互作用的具体突变</li>
+<li><strong>复杂性</strong>：突变信息散布在论文的方法、结果、讨论等多个部分；同一突变可能有多种命名方式（如 H275Y、His275Tyr、NA-275）</li>
+<li><strong>数据集</strong>：从 239 篇科学论文中人工标注了 10 种甲型流感蛋白的 <strong>629 个突变</strong>作为 ground truth</li>
+</ul>
+<p>提取任务的输出格式：\(\langle \text{Protein}, \text{Position}, \text{Wildtype}, \text{Mutant}, \text{Host}, \text{Effect} \rangle\)</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 混合检索与自适应分块 (Hybrid Retrieval with Adaptive Chunking)</strong>
+<p>科学论文的长度和结构差异很大，VILLA 采用自适应分块策略：</p>
+<ul>
+<li><strong>段落感知分块</strong>：根据论文的节标题（Methods, Results 等）自然分块，保持语义完整性</li>
+<li><strong>重叠窗口</strong>：相邻块之间有 20% 的 token 重叠，避免信息在分块边界丢失</li>
+<li><strong>混合检索评分</strong>：$$s_{\text{hybrid}}(q, d) = \alpha \cdot s_{\text{dense}}(q, d) + (1-\alpha) \cdot s_{\text{BM25}}(q, d)$$，其中 \(\alpha = 0.6\) 通过验证集调优</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>④ 全面评估方法学 (Comprehensive Evaluation Methodology)</strong>
+<p>针对开放性 SIE 任务设计了多维度评估：</p>
+<ul>
+<li><strong>精确匹配</strong>：提取的突变是否与 ground truth 完全一致</li>
+<li><strong>部分匹配</strong>：蛋白质和位置正确但氨基酸标注略有差异（如 His vs H）</li>
+<li><strong>语义匹配</strong>：使用 LLM 判断提取结果与 ground truth 的语义等价性</li>
+</ul>
+<p>对比了标准 RAG 和 SOTA 的基于代理和基于 RAG 的 SIE 工具（如 PaperQA2, OpenScholar 等）。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：流感 NA 蛋白耐药突变提取</div>
+<p><strong>查询：</strong>"哪些 NA（神经氨酸酶）蛋白突变影响奥司他韦耐药性？"</p>
+<p><strong>VILLA 多步处理：</strong></p>
+<ol>
+<li><strong>文档筛选：</strong>从 239 篇论文中识别 47 篇与 NA 耐药相关 → 精确率 91%</li>
+<li><strong>段落检索：</strong>从 47 篇中检索 127 个相关段落（平均每篇 2.7 个）</li>
+<li><strong>信息提取：</strong>提取出 23 个突变，其中 19 个与 ground truth 精确匹配</li>
+<li><strong>交叉验证：</strong>2 个突变在多篇论文中有矛盾描述 → 标记为"待确认"</li>
+</ol>
+<p><strong>最终结果：</strong>Precision = <strong>82.6%</strong>, Recall = <strong>76.0%</strong>, F1 = <strong>79.2%</strong></p>
+<p><strong>标准 RAG 对比：</strong>F1 仅 61.3%（漏检 11 个突变，误检 8 个）</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>Precision ↑</th><th>Recall ↑</th><th>F1 ↑</th><th>文档覆盖率 ↑</th></tr>
+</thead>
+<tbody>
+<tr><td>Standard RAG</td><td>68.4%</td><td>55.7%</td><td>61.3%</td><td>72%</td></tr>
+<tr><td>PaperQA2</td><td>71.2%</td><td>61.3%</td><td>65.9%</td><td>78%</td></tr>
+<tr><td>OpenScholar</td><td>73.5%</td><td>58.9%</td><td>65.4%</td><td>75%</td></tr>
+<tr><td>Agent-based SIE</td><td>69.8%</td><td>63.7%</td><td>66.6%</td><td>81%</td></tr>
+<tr><td class="highlight">VILLA (Ours)</td><td class="highlight">82.6%</td><td class="highlight">76.0%</td><td class="highlight">79.2%</td><td class="highlight">89%</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除多步流程（退化为单步 RAG）后 F1 下降至 63.8%，证明多步骤是性能提升的核心。移除交叉验证步骤后 Precision 下降 5.1%，因为单源信息中的提取错误无法被发现。密集检索单独使用 vs BM25 单独使用的 F1 分别为 72.4% 和 68.1%，混合策略（79.2%）显著优于两者之一。<strong>突破性贡献：</strong>首次在病毒学领域建立了完整的 SIE 基准数据集（629 个标注突变）。<strong>局限性：</strong>论文中仅测试了流感 A 病毒，对其他病毒的泛化性未验证；对于实验方法描述中隐含的突变信息（如"我们构建了野生型的 Y275H 变体"），提取效果较差。</p>
+</div>
+</div>
+
+<!-- Paper 14: RAG for AI Policy -->
+<div class="paper-card" id="paper14">
+<h3><a href="https://arxiv.org/abs/2603.24580" target="_blank">Retrieval Improvements Do Not Guarantee Better Answers: A Study of RAG for AI Policy QA</a></h3>
+<div class="paper-meta">
+  Saahil Mathur, Ryan David Rittner, Vedant Ajit Thakur, Daniel Stuart Schiff, Tunazzina Islam · 
+  <a href="https://arxiv.org/pdf/2603.24580" target="_blank">PDF</a> · cs.CL, cs.AI, cs.IR · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RAG 的直觉假设是"<strong>更好的检索 → 更好的回答</strong>"。然而，在分析复杂政策文档时（如 AI 治理法规），这个假设是否成立？本文使用包含 947 份 AI 政策文档的 AGORA 语料库进行了系统性研究，发现了一个<strong>反直觉的现象</strong>：在某些情况下，更强的检索能力反而导致更自信的幻觉。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 领域适配的 RAG 系统构建 (Domain-Adapted RAG System)</strong>
+<p>系统由两个核心组件组成：</p>
+<ul>
+<li><strong>检索器 (Retriever)</strong>：基于 ColBERT 架构，使用对比学习进行领域微调。训练数据为合成查询（由 LLM 从政策段落生成问题）+ 人工验证的正负例对</li>
+<li><strong>生成器 (Generator)</strong>：使用直接偏好优化（DPO）将 LLM 与人类对政策回答的偏好对齐</li>
+</ul>
+<p>微调目标：$$\mathcal{L}_{\text{retriever}} = -\log \frac{e^{s(q, d^+)}}{e^{s(q, d^+)} + \sum_{j} e^{s(q, d_j^-)}}$$</p>
+<p>其中 \(s(q, d)\) 为 ColBERT 的 late interaction 相似度，\(d^+\) 为正例文档，\(d_j^-\) 为负例。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 检索质量与端到端性能的解耦分析 (Decoupled Analysis)</strong>
+<p>本文的核心贡献是严格地<strong>解耦</strong>检索质量和最终回答质量的关系：</p>
+<ol>
+<li><strong>检索评估</strong>：使用 NDCG@10、Recall@100 等标准 IR 指标评估检索器</li>
+<li><strong>回答评估</strong>：使用 LLM 评审 + 人类评估衡量回答的准确性、完整性和幻觉率</li>
+<li><strong>关键发现</strong>：检索 NDCG@10 从 0.42 提升到 0.61（+45%），但回答准确率仅从 71.3% 提升到 73.8%（+3.5%），提升远不成比例</li>
+</ol>
+</div>
+
+<div class="sub-module">
+<strong>③ 幻觉放大效应发现 (Hallucination Amplification Effect)</strong>
+<p>最重要的发现：当查询涉及<strong>语料库中不存在相关文档</strong>的问题时：</p>
+<ul>
+<li>弱检索器：返回明显不相关的文档 → 生成器识别出无关性 → 倾向于回答"信息不足"</li>
+<li><strong>强检索器</strong>：返回<strong>表面相关但实际不包含答案</strong>的文档 → 生成器被误导 → 生成<strong>更自信的幻觉</strong></li>
+</ul>
+<p>量化对比：在"无答案"问题上，强检索器的幻觉率为 <strong>34.2%</strong>，弱检索器仅 <strong>19.8%</strong>。</p>
+$$P(\text{Hallucination} | \text{No Answer}, \text{Strong Retriever}) > P(\text{Hallucination} | \text{No Answer}, \text{Weak Retriever})$$
+</div>
+
+<div class="sub-module">
+<strong>④ DPO 生成器对齐的效果与局限 (DPO Generator Alignment)</strong>
+<p>DPO 微调使生成器在<strong>有答案</strong>的问题上表现更好（准确率 +5.2%），但对"无答案"场景帮助有限：</p>
+<ul>
+<li>DPO 训练数据主要包含有答案的正例偏好对</li>
+<li>模型学会了"给出看起来专业的回答"的偏好，但未学会"知道何时说不知道"</li>
+<li>建议：未来的 DPO 训练应包含明确的"拒答"偏好样本</li>
+</ul>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：AI 政策问答中的幻觉放大</div>
+<p><strong>问题：</strong>"巴西的 AI 监管框架对生成式 AI 有什么具体规定？"</p>
+<p><strong>事实：</strong>截至语料库截止日期，巴西尚未通过专门的生成式 AI 法规（仅有草案）</p>
+<p><strong>弱检索器检索结果：</strong>返回巴西数据保护法（LGPD）条款 → 明显不是关于生成式 AI → 生成器输出："<em>目前语料库中没有找到巴西关于生成式 AI 的具体法规信息。</em>" ✓</p>
+<p><strong>强检索器检索结果：</strong>返回巴西 AI 框架草案的讨论文档（高度相关但仍为草案） → 生成器输出："<em>根据巴西 2024 年通过的 AI 框架法案第 12 条，生成式 AI 系统必须...</em>" <strong style="color: #f85149;">✗（幻觉：草案被错误描述为已通过法律）</strong></p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>配置</th><th>检索 NDCG@10 ↑</th><th>有答案 Acc. ↑</th><th>无答案幻觉率 ↓</th><th>整体 Acc. ↑</th></tr>
+</thead>
+<tbody>
+<tr><td>BM25 + Vanilla LLM</td><td>0.42</td><td>68.1%</td><td>19.8%</td><td>71.3%</td></tr>
+<tr><td>ColBERT (原始) + Vanilla LLM</td><td>0.53</td><td>72.4%</td><td>26.3%</td><td>72.1%</td></tr>
+<tr><td>ColBERT (微调) + Vanilla LLM</td><td class="highlight">0.61</td><td>74.2%</td><td>34.2%</td><td>72.5%</td></tr>
+<tr><td>ColBERT (微调) + DPO LLM</td><td class="highlight">0.61</td><td class="highlight">79.4%</td><td>28.7%</td><td class="highlight">73.8%</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>关键洞见：</strong>"检索越好 → 回答越好"的假设在<strong>封闭域</strong>（语料库包含所有答案）中基本成立，但在<strong>开放域</strong>政策分析中不成立。根本原因是强检索器的"表面相关"文档比弱检索器的"明显不相关"文档更具欺骗性。DPO 对齐在有答案场景中有效，但对拒答能力的提升有限。<strong>实践建议：</strong>(1) RAG 系统应引入显式的"答案存在性检测"模块；(2) 检索结果应附带"信息充分度"评分，而非仅有"相关性"评分；(3) 在政策等高风险领域，系统应默认保守（宁可说"不确定"也不编造）。<strong>局限性：</strong>仅在 AI 政策领域验证，对其他专业领域（如法律、金融）的适用性未知。</p>
+</div>
+</div>
+
+<!-- Paper 15: CVPD -->
+<div class="paper-card" id="paper15">
+<h3><a href="https://arxiv.org/abs/2603.24012" target="_blank">CVPD at QIAS 2026: RAG-Guided LLM Reasoning for Al-Mawarith Share Computation and Heir Allocation</a></h3>
+<div class="paper-meta">
+  Wassim Swaileh, Mohammed-En-Nadhir Zighem, Hichem Telli, Salah Eddine Bekhouche, Abdellah Zakaria Sellam 等 · 
+  <a href="https://arxiv.org/pdf/2603.24012" target="_blank">PDF</a> · cs.CL · 2026-03-25
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>伊斯兰继承法（Ilm al-Mawarith）是一个高度结构化但极其复杂的法律推理任务：需要识别合格继承人、解决阻却规则（hajb）、分配固定份额和剩余份额、处理 awl（份额超额调整）和 radd（份额不足分配）等机制。不同法学派别（Hanafi, Maliki, Shafi'i, Hanbali）的规则存在差异，使得任务更加复杂。本文构建了一个获得 <strong>QIAS 2026 排行榜第一名</strong>的 RAG 系统。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 符号合成数据生成 (Symbolic Synthetic Data Generation)</strong>
+<p>使用确定性的符号继承计算器生成大规模训练数据：</p>
+<ul>
+<li><strong>输入生成</strong>：随机组合继承人类型（儿子、女儿、丈夫、妻子、父母等）和遗产金额</li>
+<li><strong>符号计算</strong>：按照各法学派规则精确计算每个继承人的份额</li>
+<li><strong>推理痕迹</strong>：自动生成完整的中间推理步骤（如"父亲获得 1/6 固定份额 + 剩余份额"）</li>
+</ul>
+<p>数据格式：\(\langle \text{继承人列表}, \text{法学派}, \text{遗产额} \rangle \to \langle \text{推理链}, \text{份额分配} \rangle\)</p>
+<p>生成了 <strong>50,000+</strong> 条涵盖各种边界情况的合成样本，确保数值精确性。</p>
+</div>
+
+<div class="sub-module">
+<strong>② 混合检索 + 交叉编码器重排序 (Hybrid Retrieval + Cross-Encoder Reranking)</strong>
+<p>检索系统采用三层架构：</p>
+<ol>
+<li><strong>一层：BM25 稀疏检索</strong>——基于阿拉伯语关键词匹配，召回候选文档集</li>
+<li><strong>二层：密集检索 (Dense Retrieval)</strong>——使用阿拉伯语嵌入模型计算语义相似度，扩展召回</li>
+<li><strong>三层：交叉编码器重排序</strong>——对前两层合并的候选进行精细排序</li>
+</ol>
+<p>最终检索评分：$$s_{\text{final}}(q, d) = \text{CrossEncoder}(q, d | \text{top-}k \text{ from } s_{\text{BM25}} \cup s_{\text{dense}})$$</p>
+</div>
+
+<div class="sub-module">
+<strong>③ 模式约束输出验证 (Schema-Constrained Output Validation)</strong>
+<p>继承法计算必须满足数学一致性约束：</p>
+<ul>
+<li><strong>份额总和约束</strong>：\(\sum_{i} \text{share}_i = 1\)（正常情况）或需要 awl/radd 调整</li>
+<li><strong>awl 检测</strong>：当固定份额总和 > 1 时，按比例缩减各份额</li>
+<li><strong>radd 检测</strong>：当份额总和 < 1 且无 asaba（剩余继承人）时，按比例增加</li>
+</ul>
+<p>LLM 输出通过确定性验证器检查：如果违反上述约束，触发重新生成。这确保了法律和数值的一致性。</p>
+</div>
+
+<div class="sub-module">
+<strong>④ 法学派感知推理 (School-Aware Legal Reasoning)</strong>
+<p>系统对不同法学派的差异规则进行了显式建模：</p>
+<ul>
+<li>检索时根据指定法学派过滤相关法律条文</li>
+<li>推理时将法学派作为上下文条件注入 LLM 提示</li>
+<li>验证时使用对应法学派的规则进行约束检查</li>
+</ul>
+<p>这使得同一继承场景在不同法学派下可以产生不同但各自合法的分配结果。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<div class="example-title">🔍 案例：含 awl 调整的遗产分配</div>
+<p><strong>输入：</strong>已故者（男性）留下妻子、两个女儿、母亲、父亲。遗产总额 120,000 元。（Hanafi 学派）</p>
+<p><strong>推理过程：</strong></p>
+<ol>
+<li>妻子：固定份额 1/8（因有子女）</li>
+<li>两个女儿：固定份额 2/3（共享）</li>
+<li>母亲：固定份额 1/6（因有子女）</li>
+<li>父亲：固定份额 1/6 + 剩余</li>
+<li>份额总和：\(\frac{1}{8} + \frac{2}{3} + \frac{1}{6} + \frac{1}{6} = \frac{3+16+4+4}{24} = \frac{27}{24} > 1\) → <strong style="color: #d29922;">触发 awl 调整</strong></li>
+<li>调整后：妻子 \(\frac{3}{27}\)、女儿 \(\frac{16}{27}\)、母亲 \(\frac{4}{27}\)、父亲 \(\frac{4}{27}\)</li>
+</ol>
+<p><strong>最终分配：</strong>妻子 <strong>13,333</strong> 元 · 女儿 <strong>71,111</strong> 元（每人 35,556）· 母亲 <strong>17,778</strong> 元 · 父亲 <strong>17,778</strong> 元</p>
+<p><strong>验证：</strong>13,333 + 71,111 + 17,778 + 17,778 = <strong>120,000 ✓</strong></p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead>
+<tr><th>方法</th><th>MIR-E Score ↑</th><th>份额准确率 ↑</th><th>Awl/Radd 处理 ↑</th><th>排行榜排名</th></tr>
+</thead>
+<tbody>
+<tr><td>GPT-4o (Zero-shot)</td><td>0.712</td><td>74.3%</td><td>58.2%</td><td>—</td></tr>
+<tr><td>GPT-4o + RAG</td><td>0.824</td><td>83.1%</td><td>71.4%</td><td>—</td></tr>
+<tr><td>Fine-tuned Arabic LLM</td><td>0.867</td><td>87.5%</td><td>79.3%</td><td>—</td></tr>
+<tr><td class="highlight">CVPD (Ours)</td><td class="highlight">0.935</td><td class="highlight">94.2%</td><td class="highlight">91.7%</td><td class="highlight">#1</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+<p><strong>消融实验：</strong>移除符号合成数据（仅用真实案例训练）后 MIR-E 下降至 0.856，证明大规模合成数据对覆盖边界情况至关重要。移除交叉编码器重排序后评分降至 0.908，BM25 + Dense 的基础检索已相当强。移除模式约束验证后，awl/radd 处理准确率暴跌至 73.4%（vs. 91.7%），因为 LLM 在复杂分数运算上仍会出错。<strong>亮点：</strong>这是 RAG + 符号验证的完美结合案例——LLM 负责自然语言理解和推理框架，符号系统负责精确计算和一致性验证。<strong>局限性：</strong>仅覆盖 Hanafi 学派的完整规则，其他学派的边界情况覆盖不足；当遗产涉及债务、遗嘱等额外因素时，系统处理能力下降。</p>
+</div>
+</div>
+
+<!-- ==================== REFLECTION ==================== -->
+<div class="reflection">
+<h2>📝 每日反思与趋势洞察</h2>
+<p><strong>1. RL 安全性成为核心议题：</strong>今日三篇 RL 论文均涉及"安全"主题——Likelihood Hacking 揭示了概率编程中的奖励欺骗，COX-Q 解决了安全约束下的探索问题，Cycle Consistency 通过语义一致性保证形式化质量。这反映了社区正从"让 RL 更强"转向"让 RL 更可靠"。</p>
+
+<p><strong>2. 信息不对称作为设计原则：</strong>MARCH 的核心洞见——通过故意限制 Checker 的信息来打破确认偏差——是一个优雅的设计范式。这种思路可推广到所有"自我检查"场景：让验证者看得比生成者少，而非更多。</p>
+
+<p><strong>3. 领域专用模型 vs. 通用大模型：</strong>Composer 2（代码）和 Schema-on-the-Inside（Text-to-SQL）都展示了领域专用训练的威力——8B 参数的专用模型可以在特定任务上超越 GPT-4 级别的通用模型。这为"小而精"的模型路线提供了更多证据。</p>
+
+<p><strong>4. RAG 的反直觉发现：</strong>RAG for AI Policy 的"更强检索 → 更自信幻觉"发现值得所有 RAG 系统开发者警醒。当语料库不完整时，高质量检索反而可能比低质量检索更危险——系统需要学会在检索结果"看起来相关但实际不够"时保持谦逊。</p>
+
+<p><strong>5. 医疗 AI 的评估陷阱：</strong>RAVEN 揭示的"重复事件膨胀"问题和 Multi-Agent MCQA 的"过度自信"问题，提醒我们在医疗 AI 中，看起来好的指标可能掩盖了根本性的能力缺陷。评估方法学的创新与模型创新同样重要。</p>
+</div>
+
+</div><!-- end container -->
+
+<footer>
+<div class="container">
+  <p>arXiv AI 深度日报 · 2026 年 3 月 26 日 · 由 AI 自动生成</p>
+  <p>数据来源：<a href="https://arxiv.org" target="_blank">arXiv.org</a> · 领域：cs.CL, cs.AI, cs.LG, cs.IR</p>
+  <p>共分析 207 篇论文 · 精选 15 篇 · 覆盖 5 大研究方向</p>
+</div>
+</footer>
+
+</body>
+</html>
