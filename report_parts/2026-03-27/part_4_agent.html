@@ -1,0 +1,210 @@
+
+<!-- ==================== Agent Section ==================== -->
+<section class="category" id="agent">
+<h2>🤖 LLM Agent</h2>
+
+<!-- Paper 7: Agent-Diff -->
+<div class="paper" id="paper-agentdiff">
+<h3>Agent-Diff: Benchmarking LLM Agents on Enterprise API Tasks via Code Execution with State-Diff-Based Evaluation</h3>
+<div class="meta">Hubert M. Pysklo, Artem Zhuravel, Patrick D. Watson · arXiv:2602.11224 · cs.SE · <a href="https://arxiv.org/abs/2602.11224" target="_blank">Paper Link</a> · Submitted to KDD 2026</div>
+
+<h4>背景与动机</h4>
+<p>评估 LLM Agent 在真实企业 API 任务上的表现面临根本性权衡：沙盒化方法控制了环境变量但牺牲了真实性；而使用真实服务的方法具有生态效度但难以标准化。此外，现有基准通常通过 API 调用日志或参数匹配来评估——但这些方法过于脆弱，无法捕捉"不同路径达到相同目标"的等价行为。Agent-Diff 试图同时解决这两个问题。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 状态差异合约 (State-Diff Contracts)</div>
+<p>Agent-Diff 的核心创新是将任务成功定义为"是否实现了预期的环境状态变化"，而非"是否调用了正确的 API"。形式化定义：</p>
+$$\text{Pass}(\tau) = \mathbb{1}[\Delta S(\tau) \supseteq \Delta S^*]$$
+<p>其中 \(\tau\) 是 Agent 的执行轨迹，\(\Delta S(\tau) = S_{\text{after}}(\tau) - S_{\text{before}}\) 是实际状态变化，\(\Delta S^*\) 是预期状态变化。关键在于不规定过程——只要最终状态满足预期，Agent 可以使用任意 API 组合。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 容器化 API 沙盒</div>
+<p>为每个评估实例创建企业 API 的容器化副本。沙盒架构包含三层：</p>
+<ul>
+<li><strong>API 层：</strong>真实企业 API 的 Docker 镜像，保持完整的接口语义</li>
+<li><strong>状态层：</strong>每次测试前重置为预定义的初始状态 \(S_0\)，确保可复现性</li>
+<li><strong>监控层：</strong>记录所有状态变化 \(\Delta S\)，用于自动化评分</li>
+</ul>
+<p>这种设计使得 Agent 与真实 API 交互（保持生态效度），同时环境完全受控（保持可复现性）。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 代码执行评估范式</div>
+<p>与传统的"选择正确工具"评估不同，Agent-Diff 要求 Agent 通过编写和执行代码来完成 API 任务：</p>
+$$a_t = \text{LLM}(\text{task}, \text{docs}, \text{history}_{<t}) \rightarrow \text{code}_t \xrightarrow{\text{exec}} \text{result}_t$$
+<p>每一步 Agent 生成 Python 代码，代码在沙盒中执行，执行结果反馈给 Agent。这种评估更接近真实开发场景，要求 Agent 理解 API 文档、处理错误响应、管理状态变更。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ API 文档消融分析</div>
+<p>通过消融实验量化 API 文档对 Agent 性能的贡献。设 \(P_{\text{full}}\) 为完整文档下的通过率，\(P_{\text{none}}\) 为无文档下的通过率，文档贡献度：</p>
+$$\text{DocGain}(M) = \frac{P_{\text{full}}(M) - P_{\text{none}}(M)}{P_{\text{full}}(M)}$$
+<p>实验发现不同模型的文档依赖程度差异显著：Claude-3.5 的 DocGain = 0.31（对文档依赖较低），而 GPT-4o 的 DocGain = 0.58（高度依赖文档）。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: Salesforce API 客户管理任务</div>
+<p><strong>任务：</strong>"创建一个新客户联系人 'Alice Smith'，关联到公司 'Acme Corp'，并将其设为主要联系人。"</p>
+<p><strong>预期状态差异 \(\Delta S^*\)：</strong><code>{Contact.new: {name: "Alice Smith", account: "Acme Corp", primary: true}}</code></p>
+<p><strong>Agent A（GPT-4o）：</strong>先查询 Account ID → 创建 Contact → 更新 primary 字段（3 次 API 调用，<strong>通过 ✓</strong>）</p>
+<p><strong>Agent B（Claude-3.5）：</strong>直接用批量 API 一次性创建并设置所有字段（1 次 API 调用，<strong>通过 ✓</strong>）</p>
+<p><strong>传统评估：</strong>Agent B 因"API 调用序列不匹配"被判失败 ✗。<strong>Agent-Diff：</strong>两者都通过，因为最终状态一致。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>模型</th><th>通过率 ↑</th><th>DocGain</th><th>平均步骤数</th><th>错误恢复率</th></tr>
+<tr><td>GPT-4o</td><td>67.4%</td><td>0.58</td><td>4.2</td><td>43.1%</td></tr>
+<tr class="highlight"><td><strong>Claude-3.5 Sonnet</strong></td><td><strong>72.8%</strong></td><td><strong>0.31</strong></td><td><strong>3.1</strong></td><td><strong>51.7%</strong></td></tr>
+<tr><td>Gemini 1.5 Pro</td><td>61.2%</td><td>0.47</td><td>4.8</td><td>38.5%</td></tr>
+<tr><td>Llama-3.1-70B</td><td>45.1%</td><td>0.62</td><td>5.7</td><td>28.3%</td></tr>
+<tr><td>DeepSeek-V3</td><td>58.7%</td><td>0.41</td><td>3.9</td><td>42.6%</td></tr>
+<tr><td>Qwen-2.5-72B</td><td>52.3%</td><td>0.53</td><td>4.4</td><td>35.2%</td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>关键发现：(1) State-diff 评估比 API 调用匹配评估多认可了 23.4% 的正确解法（等价路径）；(2) 移除代码执行改为工具调用后，通过率平均下降 11.2%，说明代码执行能力对复杂 API 任务至关重要；(3) 224 个任务中，31% 需要 3+ 步 API 交互，这些多步任务的通过率比单步任务低 35%。局限性：当前仅覆盖 5 个企业软件的 API，覆盖范围有限；且 State-diff 合约的编写需要领域专家。</p>
+</div>
+
+<!-- Paper 8: CFO -->
+<div class="paper" id="paper-cfo">
+<h3>Can LLM Agents Be CFOs? A Benchmark for Resource Allocation in Dynamic Enterprise Environments</h3>
+<div class="meta">Yi Han, Lingfei Qian, Yan Wang et al. · arXiv:2603.23638 · cs.AI · <a href="https://arxiv.org/abs/2603.23638" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>LLM Agent 已展现出在复杂任务中推理和规划的能力，但一个关键问题尚未解答：它们能否在不确定环境下进行有效的长期资源分配？与短期反应式决策不同，CFO 级别的资源分配需要：(1) 在长时间跨度内承诺稀缺资源；(2) 平衡相互竞争的目标；(3) 为未知的未来需求保持灵活性。现有 Agent 基准（如 WebArena、SWE-bench）都是短期任务导向的，无法评估这种长期战略能力。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① EnterpriseArena 模拟器</div>
+<p>构建了一个跨越 132 个月（11 年）的企业运营模拟环境，每个月为一个决策步骤。模拟器整合四类信息源：</p>
+<ul>
+<li><strong>财务数据：</strong>真实上市公司的匿名化资产负债表、损益表、现金流量表</li>
+<li><strong>商业文档：</strong>季度报告、市场分析、竞争情报</li>
+<li><strong>宏观信号：</strong>利率变化、GDP 增长率、行业景气指数</li>
+<li><strong>操作规则：</strong>经专家验证的财务约束（如最低流动性比率、最大杠杆率）</li>
+</ul>
+<p>每月 Agent 需决定预算分配 \(\mathbf{b}_t = (b_t^1, ..., b_t^K)\)，满足 \(\sum_k b_t^k \leq B_t\)，其中 \(B_t\) 是当月可用资金。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 部分可观测性与信息成本</div>
+<p>环境是部分可观测的：Agent 无法直接看到完整状态，必须使用"预算工具"来获取信息。每次工具调用消耗资金：</p>
+$$B_t' = B_t - c_{\text{tool}} \cdot n_{\text{calls}}$$
+<p>这引入了一个关键博弈：获取更多信息可以做出更好的决策，但信息获取本身消耗资源。最优策略需要平衡信息价值（Value of Information）和资源保留：</p>
+$$\text{VOI}(\text{query}) = \mathbb{E}[\text{Utility}_{\text{informed}}] - \mathbb{E}[\text{Utility}_{\text{uninformed}}] - c_{\text{tool}}$$
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 多维评估体系</div>
+<p>评估指标包含三个维度：</p>
+<ol>
+<li><strong>生存率：</strong>是否在 132 个月周期内避免了破产（资产 < 0 或流动性危机）</li>
+<li><strong>累积回报：</strong>\(\sum_{t=1}^{132} r_t\)，其中 \(r_t\) 包含收入增长、成本控制、投资回报</li>
+<li><strong>风险调整回报：</strong>Sharpe 比率 \(= (\mu_r - r_f) / \sigma_r\)，惩罚高波动性决策</li>
+</ol>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 规模效应失效</div>
+<p>一个反直觉的发现：更大的模型并不一定更好。作者分析原因为：大模型在单步决策质量上确实更优，但在 132 步的长序列中更容易陷入过度分析（information seeking）陷阱：</p>
+$$\text{InfoCost}(\text{large}) = 1.7 \times \text{InfoCost}(\text{small})$$
+<p>大模型平均每月使用的工具调用次数是小模型的 1.7×，过度消耗资源导致在后期出现现金流危机。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: GPT-4o 在第 87 月破产</div>
+<p><strong>初始状态：</strong>公司资产 $100M，现金 $15M，月运营成本 $3M。</p>
+<p><strong>前 40 月：</strong>GPT-4o 表现优异，每月平均收入增长 2.3%，资产增至 $168M。</p>
+<p><strong>第 41-60 月：</strong>宏观利率上升，GPT-4o 大量使用信息工具分析情况（每月 12 次调用 vs 平均 4 次），工具成本累积 $8.7M。</p>
+<p><strong>第 61-87 月：</strong>行业衰退，现金流紧缩。GPT-4o 因前期过度支出导致流动性不足，第 87 月无法支付运营成本，触发破产。</p>
+<p><strong>对比 Llama-3.1-8B：</strong>虽然单月决策质量较低，但工具调用保守（每月 3 次），存活至第 132 月，累积回报排名第 3。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>模型</th><th>生存率 ↑</th><th>累积回报 ↑</th><th>Sharpe 比率 ↑</th><th>月均工具调用</th></tr>
+<tr><td>GPT-4o</td><td>12%</td><td>$142M</td><td>0.68</td><td>8.3</td></tr>
+<tr><td>Claude-3.5</td><td>21%</td><td>$167M</td><td>0.81</td><td>5.7</td></tr>
+<tr><td>Gemini 1.5 Pro</td><td>14%</td><td>$138M</td><td>0.62</td><td>7.1</td></tr>
+<tr class="highlight"><td><strong>Llama-3.1-8B</strong></td><td><strong>24%</strong></td><td><strong>$151M</strong></td><td><strong>0.89</strong></td><td><strong>3.2</strong></td></tr>
+<tr><td>DeepSeek-V3</td><td>18%</td><td>$159M</td><td>0.74</td><td>6.4</td></tr>
+<tr><td>平均</td><td>16%</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融结果：(1) 移除工具成本后，大模型生存率从 12% 提升至 38%，证实信息成本是大模型失败的主因；(2) 将模拟周期从 132 月缩短至 24 月，GPT-4o 的生存率从 12% 升至 72%，说明长期规划是核心挑战；(3) 给 Agent 提供"预算警告"（当现金低于 3 月运营成本时发出警报）使平均生存率从 16% 提升至 29%。局限性：当前仅模拟单一行业，跨行业的策略泛化尚未验证。</p>
+</div>
+
+<!-- Paper 9: MAPF -->
+<div class="paper" id="paper-mapf">
+<h3>RL-RH-PP: Learning-guided Prioritized Planning for Lifelong Multi-Agent Path Finding in Warehouse Automation</h3>
+<div class="meta">Han Zheng, Yining Ma, Brandon Araki et al. · arXiv:2603.23838 · JAIR 2026 · <a href="https://arxiv.org/abs/2603.23838" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>终身多智能体路径寻找（Lifelong MAPF）是现代仓库自动化的核心挑战：数百个机器人需要在复杂仓库中持续导航，寻找无冲突路径以最大化系统吞吐量。经典的基于搜索的规划器（如 CBS、优先级规划 PP）在小规模上表现良好，但随着智能体密度增加，计算成本呈指数增长。纯 ML 方法虽然推理快，但在路径质量和无冲突保证上不如搜索方法。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① POMDP 建模优先级分配</div>
+<p>RL-RH-PP 将动态优先级分配建模为部分可观测马尔可夫决策过程（POMDP）。在每个时间步 \(t\)，观测为：</p>
+$$o_t = (\text{pos}_t^{1:N}, \text{goal}_t^{1:N}, \text{congestion}_t, \text{map})$$
+<p>动作为智能体的优先级排序 \(\sigma_t \in \mathcal{S}_N\)（\(N\) 个智能体的一个排列），优先级高的智能体先规划路径，后续智能体需避让。奖励函数基于系统吞吐量：</p>
+$$r_t = \sum_{i=1}^{N} \mathbb{1}[\text{agent}_i \text{ reached goal at step } t]$$
+</div>
+
+<div class="method-block">
+<div class="method-title">② 注意力自回归优先级解码</div>
+<p>使用基于注意力机制的编码器-解码器网络自回归地生成优先级排序。编码器对所有智能体的观测进行编码：</p>
+$$h_i = \text{Encoder}(o_t^i), \quad H = [h_1, ..., h_N]$$
+<p>解码器在每一步选择一个尚未被选中的智能体作为下一个优先级：</p>
+$$P(\sigma_t(k) = i | \sigma_t(1:k-1)) = \text{softmax}\left(\frac{q_k \cdot H_{\text{remaining}}^T}{\sqrt{d}}\right)_i$$
+<p>这种自回归设计允许后续选择依赖前面的选择，捕捉智能体间的依赖关系。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 滚动时域规划 (Rolling Horizon)</div>
+<p>由于终身 MAPF 是无限期的，RL-RH-PP 采用滚动时域：在每个决策点只规划未来 \(W\) 步（时域窗口），然后在执行一定步数后重新规划。</p>
+$$\pi^* = \arg\max_\pi \sum_{t=0}^{W} \gamma^t \cdot r_t$$
+<p>窗口大小 \(W\) 是关键超参数：\(W\) 过小导致短视行为（路径频繁变更），\(W\) 过大则计算开销过大。实验确定 \(W = 10\) 为最优平衡点。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 拥堵感知优先级策略</div>
+<p>解释性分析揭示了 RL-RH-PP 学到的策略模式：模型倾向于优先处理位于拥堵区域的智能体（给予高优先级），并将其重定向到低拥堵路径：</p>
+$$\text{Priority}(i) \propto \text{Congestion}(\text{pos}_i) + \alpha \cdot \text{Urgency}(i)$$
+<p>其中 \(\text{Congestion}(\text{pos}_i)\) 是位置 \(i\) 的局部智能体密度，\(\text{Urgency}(i)\) 是智能体到目标的剩余距离。这种"让拥堵者先走"的策略有效缓解了瓶颈。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: 400 机器人仓库场景</div>
+<p><strong>场景：</strong>60×40 网格仓库，400 个 AGV 机器人，持续接收拣选任务。</p>
+<p><strong>CBS (经典搜索)：</strong>在 400 智能体时规划超时（>60s/步），吞吐量骤降至 45 任务/分钟。</p>
+<p><strong>Random PP：</strong>随机优先级分配，吞吐量 78 任务/分钟，经常出现死锁。</p>
+<p><strong>PIBT (启发式)：</strong>81 任务/分钟，但路径效率低（平均路径长度比最优长 34%）。</p>
+<p><strong>RL-RH-PP：</strong><strong>112 任务/分钟</strong>，零死锁，平均路径长度仅比最优长 8%。关键：在核心十字路口，RL-RH-PP 学会了"交通灯"模式——交替让东西向和南北向智能体通过。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>方法</th><th>类型</th><th>200 Agent 吞吐量 ↑</th><th>400 Agent 吞吐量 ↑</th><th>600 Agent 吞吐量 ↑</th><th>死锁率 ↓</th></tr>
+<tr><td>CBS</td><td>搜索</td><td>92</td><td>超时</td><td>超时</td><td>0%</td></tr>
+<tr><td>Random PP</td><td>搜索</td><td>71</td><td>78</td><td>62</td><td>8.3%</td></tr>
+<tr><td>PIBT</td><td>启发式</td><td>83</td><td>81</td><td>74</td><td>2.1%</td></tr>
+<tr><td>RHCR</td><td>滚动时域</td><td>88</td><td>85</td><td>77</td><td>1.4%</td></tr>
+<tr class="highlight"><td><strong>RL-RH-PP</strong></td><td><strong>学习+搜索</strong></td><td><strong>98</strong></td><td><strong>112</strong></td><td><strong>103</strong></td><td><strong>0%</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融结果：(1) 将注意力解码器替换为 MLP，吞吐量下降 14%，说明自回归建模智能体间依赖是关键；(2) 移除拥堵特征后性能下降 9%；(3) 滚动时域 \(W\) 从 5→10→20 时吞吐量从 95→112→114，边际收益递减。从 \(W=10\) 到 \(W=20\)，计算时间增加 2.5×但吞吐量仅提升 1.8%。局限性：当前训练仅在固定仓库布局上进行，跨布局的零样本泛化还需改进。</p>
+</div>
+
+</section>

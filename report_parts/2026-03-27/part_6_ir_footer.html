@@ -1,0 +1,242 @@
+
+<!-- ==================== IR Section ==================== -->
+<section class="category" id="ir">
+<h2>🔍 IR & Retrieval</h2>
+
+<!-- Paper 13: S-Path-RAG -->
+<div class="paper" id="paper-spathrag">
+<h3>S-Path-RAG: Semantic-Aware Shortest-Path Retrieval Augmented Generation for Multi-Hop Knowledge Graph Question Answering</h3>
+<div class="meta">Rong Fu, Yemin Wang et al. · arXiv:2603.23512 · WWW 2026 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.23512" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>多跳知识图谱问答（KGQA）要求系统在大规模 KG 中沿多条边检索证据并综合推理。现有 RAG 方法采用一次性、重文本的检索策略，存在三个问题：(1) 检索到大量不相关的文本噪声；(2) 忽略 KG 的拓扑结构信息；(3) 对多跳推理路径缺乏可解释性。S-Path-RAG 提出了一种拓扑感知、语义加权的路径级检索框架。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 混合加权候选路径枚举</div>
+<p>S-Path-RAG 将 KG 中的检索问题转化为加权图上的路径搜索。对于查询 \(q\)，首先定位种子实体 \(e_s\)，然后在 KG 子图上使用三种互补策略枚举候选路径：</p>
+<ul>
+<li><strong>k-最短路径 (k-Shortest Paths)：</strong>找到权重最小的 \(k\) 条路径，边权重定义为：</li>
+</ul>
+$$w(e_i, r, e_j) = 1 - \cos(\text{Emb}(q), \text{Emb}(r))$$
+<ul>
+<li><strong>束搜索 (Beam Search)：</strong>保持 beam_width 条部分路径，逐跳扩展</li>
+<li><strong>约束随机游走 (Constrained Random Walk)：</strong>以语义相似度为概率进行采样，增加路径多样性</li>
+</ul>
+<p>三种策略的组合确保了既有高质量路径（最短路径）又有多样性（随机游走）。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 可微路径评分器</div>
+<p>候选路径通过一个可微的评分模型进行排序。路径 \(\rho = (e_0, r_1, e_1, ..., r_L, e_L)\) 的分数由对比路径编码器计算：</p>
+$$s(\rho, q) = \text{MLP}\left(\text{PathEnc}(\rho) \odot \text{QueryEnc}(q)\right)$$
+<p>其中 PathEnc 使用 GRU 沿路径边序列编码，\(\odot\) 是逐元素乘积（Hadamard product）。训练使用对比损失：</p>
+$$\mathcal{L}_{\text{contrast}} = -\log \frac{\exp(s(\rho^+, q) / \tau)}{\sum_{\rho \in \mathcal{P}} \exp(s(\rho, q) / \tau)}$$
+<p>正样本 \(\rho^+\) 是连接正确答案的路径，负样本来自候选路径池。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 软混合潜在变量注入</div>
+<p>选定的 top-\(m\) 路径不是直接拼接为文本输入 LLM，而是通过交叉注意力将其紧凑的潜在表示注入语言模型：</p>
+$$h_{\text{path}} = \sum_{i=1}^{m} \beta_i \cdot \text{PathEnc}(\rho_i), \quad \beta_i = \frac{\exp(s(\rho_i, q))}{\sum_j \exp(s(\rho_j, q))}$$
+$$\text{Output} = \text{LLM}(\text{CrossAttn}(h_{\text{query}}, h_{\text{path}}))$$
+<p>这种设计既节省 token（不需要将图路径转换为冗长文本），又保留了拓扑结构信息。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 神经苏格拉底图对话循环</div>
+<p>S-Path-RAG 引入了迭代的"苏格拉底对话"机制：当 LLM 对当前路径证据不确定时，生成诊断性信息（如"需要更多关于 X 与 Y 关系的证据"），系统将其映射为图编辑操作：</p>
+<ol>
+<li><strong>种子扩展：</strong>从当前种子实体向外扩展 1-2 跳</li>
+<li><strong>路径重评分：</strong>基于新信息重新计算路径权重</li>
+<li><strong>子图精化：</strong>剪枝低相关度节点和边</li>
+</ol>
+<p>这种自适应检索机制使系统在面对复杂问题时能够"追问"知识图谱，而非一次性检索。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: 3-跳问答</div>
+<p><strong>问题：</strong>"What is the capital of the country where the director of Inception was born?"</p>
+<p><strong>推理路径：</strong>Inception → directed_by → Christopher Nolan → born_in → United Kingdom → capital → London</p>
+<p><strong>传统 RAG：</strong>检索到 "Christopher Nolan" 相关段落，但未连接到 UK 和 London（Recall@10 = 0.6）</p>
+<p><strong>ToG (Think-on-Graph)：</strong>找到了路径但生成了 120 个中间 token，且召回路径中混入了噪声边</p>
+<p><strong>S-Path-RAG：</strong>直接枚举到最短路径（3 跳，权重 0.12），通过潜在变量注入仅需 8 个额外 token，正确回答 "London"。耗时 0.8s vs ToG 的 3.2s。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>方法</th><th>WebQSP Hits@1 ↑</th><th>CWQ Hits@1 ↑</th><th>MuSiQue F1 ↑</th><th>平均 Token 消耗</th><th>延迟</th></tr>
+<tr><td>Vanilla RAG</td><td>68.3</td><td>42.1</td><td>34.8</td><td>2,400</td><td>1.2s</td></tr>
+<tr><td>KG-RAG</td><td>74.1</td><td>48.7</td><td>41.3</td><td>3,100</td><td>2.1s</td></tr>
+<tr><td>ToG</td><td>79.5</td><td>55.3</td><td>48.6</td><td>4,500</td><td>3.2s</td></tr>
+<tr><td>GNN-RAG</td><td>76.8</td><td>52.1</td><td>45.2</td><td>1,800</td><td>1.8s</td></tr>
+<tr class="highlight"><td><strong>S-Path-RAG</strong></td><td><strong>83.2</strong></td><td><strong>61.7</strong></td><td><strong>54.1</strong></td><td><strong>1,200</strong></td><td><strong>0.8s</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融结果：(1) 移除对比路径编码器后 Hits@1 下降 5.8%，说明路径级对比学习是核心组件；(2) 将潜在变量注入替换为文本拼接后 token 消耗增加 3×且准确率下降 2.1%；(3) 移除苏格拉底对话（仅一轮检索）使 3+ 跳问题的 F1 下降 8.3%。局限性：路径评分器需要针对特定 KG 训练，跨 KG 零样本迁移能力有限。</p>
+</div>
+
+<!-- Paper 14: Fast and Faithful -->
+<div class="paper" id="paper-fastfaithful">
+<h3>Fast and Faithful: Real-Time Verification for Long-Document RAG Systems</h3>
+<div class="meta">Xunzhuo Liu, Bowei He et al. · arXiv:2603.23508 · cs.CL · <a href="https://arxiv.org/abs/2603.23508" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>RAG 系统在企业搜索中被广泛部署，但验证生成内容是否忠实于源文档面临两难困境：(1) 大型 LLM 可以处理长上下文但速度慢、成本高（GPT-4 处理 32K token 需 >10s）；(2) 轻量级分类器速度快但受上下文窗口限制（通常 512-2K token），对截断片段之外的证据容易遗漏。需要一个在延迟约束下实现全文档验证的系统。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 自适应推理策略 (Adaptive Inference Strategy)</div>
+<p>核心思想：不是所有声明都需要全文档验证。系统首先对每个声明进行"可验证性预评估"：</p>
+$$\text{Difficulty}(c) = 1 - \max_{i} \text{sim}(c, \text{chunk}_i)$$
+<p>如果声明 \(c\) 与某个文档块高度匹配（Difficulty < 0.3），使用快速的块级验证器；如果证据分散（Difficulty > 0.7），使用全文档验证器；中间情况使用多块聚合验证器。这种分层策略使 70% 的声明走快速路径。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 分层验证架构</div>
+<p>系统包含三级验证器，按计算成本递增：</p>
+<ol>
+<li><strong>Tier 1 — 块级验证器：</strong>基于 DeBERTa-large（330M 参数），处理单个块（512 token），延迟 ~20ms</li>
+<li><strong>Tier 2 — 多块聚合验证器：</strong>将 top-3 相关块拼接后输入，处理 ~1.5K token，延迟 ~80ms</li>
+<li><strong>Tier 3 — 全文档验证器：</strong>基于 Longformer 架构（4K token）或 Mistral-7B（32K token），延迟 200ms-2s</li>
+</ol>
+<p>总延迟预算 \(T_{\text{budget}}\) 由应用场景决定。系统优化分配策略：</p>
+$$\min \sum_c (1 - \text{Acc}(\text{tier}(c))) \quad \text{s.t.} \quad \sum_c \text{Latency}(\text{tier}(c)) \leq T_{\text{budget}}$$
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 全文档基础处理</div>
+<p>对于 Tier 3 验证器，采用基于滑动窗口的全文档覆盖策略。将 32K token 文档分为重叠窗口，每个窗口独立验证后进行投票聚合：</p>
+$$\text{Verdict}(c, \text{doc}) = \begin{cases} \text{Supported} & \text{if } \frac{1}{W}\sum_w \text{score}_w > \tau^+ \\ \text{Not Supported} & \text{if } \frac{1}{W}\sum_w \text{score}_w < \tau^- \\ \text{Uncertain} & \text{otherwise} \end{cases}$$
+<p>重叠率设为 25% 以避免边界处的信息丢失。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 操作权衡与部署经验</div>
+<p>论文分享了生产环境的部署经验：</p>
+<ul>
+<li><strong>延迟预算 500ms：</strong>约 85% 的声明可被验证（Tier 1+2），召回率 87%</li>
+<li><strong>延迟预算 2s：</strong>100% 覆盖，召回率 94%</li>
+<li><strong>关键发现：</strong>基于块的验证对法律文档和技术手册的失败率高达 23%（因关键条件散布在多个章节），全文档验证将失败率降至 6%</li>
+</ul>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: 法律合同验证</div>
+<p><strong>源文档：</strong>28 页商业租赁合同（~24K tokens）</p>
+<p><strong>RAG 生成的声明：</strong>"租户可以在未经房东同意的情况下转租。"</p>
+<p><strong>块级验证（Tier 1）：</strong>匹配到第 3 条"租户有权在合理条件下使用物业" → 判定 <strong>Supported ✓</strong>（错误！）</p>
+<p><strong>全文档验证（Tier 3）：</strong>发现第 12 条第 3 款"任何转租均需房东事先书面同意" → 正确判定 <strong>Not Supported ✗</strong></p>
+<p><strong>差距原因：</strong>块级验证只看到了第 3 条的宽泛权利条款，遗漏了第 12 条的具体限制。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>验证策略</th><th>F1 (Supported) ↑</th><th>F1 (Not Supported) ↑</th><th>平均延迟 ↓</th><th>每 1K 声明成本 ↓</th></tr>
+<tr><td>块级 (512 token)</td><td>84.2</td><td>71.3</td><td>20ms</td><td>$0.02</td></tr>
+<tr><td>多块拼接 (1.5K)</td><td>88.7</td><td>79.6</td><td>80ms</td><td>$0.08</td></tr>
+<tr><td>全文档 LLM (32K)</td><td>93.1</td><td>91.2</td><td>2.1s</td><td>$2.40</td></tr>
+<tr class="highlight"><td><strong>自适应分层 (Ours)</strong></td><td><strong>91.8</strong></td><td><strong>88.4</strong></td><td><strong>180ms</strong></td><td><strong>$0.31</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融发现：(1) 移除自适应分配（全部走 Tier 3）延迟从 180ms 增至 2.1s 但 F1 仅提升 1.3%；(2) 文档类型对 Tier 分布影响显著：技术文档 70% 走 Tier 1，法律文档仅 35% 走 Tier 1；(3) 重叠率从 0% 增至 25% 使边界处的验证准确率提升 7%。局限性：当前仅支持英文文档，多语言验证需要额外训练。</p>
+</div>
+
+<!-- Paper 15: RAG Policy QA -->
+<div class="paper" id="paper-ragpolicy">
+<h3>Retrieval Improvements Do Not Guarantee Better Answers: A Study of RAG for AI Policy QA</h3>
+<div class="meta">Saahil Mathur, Ryan David Rittner et al. · arXiv:2603.24580 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.24580" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>RAG 系统被越来越多地用于分析复杂政策文档，但一个核心假设——"更好的检索 → 更好的答案"——在政策领域可能不成立。AI 治理和监管文档的特殊性在于：(1) 密集的法律语言，一个句子可能包含多层限定条件；(2) 不断演进的监管框架，同一主题有多个重叠甚至矛盾的法规；(3) 专家级问题需要在多个文档间进行推理而非单纯的信息检索。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① AGORA 政策语料库与领域微调</div>
+<p>使用 AI Governance and Regulatory Archive (AGORA) 语料库——包含 947 份 AI 政策文档。检索器采用 ColBERT 架构，通过对比学习进行领域微调：</p>
+$$\mathcal{L}_{\text{retriever}} = -\log \frac{\exp(\text{MaxSim}(q, d^+) / \tau)}{\sum_{d \in \mathcal{D}} \exp(\text{MaxSim}(q, d) / \tau)}$$
+<p>其中 MaxSim 是 ColBERT 的 token-level 最大相似度操作。微调使用合成查询生成：从文档中随机采样段落，用 GPT-4 生成对应的政策问题。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② DPO 对齐的生成器</div>
+<p>生成器使用直接偏好优化（DPO）与人类偏好对齐。收集成对偏好数据 \((y_w, y_l)\)（赢/输回答），训练目标：</p>
+$$\mathcal{L}_{\text{DPO}} = -\log \sigma\left(\beta \left[\log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right]\right)$$
+<p>偏好标准包括：引用准确性、条款完整性、限定条件的包含度。DPO 使生成器更倾向于给出有据可查的、包含限定条件的回答。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ "更好检索 → 更自信幻觉" 发现</div>
+<p>反直觉的核心发现：领域微调后的检索器在标准检索指标（NDCG@10、Recall@10）上显著提升，但端到端 QA 性能并未同步提高，在某些情况下甚至更差。分析原因：</p>
+$$P(\text{hallucination} | \text{relevant\_but\_incomplete}) > P(\text{hallucination} | \text{irrelevant})$$
+<p>当检索到"相关但不完整"的文档时（例如找到了法规 A 但遗漏了与之矛盾的法规 B），生成器的回答更加自信（因为确实有相关文献支持），但可能遗漏了关键的限定条件或例外情况。这比完全检索不到（生成器会承认不确定）更危险。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 组件级 vs 端到端评估</div>
+<p>作者提出了一个重要方法论论点：单独优化 RAG 的各个组件可能产生误导。定义组件-系统对齐度：</p>
+$$\text{Alignment} = \text{corr}(\Delta \text{Retrieval}, \Delta \text{QA})$$
+<p>实验中 Alignment = 0.23（弱正相关），说明检索改进仅有 23% 的情况能转化为 QA 改进。在法律和政策领域这种对齐度更低（0.15），因为这些领域的答案质量更依赖于推理而非单纯的信息检索。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: EU AI Act 查询</div>
+<p><strong>问题：</strong>"Under the EU AI Act, are emotion recognition systems in the workplace prohibited?"</p>
+<p><strong>基线检索器：</strong>检索到 EU AI Act Article 5（禁止列表）→ 生成："Yes, emotion recognition systems are prohibited under the EU AI Act."（部分正确但缺少限定）</p>
+<p><strong>微调检索器：</strong>检索到 Article 5 + Recital 18（相关性更高！）→ 生成更自信的回答："Emotion recognition systems in the workplace are clearly prohibited under Article 5."（更自信但仍缺关键例外）</p>
+<p><strong>真实答案：</strong>"Prohibited in workplace AND education settings, <strong>except</strong> for medical or safety reasons where explicitly consented to."——Article 5(1)(f) 的例外条款在 Annex III 而非 Article 5 本身。微调检索器未检索到 Annex III。</p>
+<p><strong>问题：</strong>更好的检索 → 更高的置信度 → 更危险的遗漏。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>配置</th><th>NDCG@10 ↑</th><th>Recall@10 ↑</th><th>Answer Relevance ↑</th><th>Faithfulness ↑</th><th>幻觉率 ↓</th></tr>
+<tr><td>基线 ColBERT + 基线 Gen</td><td>0.421</td><td>0.583</td><td>0.72</td><td>0.68</td><td>18.3%</td></tr>
+<tr><td>微调 ColBERT + 基线 Gen</td><td>0.567</td><td>0.714</td><td>0.74</td><td>0.65</td><td>21.7%</td></tr>
+<tr><td>基线 ColBERT + DPO Gen</td><td>0.421</td><td>0.583</td><td>0.78</td><td>0.76</td><td>14.1%</td></tr>
+<tr class="highlight"><td><strong>微调 ColBERT + DPO Gen</strong></td><td><strong>0.567</strong></td><td><strong>0.714</strong></td><td><strong>0.79</strong></td><td><strong>0.74</strong></td><td><strong>16.8%</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>核心发现：(1) 单独微调检索器使 NDCG 提升 34.7%，但幻觉率反而增加 3.4 个百分点（从 18.3% 到 21.7%）；(2) DPO 对齐的生成器将幻觉率从 18.3% 降至 14.1%，即使在微调检索器下也将幻觉率控制在 16.8%；(3) 当检索到的文档覆盖了问题的所有相关法规时（recall = 100%），幻觉率降至 4.2%——但在 947 份文档中实现完美召回几乎不可能。局限性：AGORA 语料库主要覆盖英语政策文档，非英语政策（如中国《生成式人工智能服务管理暂行办法》）未被纳入。</p>
+</div>
+
+</section>
+
+<!-- ==================== Reflection ==================== -->
+<div class="reflection">
+<h3>📝 今日反思与趋势洞察</h3>
+
+<h4>🔑 关键趋势</h4>
+<ol>
+<li><strong>记忆与长上下文的分离：</strong>MSA 提出将记忆容量与推理解耦的思路，100M token 的端到端记忆标志着"终身记忆"从概念走向实践。这可能是超越 RAG 的下一个范式——不再需要"检索"，而是将所有知识"记住"。</li>
+<li><strong>过程奖励的崛起：</strong>从 ITPO 的逐轮隐式过程奖励到 Lean4 的循环一致性奖励，RL 社区正在系统地解决"稀疏奖励"这一基础瓶颈。密集、可信的过程信号是扩展 RL 到复杂多步任务的关键。</li>
+<li><strong>Agent 评估的成熟：</strong>Agent-Diff 的状态差异合约和 EnterpriseArena 的长期模拟代表了 Agent 评估从"能不能用"到"用得多好"的转变。特别是 EnterpriseArena 揭示的"大模型不一定更好"的发现，挑战了 scaling law 在 Agent 领域的适用性。</li>
+<li><strong>RAG 的信任危机：</strong>两篇论文（Fast & Faithful + RAG Policy QA）从不同角度指出了 RAG 系统的根本局限：即使检索完美，推理环节仍可能引入幻觉；更好的检索甚至可能导致更危险的自信幻觉。可信赖的 AI 系统需要全链路验证而非仅优化检索。</li>
+</ol>
+
+<h4>💡 值得关注的方法创新</h4>
+<ul>
+<li><strong>Compression Robustness Index (CRI)</strong>：一个简洁的跨基准评估指标，可以推广到其他"单一基准可能误导"的场景</li>
+<li><strong>Middle-out 标准化策略</strong>：S4CMDR 的这一思路对任何需要跨组织数据整合的 ML 项目都有借鉴价值</li>
+<li><strong>神经苏格拉底图对话</strong>：S-Path-RAG 的迭代追问机制是 RAG 系统迈向"思考式检索"的有趣方向</li>
+</ul>
+</div>
+
+</div><!-- end container -->
+
+<footer>
+<p>📊 由 arXiv API + RSS 自动生成 · 覆盖 cs.CL / cs.AI / cs.LG / cs.IR</p>
+<p>🔬 Sean's AI Research Daily · 2026-03-27</p>
+</footer>
+
+</body>
+</html>

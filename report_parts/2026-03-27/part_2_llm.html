@@ -1,0 +1,195 @@
+
+<!-- ==================== LLM Section ==================== -->
+<section class="category" id="llm">
+<h2>🧠 Pure Text LLMs</h2>
+
+<!-- Paper 1: MSA -->
+<div class="paper" id="paper-msa">
+<h3>MSA: Memory Sparse Attention for Efficient End-to-End Memory Model Scaling to 100M Tokens</h3>
+<div class="meta">Yu Chen, Runkai Chen, Sheng Yi et al. · arXiv:2603.23516 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.23516" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>长期记忆是人类智能的基石，但当前 LLM 的有效上下文窗口通常限制在 100 万 token 以内。现有扩展方案包括混合线性注意力、固定大小的 RNN 记忆状态、RAG 系统和 Agent 外部存储，但它们在上下文增长时面临精度急剧下降、推理延迟暴涨、无法动态修改记忆内容、且缺乏端到端优化能力等瓶颈。这些局限严重制约了大型语料库摘要、数字孪生、长历史 Agent 推理等场景。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 可扩展稀疏注意力 (Scalable Sparse Attention)</div>
+<p>MSA 的核心创新在于用稀疏注意力替代全注意力。对于长度为 \(N\) 的序列，传统全注意力的复杂度为 \(O(N^2)\)。MSA 将序列切分为大小为 \(B\) 的文档块，每个块仅与固定数量 \(k\) 的最相关块进行注意力计算：</p>
+$$\text{Attn}_{\text{MSA}}(Q_i) = \text{softmax}\left(\frac{Q_i \cdot K_{\text{top-}k}^T}{\sqrt{d}}\right) V_{\text{top-}k}$$
+<p>其中 top-\(k\) 块通过高效的块级相似度门控选取。由于每个查询块仅与 \(k \cdot B\) 个 KV 对交互，总复杂度降为 \(O(N \cdot k \cdot B)\)，在 \(k, B\) 固定时实现线性扩展。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 文档级旋转位置编码 (Document-wise RoPE)</div>
+<p>标准 RoPE 的位置 ID 随序列位置单调递增，当序列超过训练长度时外推能力退化。MSA 采用文档级 RoPE：将每个文档块的位置 ID 重置为 0，使得位置编码仅在块内有效：</p>
+$$\text{RoPE}_{\text{doc}}(x_j) = R(\text{pos}_j \bmod B) \cdot x_j$$
+<p>其中 \(\text{pos}_j \bmod B\) 确保位置编码永远不超出训练范围。跨文档的关系依赖块间稀疏注意力的语义匹配，而非位置外推。实验表明从 16K 扩展到 100M token 性能仅下降不到 9%。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ KV 缓存压缩与 Memory Parallel</div>
+<p>在推理阶段，MSA 对历史 KV 缓存进行压缩。通过学习一个压缩函数 \(C(\cdot)\)，将每个文档块的 KV 对压缩为固定大小的摘要表示：</p>
+$$\hat{K}_i, \hat{V}_i = C(K_i, V_i), \quad |\hat{K}_i| \ll |K_i|$$
+<p>结合 Memory Parallel 技术，将压缩后的记忆分片到多个 GPU 上并行处理。这使得在仅 2 张 A800 GPU 上即可完成 100M token 的推理，显著降低了硬件门槛。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 记忆交错 (Memory Interleaving)</div>
+<p>为支持分散记忆段之间的复杂多跳推理，MSA 引入记忆交错机制：在注意力计算中，当前查询块可以同时访问多个不相邻的记忆块，并通过加权聚合实现信息融合：</p>
+$$\text{Output}_i = \sum_{j \in \text{selected}} \alpha_{ij} \cdot V_j, \quad \alpha_{ij} = \text{softmax}(Q_i K_j^T / \sqrt{d})$$
+<p>这种设计使模型能够在不需要连续上下文的情况下，从散布在百万级 token 中的多个证据片段进行推理。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: 100M Token 长上下文摘要</div>
+<p><strong>输入：</strong>将约 200 本学术教材（合计 ~100M tokens）加载为 MSA 的长期记忆，提问："请对比第 3 章与第 47 章中关于注意力机制的不同阐述。"</p>
+<p><strong>处理过程：</strong>MSA 通过块级门控快速定位第 3 章（位于 ~2M token 处）和第 47 章（位于 ~68M token 处）的相关段落，Memory Interleaving 将两段记忆并行加载。</p>
+<p><strong>输出：</strong>精确的对比摘要，涵盖两章的核心差异（定义、数学形式、应用场景），全程 Latency < 15s（2×A800）。</p>
+<p><strong>对比：</strong>GPT-4-turbo（128K 窗口）无法加载该规模文本；RAG 系统需多轮检索且难以处理多跳对比。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>方法</th><th>框架类型</th><th>最大上下文</th><th>RULER@128K</th><th>RULER@1M</th><th>100M 推理</th><th>GPU 需求</th></tr>
+<tr><td>GPT-4-turbo</td><td>Full Attn</td><td>128K</td><td>87.2</td><td>—</td><td>—</td><td>N/A</td></tr>
+<tr><td>Llama-3.1-70B</td><td>Full Attn</td><td>128K</td><td>84.6</td><td>—</td><td>—</td><td>8×A100</td></tr>
+<tr><td>InfLLM (RAG)</td><td>外部存储</td><td>∞</td><td>79.3</td><td>65.1</td><td>慢</td><td>4×A100</td></tr>
+<tr><td>MemoryAgent</td><td>Agent</td><td>∞</td><td>75.8</td><td>59.4</td><td>极慢</td><td>2×A100</td></tr>
+<tr class="highlight"><td><strong>MSA (Ours)</strong></td><td><strong>端到端记忆</strong></td><td><strong>100M</strong></td><td><strong>89.1</strong></td><td><strong>82.7</strong></td><td><strong>✓ (15s)</strong></td><td><strong>2×A800</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融实验显示：(1) 移除 Document-wise RoPE 后，100M token 性能从 82.7 暴跌至 41.3，证明位置编码设计是核心；(2) 移除 Memory Interleaving 使多跳推理准确率下降 23.4 个百分点；(3) 将稀疏度 \(k\) 从 8 降至 2 仅损失 3.1 分但推理加速 2.8×。局限性方面，MSA 目前需要预分块输入，对流式场景支持有限；此外，压缩函数 \(C(\cdot)\) 的信息损耗在极端压缩比下仍需改进。</p>
+</div>
+
+<!-- Paper 2: Compression Method Matters -->
+<div class="paper" id="paper-compression">
+<h3>Compression Method Matters: Benchmark-Dependent Output Dynamics in LLM Prompt Compression</h3>
+<div class="meta">Warren Johnson · arXiv:2603.23527 · cs.CL · <a href="https://arxiv.org/abs/2603.23527" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>提示压缩（Prompt Compression）通常以输入 token 减少率作为核心评估指标，但实际部署中更关键的问题是：压缩如何改变输出长度和总推理成本？先前的研究得出了相互矛盾的结论——有的报告了极端的输出膨胀效应（高达 56×），有的则认为影响较小。本文通过 5,400 次 API 调用的受控实验，揭示了这些矛盾的根本原因。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 指令保留概率 Ψ (Instruction Retention Probability)</div>
+<p>作者形式化了一个关键概念——指令保留概率 \(\Psi\)。对于一个压缩后的提示 \(p'\)，其中包含 \(m\) 个任务关键指令段 \(\{s_1, ..., s_m\}\)：</p>
+$$\Psi(p', r) = \frac{1}{m} \sum_{i=1}^{m} \mathbb{1}[\text{retained}(s_i, p', r)]$$
+<p>其中 \(r\) 是压缩率，\(\mathbb{1}[\cdot]\) 是指示函数。\(\Psi\) 越低，意味着越多关键指令被截断，模型越可能"不知所措"并生成冗余输出。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 基准依赖性效应分析</div>
+<p>在压缩率 \(r=0.3\)（保留 30% 输入）时，不同模型 × 不同基准展现出截然不同的行为：</p>
+<ul>
+<li><strong>DeepSeek + MBPP：</strong>输出膨胀 56×，\(\Psi \approx 0.15\)（MBPP 的函数签名被截断，模型反复尝试猜测任务）</li>
+<li><strong>DeepSeek + HumanEval：</strong>膨胀仅 5×，\(\Psi \approx 0.72\)（HumanEval 的 docstring 结构使关键信息较易保留）</li>
+<li><strong>GPT-4o-mini：</strong>各基准上相对稳定（膨胀 2-8×），因为其更强的指令理解能力可部分补偿信息丢失</li>
+</ul>
+<p>这证明了<strong>提示结构（而非模型身份）是输出膨胀的主要调节因素</strong>。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 压缩鲁棒性指数 CRI (Compression Robustness Index)</div>
+<p>为实现跨基准的公平评估，作者提出压缩鲁棒性指数：</p>
+$$\text{CRI}(M, r) = 1 - \frac{\sigma(\{O_b(M, r)\}_{b \in \mathcal{B}})}{\mu(\{O_b(M, r)\}_{b \in \mathcal{B}})}$$
+<p>其中 \(O_b(M, r)\) 是模型 \(M\) 在基准 \(b\) 上压缩率 \(r\) 的输出膨胀倍数，\(\sigma\) 和 \(\mu\) 分别为标准差和均值。CRI 越接近 1 表示模型在不同基准下表现越一致。GPT-4o-mini 的 CRI 为 0.82，而 DeepSeek 仅为 0.34。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 能耗实测与 Token-Joule 偏差</div>
+<p>通过 RunPod GPU 上的 NVML 直接功耗测量，作者发现 token 节省经常夸大实际焦耳节省。定义能效偏差：</p>
+$$\Delta_E = \frac{E_{\text{compressed}}}{E_{\text{original}}} - \frac{T_{\text{compressed}}}{T_{\text{original}}}$$
+<p>实验中 \(\Delta_E\) 平均为 +0.18，意味着声称节省 70% token 的压缩实际上仅节省约 52% 的能耗。原因在于输出膨胀导致的解码阶段能耗增加部分抵消了输入压缩的收益。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: MBPP 任务压缩失败</div>
+<p><strong>原始提示（500 tokens）：</strong>"Write a function <code>has_close_elements(numbers: List[float], threshold: float) -> bool</code> that checks if any two numbers in the list are closer to each other than the given threshold..."</p>
+<p><strong>压缩后（150 tokens, r=0.3）：</strong>"Write function checks numbers closer threshold..."（函数签名和参数类型被完全截断）</p>
+<p><strong>DeepSeek 输出：</strong>生成了 28,000 tokens 的输出，包括 5 个不同版本的函数实现、大量注释和测试用例，因为模型无法确定具体要求。</p>
+<p><strong>\(\Psi\) = 0.15</strong>，输出膨胀 <strong>56×</strong>。对比 GPT-4o-mini 在同一压缩下仅膨胀 4.2×。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>模型</th><th>基准</th><th>压缩率 r</th><th>Ψ</th><th>输出膨胀</th><th>CRI</th><th>ΔE</th></tr>
+<tr><td>DeepSeek</td><td>MBPP</td><td>0.3</td><td>0.15</td><td>56×</td><td rowspan="3">0.34</td><td>+0.31</td></tr>
+<tr><td>DeepSeek</td><td>HumanEval</td><td>0.3</td><td>0.72</td><td>5×</td><td>+0.12</td></tr>
+<tr><td>DeepSeek</td><td>GSM8K</td><td>0.3</td><td>0.48</td><td>18×</td><td>+0.22</td></tr>
+<tr><td>GPT-4o-mini</td><td>MBPP</td><td>0.3</td><td>0.31</td><td>8×</td><td rowspan="3" class="highlight">0.82</td><td>+0.09</td></tr>
+<tr><td>GPT-4o-mini</td><td>HumanEval</td><td>0.3</td><td>0.79</td><td>3×</td><td>+0.05</td></tr>
+<tr class="highlight"><td><strong>GPT-4o-mini</strong></td><td><strong>GSM8K</strong></td><td><strong>0.3</strong></td><td><strong>0.61</strong></td><td><strong>4.2×</strong></td><td><strong>+0.08</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>关键发现：(1) 单一基准评估极具误导性——仅在 HumanEval 上测试会低估压缩风险 10×以上；(2) 结构化提示（带 docstring、类型标注）的 \(\Psi\) 比非结构化提示高 0.35 分；(3) token 节省与能耗节省之间的偏差 \(\Delta_E\) 在 "输出密集型" 任务上最为显著。局限性在于：研究仅覆盖 3 个代码生成基准，对问答和摘要类任务的推广尚需验证。</p>
+</div>
+
+<!-- Paper 3: Many-Shot Jailbreaking -->
+<div class="paper" id="paper-msj">
+<h3>Mitigating Many-Shot Jailbreaking</h3>
+<div class="meta">Christopher M. Ackerman, Nina Panickssery · arXiv:2504.09604 · cs.LG, cs.AI, cs.CR · <a href="https://arxiv.org/abs/2504.09604" target="_blank">Paper Link</a></div>
+
+<h4>背景与动机</h4>
+<p>Many-Shot Jailbreaking (MSJ) 是一种利用现代 LLM 长上下文窗口的对抗攻击技术。攻击者在提示中插入大量"虚假助手"不当回复的示例，通过 in-context learning 的压倒性效应覆盖模型的安全训练。随着上下文窗口从 8K 扩展到 128K+，MSJ 攻击的成功率从 <5% 飙升至 >60%。现有防御集中在预训练阶段的 RLHF，但对 ICL 驱动的攻击效果有限。</p>
+
+<h4>核心方法详解</h4>
+
+<div class="method-block">
+<div class="method-title">① 安全微调 (Safety Fine-tuning)</div>
+<p>构造包含 MSJ 攻击模式的训练数据，让模型学习在看到大量不当示例后仍然拒绝有害请求。训练目标为条件概率最大化：</p>
+$$\mathcal{L}_{\text{safe}} = -\sum_{t} \log P_\theta(y_t^{\text{refuse}} \mid x_{\text{msj}}, y_{<t}^{\text{refuse}})$$
+<p>其中 \(x_{\text{msj}}\) 包含 50-200 个恶意 in-context 示例，\(y^{\text{refuse}}\) 是安全拒绝响应。关键是让模型在训练中"见过"这种攻击模式。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">② 输入清理 (Input Sanitization)</div>
+<p>在推理阶段对输入进行结构分析，检测并移除可疑的重复对话模式。定义重复率指标：</p>
+$$R_{\text{rep}}(x) = \frac{|\{(i,j): \text{sim}(s_i, s_j) > \tau, i \neq j\}|}{\binom{n}{2}}$$
+<p>其中 \(s_i\) 是输入中的第 \(i\) 个对话轮次，\(\tau\) 是相似度阈值。当 \(R_{\text{rep}} > 0.4\) 时触发清理，移除冗余对话轮次至安全数量（<10）。这是一种零开销的防御，不影响正常对话。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">③ 组合防御策略</div>
+<p>将安全微调和输入清理组合使用，构成两道防线：</p>
+<ol>
+<li><strong>第一道防线（输入层）：</strong>输入清理检测并削减 MSJ 攻击的 in-context 示例数量</li>
+<li><strong>第二道防线（模型层）：</strong>即使攻击绕过输入清理，安全微调后的模型仍能识别并拒绝</li>
+</ol>
+<p>组合效果呈超线性：设微调单独的安全率提升 \(\Delta_F\)，清理单独提升 \(\Delta_S\)，组合后提升 \(\Delta_C > \Delta_F + \Delta_S\)，因为清理降低了攻击强度，使微调更容易发挥作用。</p>
+</div>
+
+<div class="method-block">
+<div class="method-title">④ 良性 ICL 性能保持</div>
+<p>防御不应影响模型的正常 in-context learning 能力。作者验证了在 few-shot 分类、翻译、代码补全等良性 ICL 任务上，防御后的模型性能损失 < 1.5%。这是因为：(1) 微调数据中包含正面 ICL 示例的对比样本；(2) 输入清理的 \(\tau\) 阈值经过调优，仅对高度重复的模式触发。</p>
+</div>
+
+<h4>深度案例</h4>
+<div class="example-box">
+<div class="label">📋 案例: 100-shot MSJ 攻击与防御</div>
+<p><strong>攻击输入：</strong>在提示中插入 100 个"用户提问有害问题 → 虚假助手热心回答"的 in-context 对话轮次，然后附加真实有害请求。</p>
+<p><strong>无防御模型：</strong>攻击成功率 67.3%，模型按照虚假助手的"风格"回答了有害请求。</p>
+<p><strong>仅输入清理：</strong>检测到 \(R_{\text{rep}} = 0.89\)，删减至 8 个示例，攻击成功率降至 23.1%。</p>
+<p><strong>仅安全微调：</strong>攻击成功率降至 18.5%。</p>
+<p><strong>组合防御：</strong>攻击成功率降至 <strong>4.2%</strong>（接近无攻击基线的 2.1%），且良性 ICL 准确率仅下降 0.9%。</p>
+</div>
+
+<h4>实验结果</h4>
+<table>
+<tr><th>防御方法</th><th>MSJ 攻击成功率 ↓</th><th>良性 ICL 保持率 ↑</th><th>对话任务保持率 ↑</th></tr>
+<tr><td>无防御 (Baseline)</td><td>67.3%</td><td>100%</td><td>100%</td></tr>
+<tr><td>仅输入清理</td><td>23.1%</td><td>99.2%</td><td>99.8%</td></tr>
+<tr><td>仅安全微调</td><td>18.5%</td><td>98.7%</td><td>99.1%</td></tr>
+<tr class="highlight"><td><strong>组合防御 (Ours)</strong></td><td><strong>4.2%</strong></td><td><strong>98.5%</strong></td><td><strong>98.9%</strong></td></tr>
+</table>
+
+<h4>消融与讨论</h4>
+<p>消融发现：(1) 微调样本中 MSJ 示例数量从 50 增到 200 时安全率持续提升，但超过 200 后边际收益递减；(2) 输入清理的阈值 \(\tau=0.6\) 最优，低于 0.4 会误删正常 few-shot 示例；(3) 攻击示例数量从 50 到 500 时，组合防御的成功率始终低于 8%，而无防御模型从 42% 升至 83%。局限性：该方法对"语义多样但意图一致"的高级 MSJ 变体（每个示例措辞不同）的效果还需进一步研究。</p>
+</div>
+
+</section>
