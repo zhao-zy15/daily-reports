@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026年3月27日</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-secondary: #12121f;
+            --bg-card: #1a1a2e;
+            --bg-card-alt: #16162a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9a9ab8;
+            --text-muted: #6a6a88;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --border: #2a2a44;
+            --gradient-fire: linear-gradient(135deg, #ef4444, #f97316);
+            --gradient-gold: linear-gradient(135deg, #f59e0b, #eab308);
+            --gradient-blue: linear-gradient(135deg, #3b82f6, #6366f1);
+            --gradient-green: linear-gradient(135deg, #22c55e, #10b981);
+            --gradient-purple: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-primary: #f5f7fa;
+                --bg-secondary: #ffffff;
+                --bg-card: #ffffff;
+                --bg-card-alt: #f8f9fc;
+                --text-primary: #1a1a2e;
+                --text-secondary: #4a4a6a;
+                --text-muted: #8a8aaa;
+                --border: #e5e7eb;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+        .report-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f2a 50%, #1a0a2e 100%);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .report-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            transition: color 0.3s;
+        }
+        .report-header .back-link:hover { color: var(--accent-blue); }
+        .report-header .tag {
+            display: inline-block;
+            background: var(--gradient-fire);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .report-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #f0f0f5, #9a9ab8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .report-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .report-header .meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        /* Section */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .icon {
+            font-size: 1.5rem;
+        }
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.9rem;
+        }
+        .data-table th {
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table tr:hover { background: var(--bg-card-alt); }
+        .up { color: var(--accent-red); font-weight: 700; }
+        .down { color: var(--accent-green); font-weight: 700; }
+        .neutral { color: var(--accent-gold); font-weight: 600; }
+        /* Stock Card */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            margin: 16px 0;
+        }
+        .stock-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stock-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .stock-card .name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .stock-card .code {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            margin-bottom: 10px;
+        }
+        .stock-card .news-item {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+        .stock-card .verdict {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .verdict-bullish {
+            background: rgba(239,68,68,0.1);
+            border-left: 3px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+        .verdict-bearish {
+            background: rgba(34,197,94,0.1);
+            border-left: 3px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+        .verdict-neutral {
+            background: rgba(245,158,11,0.1);
+            border-left: 3px solid var(--accent-gold);
+            color: var(--accent-gold);
+        }
+        /* Hot Topic Card */
+        .hot-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .hot-card .hot-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hot-card .hot-title .num {
+            background: var(--gradient-fire);
+            color: #fff;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+        .hot-card .logic {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .hot-card .stocks-tag {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .hot-card .stocks-tag span {
+            background: rgba(59,130,246,0.12);
+            color: var(--accent-blue);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .hot-card .strategy {
+            font-size: 0.85rem;
+            color: var(--accent-gold);
+            padding: 8px 12px;
+            background: rgba(245,158,11,0.08);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-gold);
+        }
+        /* Tone */
+        .tone-card {
+            background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.08));
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 14px;
+            padding: 24px;
+        }
+        .tone-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--accent-blue);
+        }
+        .tone-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        /* Risk */
+        .risk-item {
+            background: rgba(239,68,68,0.06);
+            border: 1px solid rgba(239,68,68,0.15);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+        .risk-item strong { color: var(--accent-red); }
+        /* Source */
+        .source-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 0.78rem;
+            opacity: 0.8;
+        }
+        .source-link:hover { opacity: 1; text-decoration: underline; }
+        /* Industry Card */
+        .industry-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .industry-card h4 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .industry-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        /* Alert banner */
+        .alert-banner {
+            background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(249,115,22,0.12));
+            border: 1px solid rgba(239,68,68,0.25);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .alert-banner .alert-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        .alert-banner .alert-text {
+            font-size: 0.95rem;
+            color: var(--accent-red);
+            font-weight: 600;
+            line-height: 1.5;
+        }
+        .alert-banner .alert-text span {
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-size: 0.85rem;
+        }
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            padding: 32px 0 16px;
+            border-top: 1px solid var(--border);
+            margin-top: 32px;
+        }
+        @media (max-width: 640px) {
+            .report-header h1 { font-size: 1.5rem; }
+            .section { padding: 20px 16px; }
+            .stock-grid { grid-template-columns: 1fr; }
+            .report-header .meta { flex-direction: column; gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="report-header">
+        <a href="index.html" class="back-link">← 返回报告列表</a>
+        <div class="tag">🔥 晨会盘前</div>
+        <h1>A股港股盘前前瞻</h1>
+        <p class="subtitle">2026年3月27日 周五 · 地缘黑天鹅冲击隔夜外围，A股面临压力测试</p>
+        <div class="meta">
+            <span>📅 2026-03-27 09:00</span>
+            <span>📊 数据截至美东3月26日收盘</span>
+            <span>🔗 多信源交叉验证</span>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div class="alert-banner">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-text">
+            隔夜重大风险警告：美股三大指数全线暴跌，纳指跌入技术性修正区间！费城半导体指数单日暴跌4.79%！
+            <br><span>美以伊局势骤然升温 + 谷歌TurboQuant技术冲击芯片股 = 双重利空共振</span>
+        </div>
+    </div>
+
+    <!-- 🌍 隔夜外围与宏观定调 -->
+    <div class="section">
+        <h2 class="section-title"><span class="icon">🌍</span> 隔夜外围与宏观定调</h2>
+
+        <h3 style="color:var(--accent-red); font-size:1rem; margin-bottom:12px;">美股三大指数全线重挫（3月26日）</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>指数</th>
+                    <th>收盘点位</th>
+                    <th>涨跌幅</th>
+                    <th>核心信号</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>道琼斯工业指数</td>
+                    <td>45,960.11</td>
+                    <td class="down">-1.01%</td>
+                    <td>地缘冲突压制风险偏好</td>
+                </tr>
+                <tr>
+                    <td>标普500</td>
+                    <td>6,477.16</td>
+                    <td class="down">-1.74%</td>
+                    <td>科技股权重股拖累</td>
+                </tr>
+                <tr>
+                    <td>纳斯达克</td>
+                    <td>21,408.08</td>
+                    <td class="down" style="color:#ef4444; font-size:1.05rem;">-2.38%</td>
+                    <td>⚠️ 跌入技术性修正区间</td>
+                </tr>
+                <tr>
+                    <td>费城半导体</td>
+                    <td>—</td>
+                    <td class="down" style="color:#ef4444; font-size:1.05rem;">-4.79%</td>
+                    <td>⚠️ 12个月最大单日跌幅</td>
+                </tr>
+                <tr>
+                    <td>纳斯达克金龙（中概）</td>
+                    <td>—</td>
+                    <td class="down">-2.55%</td>
+                    <td>中概股普遍跟跌</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+            <a class="source-link" href="https://usstock.jrj.com.cn/2026/03/27080656487419.shtml" target="_blank">📎 来源：金融界 3月27日</a> ｜
+            <a class="source-link" href="https://www.eet-china.com/mp/a483724.html" target="_blank">📎 电子工程专辑</a>
+        </p>
+
+        <h3 style="color:var(--accent-gold); font-size:1rem; margin:16px 0 10px;">两大核心利空</h3>
+        <div class="industry-card">
+            <h4>🔴 地缘冲突急剧升温</h4>
+            <p>美以伊局势进一步恶化。新华社援引美媒称美国正制定对伊朗"致命一击"军事方案，以色列持续轰炸伊朗军工设施，伊朗动员百万作战人员。美联储理事库克表示中东冲突使通胀风险更加突出，市场加息押注概率超50%。<strong style="color:var(--accent-gold)">盘后缓和信号：</strong>特朗普宣布推迟10天（至4月6日）打击伊朗能源设施，谈判仍在进行。</p>
+        </div>
+        <div class="industry-card">
+            <h4>🔴 谷歌TurboQuant技术炸弹</h4>
+            <p>谷歌发布TurboQuant AI内存压缩技术，可将大模型KV Cache从16位压缩至3位，内存占用降至1/6。华尔街担忧：若软件效率提升6倍，则市场对DRAM/HBM的需求可能结构性下降。闪迪暴跌超11%，拉姆研究、应用材料、希捷跌逾8%，AMD跌7.5%，美光跌近7%，台积电跌超6%，英伟达跌4.2%。</p>
+        </div>
+
+        <h3 style="color:var(--accent-blue); font-size:1rem; margin:16px 0 10px;">A50期指与前日A股/港股</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>标的</th>
+                    <th>收盘点位</th>
+                    <th>涨跌幅</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>富时A50期指（3月27日收盘）</td>
+                    <td>14,503</td>
+                    <td class="down">-0.08%</td>
+                    <td>小幅收跌，市场情绪谨慎</td>
+                </tr>
+                <tr>
+                    <td>恒生指数（3月26日收盘）</td>
+                    <td>24,856.43</td>
+                    <td class="down">-1.89%</td>
+                    <td>再失25000关口</td>
+                </tr>
+                <tr>
+                    <td>恒生科技指数</td>
+                    <td>4,761.54</td>
+                    <td class="down">-3.28%</td>
+                    <td>科网股拖累显著</td>
+                </tr>
+                <tr>
+                    <td>上证指数（3月26日收盘）</td>
+                    <td>—</td>
+                    <td class="down">&gt;-1%</td>
+                    <td>三大股指均跌超1%</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.82rem; color:var(--text-muted);">
+            <a class="source-link" href="https://usstock.jrj.com.cn/2026/03/26161756480397.shtml" target="_blank">📎 港股收评 金融界</a> ｜
+            <a class="source-link" href="https://www.163.com/dy/article/KP0KO51G0512B07B.html" target="_blank">📎 A50期指 每经网</a>
+        </p>
+    </div>
+
+    <!-- ⭐ 专属自选推演 -->
+    <div class="section">
+        <h2 class="section-title"><span class="icon">⭐</span> 专属自选推演</h2>
+
+        <h3 style="font-size:1rem; margin-bottom:14px; color:var(--accent-purple);">📌 个股盘前消息面解读</h3>
+        <div class="stock-grid">
+            <!-- 腾讯 -->
+            <div class="stock-card">
+                <div class="name">腾讯控股</div>
+                <div class="code">0700.HK</div>
+                <div class="news-item">• 港股3月26日收跌 <strong class="down">1.96%</strong></div>
+                <div class="news-item">• 美股ADR隔夜跟跌超2%，中概金龙指数-2.55%</div>
+                <div class="news-item">• AI词元调用量暴增千倍利好长期逻辑，但短期受大盘拖累</div>
+                <div class="news-item">• 持续回购护盘，AI商业化进程稳步推进</div>
+                <div class="verdict verdict-neutral">⚡ 开盘预期：受外围暴跌拖累低开，但护城河深厚，回调即机会</div>
+            </div>
+            <!-- 阿里巴巴 -->
+            <div class="stock-card">
+                <div class="name">阿里巴巴</div>
+                <div class="code">9988.HK</div>
+                <div class="news-item">• 港股3月26日收跌 <strong class="down">4.58%</strong>，领跌科网板块</div>
+                <div class="news-item">• 美股ADR跌超3%，中概股整体承压</div>
+                <div class="news-item">• 外卖大战叫停利好消退，短期缺乏强催化</div>
+                <div class="news-item">• 阿里云AI业务仍是中长期看点</div>
+                <div class="verdict verdict-bearish">⚡ 开盘预期：外围暴跌叠加自身弱势，预计低开2-3%</div>
+            </div>
+            <!-- 美团 -->
+            <div class="stock-card">
+                <div class="name">美团</div>
+                <div class="code">3690.HK</div>
+                <div class="news-item">• 港股3月26日收跌 <strong class="down">3.67%</strong></div>
+                <div class="news-item">• 3月26日发布2025年报，关注具体业绩数据</div>
+                <div class="news-item">• 3月25日因外卖大战叫停美股ADR曾大涨14.43%</div>
+                <div class="news-item">• 市场监管总局召集外卖平台座谈，利好已部分消化</div>
+                <div class="verdict verdict-neutral">⚡ 开盘预期：外围利空 vs 业绩公布，关注盘前资金博弈方向</div>
+            </div>
+            <!-- 蜜雪冰城 -->
+            <div class="stock-card">
+                <div class="name">蜜雪冰城（蜜雪集团）</div>
+                <div class="code">2097.HK</div>
+                <div class="news-item">• 港股3月26日收跌 <strong class="down">6.65%</strong>，报300.6港元</div>
+                <div class="news-item">• 2天市值蒸发约156.4亿港元</div>
+                <div class="news-item">• 2025年营收335.6亿元，仍需寻找新增长点</div>
+                <div class="news-item">• 从IPO认购王到市值持续缩水，估值承压</div>
+                <div class="verdict verdict-bearish">⚡ 开盘预期：叠加外围利空，短期承压，跌破300港元支撑需警惕</div>
+                <p style="margin-top:6px;"><a class="source-link" href="https://hk.stockstar.com/RB2026032600034446.shtml" target="_blank">📎 证券之星</a></p>
+            </div>
+            <!-- 宁德时代 -->
+            <div class="stock-card">
+                <div class="name">宁德时代</div>
+                <div class="code">300750.SZ</div>
+                <div class="news-item">• A股3月26日随大盘下跌</div>
+                <div class="news-item">• 固态电池2027年小批量生产预期持续</div>
+                <div class="news-item">• 3月26日A股锂电/能源金属板块逆势活跃</div>
+                <div class="news-item">• 中东冲突推升油价→新能源替代逻辑受益</div>
+                <div class="verdict verdict-bullish">⚡ 开盘预期：油价高企叠加新能源替代逻辑，防御属性凸显</div>
+                <p style="margin-top:6px;"><a class="source-link" href="https://www.msn.cn/zh-cn/news/other/股市必读-宁德时代-300750-3月18日董秘有最新回复/ar-AA1YXPMw" target="_blank">📎 MSN财经</a></p>
+            </div>
+            <!-- 泡泡玛特 -->
+            <div class="stock-card">
+                <div class="name">泡泡玛特</div>
+                <div class="code">9992.HK</div>
+                <div class="news-item">• 两天暴跌超 <strong class="down">30%</strong>！市值蒸发近2500亿港元</div>
+                <div class="news-item">• 2025年报：营收371.2亿↑184.7%，净利130.8亿↑284.5%</div>
+                <div class="news-item">• 核心风险：LABUBU营收占比升至40%，单一IP依赖加剧</div>
+                <div class="news-item">• 3月26日公司回购394万股，耗资5.99亿港元护盘</div>
+                <div class="news-item">• 今日早盘150.8港元附近企稳</div>
+                <div class="verdict verdict-neutral">⚡ 开盘预期：急跌后技术面超卖，关注150港元支撑，短线博反弹需谨慎</div>
+                <p style="margin-top:6px;">
+                    <a class="source-link" href="https://www.36kr.com/p/3739253486534918" target="_blank">📎 36氪深度</a> ｜
+                    <a class="source-link" href="https://news.qq.com/rain/a/20260326A08LKM00" target="_blank">📎 腾讯新闻</a>
+                </p>
+            </div>
+            <!-- 小米 -->
+            <div class="stock-card">
+                <div class="name">小米集团</div>
+                <div class="code">1810.HK</div>
+                <div class="news-item">• 港股3月26日收跌仅 <strong class="down">0.25%</strong>，表现强势</div>
+                <div class="news-item">• 新SU7首批交付火爆，上市4天即交车</div>
+                <div class="news-item">• SU7 Ultra全年1万辆目标已完成90%预订</div>
+                <div class="news-item">• 汽车+手机+IoT生态持续扩展</div>
+                <div class="verdict verdict-bullish">⚡ 开盘预期：基本面坚挺、前日抗跌，低开幅度有限，逢低可关注</div>
+                <p style="margin-top:6px;"><a class="source-link" href="https://chejiahao.autohome.com.cn/info/25066752" target="_blank">📎 汽车之家</a></p>
+            </div>
+        </div>
+
+        <h3 style="font-size:1rem; margin:20px 0 14px; color:var(--accent-cyan);">📌 自选行业盘前梳理</h3>
+        <div class="industry-card">
+            <h4>🤖 机器人</h4>
+            <p>
+                3月26日板块冲高回落，国证机器人产业指数最终收跌0.7%。<strong>核心催化：</strong>①广东省发布推动制造业与服务业协同融合方案，明确举办"人工智能与机器人应用场景创新大会"，开展智能养老服务机器人试点；②特斯拉Optimus 3确认今夏投产，中信建投看好"物理AI"产业变革；③机器人ETF易方达规模达141亿元，中长期资金持续布局。<br>
+                <strong style="color:var(--accent-gold);">盘前判断：</strong>外围暴跌或拖累短期表现，但政策+产业双催化中长期逻辑不变，逢低关注核心零部件标的。
+            </p>
+            <p style="margin-top:6px;">
+                <a class="source-link" href="https://news.qq.com/rain/a/20260326A08DHZ00" target="_blank">📎 腾讯新闻</a> ｜
+                <a class="source-link" href="https://www.nbd.com.cn/articles/2026-03-26/4309021.html" target="_blank">📎 每日经济新闻</a>
+            </p>
+        </div>
+        <div class="industry-card">
+            <h4>💊 创新药 / 恒生医疗</h4>
+            <p>
+                3月26日港股医药股随大市走弱。但行业底层逻辑持续向好：①国家药审改革持续推进，创新药BD交易活跃；②恒生创新药指数前十权重：百济神州、信达生物、药明生物、康方生物等；③CXO板块随创新药估值修复联动。<br>
+                <strong style="color:var(--accent-gold);">盘前判断：</strong>外围风险或短期压制，但政策暖风+BD催化下，中长期配置价值凸显，关注恒生医疗ETF（513060）。
+            </p>
+        </div>
+        <div class="industry-card">
+            <h4>🔧 芯片半导体</h4>
+            <p>
+                ⚠️ <strong style="color:var(--accent-red);">重大利空预警！</strong>隔夜费城半导体指数暴跌4.79%，谷歌TurboQuant技术冲击存储芯片需求预期。具体：闪迪-11%，应用材料/希捷-8%+，AMD-7.5%，台积电-6.2%，英伟达-4.2%。同步影响：SK海力士、三星跌5-6%。<br>
+                港股3月26日：中芯国际跌近6%，华虹半导体跌超6%，兆易创新跌超7%。<br>
+                <strong>但需注意：</strong>ARM发布自研芯片涨16%、AMD/英特尔宣布CPU涨价，国产替代逻辑未变。<br>
+                <strong style="color:var(--accent-gold);">盘前判断：</strong>今日半导体板块大概率低开，存储方向承压最大。但国产替代+自主可控逻辑仍是中长期主线，急跌后关注超卖反弹机会。
+            </p>
+            <p style="margin-top:6px;">
+                <a class="source-link" href="https://www.eet-china.com/mp/a483724.html" target="_blank">📎 电子工程专辑</a> ｜
+                <a class="source-link" href="https://www.mrchip.cn/newsDetail/37000" target="_blank">📎 IC先生</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- 🎯 趋势推演与潜力热点 -->
+    <div class="section">
+        <h2 class="section-title"><span class="icon">🎯</span> 趋势推演与潜力热点</h2>
+
+        <!-- 热点1：能源/石油 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">1</span>
+                <span>石油能源 / 油气股 🔥🔥🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>美以伊冲突持续升级，霍尔木兹海峡封锁恐慌推升油价。特朗普虽宣布推迟10天打击伊朗能源设施，但地缘不确定性将持续。WTI维持91美元/桶高位。<br>
+                <strong>深层逻辑：</strong>A股3月26日油气/传统能源板块已率先逆势领涨，蓝焰控股涨停。高股息+避险双属性共振，能源股有望成为短期确定性最强的方向。
+            </div>
+            <div class="stocks-tag">
+                <span>中国石油</span><span>中国海油</span><span>蓝焰控股</span><span>广汇能源</span><span>新潮能源</span>
+            </div>
+            <div class="strategy">💡 策略：地缘冲突期间能源股为最强防御+进攻品种，追涨需控制仓位，关注特朗普4月6日前的谈判进展。</div>
+        </div>
+
+        <!-- 热点2：电力高股息 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">2</span>
+                <span>电力 / 高股息红利 🔥🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>全球避险情绪飙升 + 美联储加息预期升温，高股息资产成为资金避风港。3月26日A股电力板块强势：华电能源6天4板、湖南发展3连板。银行板块同步吸引险资等长线配置资金。<br>
+                <strong>深层逻辑：</strong>地缘风险期间，高股息策略历史表现优异。叠加油价高企→电力需求刚性→电力公司盈利稳定的逻辑链。
+            </div>
+            <div class="stocks-tag">
+                <span>华电能源</span><span>湖南发展</span><span>长江电力</span><span>华能水电</span><span>国投电力</span>
+            </div>
+            <div class="strategy">💡 策略：作为避险核心配置，回调可加仓。华电能源已连板，追高需注意获利盘回吐。新进可关注长江电力、华能水电等稳健标的。</div>
+        </div>
+
+        <!-- 热点3：商业航天 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">3</span>
+                <span>商业航天 / SpaceX IPO 🔥🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>SpaceX最快本周提交IPO申请，目标6月挂牌，拟募资超750亿美元，最新估值1.25万亿美元！这将为全球商业航天企业提供史诗级估值锚点。<br>
+                <strong>深层逻辑：</strong>SpaceX IPO将加速国内商业航天"五小龙"上市进程。叠加军事需求（地缘冲突→卫星通信/遥感需求激增），商业航天具备事件催化+政策+需求三重共振。
+            </div>
+            <div class="stocks-tag">
+                <span>航天电子</span><span>中国卫通</span><span>航天动力</span><span>航天科技</span><span>银河电子</span>
+            </div>
+            <div class="strategy">💡 策略：SpaceX IPO进展为强催化事件，板块在3月26日午后已有异动。关注IPO时间表推进节奏，聚焦卫星互联网、火箭发动机核心零部件标的。</div>
+            <p style="margin-top:8px;"><a class="source-link" href="https://cj.sina.com.cn/articles/view/7857201856/1d45362c001903mafm" target="_blank">📎 新浪美股</a></p>
+        </div>
+
+        <!-- 热点4：锂电能源金属 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">4</span>
+                <span>锂电 / 能源金属 / 固态电池 🔥🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>中东冲突推高油价→新能源替代逻辑强化。3月26日A股锂电/能源金属板块逆势活跃，融捷股份3连板。宁德时代固态电池2027年量产预期稳步推进。<br>
+                <strong>深层逻辑：</strong>油价高位→电动车经济性优势扩大→上游锂矿/电池需求预期上修。固态电池产业化节奏加快，题材+基本面双驱动。
+            </div>
+            <div class="stocks-tag">
+                <span>融捷股份</span><span>宁德时代</span><span>天齐锂业</span><span>赣锋锂业</span><span>亿纬锂能</span>
+            </div>
+            <div class="strategy">💡 策略：油价高位期锂电有明确替代逻辑支撑，中期看好。短期融捷股份已3连板，追高风险大；稳健型关注宁德时代、赣锋锂业。</div>
+        </div>
+
+        <!-- 热点5：黄金/贵金属 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">5</span>
+                <span>黄金 / 贵金属 🔥🔥🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>地缘冲突+通胀预期+美元信用动摇三重驱动，黄金避险属性充分释放。中东冲突持续→油价高位→通胀反弹→降息推迟→实物黄金需求暴增。<br>
+                <strong>深层逻辑：</strong>全球央行持续增持黄金储备，黄金长期上行趋势不变。A股黄金概念股历史上在地缘危机期间表现优异。
+            </div>
+            <div class="stocks-tag">
+                <span>山东黄金</span><span>紫金矿业</span><span>中金黄金</span><span>赤峰黄金</span><span>银泰黄金</span>
+            </div>
+            <div class="strategy">💡 策略：黄金是当前最确定的避险方向，地缘冲突不消退则贵金属持续受益。回调即是加仓机会，中长期持有为主。</div>
+        </div>
+
+        <!-- 热点6：军工 -->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">6</span>
+                <span>军工 / 国防安全 🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>美以伊冲突进一步升温，全球军备需求预期升温。美国制定对伊朗"致命一击"军事方案，地缘紧张局势短期难以缓解。<br>
+                <strong>深层逻辑：</strong>国防安全的战略重要性在冲突期间被重新定价。中国军费预算稳步增长+军工企业改革持续推进。
+            </div>
+            <div class="stocks-tag">
+                <span>中航沈飞</span><span>中直股份</span><span>航发动力</span><span>洪都航空</span><span>北方导航</span>
+            </div>
+            <div class="strategy">💡 策略：地缘催化+国防需求双驱动，军工为中期确定性方向。关注航空发动机、导弹武器等核心标的。</div>
+        </div>
+
+        <!-- 热点7：AI算力（逆势布局）-->
+        <div class="hot-card">
+            <div class="hot-title">
+                <span class="num">7</span>
+                <span>AI算力 / 国产算力链（逆势布局）🔥</span>
+            </div>
+            <div class="logic">
+                <strong>催化剂：</strong>谷歌TurboQuant短期利空存储芯片，但也证明AI推理需求持续爆发。国家数据局透露中国日均AI词元调用量突破140万亿，较2024年初暴增超1000倍。ARM下场做芯片涨16%，算力竞争白热化。<br>
+                <strong>深层逻辑：</strong>存储被冲击≠AI需求减弱，反而证明AI应用正在加速落地。国产算力链（昇腾、海光、寒武纪）的自主可控逻辑不受海外技术冲击影响。
+            </div>
+            <div class="stocks-tag">
+                <span>海光信息</span><span>寒武纪</span><span>中科曙光</span><span>浪潮信息</span><span>紫光股份</span>
+            </div>
+            <div class="strategy">💡 策略：外围芯片暴跌短期带来冲击，但国产算力链超卖后可能迎来错杀修复。大胆者可在恐慌低开时左侧布局，保守者等待企稳信号。</div>
+            <p style="margin-top:8px;"><a class="source-link" href="https://www.nbd.com.cn/articles/2026-03-26/4309021.html" target="_blank">📎 每日经济新闻</a></p>
+        </div>
+    </div>
+
+    <!-- 💡 今日投资总基调 -->
+    <div class="section">
+        <h2 class="section-title"><span class="icon">💡</span> 今日投资总基调</h2>
+        <div class="tone-card">
+            <h3>🎯 基调判断：防御为主、逢低布局</h3>
+            <p>
+                <strong>大盘预判：</strong>隔夜美股全线暴跌、纳指跌入修正区间、费半暴跌4.79%，叠加美以伊冲突升级，今日A股大概率低开。但特朗普盘后宣布推迟打击伊朗给出缓和信号，A50期指仅小幅收跌0.08%，暗示市场对最坏情形已有一定消化。<br><br>
+                <strong>风格预判：</strong>今日大概率呈现"大盘价值防御 > 小盘成长进攻"的格局。高股息（电力、银行、能源）和避险资产（黄金）有望逆势走强。科技成长方向（半导体、AI）短期承压，但超卖后可能出现急速修复。<br><br>
+                <strong>总策略：</strong><br>
+                ① <strong>仓位管理：</strong>维持5-6成仓位，不宜满仓抄底也不宜清仓恐慌<br>
+                ② <strong>防御配置：</strong>加大能源、黄金、电力高股息等避险方向的配置<br>
+                ③ <strong>逆向思维：</strong>半导体/AI若出现恐慌性低开（-3%以上），可分批左侧布局国产算力链<br>
+                ④ <strong>密切跟踪：</strong>美伊谈判进展（4月6日前为关键窗口）、谷歌TurboQuant技术后续影响评估
+            </p>
+        </div>
+    </div>
+
+    <!-- ⚠️ 风险提示 -->
+    <div class="section">
+        <h2 class="section-title"><span class="icon">⚠️</span> 风险提示</h2>
+
+        <div class="risk-item">
+            <strong>🔴 地缘风险（最大不确定性）：</strong>美以伊冲突若进一步升级，霍尔木兹海峡被封锁将引发全球能源供应链危机。特朗普4月6日前为关键窗口，若谈判破裂，全球市场可能出现更剧烈波动。
+        </div>
+        <div class="risk-item">
+            <strong>🔴 美联储加息风险：</strong>中东冲突推升油价→通胀预期升温→美联储理事已发鹰派信号。若年内加息兑现，全球流动性将进一步收紧，对科技股/成长股估值压制最为直接。
+        </div>
+        <div class="risk-item">
+            <strong>🟡 半导体存储板块短期冲击：</strong>谷歌TurboQuant技术对存储需求预期的冲击尚未被市场充分消化，美光已从高点回撤超23%。A股/港股存储概念股（兆易创新、中芯国际、华虹半导体）今日面临较大调整压力。
+        </div>
+        <div class="risk-item">
+            <strong>🟡 泡泡玛特回调风险：</strong>两天暴跌30%后虽有5.99亿回购护盘，但LABUBU单一IP风险未解、Q4增速放缓、估值仍高。反弹可能是"死猫跳"，追涨需极度谨慎。
+        </div>
+        <div class="risk-item">
+            <strong>🟡 限售股解禁：</strong>3月28日（明日）共11家公司解禁，合计解禁市值约177.46亿元，需关注相关个股的抛压风险。
+            <a class="source-link" href="https://finance.eastmoney.com/a/202503283358619319.html" target="_blank">📎 东方财富</a>
+        </div>
+        <div class="risk-item">
+            <strong>🟡 快手暴跌传导效应：</strong>港股3月26日快手大跌14.04%，短视频/直播赛道估值面临重新审视。需关注是否传导至A股相关标的。
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p>⚠️ 本报告基于公开市场信息整理，不构成投资建议。股市有风险，投资需谨慎。</p>
+        <p style="margin-top:6px;">数据来源：金融界、新浪财经、每日经济新闻、36氪、电子工程专辑、同花顺、东方财富 等</p>
+        <p style="margin-top:4px;">报告生成时间：2026-03-27 09:00</p>
+    </div>
+
+</div>
+</body>
+</html>
