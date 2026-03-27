@@ -1,218 +1,134 @@
 
-<!-- ==================== Medical Section ==================== -->
-<section class="category" id="medical">
-<h2>⚕️ Medical LLMs</h2>
-
-<!-- Paper 10: S4CMDR -->
-<div class="paper" id="paper-s4cmdr">
-<h3>S4CMDR: A Metadata Repository for Electronic Health Records</h3>
-<div class="meta">Jiawei Zhao, Md Shamim Ahmed et al. · arXiv:2603.24118 · cs.IR · <a href="https://arxiv.org/abs/2603.24118" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>电子健康记录（EHR）是医疗 ML 的基础数据源，但 EHR 标准因国家和医院而异（如 HL7 FHIR、ICD-10、SNOMED CT 等混用），导致数据不兼容。这种碎片化严重限制了大规模和跨机构的 ML 应用。例如，使用美国医院数据训练的疾病预测模型通常无法直接部署到欧洲医院，因为特征定义、编码体系和数据结构可能完全不同。建立一个标准化的元数据仓库是解决这一问题的关键。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① ISO 11179-3 元数据标准化</div>
-<p>S4CMDR 基于 ISO 11179-3 标准构建，将每个 EHR 数据元素分解为三层抽象：</p>
-<ul>
-<li><strong>概念域 (Conceptual Domain)：</strong>定义数据的语义含义（如"血压测量"）</li>
-<li><strong>值域 (Value Domain)：</strong>定义允许的值范围和格式（如"收缩压: 60-250 mmHg"）</li>
-<li><strong>数据元素 (Data Element)：</strong>特定系统中的具体实现（如"BP_SYSTOLIC, INT, FHIR.Observation"）</li>
-</ul>
-<p>兼容性判断基于概念域和值域的映射：</p>
-$$\text{Compatible}(DE_A, DE_B) = \mathbb{1}[\text{CD}(DE_A) \equiv \text{CD}(DE_B)] \wedge \text{VD\_Overlap}(DE_A, DE_B) > \tau$$
+<!-- ==================== SECTION: Medical ==================== -->
+<div class="section-header">
+  <span class="icon">⚕️</span>
+  <h2>Medical LLMs</h2>
 </div>
 
-<div class="method-block">
-<div class="method-title">② 自中而外标准化 (Middle-out Approach)</div>
-<p>不同于自顶向下（强制统一标准）或自底向上（从数据推断）的方法，S4CMDR 采用自中而出策略：</p>
-<ol>
-<li><strong>中间层：</strong>定义一组"桥接概念"（Bridge Concepts），覆盖常见临床数据（如诊断、药物、实验室检查）</li>
-<li><strong>向上映射：</strong>每个桥接概念链接到国际标准（ICD-10、SNOMED CT、LOINC 等）</li>
-<li><strong>向下映射：</strong>每个参与机构将本地数据元素映射到桥接概念</li>
-</ol>
-<p>这种设计最大限度减少了各机构的改造成本。映射覆盖率定义为：</p>
-$$\text{Coverage}(H_i) = \frac{|\{DE \in H_i : \exists BC, \text{mapped}(DE, BC)\}|}{|H_i|}$$
+<!-- Paper 11 -->
+<div class="paper-card" id="paper-11">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.24772" target="_blank">Evaluating Fine-Tuned LLM Model For Medical Transcription With Small Low-Resource Languages Validated Dataset</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.24772</span>
+    <span>👤 Mohammed Nowshad Ruhani Chowdhury 等</span>
+    <span>📅 2026-03-25</span>
+    <span class="tag tag-medical">⚕️ Medical</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>电子健康记录（EHR）的管理负担是导致医生职业倦怠的重要因素，对于<strong>低资源语言</strong>（如芬兰语）更为严峻——缺乏足够的训练数据来构建有效的转录工具。本文探索在极小规模验证数据集上微调 LLaMA-3.1-8B 用于芬兰语医疗对话转录，揭示了一个有趣发现：n-gram 重叠低但语义相似度高。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>数据集构建与预处理</h4>
+    <p>在 Metropolia 应用科学大学收集学生模拟的临床对话（芬兰语），经过受控预处理：<br>
+    (a) <strong>口语→书面转换</strong>：芬兰语口语存在大量缩略（如 "mä" → "minä"），需标准化<br>
+    (b) <strong>医学术语对齐</strong>：将患者描述映射到 ICD-10-FI 标准编码<br>
+    (c) <strong>隐私脱敏</strong>：替换姓名、日期等 PHI 信息<br>
+    最终数据集规模较小（论文未披露确切数量，但强调为"small validated corpus"），使用七折交叉验证以最大化有效样本量。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>LoRA 微调策略</h4>
+    <p>使用参数高效微调（PEFT）中的 LoRA 方法微调 LLaMA-3.1-8B：$$W' = W + \Delta W = W + BA$$ 其中 \(B \in \mathbb{R}^{d \times r}\), \(A \in \mathbb{R}^{r \times k}\)，秩 \(r\) 设为 16。训练目标：给定对话音频的文本转写作为输入，生成结构化的临床摘要。损失函数：$$\mathcal{L} = -\sum_t \log p_\theta(y_t | y_{<t}, x)$$ 其中 \(x\) 是对话转写，\(y\) 是参考临床摘要。训练配置：学习率 2e-4，batch size 4，warmup 10%。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>多维度评估框架</h4>
+    <p>采用三类指标评估微调效果：<br>
+    <strong>表面匹配</strong>：BLEU（n-gram 精确率）和 ROUGE-L（最长公共子序列）<br>
+    <strong>语义匹配</strong>：BERTScore（基于嵌入的 F1）<br>
+    <strong>临床准确性</strong>：人工评估关键诊断信息的保留率<br>
+    关键发现是<strong>BLEU 低但 BERTScore 高</strong>的矛盾，说明微调后的模型用<strong>不同的词汇</strong>表达了<strong>相同的临床含义</strong>——这对于口语→书面转换是合理的。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：芬兰语临床对话转录</div>
+    <div class="example-content">
+      <strong>输入（模拟对话片段）：</strong>"Potilas kertoo, et hänellä on ollu päänsärkyy jo kolme päivää... ottanu buranaa mut ei oo auttanu..."<br>
+      <strong>参考转录：</strong>"Potilas raportoi kolmen päivän päänsäryn. Ibuprofeeni ei ole tuonut helpotusta."<br>
+      <strong>微调 LLaMA 输出：</strong>"Potilaalla on ollut päänsärkyä kolme vuorokautta. Ibuprofeiinilla ei ole saatu vastetta."<br>
+      <strong>BLEU = 0.11</strong>（低：用了不同词汇如 "vuorokautta" vs "päivän"）<br>
+      <strong>BERTScore F1 = 0.84</strong>（高：语义几乎等价）<br>
+      <strong>临床准确性：</strong>3/3 关键信息保留（症状、持续时间、药物无效）✅
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型 / 配置</th><th>BLEU↑</th><th>ROUGE-L↑</th><th>BERTScore F1↑</th><th>临床准确率</th></tr>
+    <tr><td>LLaMA-3.1-8B (零样本)</td><td>0.034</td><td>0.218</td><td>0.641</td><td>42%</td></tr>
+    <tr><td>LLaMA-3.1-8B (少样本 3-shot)</td><td>0.067</td><td>0.312</td><td>0.724</td><td>58%</td></tr>
+    <tr><td><span class="highlight-best">LLaMA-3.1-8B (LoRA 微调)</span></td><td><span class="highlight-best">0.121</span></td><td><span class="highlight-best">0.498</span></td><td><span class="highlight-best">0.823</span></td><td><span class="highlight-best">81%</span></td></tr>
+    <tr><td>GPT-4o (零样本)</td><td>0.089</td><td>0.401</td><td>0.789</td><td>73%</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 微调后 BERTScore 从 0.641→0.823（+28%），是最大的改善来源，说明模型学到了芬兰语医学领域的语义表达。② 与 GPT-4o 零样本相比，微调的 8B 模型在 BERTScore 上超越 (+0.034)，且可本地部署保护隐私。③ BLEU 仍然偏低（0.121），因为芬兰语的形态变化丰富（15 种格变化），同一含义可有多种表面形式。局限性：数据集规模小导致泛化能力不确定；仅针对模拟对话而非真实患者；七折交叉验证可能因数据量小而方差较大。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">③ 自动化编目与错误检测</div>
-<p>为减少人工编目错误，S4CMDR 实现了自动化管线：</p>
-<ul>
-<li><strong>格式验证：</strong>检查数据类型、值域范围、必填字段的完整性</li>
-<li><strong>语义验证：</strong>使用预训练的医学 NLP 模型（基于 PubMedBERT）检测概念映射的合理性</li>
-<li><strong>冲突检测：</strong>识别同一概念在不同机构中的矛盾定义（如"Glucose" 在 A 医院指空腹血糖，在 B 医院指随机血糖）</li>
-</ul>
-<p>错误率降低效果：手动编目的错误率约 8.3%，自动化后降至 1.7%。</p>
+<!-- Paper 12 -->
+<div class="paper-card" id="paper-12">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25196" target="_blank">A Decade-Scale Benchmark Evaluating LLMs' Clinical Practice Guidelines Detection and Adherence in Multi-turn Conversations (CPGBench)</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25196</span>
+    <span>👤 Andong Tan, Shuyu Dai, Jinglu Wang 等</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-medical">⚕️ Medical</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>临床实践指南（CPG）是循证医学的基石，但 LLM 是否真的能在多轮对话中正确识别和遵守 CPG，目前没有系统性评估。现有医学 LLM 评测集中在单轮问答，忽略了真实临床场景中的<strong>多轮推理</strong>和<strong>指南遵从</strong>。CPGBench 填补了这一空白，构建了一个跨越十年、24 个专科、9 个国家/地区的大规模基准。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>CPG 文档收集与建议提取</h4>
+    <p>从 9 个国家/地区和 2 个国际组织（WHO、Cochrane）收集十年间发布的 CPG 文档。使用自动化管道提取临床建议：$$\text{CPG Doc} \xrightarrow{\text{NER}} \text{Recommendations} \xrightarrow{\text{Annotation}} (\text{Strength}, \text{Evidence Level}, \text{Specialty})$$ 共提取 32,155 条建议，每条标注：发布机构、日期、国家、专科（24 个）、推荐强度（A/B/C/D）、证据水平（I/II/III/IV）。数据规模为目前最大的 CPG 基准。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>多轮对话生成与评估</h4>
+    <p>对每条建议生成一次多轮临床对话（模拟医患场景），评估两个维度：<br>
+    <strong>检测能力</strong>：LLM 是否能识别对话中涉及的 CPG 建议。检测率定义为：$$\text{Detection Rate} = \frac{|\text{Correctly Identified Recommendations}|}{|\text{Total Relevant Recommendations}|}$$ <strong>遵从能力</strong>：给定 LLM 已识别建议，它的回答是否与建议一致。遵从率定义为：$$\text{Adherence Rate} = \frac{|\text{Responses Consistent with Recommendation}|}{|\text{Detected Recommendations}|}$$</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>引用验证与人工评估</h4>
+    <p>除检测和遵从外，还评估<strong>引用准确性</strong>：LLM 能否正确引用建议的来源（指南标题、发布机构）。这衡量了"知道内容"vs"知道来源"的差距。引用率定义为：$$\text{Citation Rate} = \frac{|\text{Correct Title + Organization}|}{|\text{Detected Recommendations}|}$$ 为验证自动评估的有效性，邀请 56 名不同专科的临床医生进行全面人工评估，计算自动评估与人工评估的 Cohen's κ 一致性。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：心血管专科 CPG 遵从分析</div>
+    <div class="example-content">
+      <strong>CPG 建议：</strong>"ESC 2021: 对于确诊的慢性冠脉综合征患者，推荐长期使用低剂量阿司匹林（75-100mg/d）（推荐强度 A，证据水平 I）"<br>
+      <strong>多轮对话场景：</strong>患者描述胸痛病史 → 医生追问家族史 → 讨论用药方案<br>
+      <strong>GPT-4o 回答：</strong>"建议使用阿司匹林 81mg 每日一次..."<br>
+      → <strong>检测</strong>：✅ 识别到抗血小板治疗建议<br>
+      → <strong>遵从</strong>：✅ 剂量在 75-100mg 范围内<br>
+      → <strong>引用</strong>：❌ 未提及 ESC 2021 指南来源<br><br>
+      <strong>Claude-3.5 回答：</strong>"根据相关心血管指南，推荐阿司匹林 75-100mg/d..."<br>
+      → 检测 ✅，遵从 ✅，引用 ❌（仅说"相关指南"，未指明具体来源）
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型</th><th>检测率↑</th><th>引用率↑</th><th>遵从率↑</th><th>检测-遵从差距</th></tr>
+    <tr><td>GPT-4o</td><td><span class="highlight-best">89.6%</span></td><td><span class="highlight-best">29.7%</span></td><td><span class="highlight-best">63.2%</span></td><td>26.4%</td></tr>
+    <tr><td>Claude-3.5 Sonnet</td><td>85.3%</td><td>22.1%</td><td>58.7%</td><td>26.6%</td></tr>
+    <tr><td>Gemini-1.5 Pro</td><td>82.7%</td><td>18.4%</td><td>52.1%</td><td>30.6%</td></tr>
+    <tr><td>LLaMA-3-70B</td><td>78.2%</td><td>8.9%</td><td>41.5%</td><td>36.7%</td></tr>
+    <tr><td>Mistral-Large</td><td>71.1%</td><td>3.6%</td><td>21.8%</td><td>49.3%</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 检测率（71-89%）远高于引用率（3.6-29.7%），说明 LLM "知道指南内容但不知道指南来源"——这对临床透明性是严重问题。② 遵从率最高仅 63.2%（GPT-4o），意味着即使模型识别到了指南，仍有 36.8% 的情况给出不一致的建议。③ 专科差异显著：心血管和糖尿病领域遵从率较高（~70%），精神科和罕见病领域低至 25-30%。④ 56 名临床医生人工评估与自动评估的 Cohen's κ = 0.78，表明框架可靠。局限性：CPG 建议可能随时间更新，模型训练截止日期后的新指南无法被正确引用；多轮对话由模型生成，可能不完全反映真实临床交互的复杂性。
+  </div>
 </div>
-
-<div class="method-block">
-<div class="method-title">④ 微服务架构与部署</div>
-<p>系统采用微服务架构：认证服务（OAuth 2.0）、元数据服务（REST API）、可视化服务（React 前端）、搜索服务（ElasticSearch）。支持本地 Linux 部署和云托管，通过 Docker Compose 一键启动。关键 API 包括：</p>
-<ul>
-<li><code>POST /register</code>：注册新的数据元素及其映射</li>
-<li><code>GET /discover?concept=X</code>：发现与概念 X 兼容的所有数据源</li>
-<li><code>GET /compatibility?source=A&target=B</code>：计算两个数据注册表的兼容特征集</li>
-</ul>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 跨机构罕见病患者识别</div>
-<p><strong>任务：</strong>在 Screen4Care 项目中，需要从 5 个欧洲医院的 EHR 中识别疑似法布里病（Fabry Disease）的患者。</p>
-<p><strong>挑战：</strong>5 家医院使用 3 种不同编码体系（ICD-10-GM, SNOMED CT, 本地编码），诊断字段名称各异。</p>
-<p><strong>S4CMDR 过程：</strong>(1) 定义桥接概念 "Fabry Disease" 并映射到 ICD-10 E75.2 和 SNOMED 16652001；(2) 各医院注册其诊断字段元数据；(3) 系统自动发现 4/5 医院有兼容字段（Coverage = 80%）；(4) 研究者一键生成跨机构查询。</p>
-<p><strong>结果：</strong>识别出 <strong>23 名</strong>疑似法布里病患者（传统人工跨库查询仅找到 8 名）。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>指标</th><th>传统方法</th><th>S4CMDR</th><th>提升</th></tr>
-<tr><td>编目错误率</td><td>8.3%</td><td>1.7%</td><td>↓ 79.5%</td></tr>
-<tr><td>跨机构兼容性发现</td><td>手动 2-4 周</td><td>自动 < 5 分钟</td><td>↓ 99.8%</td></tr>
-<tr><td>特征覆盖率</td><td>53%</td><td>80%</td><td>↑ 50.9%</td></tr>
-<tr class="highlight"><td><strong>罕见病患者识别</strong></td><td><strong>8 人</strong></td><td><strong>23 人</strong></td><td><strong>↑ 187.5%</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除自动化语义验证后错误率从 1.7% 升至 5.1%，说明 NLP 辅助映射检查至关重要；(2) 自中而出方法比自顶向下方法的采纳率高 3×（各医院仅需映射 20-30 个桥接概念 vs 重新构建整个编码体系）；(3) ElasticSearch 使兼容性查询延迟从平均 8.3s 降至 0.12s。局限性：当前桥接概念覆盖约 200 个常见临床概念，对罕见疾病的覆盖仍需扩展。</p>
-</div>
-
-<!-- Paper 11: Patient Simulator -->
-<div class="paper" id="paper-patsim">
-<h3>Advancing AI Trustworthiness Through Patient Simulation: Risk Assessment of Conversational Agents for Antidepressant Selection</h3>
-<div class="meta">Md Tanvir Rouf Shawon, Mohammad Sabik Irbaz et al. · arXiv:2602.11391 · cs.CL · <a href="https://arxiv.org/abs/2602.11391" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>对话式医疗 AI（如辅助抗抑郁药物选择的决策支持工具）的部署需要系统化的风险评估，但获取足够多样化的真实患者交互数据成本极高且涉及伦理问题。现有评估要么规模太小（几十例），要么未能覆盖健康素养水平、行为模式等关键人口学维度。需要一个可扩展的患者模拟器来进行自动化、可控的风险评估。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 三层档案系统 (Triple-Profile Architecture)</div>
-<p>模拟器为每个虚拟患者生成三个独立可控的档案：</p>
-<ul>
-<li><strong>医疗档案 (Medical Profile)：</strong>从 All of Us EHR 数据库中，使用风险比门控提取真实的健康状况组合。门控条件：</li>
-</ul>
-$$P(\text{profile}_m) \propto \prod_{d \in \text{diagnoses}} \text{HR}(d) \cdot \mathbb{1}[\text{HR}(d) > \tau_{\text{risk}}]$$
-<ul>
-<li><strong>语言档案 (Linguistic Profile)：</strong>模拟不同健康素养水平（有限/基本/熟练）和疾病特定的沟通模式</li>
-<li><strong>行为档案 (Behavioral Profile)：</strong>代表合作型、分心型和对抗型三种患者行为</li>
-</ul>
-</div>
-
-<div class="method-block">
-<div class="method-title">② NIST AI RMF 对齐的评估框架</div>
-<p>评估框架对齐 NIST AI 风险管理框架的可信度要求。对于每次模拟对话 \(\tau\)，计算多维风险分数：</p>
-$$\text{Risk}(\tau) = w_1 \cdot (1 - \text{Accuracy}(\tau)) + w_2 \cdot \text{Bias}(\tau) + w_3 \cdot \text{Safety}(\tau)$$
-<p>其中准确率通过 Rank-1 概念检索率衡量（AI 是否正确识别了最相关的医学概念）。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 医疗概念保真度验证</div>
-<p>为确保模拟的真实性，每个生成的患者陈述都经过医疗概念提取和保真度检查：</p>
-$$\text{Fidelity}(\text{utterance}) = \frac{|\text{ExtractedConcepts} \cap \text{ProfileConcepts}|}{|\text{ProfileConcepts}|}$$
-<p>使用 MedCAT 进行概念提取，在 8,210 个医疗概念上达到了 96.6% 的保真度。同时经人类注释员验证（κ = 0.73）和 LLM 评判员验证（κ = 0.78）双重确认。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 健康素养影响量化</div>
-<p>关键发现是健康素养水平对 AI 性能的单调影响。定义素养敏感性：</p>
-$$\text{LitSens} = \frac{\text{Perf}(\text{proficient}) - \text{Perf}(\text{limited})}{\text{Perf}(\text{proficient})}$$
-<p>在 500 次模拟对话中，Rank-1 概念检索率从有限素养的 47.6% 到熟练素养的 81.9%，\(\text{LitSens} = 0.419\)。这意味着 AI 决策支持工具对低健康素养患者的服务质量严重不足。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 低健康素养对抗型患者</div>
-<p><strong>患者档案：</strong>55 岁女性，主要诊断：重度抑郁症（MDD）+ 2 型糖尿病。健康素养：有限。行为：对抗型。</p>
-<p><strong>模拟对话：</strong></p>
-<p><strong>AI：</strong>"请告诉我您目前在服用哪些药物？"</p>
-<p><strong>患者（模拟）：</strong>"就是那个白色的小药片，每天早上吃的。还有一个让我犯困的。"（有限素养 → 无法提供药物名称）</p>
-<p><strong>AI 的 Rank-1 检索：</strong>匹配到 "Metformin"（正确 ✓）和 "Trazodone"（错误 ✗，实际为 Amitriptyline）。</p>
-<p><strong>保真度：</strong>94.2%（患者的描述准确反映了档案中的症状和用药模式）。</p>
-<p><strong>风险评估：</strong>因错误识别用药，AI 可能推荐与 Amitriptyline 有不良相互作用的抗抑郁药。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>健康素养水平</th><th>Rank-1 检索率 ↑</th><th>推荐质量 ↑</th><th>安全事件率 ↓</th></tr>
-<tr><td>有限 (Limited)</td><td>47.6%</td><td>52.3%</td><td>12.4%</td></tr>
-<tr><td>基本 (Adequate)</td><td>68.1%</td><td>71.8%</td><td>5.7%</td></tr>
-<tr class="highlight"><td><strong>熟练 (Proficient)</strong></td><td><strong>81.9%</strong></td><td><strong>84.5%</strong></td><td><strong>2.1%</strong></td></tr>
-<tr><td colspan="4" style="text-align:center; color:var(--muted)">档案一致性：医疗 κ=0.73 | 行为 κ=0.93 | 语言 κ=0.61</td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除行为档案（全部设为合作型）后安全事件率降至 3.8%，说明对抗型行为显著增加风险；(2) 使用 GPT-4 替代专用 LLM 生成患者回复可将保真度从 96.6% 提升至 97.8%，但成本增加 20×；(3) 500 次模拟提供了足够的统计效力（95% CI 宽度 < 3%）。局限性：当前仅针对抗抑郁药选择场景验证，需扩展到其他临床决策领域；语言档案的一致性（κ=0.61）有待提升。</p>
-</div>
-
-<!-- Paper 12: RAVEN -->
-<div class="paper" id="paper-raven">
-<h3>RAVEN: Scaling Recurrence-aware Foundation Models for Clinical Records via Next-Visit Prediction</h3>
-<div class="meta">Haresh Rengaraj Rajamohan, Xiang Gao et al. · arXiv:2603.24562 · cs.LG · <a href="https://arxiv.org/abs/2603.24562" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>大规模预训练已彻底改变了语言建模，但在结构化电子健康记录（EHR）领域的潜力尚未被充分挖掘。现有 EHR 预训练方法大多采用"下一个 token 预测"范式，但这种方法忽略了 EHR 的独特时间结构——患者的临床事件按"就诊"（visit）自然组织，每次就诊包含一组同时发生的临床事件。需要一种能感知这种循环时间结构的基础模型。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 循环感知的下次就诊预测 (Recurrence-aware Next-Visit Prediction)</div>
-<p>RAVEN 将 EHR 序列建模为就诊级别的预测任务。给定患者的就诊历史 \(V = (v_1, v_2, ..., v_T)\)，其中每次就诊 \(v_t = \{e_t^1, ..., e_t^{n_t}\}\) 包含 \(n_t\) 个临床事件（诊断码、药物码、检查码等），模型预测下次就诊的事件集合：</p>
-$$P(v_{T+1} | v_1, ..., v_T) = \prod_{j=1}^{n_{T+1}} P(e_{T+1}^j | v_1, ..., v_T, e_{T+1}^{<j})$$
-<p>关键区别：标准 next-token 预测将所有 token 视为平等，而 RAVEN 在就诊边界处使用特殊的分隔符和时间编码来建模循环模式。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② 循环事件与新发事件的区分</div>
-<p>论文发现了 EHR 基础模型评估中的一个关键缺陷：当重复事件（如慢性病每次就诊都出现的诊断码）与新发事件未加区分时，模型可以通过简单"复制"上次就诊的事件来获得虚高分数。RAVEN 引入事件类型标记：</p>
-$$\text{Type}(e_t^j) = \begin{cases} \text{RECURRENT} & \text{if } e_t^j \in \bigcup_{s<t} v_s \\ \text{NEW} & \text{otherwise} \end{cases}$$
-<p>评估时分别报告循环事件和新发事件的预测性能。新发事件的预测更具临床价值（如预测新的疾病发作），也更困难。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 数据受限下的扩展行为</div>
-<p>利用 100 万+ 患者数据研究扩展行为。发现在数据受限的医疗领域，遵循不同于 Chinchilla 定律的扩展规律：</p>
-$$L(N, D) = \alpha \cdot N^{-\beta} + \gamma \cdot D^{-\delta} + L_{\infty}$$
-<p>其中 \(N\) 是模型参数量，\(D\) 是数据量。关键发现：\(\delta \gg \beta\)（数据的边际价值远超参数），意味着在 EHR 领域，增加数据比增加模型规模更重要。当 \(D\) 固定时，超过一定模型规模后 loss 不再下降甚至回升（过拟合）。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 零样本疾病发病率预测</div>
-<p>训练完成后，RAVEN 可以在不进行额外参数更新的情况下预测多种疾病的发病率。对于目标疾病 \(d\)，计算其在预测的下次就诊中出现的概率：</p>
-$$P(\text{onset}_d | \text{history}) = \sigma\left(\sum_{j} P(e_{T+1}^j = \text{code}_d | v_1, ..., v_T)\right)$$
-<p>在心力衰竭、糖尿病、慢性肾病等 8 种疾病上的零样本预测性能与完全微调的 Transformer 基线相当。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 心力衰竭发病预测</div>
-<p><strong>患者：</strong>62 岁男性，10 年 EHR 记录，包含 47 次就诊、312 个临床事件。</p>
-<p><strong>历史关键事件：</strong>高血压（2016）、2 型糖尿病（2018）、肥胖（持续）、近 3 次就诊中肌酐持续升高。</p>
-<p><strong>RAVEN 预测（第 48 次就诊）：</strong></p>
-<ul>
-<li>心力衰竭（I50）发病概率：<strong>0.73</strong>（高风险 🔴）</li>
-<li>新处方：利尿剂概率 0.81，ACE 抑制剂调量概率 0.65</li>
-<li>循环事件预测准确率：94.2%（复制效应），新发事件预测准确率：61.7%（真正的预测能力）</li>
-</ul>
-<p><strong>实际：</strong>该患者在第 48 次就诊时确实被诊断为心力衰竭。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>HF AUROC ↑</th><th>DM AUROC ↑</th><th>CKD AUROC ↑</th><th>新发事件 F1 ↑</th><th>外部泛化</th></tr>
-<tr><td>Logistic Regression</td><td>0.72</td><td>0.68</td><td>0.71</td><td>—</td><td>差</td></tr>
-<tr><td>RETAIN</td><td>0.78</td><td>0.74</td><td>0.76</td><td>0.31</td><td>中</td></tr>
-<tr><td>Med-BERT (微调)</td><td>0.83</td><td>0.81</td><td>0.82</td><td>0.38</td><td>中</td></tr>
-<tr><td>Next-Token (模拟)</td><td>0.80</td><td>0.77</td><td>0.79</td><td>0.29</td><td>差</td></tr>
-<tr class="highlight"><td><strong>RAVEN (零样本)</strong></td><td><strong>0.84</strong></td><td><strong>0.80</strong></td><td><strong>0.83</strong></td><td><strong>0.42</strong></td><td><strong>好</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除循环感知（不区分新发/复发事件）后，新发事件 F1 从 0.42 降至 0.29，但整体 AUROC 看似仅降 0.01——这正是论文指出的"虚增性能"问题；(2) 数据从 100 万降至 10 万患者时，AUROC 下降 0.06，而模型参数翻倍仅提升 0.01；(3) 外部泛化实验显示：即使编码映射损耗 15%，RAVEN 的 AUROC 仅下降 0.03。局限性：当前仅处理结构化 EHR 数据，未整合临床笔记等非结构化文本。</p>
-</div>
-
-</section>

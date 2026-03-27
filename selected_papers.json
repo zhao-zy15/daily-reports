@@ -1,387 +1,320 @@
 [
   {
-    "id": "2603.23516",
-    "title": "MSA: Memory Sparse Attention for Efficient End-to-End Memory Model Scaling to 100M Tokens",
-    "summary": "Long-term memory is a cornerstone of human intelligence. Enabling AI to process lifetime-scale information remains a long-standing pursuit in\n  the field. Due to the constraints of full-attention architectures, the effective context length of large language models (LLMs) is typically\n  limited to 1M tokens. Existing approaches, such as hybrid linear attention, fixed-size memory states (e.g., RNNs), and external storage\n  methods like RAG or agent systems, attempt to extend this limit. However, they often suffer from severe precision degradation and rapidly\n  increasing latency as context length grows, an inability to dynamically modify memory content, or a lack of end-to-end optimization. These\n  bottlenecks impede complex scenarios like large-corpus summarization, Digital Twins, and long-history agent reasoning, while limiting memory\n  capacity and slowing inference. We present Memory Sparse Attention (MSA), an end-to-end trainable, efficient, and massively scalable memory\n  model framework. Through core innovations including scalable sparse attention and document-wise RoPE, MSA achieves linear complexity in both\n  training and inference while maintaining exceptional stability, exhibiting less than 9% degradation when scaling from 16K to 100M tokens.\n  Furthermore, KV cache compression, combined with Memory Parallel, enables 100M-token inference on 2xA800 GPUs. We also propose Memory\n  Interleaving to facilitate complex multi-hop reasoning across scattered memory segments. MSA significantly surpasses frontier LLMs,\n  state-of-the-art RAG systems, and leading memory agents in long-context benchmarks. These results demonstrate that by decoupling memory\n  capacity from reasoning, MSA provides a scalable foundation to endow general-purpose models with intrinsic, lifetime-scale memory.",
+    "id": "2603.24652",
+    "title": "Demystifying When Pruning Works via Representation Hierarchies",
+    "summary": "Network pruning, which removes less important parameters or architectures, is often expected to improve efficiency while preserving performance. However, this expectation does not consistently hold across language tasks: pruned models can perform well on non-generative tasks but frequently fail in generative settings. To understand this discrepancy, we analyze network pruning from a representation-hierarchy perspective, decomposing the internal computation of language models into three sequential spaces: embedding (hidden representations), logit (pre-softmax outputs), and probability (post-softmax distributions). We find that representations in the embedding and logit spaces are largely robust to pruning-induced perturbations. However, the nonlinear transformation from logits to probabilities amplifies these deviations, which accumulate across time steps and lead to substantial degradation during generation. In contrast, the stability of the categorical-token probability subspace, together with the robustness of the embedding space, supports the effectiveness of pruning for non-generative tasks such as retrieval and multiple-choice selection. Our analysis disentangles the effects of pruning across tasks and provides practical guidance for its application. Code is available at https://github.com/CASE-Lab-UMD/Pruning-on-Representations",
     "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.23516",
+    "link": "https://arxiv.org/abs/2603.24652",
     "tag": "llm",
-    "tag_score": 8,
-    "all_scores": {
-      "llm": 8,
-      "rl": 1,
-      "agent": 1,
-      "ir": 1
-    },
     "authors": [
-      "Yu Chen",
-      "Runkai Chen",
-      "Sheng Yi",
-      "Xinda Zhao",
-      "Xiaohong Li",
-      "Jianjin Zhang",
-      "Jun Sun",
-      "Chuanrui Hu",
-      "Yunyun Han",
-      "Lidong Bing",
-      "Yafeng Deng",
-      "Tianqiao Chen"
+      "Shwai He",
+      "Guoheng Sun",
+      "Haichao Zhang",
+      "Yun Fu",
+      "Ang Li"
     ],
     "categories": [
       "cs.CL",
-      "cs.AI",
-      "cs.IR"
-    ]
+      "cs.LG"
+    ],
+    "published": "2026-03-25T17:55:52Z",
+    "updated": "2026-03-25T17:55:52Z"
   },
   {
-    "id": "2603.23527",
-    "title": "Compression Method Matters: Benchmark-Dependent Output Dynamics in LLM Prompt Compression",
-    "summary": "Prompt compression is often evaluated by input-token reduction, but its real deployment impact depends on how compression changes output length and total inference cost. We present a controlled replication and extension study of benchmark-dependent output dynamics under aggressive compression, covering 5,400 API calls across three benchmarks and multiple providers. To explain conflicting prior observations, we formalize instruction survival probability (Psi), a structural metric that captures whether task-critical prompt segments remain after truncation. Results show a strong benchmark effect: under r=0.3, DeepSeek exhibits severe output expansion on MBPP (56x, Psi approx 0.15) but substantially lower expansion on HumanEval (5x, Psi approx 0.72), while GPT-4o-mini is comparatively stable across benchmarks. This reconciles the apparent discrepancy between previously reported extreme explosion and lower replication effects by identifying prompt structure, not provider identity alone, as the primary moderator. We introduce the Compression Robustness Index (CRI) for cross-benchmark evaluation and show that single-benchmark assessments can produce misleading conclusions about compression safety and efficiency. To contextualize energy claims, we incorporate companion direct NVML measurements from rented RunPod GPUs and show that token savings can overstate joule savings. These findings motivate benchmark-diverse testing and structure-aware compression policies for reliable, energy-conscious LLM deployment.",
+    "id": "2603.24840",
+    "title": "Prune as You Generate: Online Rollout Pruning for Faster and Better RLVR",
+    "summary": "Reinforcement Learning with Verifiable Rewards (RLVR) has significantly advanced the reasoning capabilities of Large Language Models (LLMs). However, methods such as GRPO and DAPO suffer from substantial computational cost, since they rely on sampling many rollouts for each prompt. Moreover, in RLVR the relative advantage is often sparse: many samples become nearly all-correct or all-incorrect, yielding low within-group reward variance and thus weak learning signals. In this paper, we introduce arrol (Accelerating RLVR via online Rollout Pruning), an online rollout pruning method that prunes rollouts during generation while explicitly steering the surviving ones more correctness-balanced to enhance learning signals. Specifically, arrol trains a lightweight quality head on-the-fly to predict the success probability of partial rollouts and uses it to make early pruning decisions. The learned quality head can further weigh candidates to improve inference accuracy during test-time scaling. To improve efficiency, we present a system design that prunes rollouts inside the inference engine and re-batches the remaining ones for log-probability computation and policy updates. Across GRPO and DAPO on Qwen-3 and LLaMA-3.2 models (1B-8B), arrol improves average accuracy by +2.30 to +2.99 while achieving up to 1.7x training speedup, and yielding up to +8.33 additional gains in average accuracy in test-time scaling. The code is available at https://github.com/Hsu1023/ARRoL.",
     "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.23527",
+    "link": "https://arxiv.org/abs/2603.24840",
     "tag": "llm",
-    "tag_score": 6,
-    "all_scores": {
-      "llm": 6,
-      "rl": 1
-    },
     "authors": [
-      "Warren Johnson"
+      "Haobo Xu",
+      "Sirui Chen",
+      "Ruizhong Qiu",
+      "Yuchen Yan",
+      "Chen Luo",
+      "Monica Cheng",
+      "Jingrui He",
+      "Hanghang Tong"
     ],
     "categories": [
       "cs.CL"
-    ]
+    ],
+    "published": "2026-03-25T22:10:36Z",
+    "updated": "2026-03-25T22:10:36Z"
   },
   {
-    "id": "2504.09604",
-    "title": "Mitigating Many-Shot Jailbreaking",
-    "summary": "Many-shot jailbreaking (MSJ) is an adversarial technique that exploits the long context windows of modern LLMs to circumvent model safety training by including in the prompt many examples of a \"fake\" assistant responding inappropriately before the final request. With enough examples, the model's in-context learning abilities override its safety training, and it responds as if it were the \"fake\" assistant. In this work, we probe the effectiveness of different fine-tuning and input sanitization approaches on mitigating MSJ attacks, alone and in combination. We find incremental mitigation effectiveness for each, and show that the combined techniques significantly reduce the effectiveness of MSJ attacks, while retaining model performance in benign in-context learning and conversational tasks. We suggest that our approach could meaningfully ameliorate this vulnerability if incorporated into model safety post-training.",
-    "primary_cat": "cs.AI",
-    "link": "https://arxiv.org/abs/2504.09604",
+    "id": "2603.25052",
+    "title": "Closing the Confidence-Faithfulness Gap in Large Language Models",
+    "summary": "Large language models (LLMs) tend to verbalize confidence scores that are largely detached from their actual accuracy, yet the geometric relationship governing this behavior remain poorly understood. In this work, we present a mechanistic interpretability analysis of verbalized confidence, using linear probes and contrastive activation addition (CAA) steering to show that calibration and verbalized confidence signals are encoded linearly but are orthogonal to one another -- a finding consistent across three open-weight models and four datasets. Interestingly, when models are prompted to simultaneously reason through a problem and verbalize a confidence score, the reasoning process disrupts the verbalized confidence direction, exacerbating miscalibration. We term this the \"Reasoning Contamination Effect.\" Leveraging this insight, we introduce a two-stage adaptive steering pipeline that reads the model's internal accuracy estimate and steers verbalized output to match it, substantially improving calibration alignment across all evaluated models.",
+    "primary_cat": "cs.CL",
+    "link": "https://arxiv.org/abs/2603.25052",
     "tag": "llm",
-    "tag_score": 6,
-    "all_scores": {
-      "llm": 6
-    },
     "authors": [
-      "Christopher M. Ackerman",
-      "Nina Panickssery"
+      "Miranda Muqing Miao",
+      "Lyle Ungar"
+    ],
+    "categories": [
+      "cs.CL",
+      "cs.AI"
+    ],
+    "published": "2026-03-26T05:42:04Z",
+    "updated": "2026-03-26T05:42:04Z"
+  },
+  {
+    "id": "2603.25112",
+    "title": "Do LLMs Know What They Know? Measuring Metacognitive Efficiency with Signal Detection Theory",
+    "summary": "Standard evaluation of LLM confidence relies on calibration metrics (ECE, Brier score) that conflate two distinct capacities: how much a model knows (Type-1 sensitivity) and how well it knows what it knows (Type-2 metacognitive sensitivity). We introduce an evaluation framework based on Type-2 Signal Detection Theory that decomposes these capacities using meta-d' and the metacognitive efficiency ratio M-ratio. Applied to four LLMs (Llama-3-8B-Instruct, Mistral-7B-Instruct-v0.3, Llama-3-8B-Base, Gemma-2-9B-Instruct) across 224,000 factual QA trials, we find: (1) metacognitive efficiency varies substantially across models even when Type-1 sensitivity is similar -- Mistral achieves the highest d' but the lowest M-ratio; (2) metacognitive efficiency is domain-specific, with different models showing different weakest domains, invisible to aggregate metrics; (3) temperature manipulation shifts Type-2 criterion while meta-d' remains stable for two of four models, dissociating confidence policy from metacognitive capacity; (4) AUROC_2 and M-ratio produce fully inverted model rankings, demonstrating these metrics answer fundamentally different evaluation questions. The meta-d' framework reveals which models \"know what they don't know\" versus which merely appear well-calibrated due to criterion placement -- a distinction with direct implications for model selection, deployment, and human-AI collaboration. Pre-registered analysis; code and data publicly available.",
+    "primary_cat": "cs.CL",
+    "link": "https://arxiv.org/abs/2603.25112",
+    "tag": "llm",
+    "authors": [
+      "Jon-Paul Cacioli"
+    ],
+    "categories": [
+      "cs.CL",
+      "cs.AI"
+    ],
+    "published": "2026-03-26T07:38:28Z",
+    "updated": "2026-03-26T07:38:28Z"
+  },
+  {
+    "id": "2603.25201",
+    "title": "SafeMath: Inference-time Safety improves Math Accuracy",
+    "summary": "Recent research points toward LLMs being manipulated through adversarial and seemingly benign inputs, resulting in harmful, biased, or policy-violating outputs. In this paper, we study an underexplored issue concerning harmful and toxic mathematical word problems. We show that math questions, particularly those framed as natural language narratives, can serve as a subtle medium for propagating biased, unethical, or psychologically harmful content, with heightened risks in educational settings involving children. To support a systematic study of this phenomenon, we introduce ToxicGSM, a dataset of 1.9k arithmetic problems in which harmful or sensitive context is embedded while preserving mathematically well-defined reasoning tasks. Using this dataset, we audit the behaviour of existing LLMs and analyse the trade-offs between safety enforcement and mathematical correctness. We further propose SafeMath -- a safety alignment technique that reduces harmful outputs while maintaining, and in some cases improving, mathematical reasoning performance. Our results highlight the importance of disentangling linguistic harm from math reasoning and demonstrate that effective safety alignment need not come at the cost of accuracy. We release the source code and dataset at https://github.com/Swagnick99/SafeMath/tree/main.",
+    "primary_cat": "cs.CL",
+    "link": "https://arxiv.org/abs/2603.25201",
+    "tag": "llm",
+    "authors": [
+      "Sagnik Basu",
+      "Subhrajit Mitra",
+      "Aman Juneja",
+      "Somnath Banerjee",
+      "Rima Hazra",
+      "Animesh Mukherjee"
+    ],
+    "categories": [
+      "cs.CL",
+      "cs.CY"
+    ],
+    "published": "2026-03-26T09:06:46Z",
+    "updated": "2026-03-26T09:06:46Z"
+  },
+  {
+    "id": "2603.25111",
+    "title": "SEVerA: Verified Synthesis of Self-Evolving Agents",
+    "summary": "Recent advances have shown the effectiveness of self-evolving LLM agents on tasks such as program repair and scientific discovery. In this paradigm, a planner LLM synthesizes an agent program that invokes parametric models, including LLMs, which are then tuned per task to improve performance. However, existing self-evolving agent frameworks provide no formal guarantees of safety or correctness. Because such programs are often executed autonomously on unseen inputs, this lack of guarantees raises reliability and security concerns. We formulate agentic code generation as a constrained learning problem, combining hard formal specifications with soft objectives capturing task utility. We introduce Formally Guarded Generative Models (FGGM), which allow the planner LLM to specify a formal output contract for each generative model call using first-order logic. Each FGGM call wraps the underlying model in a rejection sampler with a verified fallback, ensuring every returned output satisfies the contract for any input and parameter setting. Building on FGGM, we present SEVerA (Self-Evolving Verified Agents), a three-stage framework: Search synthesizes candidate parametric programs containing FGGM calls; Verification proves correctness with respect to hard constraints for all parameter values, reducing the problem to unconstrained learning; and Learning applies scalable gradient-based optimization, including GRPO-style fine-tuning, to improve the soft objective while preserving correctness. We evaluate SEVerA on Dafny program verification, symbolic math synthesis, and policy-compliant agentic tool use ($τ^2$-bench). Across tasks, SEVerA achieves zero constraint violations while improving performance over unconstrained and SOTA baselines, showing that formal behavioral constraints not only guarantee correctness but also steer synthesis toward higher-quality agents.",
+    "primary_cat": "cs.LG",
+    "link": "https://arxiv.org/abs/2603.25111",
+    "tag": "rl",
+    "authors": [
+      "Debangshu Banerjee",
+      "Changming Xu",
+      "Gagandeep Singh"
+    ],
+    "categories": [
+      "cs.LG",
+      "cs.PL",
+      "cs.SE"
+    ],
+    "published": "2026-03-26T07:32:20Z",
+    "updated": "2026-03-26T07:32:20Z"
+  },
+  {
+    "id": "2603.25464",
+    "title": "Maximum Entropy Behavior Exploration for Sim2Real Zero-Shot Reinforcement Learning",
+    "summary": "Zero-shot reinforcement learning (RL) algorithms aim to learn a family of policies from a reward-free dataset, and recover optimal policies for any reward function directly at test time. Naturally, the quality of the pretraining dataset determines the performance of the recovered policies across tasks. However, pre-collecting a relevant, diverse dataset without prior knowledge of the downstream tasks of interest remains a challenge. In this work, we study $\\textit{online}$ zero-shot RL for quadrupedal control on real robotic systems, building upon the Forward-Backward (FB) algorithm. We observe that undirected exploration yields low-diversity data, leading to poor downstream performance and rendering policies impractical for direct hardware deployment. Therefore, we introduce FB-MEBE, an online zero-shot RL algorithm that combines an unsupervised behavior exploration strategy with a regularization critic. FB-MEBE promotes exploration by maximizing the entropy of the achieved behavior distribution. Additionally, a regularization critic shapes the recovered policies toward more natural and physically plausible behaviors. We empirically demonstrate that FB-MEBE achieves and improved performance compared to other exploration strategies in a range of simulated downstream tasks, and that it renders natural policies that can be seamlessly deployed to hardware without further finetuning. Videos and code available on our website.",
+    "primary_cat": "cs.LG",
+    "link": "https://arxiv.org/abs/2603.25464",
+    "tag": "rl",
+    "authors": [
+      "Jiajun Hu",
+      "Nuria Armengol Urpi",
+      "Jin Cheng",
+      "Stelian Coros"
+    ],
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "published": "2026-03-26T14:07:01Z",
+    "updated": "2026-03-26T14:07:01Z"
+  },
+  {
+    "id": "2603.25562",
+    "title": "Revisiting On-Policy Distillation: Empirical Failure Modes and Simple Fixes",
+    "summary": "On-policy distillation (OPD) is appealing for large language model (LLM) post-training because it evaluates teacher feedback on student-generated rollouts rather than fixed teacher traces. In long-horizon settings, however, the common sampled-token variant is fragile: it reduces distribution matching to a one-token signal and becomes increasingly unreliable as rollouts drift away from prefixes the teacher commonly visits. We revisit OPD from the estimator and implementation sides. Theoretically, token-level OPD is biased relative to sequence-level reverse-KL, but it has a much tighter worst-case variance bound; our toy study shows the same tradeoff empirically, with stronger future-reward coupling producing higher gradient variance and less stable learning. Empirically, we identify three failure modes of sampled-token OPD: an imbalanced one-token signal, unreliable teacher guidance on student-generated prefixes, and distortions caused by tokenizer or special-token mismatch. We address these issues with teacher top-K local support matching, implemented as truncated reverse-KL with top-p rollout sampling and special-token masking. Across single-task math reasoning and multi-task agentic-plus-math training, this objective yields more stable optimization and better downstream performance than sampled-token OPD.",
+    "primary_cat": "cs.LG",
+    "link": "https://arxiv.org/abs/2603.25562",
+    "tag": "rl",
+    "authors": [
+      "Yuqian Fu",
+      "Haohuan Huang",
+      "Kaiwen Jiang",
+      "Yuanheng Zhu",
+      "Dongbin Zhao"
     ],
     "categories": [
       "cs.LG",
       "cs.AI",
-      "cs.CR"
-    ]
+      "cs.CL"
+    ],
+    "published": "2026-03-26T15:35:59Z",
+    "updated": "2026-03-26T15:35:59Z"
   },
   {
-    "id": "2603.24372",
-    "title": "Improving Lean4 Autoformalization via Cycle Consistency Fine-tuning",
-    "summary": "Autoformalization - automatically translating natural language mathematical texts into formal proof language such as Lean4 - can help accelerate AI-assisted mathematical research, be it via proof verification or proof search. I fine-tune Qwen3.5-2B with LoRA for natural language to Lean4 formalization on FineLeanCorpus and consider three training regimes: supervised fine-tuning (SFT) with curriculum learning (difficulty 1 to 10), SFT without curriculum ordering, and reinforcement learning using group relative policy optimization (GRPO) with a cycle consistency reward. Cycle consistency measures how well the meaning of a statement is preserved through a NL to Lean4 to NL' loop, computed as cosine similarity of off-the-shelf sentence embeddings. On an unseen subset of FineLeanCorpus (FLC) and on PutnamBench, RL substantially outperforms both SFT variants (mean cycle consistency 0.669 vs. 0.513 on FLC; 0.561 vs. 0.422 on PutnamBench), while increasing cross-entropy loss by only 0.011 nats, with minimal impact on formalization quality. Curriculum ordering provides no measurable benefit over shuffled training.",
+    "id": "2603.24979",
+    "title": "LLM-Driven Reasoning for Constraint-Aware Feature Selection in Industrial Systems",
+    "summary": "Feature selection is a crucial step in large-scale industrial machine learning systems, directly affecting model accuracy, efficiency, and maintainability. Traditional feature selection methods rely on labeled data and statistical heuristics, making them difficult to apply in production environments where labeled data are limited and multiple operational constraints must be satisfied. To address this, we propose Model Feature Agent (MoFA), a model-driven framework that performs sequential, reasoning-based feature selection using both semantic and quantitative feature information. MoFA incorporates feature definitions, importance scores, correlations, and metadata (e.g., feature groups or types) into structured prompts and selects features through interpretable, constraint-aware reasoning. We evaluate MoFA in three real-world industrial applications: (1) True Interest and Time-Worthiness Prediction, where it improves accuracy while reducing feature group complexity, (2) Value Model Enhancement, where it discovers high-order interaction terms that yield substantial engagement gains in online experiments, and (3) Notification Behavior Prediction, where it selects compact, high-value feature subsets that improve both model accuracy and inference efficiency. Together, these results demonstrate the practicality and effectiveness of LLM-based reasoning for feature selection in real production systems.",
     "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.24372",
-    "tag": "rl",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 2,
-      "rl": 5,
-      "ir": 1
-    },
+    "link": "https://arxiv.org/abs/2603.24979",
+    "tag": "agent",
     "authors": [
-      "Arsen Shebzukhov"
+      "Yuhang Zhou",
+      "Zhuokai Zhao",
+      "Ke Li",
+      "Spilios Evmorfos",
+      "Gökalp Demirci",
+      "Mingyi Wang",
+      "Qiao Liu",
+      "Qifei Wang",
+      "Serena Li",
+      "Weiwei Li",
+      "Tingting Wang",
+      "Mingze Gao",
+      "Gedi Zhou",
+      "Abhishek Kumar",
+      "Xiangjun Fan",
+      "Lizhu Zhang",
+      "Jiayi Liu"
     ],
     "categories": [
       "cs.CL"
-    ]
+    ],
+    "published": "2026-03-26T03:10:33Z",
+    "updated": "2026-03-26T03:10:33Z"
   },
   {
-    "id": "2603.23550",
-    "title": "Implicit Turn-Wise Policy Optimization for Proactive User-LLM Interaction",
-    "summary": "Multi-turn human-AI collaboration is fundamental to deploying interactive services such as adaptive tutoring, conversational recommendation, and professional consultation. However, optimizing these interactions via reinforcement learning is hindered by the sparsity of verifiable intermediate rewards and the high stochasticity of user responses. To address these challenges, we introduce Implicit Turn-wise Policy Optimization (ITPO). ITPO leverages an implicit process reward model to derive fine-grained, turn-wise process rewards from sparse outcome signals. Unlike volatile token-level rewards, these turn-level signals exhibit superior robustness and may utilize a normalization mechanism to further enhance training stability. We evaluate ITPO across three representative multi-turn collaborative tasks: math tutoring, document writing, and medical recommendation. Empirical results demonstrate that ITPO, when combined with PPO, GRPO, or RLOO, consistently achieves improved convergence than existing baselines. Elaborate trajectory analysis confirms that ITPO infers turn-wise preferences that are semantically aligned with human judgment. Code is publicly available at https://github.com/Graph-COM/ITPO.",
-    "primary_cat": "cs.LG",
-    "link": "https://arxiv.org/abs/2603.23550",
-    "tag": "rl",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 1,
-      "rl": 5,
-      "medical": 1,
-      "ir": 2
-    },
+    "id": "2603.25176",
+    "title": "Prompt Attack Detection with LLM-as-a-Judge and Mixture-of-Models",
+    "summary": "Prompt attacks, including jailbreaks and prompt injections, pose a critical security risk to Large Language Model (LLM) systems. In production, guardrails must mitigate these attacks under strict low-latency constraints, resulting in a deployment gap in which lightweight classifiers and rule-based systems struggle to generalize under distribution shift, while high-capacity LLM-based judges remain too slow or costly for live enforcement. In this work, we examine whether lightweight, general-purpose LLMs can reliably serve as security judges under real-world production constraints. Through careful prompt and output design, lightweight LLMs are guided through a structured reasoning process involving explicit intent decomposition, safety-signal verification, harm assessment, and self-reflection. We evaluate our method on a curated dataset combining benign queries from real-world chatbots with adversarial prompts generated via automated red teaming (ART), covering diverse and evolving patterns. Our results show that general-purpose LLMs, such as gemini-2.0-flash-lite-001, can serve as effective low-latency judges for live guardrails. This configuration is currently deployed in production as a centralized guardrail service for public service chatbots in Singapore. We additionally evaluate a Mixture-of-Models (MoM) setting to assess whether aggregating multiple LLM judges improves prompt-attack detection performance relative to single-model judges, with only modest gains observed.",
+    "primary_cat": "cs.CL",
+    "link": "https://arxiv.org/abs/2603.25176",
+    "tag": "agent",
     "authors": [
-      "Haoyu Wang",
-      "Yuxin Chen",
-      "Liang Luo",
-      "Buyun Zhang",
-      "Ellie Dingqiao Wen",
-      "Pan Li"
+      "Hieu Xuan Le",
+      "Benjamin Goh",
+      "Quy Anh Tang"
     ],
     "categories": [
+      "cs.CL"
+    ],
+    "published": "2026-03-26T08:47:53Z",
+    "updated": "2026-03-26T08:47:53Z"
+  },
+  {
+    "id": "2603.24772",
+    "title": "Evaluating Fine-Tuned LLM Model For Medical Transcription With Small Low-Resource Languages Validated Dataset",
+    "summary": "Clinical documentation is a critical factor for patient safety, diagnosis, and continuity of care. The administrative burden of EHRs is a significant factor in physician burnout. This is a critical issue for low-resource languages, including Finnish. This study aims to investigate the effectiveness of a domain-aligned natural language processing (NLP); large language model for medical transcription in Finnish by fine-tuning LLaMA 3.1-8B on a small validated corpus of simulated clinical conversations by students at Metropolia University of Applied Sciences. The fine-tuning process for medical transcription used a controlled preprocessing and optimization approach. The fine-tuning effectiveness was evaluated by sevenfold cross-validation. The evaluation metrics for fine-tuned LLaMA 3.1-8B were BLEU = 0.1214, ROUGE-L = 0.4982, and BERTScore F1 = 0.8230. The results showed a low n-gram overlap but a strong semantic similarity with reference transcripts. This study indicate that fine-tuning can be an effective approach for translation of medical discourse in spoken Finnish and support the feasibility of fine-tuning a privacy-oriented domain-specific large language model for clinical documentation in Finnish. Beside that provide directions for future work.",
+    "primary_cat": "cs.CL",
+    "link": "https://arxiv.org/abs/2603.24772",
+    "tag": "medical",
+    "authors": [
+      "Mohammed Nowshad Ruhani Chowdhury",
+      "Mohammed Nowaz Rabbani Chowdhury",
+      "Sakari Lukkarinen"
+    ],
+    "categories": [
+      "cs.CL",
+      "cs.AI",
       "cs.LG"
-    ]
+    ],
+    "published": "2026-03-25T19:44:49Z",
+    "updated": "2026-03-25T19:44:49Z"
   },
   {
-    "id": "2603.19311",
-    "title": "PrefPO: Pairwise Preference Prompt Optimization",
-    "summary": "Prompt engineering is effective but labor-intensive, motivating automated optimization methods. Existing methods typically require labeled datasets, which are often unavailable, and produce verbose, repetitive prompts. We introduce PrefPO, a minimal prompt optimization approach inspired by reinforcement learning from human feedback (RLHF). Its preference-based approach reduces the need for labeled data and hyperparameter tuning-only a starting prompt and natural language criteria are needed. PrefPO uses an LLM discriminator to express pairwise preferences over model outputs and provide feedback to an LLM optimizer, iteratively improving performance. We evaluate PrefPO on 9 BIG-Bench Hard (BBH) tasks and IFEval-Hard, a newly-curated, challenging subset of IFEval. PrefPO matches or exceeds SOTA methods, including GEPA, MIPRO, and TextGrad, on 6/9 tasks and performs comparably to TextGrad on IFEval-Hard (82.4% vs 84.5%). Unlike other methods, PrefPO can optimize in both labeled and unlabeled settings. Without labels, PrefPO closely matches its labeled performance on 6/9 tasks, proving effective without ground truth. PrefPO also improves prompt hygiene: we find existing methods produce prompts 14.7x their original length or with 34% repetitive content; PrefPO reduces these issues by 3-5x. Furthermore, both LLM and human judges rate PrefPO's prompts higher than TextGrad's. Finally, we identify prompt hacking in prompt optimizers, where methods game evaluation criteria, and find PrefPO is susceptible at half the rate of TextGrad (37% vs 86%), generating fewer brittle, misaligned prompts.",
+    "id": "2603.25196",
+    "title": "A Decade-Scale Benchmark Evaluating LLMs' Clinical Practice Guidelines Detection and Adherence in Multi-turn Conversations",
+    "summary": "Clinical practice guidelines (CPGs) play a pivotal role in ensuring evidence-based decision-making and improving patient outcomes. While Large Language Models (LLMs) are increasingly deployed in healthcare scenarios, it is unclear to which extend LLMs could identify and adhere to CPGs during conversations. To address this gap, we introduce CPGBench, an automated framework benchmarking the clinical guideline detection and adherence capabilities of LLMs in multi-turn conversations. We collect 3,418 CPG documents from 9 countries/regions and 2 international organizations published in the last decade spanning across 24 specialties. From these documents, we extract 32,155 clinical recommendations with corresponding publication institute, date, country, specialty, recommendation strength, evidence level, etc. One multi-turn conversation is generated for each recommendation accordingly to evaluate the detection and adherence capabilities of 8 leading LLMs. We find that the 71.1%-89.6% recommendations can be correctly detected, while only 3.6%-29.7% corresponding titles can be correctly referenced, revealing the gap between knowing the guideline contents and where they come from. The adherence rates range from 21.8% to 63.2% in different models, indicating a large gap between knowing the guidelines and being able to apply them. To confirm the validity of our automatic analysis, we further conduct a comprehensive human evaluation involving 56 clinicians from different specialties. To our knowledge, CPGBench is the first benchmark systematically revealing which clinical recommendations LLMs fail to detect or adhere to during conversations. Given that each clinical recommendation may affect a large population and that clinical applications are inherently safety critical, addressing these gaps is crucial for the safe and responsible deployment of LLMs in real world clinical practice.",
     "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.19311",
-    "tag": "rl",
-    "tag_score": 4,
-    "all_scores": {
-      "llm": 1,
-      "rl": 4
-    },
+    "link": "https://arxiv.org/abs/2603.25196",
+    "tag": "medical",
     "authors": [
-      "Rahul Singhal",
-      "Pradyumna Tambwekar",
-      "Karime Maamari"
+      "Andong Tan",
+      "Shuyu Dai",
+      "Jinglu Wang",
+      "Fengtao Zhou",
+      "Yan Lu",
+      "Xi Wang",
+      "Yingcong Chen",
+      "Can Yang",
+      "Shujie Liu",
+      "Hao Chen"
     ],
     "categories": [
-      "cs.CL"
-    ]
-  },
-  {
-    "id": "2602.11224",
-    "title": "Agent-Diff: Benchmarking LLM Agents on Enterprise API Tasks via Code Execution with State-Diff-Based Evaluation",
-    "summary": "We present Agent-Diff, a novel benchmarking framework for evaluating agentic Large Language Models (LLMs) on real-world productivity software API tasks via code execution. Agentic LLM performance varies due to differences in models, external tool access, prompt structures, and agentic frameworks. Benchmarks must make fundamental trade-offs between a sandboxed approach that controls for variation in software environments and more ecologically valid approaches employing real services. Agent-Diff attempts to capture the desirable features of both of these approaches by including access to the real API interfaces for software services while sandboxing the environment in which calls are made, processed, and evaluated. This approach relies on two key innovations. The first is a novel state-diff contract, which separates process from outcome - rather than fuzzy trace or parameter matching, we define task success as whether the expected change in environment state was achieved. The second is a novel sandbox built on containerized replicas of enterprise APIs, allowing all models to interact with the same service interfaces through code execution. This enables controlled evaluation against a common set of state-diff contracts while preserving the structure of real-world API interaction. Using the Agent-Diff framework, we provide benchmarks for nine LLMs across 224 tasks utilizing enterprise software workflows. In addition, we evaluate the robustness of the framework with ablation experiments to assess the contribution of access to API documentation on benchmark performance. Code and data: https://github.com/agent-diff-bench/agent-diff.",
-    "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2602.11224",
-    "tag": "agent",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 4,
-      "agent": 5
-    },
-    "authors": [
-      "Hubert M. Pysklo",
-      "Artem Zhuravel",
-      "Patrick D. Watson"
-    ],
-    "categories": [
-      "cs.SE",
-      "cs.CL"
-    ]
-  },
-  {
-    "id": "2603.23638",
-    "title": "Can LLM Agents Be CFOs? A Benchmark for Resource Allocation in Dynamic Enterprise Environments",
-    "summary": "Large language models (LLMs) have enabled agentic systems that can reason, plan, and act across complex tasks, but it remains unclear whether they can allocate resources effectively under uncertainty. Unlike short-horizon reactive decisions, allocation requires committing scarce resources over time while balancing competing objectives and preserving flexibility for future needs. We introduce EnterpriseArena, the first benchmark for evaluating agents on long-horizon enterprise resource allocation. It instantiates CFO-style decision-making in a 132-month enterprise simulator combining firm-level financial data, anonymized business documents, macroeconomic and industry signals, and expert-validated operating rules. The environment is partially observable and reveals the state only through budgeted organizational tools, forcing agents to trade off information acquisition against conserving scarce resources. Experiments on eleven advanced LLMs show that this setting remains highly challenging: only 16% of runs survive the full horizon, and larger models do not reliably outperform smaller ones. These results identify long-horizon resource allocation under uncertainty as a distinct capability gap for current LLM agents.",
-    "primary_cat": "cs.AI",
-    "link": "https://arxiv.org/abs/2603.23638",
-    "tag": "agent",
-    "tag_score": 4,
-    "all_scores": {
-      "llm": 2,
-      "agent": 4
-    },
-    "authors": [
-      "Yi Han",
-      "Lingfei Qian",
-      "Yan Wang",
-      "Yueru He",
-      "Xueqing Peng",
-      "Dongji Feng",
-      "Yankai Chen",
-      "Haohang Li",
-      "Yupeng Cao",
-      "Jimin Huang",
-      "Xue Liu",
-      "Jian-Yun Nie",
-      "Sophia Ananiadou"
-    ],
-    "categories": [
+      "cs.CL",
       "cs.AI"
-    ]
-  },
-  {
-    "id": "2603.23838",
-    "title": "Learning-guided Prioritized Planning for Lifelong Multi-Agent Path Finding in Warehouse Automation",
-    "summary": "Lifelong Multi-Agent Path Finding (MAPF) is critical for modern warehouse automation, which requires multiple robots to continuously navigate conflict-free paths to optimize the overall system throughput. However, the complexity of warehouse environments and the long-term dynamics of lifelong MAPF often demand costly adaptations to classical search-based solvers. While machine learning methods have been explored, their superiority over search-based methods remains inconclusive. In this paper, we introduce Reinforcement Learning (RL) guided Rolling Horizon Prioritized Planning (RL-RH-PP), the first framework integrating RL with search-based planning for lifelong MAPF. Specifically, we leverage classical Prioritized Planning (PP) as a backbone for its simplicity and flexibility in integrating with a learning-based priority assignment policy. By formulating dynamic priority assignment as a Partially Observable Markov Decision Process (POMDP), RL-RH-PP exploits the sequential decision-making nature of lifelong planning while delegating complex spatial-temporal interactions among agents to reinforcement learning. An attention-based neural network autoregressively decodes priority orders on-the-fly, enabling efficient sequential single-agent planning by the PP planner. Evaluations in realistic warehouse simulations show that RL-RH-PP achieves the highest total throughput among baselines and generalizes effectively across agent densities, planning horizons, and warehouse layouts. Our interpretive analyses reveal that RL-RH-PP proactively prioritizes congested agents and strategically redirects agents from congestion, easing traffic flow and boosting throughput. These findings highlight the potential of learning-guided approaches to augment traditional heuristics in modern warehouse automation.",
-    "primary_cat": "cs.AI",
-    "link": "https://arxiv.org/abs/2603.23838",
-    "tag": "agent",
-    "tag_score": 4,
-    "all_scores": {
-      "rl": 2,
-      "agent": 4,
-      "ir": 1
-    },
-    "authors": [
-      "Han Zheng",
-      "Yining Ma",
-      "Brandon Araki",
-      "Jingkai Chen",
-      "Cathy Wu"
     ],
-    "categories": [
-      "cs.AI",
-      "cs.RO"
-    ]
+    "published": "2026-03-26T09:00:55Z",
+    "updated": "2026-03-26T09:00:55Z"
   },
   {
-    "id": "2603.24118",
-    "title": "S4CMDR: a metadata repository for electronic health records",
-    "summary": "Background: Electronic health records (EHRs) enable machine learning for diagnosis, prognosis, and clinical decision support. However, EHR standards vary by country and hospital, making records often incompatible. This limits large-scale and cross-clinical machine learning. To address such complexity, a metadata repository cataloguing available data elements, their value domains, and their compatibility is an essential tool. This allows researchers to leverage relevant data for tasks such as identifying undiagnosed rare disease patients.\n  Results: Within the Screen4Care project, we developed S4CMDR, an open-source metadata repository built on ISO 11179-3, based on a middle-out metadata standardisation approach. It automates cataloguing to reduce errors and enable the discovery of compatible feature sets across data registries. S4CMDR supports on-premise Linux deployment and cloud hosting, with state-of-the-art user authentication and an accessible interface.\n  Conclusions: S4CMDR is a clinical metadata repository registering and discovering compatible EHR records. Novel contributions include a microservice architecture, a middle-out standardisation approach, and a user-friendly interface for error-free data registration and visualisation of metadata compatibility. We validate S4CMDR's case studies involving rare disease patients. We invite clinical data holders to populate S4CMDR using their metadata to validate the generalisability and support further development.",
-    "primary_cat": "cs.IR",
-    "link": "https://arxiv.org/abs/2603.24118",
-    "tag": "medical",
-    "tag_score": 7,
-    "all_scores": {
-      "rl": 1,
-      "medical": 7,
-      "ir": 2
-    },
-    "authors": [
-      "Jiawei Zhao",
-      "Md Shamim Ahmed",
-      "Nicolai Dinh Khang Truong",
-      "Verena Schuster",
-      "Rudolf Mayer",
-      "Richard Röttger"
-    ],
-    "categories": [
-      "cs.IR"
-    ]
-  },
-  {
-    "id": "2602.11391",
-    "title": "Advancing AI Trustworthiness Through Patient Simulation: Risk Assessment of Conversational Agents for Antidepressant Selection",
-    "summary": "Objective: This paper introduces a patient simulator for scalable, automated evaluation of healthcare conversational agents, generating realistic, controllable interactions that systematically vary across medical, linguistic, and behavioral dimensions to support risk assessment across populations. Methods: Grounded in the NIST AI Risk Management Framework, the simulator integrates three profile components: (1) medical profiles constructed from All of Us electronic health records using risk-ratio gating; (2) linguistic profiles modeling health literacy and condition-specific communication; and (3) behavioral profiles representing cooperative, distracted, and adversarial engagement. Profiles were evaluated against NIST AI RMF trustworthiness requirements and assessed against an AI Decision Aid for antidepressant selection. Results: Across 500 simulated conversations, the simulator revealed monotonic degradation in AI Decision Aid performance across health literacy levels: Rank-1 concept retrieval ranged from 47.6% (limited) to 81.9% (proficient), with corresponding recommendation degradation. Medical concept fidelity was high (96.6% across 8,210 concepts), validated by human annotators (0.73 kappa) and an LLM judge with comparable agreement (0.78 kappa). Behavioral profiles were reliably distinguished (0.93 kappa), and linguistic profiles showed moderate agreement (0.61 kappa). Conclusions: The simulator exposes measurable performance risks in conversational healthcare AI. Health literacy emerged as a primary risk factor with direct implications for equitable AI deployment.",
-    "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2602.11391",
-    "tag": "medical",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 1,
-      "rl": 1,
-      "agent": 1,
-      "medical": 5
-    },
-    "authors": [
-      "Md Tanvir Rouf Shawon",
-      "Mohammad Sabik Irbaz",
-      "Hadeel R. A. Elyazori",
-      "Keerti Reddy Resapu",
-      "Yili Lin",
-      "Vladimir Franzuela Cardenas",
-      "Farrokh Alemi",
-      "Kevin Lybarger"
-    ],
-    "categories": [
-      "cs.CL"
-    ]
-  },
-  {
-    "id": "2603.24562",
-    "title": "Scaling Recurrence-aware Foundation Models for Clinical Records via Next-Visit Prediction",
-    "summary": "While large-scale pretraining has revolutionized language modeling, its potential remains underexplored in healthcare with structured electronic health records (EHRs). We present RAVEN, a novel generative pretraining strategy for sequential EHR data based on Recurrence-Aware next-Visit EveNt prediction. Leveraging a dataset of over one million unique individuals, our model learns to autoregressively generate tokenized clinical events for the next visit conditioned on patient history. We introduce regularization on predicting repeated events and highlight a key pitfall in EHR-based foundation model evaluations: repeated event tokens can inflate performance metrics when new onsets are not distinguished from subsequent occurrences. Furthermore, we empirically investigate the scaling behaviors in a data-constrained, compute-saturated regime, showing that simply increasing model size is suboptimal without commensurate increases in data volume. We evaluate our model via zero-shot prediction for forecasting the incidence of a diverse set of diseases, where it rivals fully fine-tuned representation-based Transformer models and outperforms widely used simulation-based next-token approaches. Finally, without additional parameter updates, we show that RAVEN can generalize to an external patient cohort under lossy clinical code mappings and feature coverage gaps.",
+    "id": "2603.24925",
+    "title": "GraphER: An Efficient Graph-Based Enrichment and Reranking Method for Retrieval-Augmented Generation",
+    "summary": "Semantic search in retrieval-augmented generation (RAG) systems is often insufficient for complex information needs, particularly when relevant evidence is scattered across multiple sources. Prior approaches to this problem include agentic retrieval strategies, which expand the semantic search space by generating additional queries. However, these methods do not fully leverage the organizational structure of the data and instead rely on iterative exploration, which can lead to inefficient retrieval. Another class of approaches employs knowledge graphs to model non-semantic relationships through graph edges. Although effective in capturing richer proximities, such methods incur significant maintenance costs and are often incompatible with the vector stores used in most production systems. To address these limitations, we propose GraphER, a graph-based enrichment and reranking method that captures multiple forms of proximity beyond semantic similarity. GraphER independently enriches data objects during offline indexing and performs graph-based reranking over candidate objects at query time. This design does not require a knowledge graph, allowing GraphER to integrate seamlessly with standard vector stores. In addition, GraphER is retriever-agnostic and introduces negligible latency overhead. Experiments on multiple retrieval benchmarks demonstrate the effectiveness of the proposed approach.",
     "primary_cat": "cs.LG",
-    "link": "https://arxiv.org/abs/2603.24562",
-    "tag": "medical",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 4,
-      "medical": 5,
-      "ir": 1
-    },
-    "authors": [
-      "Haresh Rengaraj Rajamohan",
-      "Xiang Gao",
-      "Weicheng Zhu",
-      "Shih-Lun Huang",
-      "Long Chen",
-      "Gabe Schulman",
-      "Huizhen Jin",
-      "Shengduo Li",
-      "Yixuan Wang",
-      "Huidi Yang",
-      "Kyunghyun Cho",
-      "Cem M. Deniz",
-      "Narges Razavian"
-    ],
-    "categories": [
-      "cs.LG"
-    ]
-  },
-  {
-    "id": "2603.23512",
-    "title": "S-Path-RAG: Semantic-Aware Shortest-Path Retrieval Augmented Generation for Multi-Hop Knowledge Graph Question Answering",
-    "summary": "We present S-Path-RAG, a semantic-aware shortest-path Retrieval-Augmented Generation framework designed to improve multi-hop question answering over large knowledge graphs. S-Path-RAG departs from one-shot, text-heavy retrieval by enumerating bounded-length, semantically weighted candidate paths using a hybrid weighted $k$-shortest, beam, and constrained random-walk strategy, learning a differentiable path scorer together with a contrastive path encoder and lightweight verifier, and injecting a compact soft mixture of selected path latents into a language model via cross-attention. The system runs inside an iterative Neural-Socratic Graph Dialogue loop in which concise diagnostic messages produced by the language model are mapped to targeted graph edits or seed expansions, enabling adaptive retrieval when the model expresses uncertainty. This combination yields a retrieval mechanism that is both token-efficient and topology-aware while preserving interpretable path-level traces for diagnostics and intervention. We validate S-Path-RAG on standard multi-hop KGQA benchmarks and through ablations and diagnostic analyses. The results demonstrate consistent improvements in answer accuracy, evidence coverage, and end-to-end efficiency compared to strong graph- and LLM-based baselines. We further analyze trade-offs between semantic weighting, verifier filtering, and iterative updates, and report practical recommendations for deployment under constrained compute and token budgets.",
-    "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.23512",
+    "link": "https://arxiv.org/abs/2603.24925",
     "tag": "ir",
-    "tag_score": 6,
-    "all_scores": {
-      "llm": 3,
-      "rl": 1,
-      "ir": 6
-    },
     "authors": [
-      "Rong Fu",
-      "Yemin Wang",
-      "Tianxiang Xu",
-      "Yongtai Liu",
-      "Weizhi Tang",
-      "Wangyu Wu",
-      "Xiaowen Ma",
-      "Simon Fong"
+      "Ruizhong Miao",
+      "Yuying Wang",
+      "Rongguang Wang",
+      "Chenyang Li",
+      "Tao Sheng",
+      "Sujith Ravi",
+      "Dan Roth"
     ],
     "categories": [
-      "cs.CL",
-      "cs.AI",
-      "cs.IR"
-    ]
-  },
-  {
-    "id": "2603.23508",
-    "title": "Fast and Faithful: Real-Time Verification for Long-Document Retrieval-Augmented Generation Systems",
-    "summary": "Retrieval-augmented generation (RAG) is increasingly deployed in enterprise search and document-centric assistants, where responses must be grounded in long and complex source materials. In practice, verifying that generated answers faithfully reflect retrieved documents is difficult: large language models can check long contexts but are too slow and costly for interactive services, while lightweight classifiers operate within strict context limits and frequently miss evidence outside truncated passages. We present the design of a real-time verification component integrated into a production RAG pipeline that enables full-document grounding under latency constraints. The system processes documents up to 32K tokens and employs adaptive inference strategies to balance response time and verification coverage across workloads. We describe the architectural decisions, operational trade-offs, and evaluation methodology used to deploy the verifier, and show that full-context verification substantially improves detection of unsupported responses compared with truncated validation. Our experience highlights when long-context verification is necessary, why chunk-based checking often fails in real documents, and how latency budgets shape model design. These findings provide practical guidance for practitioners building reliable large-scale retrieval-augmented applications. (Model, benchmark, and code: https://huggingface.co/llm-semantic-router)",
-    "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.23508",
-    "tag": "ir",
-    "tag_score": 5,
-    "all_scores": {
-      "llm": 4,
-      "rl": 1,
-      "ir": 5
-    },
-    "authors": [
-      "Xunzhuo Liu",
-      "Bowei He",
-      "Xue Liu",
-      "Haichen Zhang",
-      "Huamin Chen"
-    ],
-    "categories": [
+      "cs.LG",
       "cs.CL",
       "cs.IR"
-    ]
+    ],
+    "published": "2026-03-26T01:30:22Z",
+    "updated": "2026-03-26T01:30:22Z"
   },
   {
-    "id": "2603.24580",
-    "title": "Retrieval Improvements Do Not Guarantee Better Answers: A Study of RAG for AI Policy QA",
-    "summary": "Retrieval-augmented generation (RAG) systems are increasingly used to analyze complex policy documents, but achieving sufficient reliability for expert usage remains challenging in domains characterized by dense legal language and evolving, overlapping regulatory frameworks. We study the application of RAG to AI governance and policy analysis using the AI Governance and Regulatory Archive (AGORA) corpus, a curated collection of 947 AI policy documents. Our system combines a ColBERT-based retriever fine-tuned with contrastive learning and a generator aligned to human preferences using Direct Preference Optimization (DPO). We construct synthetic queries and collect pairwise preferences to adapt the system to the policy domain. Through experiments evaluating retrieval quality, answer relevance, and faithfulness, we find that domain-specific fine-tuning improves retrieval metrics but does not consistently improve end-to-end question answering performance. In some cases, stronger retrieval counterintuitively leads to more confident hallucinations when relevant documents are absent from the corpus. These results highlight a key concern for those building policy-focused RAG systems: improvements to individual components do not necessarily translate to more reliable answers. Our findings provide practical insights for designing grounded question-answering systems over dynamic regulatory corpora.",
-    "primary_cat": "cs.CL",
-    "link": "https://arxiv.org/abs/2603.24580",
+    "id": "2603.25092",
+    "title": "AuthorityBench: Benchmarking LLM Authority Perception for Reliable Retrieval-Augmented Generation",
+    "summary": "Retrieval-Augmented Generation (RAG) enhances Large Language Models (LLMs) with external knowledge but remains vulnerable to low-authority sources that can propagate misinformation. We investigate whether LLMs can perceive information authority - a capability extending beyond semantic understanding. To address this, we introduce AuthorityBench, a comprehensive benchmark for evaluating LLM authority perception comprising three datasets: DomainAuth (10K web domains with PageRank-based authority), EntityAuth (22K entities with popularity-based authority), and RAGAuth (120 queries with documents of varying authority for downstream evaluation). We evaluate five LLMs using three judging methods (PointJudge, PairJudge, ListJudge) across multiple output formats. Results show that ListJudge and PairJudge with PointScore output achieve the strongest correlation with ground-truth authority, while ListJudge offers optimal cost-effectiveness. Notably, incorporating webpage text consistently degrades judgment performance, suggesting authority is distinct from textual style. Downstream experiments on RAG demonstrate that authority-guided filtering largely improves answer accuracy, validating the practical importance of authority perception for reliable knowledge retrieval. Code and benchmark are available at: https://github.com/Trustworthy-Information-Access/AuthorityBench.",
+    "primary_cat": "cs.IR",
+    "link": "https://arxiv.org/abs/2603.25092",
     "tag": "ir",
-    "tag_score": 4,
-    "all_scores": {
-      "llm": 2,
-      "ir": 4
-    },
     "authors": [
-      "Saahil Mathur",
-      "Ryan David Rittner",
-      "Vedant Ajit Thakur",
-      "Daniel Stuart Schiff",
-      "Tunazzina Islam"
+      "Zhihui Yao",
+      "Hengran Zhang",
+      "Keping Bi"
     ],
     "categories": [
-      "cs.CL",
-      "cs.AI",
-      "cs.CY",
-      "cs.IR",
-      "cs.LG"
-    ]
+      "cs.IR"
+    ],
+    "published": "2026-03-26T06:58:22Z",
+    "updated": "2026-03-26T06:58:22Z"
+  },
+  {
+    "id": "2603.25248",
+    "title": "ColBERT-Att: Late-Interaction Meets Attention for Enhanced Retrieval",
+    "summary": "Vector embeddings from pre-trained language models form a core component in Neural Information Retrieval systems across a multitude of knowledge extraction tasks. The paradigm of late interaction, introduced in ColBERT, demonstrates high accuracy along with runtime efficiency. However, the current formulation fails to take into account the attention weights of query and document terms, which intuitively capture the \"importance\" of similarities between them, that might lead to a better understanding of relevance between the queries and documents. This work proposes ColBERT-Att, to explicitly integrate attention mechanism into the late interaction framework for enhanced retrieval performance. Empirical evaluation of ColBERT-Att depicts improvements in recall accuracy on MS-MARCO as well as on a wide range of BEIR and LoTTE benchmark datasets.",
+    "primary_cat": "cs.IR",
+    "link": "https://arxiv.org/abs/2603.25248",
+    "tag": "ir",
+    "authors": [
+      "Raj Nath Patel",
+      "Sourav Dutta"
+    ],
+    "categories": [
+      "cs.IR"
+    ],
+    "published": "2026-03-26T09:51:54Z",
+    "updated": "2026-03-26T09:51:54Z"
   }
 ]

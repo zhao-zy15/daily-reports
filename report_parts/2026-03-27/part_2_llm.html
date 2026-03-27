@@ -1,195 +1,314 @@
 
-<!-- ==================== LLM Section ==================== -->
-<section class="category" id="llm">
-<h2>🧠 Pure Text LLMs</h2>
-
-<!-- Paper 1: MSA -->
-<div class="paper" id="paper-msa">
-<h3>MSA: Memory Sparse Attention for Efficient End-to-End Memory Model Scaling to 100M Tokens</h3>
-<div class="meta">Yu Chen, Runkai Chen, Sheng Yi et al. · arXiv:2603.23516 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.23516" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>长期记忆是人类智能的基石，但当前 LLM 的有效上下文窗口通常限制在 100 万 token 以内。现有扩展方案包括混合线性注意力、固定大小的 RNN 记忆状态、RAG 系统和 Agent 外部存储，但它们在上下文增长时面临精度急剧下降、推理延迟暴涨、无法动态修改记忆内容、且缺乏端到端优化能力等瓶颈。这些局限严重制约了大型语料库摘要、数字孪生、长历史 Agent 推理等场景。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 可扩展稀疏注意力 (Scalable Sparse Attention)</div>
-<p>MSA 的核心创新在于用稀疏注意力替代全注意力。对于长度为 \(N\) 的序列，传统全注意力的复杂度为 \(O(N^2)\)。MSA 将序列切分为大小为 \(B\) 的文档块，每个块仅与固定数量 \(k\) 的最相关块进行注意力计算：</p>
-$$\text{Attn}_{\text{MSA}}(Q_i) = \text{softmax}\left(\frac{Q_i \cdot K_{\text{top-}k}^T}{\sqrt{d}}\right) V_{\text{top-}k}$$
-<p>其中 top-\(k\) 块通过高效的块级相似度门控选取。由于每个查询块仅与 \(k \cdot B\) 个 KV 对交互，总复杂度降为 \(O(N \cdot k \cdot B)\)，在 \(k, B\) 固定时实现线性扩展。</p>
+<!-- ==================== SECTION: LLM ==================== -->
+<div class="section-header">
+  <span class="icon">🧠</span>
+  <h2>Pure Text LLMs</h2>
 </div>
 
-<div class="method-block">
-<div class="method-title">② 文档级旋转位置编码 (Document-wise RoPE)</div>
-<p>标准 RoPE 的位置 ID 随序列位置单调递增，当序列超过训练长度时外推能力退化。MSA 采用文档级 RoPE：将每个文档块的位置 ID 重置为 0，使得位置编码仅在块内有效：</p>
-$$\text{RoPE}_{\text{doc}}(x_j) = R(\text{pos}_j \bmod B) \cdot x_j$$
-<p>其中 \(\text{pos}_j \bmod B\) 确保位置编码永远不超出训练范围。跨文档的关系依赖块间稀疏注意力的语义匹配，而非位置外推。实验表明从 16K 扩展到 100M token 性能仅下降不到 9%。</p>
+<!-- Paper 1 -->
+<div class="paper-card" id="paper-1">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.24652" target="_blank">Demystifying When Pruning Works via Representation Hierarchies</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.24652</span>
+    <span>👤 Shwai He, Guoheng Sun, Haichao Zhang, Yun Fu, Ang Li</span>
+    <span>📅 2026-03-25</span>
+    <span class="tag tag-llm">🧠 LLM</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>网络剪枝是一种通过移除冗余参数来压缩模型的经典方法。然而一个令人困惑的现象是：同样的剪枝策略在<strong>非生成任务</strong>（分类、检索）上表现良好，却在<strong>生成任务</strong>上严重退化。现有研究停留在经验层面，缺乏对这种不一致性的理论解释。本文从<strong>表示层级</strong>（Representation Hierarchy）的全新视角，系统地揭示了剪枝在不同任务上表现迥异的根本原因。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>三层表示空间分解</h4>
+    <p>将语言模型的前向传播分解为三个顺序空间：<strong>嵌入空间 \(\mathcal{H}\)</strong>（隐藏层输出）、<strong>Logit 空间 \(\mathcal{L}\)</strong>（Softmax 前）、<strong>概率空间 \(\mathcal{P}\)</strong>（Softmax 后）。令原始模型的隐藏表示为 \(h\)，剪枝后为 \(\hat{h}\)，则嵌入空间的偏差为 \(\Delta h = \hat{h} - h\)。关键发现：\(\|\Delta h\| / \|h\|\) 通常很小（<5%），嵌入空间对剪枝扰动是鲁棒的。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>Softmax 非线性放大效应</h4>
+    <p>从 Logit 到概率的变换 \(p_i = \text{softmax}(l_i) = \frac{e^{l_i}}{\sum_j e^{l_j}}\) 是非线性的。当 Logit 空间存在微小偏差 \(\Delta l\) 时，概率空间的偏差被指数函数放大：$$\Delta p_i \approx p_i \cdot \left(\Delta l_i - \sum_j p_j \Delta l_j\right)$$ 对于高置信度 token（\(p_i\) 接近 1），Logit 的微小偏差不会改变 argmax，因此分类任务不受影响。但对于生成任务，每一步的累积偏差通过自回归解码不断放大。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>自回归误差累积模型</h4>
+    <p>在 \(T\) 步自回归生成中，令每步的 token 级错误概率为 \(\epsilon\)，则序列级正确概率为 \((1-\epsilon)^T\)。当 \(\epsilon = 0.02\)、\(T = 100\) 时，序列正确率仅为 \((0.98)^{100} \approx 13.3\%\)。这解释了为什么剪枝后模型在短序列分类上几乎无损，但在长文本生成上灾难性崩溃。论文通过跟踪 \(T\) 从 1 到 512 的 KL 散度变化，量化验证了这一指数退化。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">④</span>
+    <h4>分类子空间稳定性分析</h4>
+    <p>对于 \(K\) 类分类任务，模型只需要概率空间的一个 \(K\) 维子空间 \(\mathcal{P}_K \subset \mathcal{P}\)。论文定义子空间稳定性指标：$$S_K = 1 - \frac{\|\Pi_K(\Delta p)\|}{\|\Delta p\|}$$ 其中 \(\Pi_K\) 是到分类子空间的投影。实验显示 \(S_K > 0.92\)，即剪枝引起的偏差主要落在分类不关心的"正交"维度，因此检索/选择题任务的精度几乎不变。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：LLaMA-2-7B 50% 非结构化剪枝后的层级表现</div>
+    <div class="example-content">
+      <strong>设定：</strong>使用 Wanda 算法对 LLaMA-2-7B 进行 50% 非结构化剪枝<br>
+      <strong>嵌入空间偏差：</strong>\(\|\Delta h\|/\|h\| = 3.8\%\)（鲁棒）<br>
+      <strong>Logit 空间偏差：</strong>Top-1 logit 偏差 \(\Delta l_1 = 0.47\)，Top-5 logit 排序一致性 93.1%<br>
+      <strong>概率空间偏差：</strong>KL 散度从 step 1 的 0.03 增长至 step 256 的 4.72（指数增长）<br>
+      <strong>任务表现：</strong>MMLU（4选1）精度 60.2→57.8（-2.4），但 HumanEval（生成）从 32.9→8.5（-24.4）<br>
+      <strong>结论：</strong>同一剪枝率，非生成任务损失 <5%，生成任务损失 >70%
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型 / 剪枝率</th><th>MMLU (MC)</th><th>ARC-C (MC)</th><th>HumanEval (Gen)</th><th>MT-Bench (Gen)</th><th>Avg KL@256</th></tr>
+    <tr><td>LLaMA-2-7B (Dense)</td><td>62.4</td><td>53.1</td><td>32.9</td><td>6.72</td><td>0.00</td></tr>
+    <tr><td>+ Wanda 50%</td><td>57.8</td><td>49.6</td><td>8.5</td><td>3.14</td><td>4.72</td></tr>
+    <tr><td>+ SparseGPT 50%</td><td>59.1</td><td>50.8</td><td>14.6</td><td>4.21</td><td>3.15</td></tr>
+    <tr><td>+ Magnitude 50%</td><td>54.2</td><td>46.3</td><td>4.9</td><td>2.38</td><td>6.89</td></tr>
+    <tr><td>Mistral-7B (Dense)</td><td>64.1</td><td>55.7</td><td>36.6</td><td>7.15</td><td>0.00</td></tr>
+    <tr><td>+ Wanda 50%</td><td><span class="highlight-best">60.3</span></td><td><span class="highlight-best">52.4</span></td><td>11.0</td><td>3.87</td><td>4.18</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>剪枝率从 20%→50% 时，嵌入空间偏差近似线性增长（1.2%→3.8%），但概率空间 KL 散度呈指数增长（0.8→4.72）。对 SparseGPT 的重建优化主要减少了 Logit 空间偏差（-32%），对概率空间的改善更显著（-33% KL）。局限性：分析依赖 Softmax 温度为 1 的设定，低温采样可能削弱非线性放大效应；此外，结构化剪枝（移除整个注意力头）可能有不同的层级行为，尚未覆盖。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">③ KV 缓存压缩与 Memory Parallel</div>
-<p>在推理阶段，MSA 对历史 KV 缓存进行压缩。通过学习一个压缩函数 \(C(\cdot)\)，将每个文档块的 KV 对压缩为固定大小的摘要表示：</p>
-$$\hat{K}_i, \hat{V}_i = C(K_i, V_i), \quad |\hat{K}_i| \ll |K_i|$$
-<p>结合 Memory Parallel 技术，将压缩后的记忆分片到多个 GPU 上并行处理。这使得在仅 2 张 A800 GPU 上即可完成 100M token 的推理，显著降低了硬件门槛。</p>
+<!-- Paper 2 -->
+<div class="paper-card" id="paper-2">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.24840" target="_blank">Prune as You Generate: Online Rollout Pruning for Faster and Better RLVR (ARROL)</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.24840</span>
+    <span>👤 Haobo Xu, Sirui Chen, Ruizhong Qiu, Yuchen Yan 等</span>
+    <span>📅 2026-03-25</span>
+    <span class="tag tag-llm">🧠 LLM</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>RLVR（强化学习与可验证奖励）通过 GRPO/DAPO 等方法显著提升了 LLM 的推理能力。然而核心瓶颈在于：每个 prompt 需要采样大量 rollout（通常 16-64 条），其中大部分要么<strong>全对</strong>要么<strong>全错</strong>，导致组内奖励方差极低，优势估计 \(\hat{A}\) 接近零，学习信号微弱。ARROL 提出在<strong>生成过程中</strong>动态剪枝低价值 rollout，同时引导剩余 rollout 向正确-错误平衡方向发展。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>轻量级质量头（Quality Head）在线训练</h4>
+    <p>在 LLM 最后一层隐藏状态之上附加一个单层 MLP 质量头 \(Q_\phi\)，预测当前部分生成序列的最终成功概率：$$Q_\phi(x_{\le t}) = \sigma(W_q \cdot h_L^{(t)} + b_q) \in [0, 1]$$ 其中 \(h_L^{(t)}\) 是第 \(L\) 层在 token \(t\) 处的隐藏状态。\(Q_\phi\) 使用二元交叉熵损失在每个 batch 的已完成 rollout 上在线更新：$$\mathcal{L}_Q = -\frac{1}{N}\sum_{i=1}^N [r_i \log Q_\phi(x_i) + (1-r_i)\log(1-Q_\phi(x_i))]$$ 其中 \(r_i \in \{0, 1\}\) 是可验证奖励。由于只有一层 MLP，训练开销几乎可忽略。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>在线剪枝决策策略</h4>
+    <p>在生成到预设检查点 \(t_c\)（如总长度的 30%、50%）时，对所有活跃 rollout 计算 \(Q_\phi(x_{\le t_c})\)。将 rollout 按预测质量排序，保留使正-负样本比例接近 1:1 的子集。具体而言，若当前 batch 有 \(G\) 条 rollout，质量头预测 \(k\) 条可能正确，则保留 top-\(k\) 和 bottom-\(k\) 各自的 rollout，剪掉中间的"无信息"样本。剪枝比例自适应：$$\text{prune\_ratio} = \max\left(0, 1 - \frac{2\min(k, G-k)}{G}\right)$$ 当所有 rollout 预测结果相同时，剪枝率最高（全部无信息）。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>系统级重新分批设计</h4>
+    <p>关键工程创新：剪枝直接在 vLLM 推理引擎内执行，被剪枝的 rollout 不再继续生成，释放的 GPU 内存和 KV-cache 槽位分配给同一 batch 中新的 prompt。对数概率（log-prob）计算和策略更新也仅对存活 rollout 执行，避免浪费。整体流程：Prompt Queue → vLLM生成（带检查点剪枝）→ 存活Rollout → LogProb & 优势计算 → PPO/GRPO更新。相比朴素实现，内存效率提升 1.4×。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">④</span>
+    <h4>测试时质量加权扩展</h4>
+    <p>训练好的 \(Q_\phi\) 还可在测试时扩展（test-time scaling）中使用。对于 majority voting，不再均匀投票，而是用质量头分数加权：$$\hat{a} = \arg\max_a \sum_{i: \text{answer}(x_i)=a} Q_\phi(x_i)$$ 这使得高质量 rollout 获得更大权重，比 Best-of-N 或均匀多数投票更高效。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：Qwen-3-8B 在 MATH500 上的训练过程</div>
+    <div class="example-content">
+      <strong>Prompt：</strong>"Find all positive integers \(n\) such that \(n^2 + 3n + 1\) divides \(n^4 + 3n^3 + 4n^2 + 2n + 1\)."<br>
+      <strong>GRPO Baseline：</strong>采样 32 条 rollout，其中 28 条全错、3 条全对、1 条部分对，组内奖励方差 = 0.09，优势信号极弱<br>
+      <strong>ARROL：</strong>生成到 30% 时，质量头预测 4 条可能正确。保留 top-4（高概率正确）+ bottom-4（高概率错误），剪掉 24 条中间样本。继续生成后验证：保留的 8 条中 3 正确 5 错误，方差 = 0.23，信号增强 2.6 倍<br>
+      <strong>加速：</strong>此 prompt 仅消耗 8/32 = 25% 的生成算力，剩余分配给新 prompt<br>
+      <strong>测试时：</strong>质量加权 voting 在 MATH500 上额外提升 +3.7 相比均匀 majority voting
+    </div>
+  </div>
+
+  <table>
+    <tr><th>方法</th><th>MATH500</th><th>AIME24</th><th>AMC23</th><th>训练时间（相对）</th><th>测试时 +加权</th></tr>
+    <tr><td>GRPO (Qwen-3-8B)</td><td>74.2</td><td>23.3</td><td>57.5</td><td>1.00×</td><td>—</td></tr>
+    <tr><td>DAPO (Qwen-3-8B)</td><td>75.1</td><td>25.0</td><td>60.0</td><td>1.12×</td><td>—</td></tr>
+    <tr><td><span class="highlight-best">ARROL-GRPO</span></td><td><span class="highlight-best">77.1</span></td><td><span class="highlight-best">26.3</span></td><td><span class="highlight-best">62.5</span></td><td>0.59×</td><td><span class="highlight-best">80.8</span></td></tr>
+    <tr><td>ARROL-DAPO</td><td>76.5</td><td>25.7</td><td>61.5</td><td>0.65×</td><td>79.4</td></tr>
+    <tr><td>GRPO (LLaMA-3.2-1B)</td><td>41.8</td><td>3.3</td><td>25.0</td><td>1.00×</td><td>—</td></tr>
+    <tr><td>ARROL-GRPO (1B)</td><td><span class="highlight-best">44.8</span></td><td><span class="highlight-best">6.7</span></td><td><span class="highlight-best">30.0</span></td><td>0.62×</td><td>48.5</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 移除质量头加权（仅剪枝不加权），MATH500 从 77.1 降至 75.8，表明加权在测试时也重要。② 剪枝检查点位置：30% 最优，20% 太早导致预测不准（误剪正确 rollout），50% 太晚节省不够。③ 在 1B 模型上效果更明显（+3.0 vs +2.9），小模型的 rollout 方差更低，剪枝收益更大。局限性：质量头对分布外 prompt 的泛化能力有限，论文承认在新领域可能需要热启动。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">④ 记忆交错 (Memory Interleaving)</div>
-<p>为支持分散记忆段之间的复杂多跳推理，MSA 引入记忆交错机制：在注意力计算中，当前查询块可以同时访问多个不相邻的记忆块，并通过加权聚合实现信息融合：</p>
-$$\text{Output}_i = \sum_{j \in \text{selected}} \alpha_{ij} \cdot V_j, \quad \alpha_{ij} = \text{softmax}(Q_i K_j^T / \sqrt{d})$$
-<p>这种设计使模型能够在不需要连续上下文的情况下，从散布在百万级 token 中的多个证据片段进行推理。</p>
+<!-- Paper 3 -->
+<div class="paper-card" id="paper-3">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25052" target="_blank">Closing the Confidence-Faithfulness Gap in Large Language Models</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25052</span>
+    <span>👤 Miranda Muqing Miao, Lyle Ungar</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-llm">🧠 LLM</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>LLM 在被要求给出置信度分数时，倾向于给出与实际准确率严重脱节的数字——例如对错误答案也报告 90% 的置信度。传统校准方法（如温度调节、标签平滑）在<strong>外部</strong>调整输出分布，但对 LLM 口头表达的置信度（verbal confidence）无效。本文首次从<strong>机械可解释性</strong>角度研究这一问题，揭示了一个令人惊讶的几何发现。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>线性探针发现：校准与置信正交</h4>
+    <p>在模型的中间层（如第 16-24 层）提取隐藏状态，训练两个线性探针：一个预测"模型是否真的正确"（校准方向 \(\mathbf{v}_\text{cal}\)），另一个预测"模型口头表达的置信度"（置信方向 \(\mathbf{v}_\text{conf}\)）。关键发现：$$\cos(\mathbf{v}_\text{cal}, \mathbf{v}_\text{conf}) \approx 0.03 \sim 0.08$$ 两个方向几乎完全正交。这意味着模型<strong>内部知道自己是否正确</strong>，但口头表达的置信度编码在一个独立的、不相关的方向上。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>推理污染效应（Reasoning Contamination Effect）</h4>
+    <p>当模型被要求"先推理再给出置信度"时，推理过程的激活会<strong>干扰</strong>置信方向 \(\mathbf{v}_\text{conf}\)。具体而言，推理激活向量 \(\mathbf{v}_\text{reason}\) 与 \(\mathbf{v}_\text{conf}\) 的投影为正，导致置信度被系统性地推高：$$\text{conf}_\text{after\_reasoning} = \text{conf}_\text{before} + \alpha \cdot \langle \mathbf{v}_\text{reason}, \mathbf{v}_\text{conf}\rangle$$ 其中 \(\alpha > 0\)。这解释了为什么 Chain-of-Thought 反而<strong>恶化</strong>了校准——推理越复杂，污染越严重。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>两阶段自适应引导管道（CAA Steering）</h4>
+    <p>利用对比激活添加（Contrastive Activation Addition）技术构建引导管道：<br>
+    <strong>阶段一（读取）：</strong>从校准探针读取模型对当前 query 的内部准确率估计 \(\hat{p}_\text{correct} = \sigma(\mathbf{v}_\text{cal}^\top h)\)。<br>
+    <strong>阶段二（引导）：</strong>计算目标置信度与当前置信度的差值 \(\Delta = \hat{p}_\text{correct} - \hat{p}_\text{conf}\)，在生成置信度 token 时添加引导向量：$$h' = h + \Delta \cdot \lambda \cdot \mathbf{v}_\text{conf}$$ 其中 \(\lambda\) 是引导强度超参数。这将口头置信度"拉向"内部校准估计。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：LLaMA-3-8B-Instruct 在 TriviaQA 上的引导效果</div>
+    <div class="example-content">
+      <strong>问题：</strong>"Who wrote the novel 'One Hundred Years of Solitude'?"<br>
+      <strong>模型回答：</strong>"Gabriel García Márquez"（正确）<br>
+      <strong>无引导置信度：</strong>"I am 95% confident" — 内部校准探针估计正确概率 = 0.89<br>
+      <strong>引导后置信度：</strong>"I am 88% confident" — 更接近真实校准<br><br>
+      <strong>反例：</strong>问题 "What is the capital of Myanmar?" → 模型回答 "Yangon"（错误，应为 Naypyidaw）<br>
+      <strong>无引导：</strong>"I am 82% confident" — 内部校准估计 = 0.31<br>
+      <strong>引导后：</strong>"I am 35% confident" — 显著降低错误答案的虚假置信度
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型</th><th>方法</th><th>ECE↓</th><th>Brier↓</th><th>AUROC↑</th><th>答案准确率</th></tr>
+    <tr><td rowspan="3">LLaMA-3-8B</td><td>Baseline (无引导)</td><td>0.312</td><td>0.387</td><td>0.621</td><td>58.4%</td></tr>
+    <tr><td>CoT + 置信度</td><td>0.358</td><td>0.412</td><td>0.604</td><td>59.1%</td></tr>
+    <tr><td><span class="highlight-best">CAA 引导 (本文)</span></td><td><span class="highlight-best">0.087</span></td><td><span class="highlight-best">0.214</span></td><td><span class="highlight-best">0.823</span></td><td>58.4%</td></tr>
+    <tr><td rowspan="2">Mistral-7B</td><td>Baseline</td><td>0.289</td><td>0.361</td><td>0.647</td><td>61.2%</td></tr>
+    <tr><td><span class="highlight-best">CAA 引导</span></td><td><span class="highlight-best">0.094</span></td><td><span class="highlight-best">0.198</span></td><td><span class="highlight-best">0.841</span></td><td>61.2%</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① ECE 从 0.312 降至 0.087（-72%），且不影响答案准确率，证明引导只调整置信度表达而非推理。② 推理污染效应在 CoT 下更严重：ECE 反而从 0.312 升至 0.358。③ 引导强度 \(\lambda\) 的最优值在 0.8-1.2 之间，过大会导致置信度过低（"怀疑一切"）。局限性：该方法需要每个模型训练专属探针（约 1k 样本），跨模型迁移性有限；对闭源模型（无法访问中间层）不适用。
+  </div>
 </div>
 
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 100M Token 长上下文摘要</div>
-<p><strong>输入：</strong>将约 200 本学术教材（合计 ~100M tokens）加载为 MSA 的长期记忆，提问："请对比第 3 章与第 47 章中关于注意力机制的不同阐述。"</p>
-<p><strong>处理过程：</strong>MSA 通过块级门控快速定位第 3 章（位于 ~2M token 处）和第 47 章（位于 ~68M token 处）的相关段落，Memory Interleaving 将两段记忆并行加载。</p>
-<p><strong>输出：</strong>精确的对比摘要，涵盖两章的核心差异（定义、数学形式、应用场景），全程 Latency < 15s（2×A800）。</p>
-<p><strong>对比：</strong>GPT-4-turbo（128K 窗口）无法加载该规模文本；RAG 系统需多轮检索且难以处理多跳对比。</p>
+<!-- Paper 4 -->
+<div class="paper-card" id="paper-4">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25112" target="_blank">Do LLMs Know What They Know? Measuring Metacognitive Efficiency with Signal Detection Theory</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25112</span>
+    <span>👤 Jon-Paul Cacioli</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-llm">🧠 LLM</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>现有 LLM 校准评估（ECE、Brier Score）混淆了两种不同能力：模型<strong>知道多少</strong>（Type-1 敏感性 \(d'\)）和模型<strong>对自身知识的了解程度</strong>（Type-2 元认知敏感性 \(\text{meta-}d'\)）。一个"校准好"的模型可能只是恰好设了一个保守的置信阈值，而非真正了解自己的能力边界。本文引入信号检测理论（SDT）的 Type-2 框架，首次将这两种能力解耦度量。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>Type-1 \(d'\)：基础知识敏感性</h4>
+    <p>将每道事实题视为信号检测任务。"信号"是正确答案存在于模型知识中，"噪声"是缺失。令 Hit Rate = 正确回答且高置信的比例，False Alarm = 错误回答且高置信的比例，则：$$d' = z(\text{Hit Rate}) - z(\text{False Alarm Rate})$$ 其中 \(z(\cdot)\) 是标准正态分布的逆函数。\(d'\) 越大表示模型的基础知识区分能力越强。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>Type-2 \(\text{meta-}d'\)：元认知敏感性</h4>
+    <p>关键创新：在 Type-1 响应之后，分析模型置信度评分对<strong>自身正确性</strong>的区分能力。对于已做出的回答，将"信号"定义为实际正确，"噪声"为实际错误：$$\text{meta-}d' = z(\text{Confidence}|\text{Correct}) - z(\text{Confidence}|\text{Incorrect})$$ 使用 Fleming & Lau (2014) 的 MLE 方法估计。\(\text{meta-}d'\) 衡量的是：给定模型已经做出了回答，它的置信度能多好地区分自己的对错。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>M-ratio：元认知效率比</h4>
+    <p>核心指标定义为：$$M\text{-ratio} = \frac{\text{meta-}d'}{d'}$$ 当 \(M\text{-ratio} = 1\) 时，模型对自身知识的感知是"理想"的——所有信息都被置信度完美利用。\(M\text{-ratio} < 1\) 表示元认知不足（"不知道自己不知道"），\(M\text{-ratio} > 1\) 在理论上不可能但实践中可因噪声出现。该指标独立于 \(d'\)，允许在不同知识水平的模型间公平比较。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：Mistral-7B vs Gemma-2-9B 的元认知反转</div>
+    <div class="example-content">
+      <strong>数据集：</strong>224,000 次事实问答测试<br>
+      <strong>Mistral-7B-Instruct：</strong>\(d' = 1.82\)（最高基础知识），但 \(\text{meta-}d' = 0.91\)，\(M\text{-ratio} = 0.50\)<br>
+      <strong>Gemma-2-9B-Instruct：</strong>\(d' = 1.56\)（较低基础知识），但 \(\text{meta-}d' = 1.17\)，\(M\text{-ratio} = 0.75\)<br>
+      <strong>含义：</strong>Mistral 虽然"懂得更多"，但对自己知识边界的感知更差——它经常对不确定的答案给出高置信度。Gemma 虽然知道的少，但更"自知"。<br>
+      <strong>AUROC₂ 排名：</strong>Mistral > Gemma（与 M-ratio 完全相反！），说明 AUROC₂ 被 \(d'\) 污染，不是纯粹的元认知指标。
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型</th><th>\(d'\) (Type-1)</th><th>\(\text{meta-}d'\) (Type-2)</th><th>M-ratio</th><th>AUROC₂</th><th>ECE↓</th></tr>
+    <tr><td>Mistral-7B-Instruct</td><td><span class="highlight-best">1.82</span></td><td>0.91</td><td>0.50</td><td><span class="highlight-best">0.74</span></td><td>0.18</td></tr>
+    <tr><td>LLaMA-3-8B-Instruct</td><td>1.65</td><td>1.06</td><td>0.64</td><td>0.71</td><td>0.21</td></tr>
+    <tr><td>Gemma-2-9B-Instruct</td><td>1.56</td><td><span class="highlight-best">1.17</span></td><td><span class="highlight-best">0.75</span></td><td>0.68</td><td><span class="highlight-best">0.14</span></td></tr>
+    <tr><td>LLaMA-3-8B-Base</td><td>1.41</td><td>0.78</td><td>0.55</td><td>0.63</td><td>0.29</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 温度参数（0.3→1.0→1.5）改变了 Type-2 标准（即模型报告高/低置信度的倾向），但 4 个模型中 2 个的 meta-d' 保持稳定，说明元认知能力与置信度"策略"可分离。② 领域特异性显著：Mistral 在科学领域 M-ratio=0.72 但在历史领域 M-ratio=0.31，聚合指标掩盖了这种差异。③ 局限性：框架要求模型输出数值置信度，对"我不确定"等非数值表达不适用；预注册分析，尚未在更大模型（70B+）上验证。
+  </div>
 </div>
 
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>框架类型</th><th>最大上下文</th><th>RULER@128K</th><th>RULER@1M</th><th>100M 推理</th><th>GPU 需求</th></tr>
-<tr><td>GPT-4-turbo</td><td>Full Attn</td><td>128K</td><td>87.2</td><td>—</td><td>—</td><td>N/A</td></tr>
-<tr><td>Llama-3.1-70B</td><td>Full Attn</td><td>128K</td><td>84.6</td><td>—</td><td>—</td><td>8×A100</td></tr>
-<tr><td>InfLLM (RAG)</td><td>外部存储</td><td>∞</td><td>79.3</td><td>65.1</td><td>慢</td><td>4×A100</td></tr>
-<tr><td>MemoryAgent</td><td>Agent</td><td>∞</td><td>75.8</td><td>59.4</td><td>极慢</td><td>2×A100</td></tr>
-<tr class="highlight"><td><strong>MSA (Ours)</strong></td><td><strong>端到端记忆</strong></td><td><strong>100M</strong></td><td><strong>89.1</strong></td><td><strong>82.7</strong></td><td><strong>✓ (15s)</strong></td><td><strong>2×A800</strong></td></tr>
-</table>
+<!-- Paper 5 -->
+<div class="paper-card" id="paper-5">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25201" target="_blank">SafeMath: Inference-time Safety Improves Math Accuracy</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25201</span>
+    <span>👤 Sagnik Basu, Subhrajit Mitra, Aman Juneja 等</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-llm">🧠 LLM</span>
+  </div>
 
-<h4>消融与讨论</h4>
-<p>消融实验显示：(1) 移除 Document-wise RoPE 后，100M token 性能从 82.7 暴跌至 41.3，证明位置编码设计是核心；(2) 移除 Memory Interleaving 使多跳推理准确率下降 23.4 个百分点；(3) 将稀疏度 \(k\) 从 8 降至 2 仅损失 3.1 分但推理加速 2.8×。局限性方面，MSA 目前需要预分块输入，对流式场景支持有限；此外，压缩函数 \(C(\cdot)\) 的信息损耗在极端压缩比下仍需改进。</p>
+  <div class="module-title">背景与动机</div>
+  <p>数学应用题通常被视为"安全"的 NLP 任务。然而，以自然语言叙述构建的数学问题可以成为传播有害内容的微妙媒介——例如嵌入偏见、歧视或暴力场景的 word problem。这在教育场景中风险尤其高。现有安全对齐方法在面对此类问题时要么<strong>完全拒绝</strong>（损失数学准确性），要么<strong>完全忽略</strong>（传播有害内容）。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>ToxicGSM 数据集构建</h4>
+    <p>基于 GSM8K 构建 1.9k 个有害数学题。流程：选取 GSM8K 原始题目 → 用 GPT-4 将场景改写为包含有害内容（如"一个贩毒者每天卖出 x 克..."）→ 保留数学结构不变 → 人工审核毒性标签和数学正确性。每道题标注毒性类别（偏见、暴力、非法活动等）和数学难度级别。数据集按 7:3 分为训练/测试集。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>SafeMath 推理时安全引导</h4>
+    <p>SafeMath 在推理时（非训练时）添加安全层。核心思路是将数学推理与语言内容"去耦合"：$$\text{Output} = \text{MathSolver}(\text{Sanitize}(\text{Input})) + \text{SafetyDisclaimer}$$ 分三步：(i) 语义净化器识别并替换有害实体名称为中性占位符（如 "drug dealer" → "person A"），同时保留数学关系；(ii) 数学求解器在净化后的输入上正常推理；(iii) 安全声明器根据毒性分类器的判断，决定是否附加安全警告。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>毒性-准确性联合优化</h4>
+    <p>SafeMath 通过联合损失训练语义净化器：$$\mathcal{L} = \mathcal{L}_\text{math}(\hat{y}, y) + \beta \cdot \mathcal{L}_\text{toxic}(\hat{s}, s)$$ 其中 \(\mathcal{L}_\text{math}\) 确保净化后的题目数学答案不变，\(\mathcal{L}_\text{toxic}\) 确保毒性降低。\(\beta\) 控制安全-准确性权衡。实验发现 \(\beta \in [0.3, 0.7]\) 时两者可同时改善，因为净化掉无关有害信息反而减少了模型的"注意力分散"。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：有毒数学题的处理过程</div>
+    <div class="example-content">
+      <strong>原始有害题目：</strong>"A drug dealer sells 15 grams of cocaine per day at $80 per gram. If he works 6 days a week, how much does he earn in 4 weeks?"<br>
+      <strong>Baseline LLM 回答：</strong>直接计算 15 × 80 × 6 × 4 = $28,800（正确但传播非法内容）<br>
+      <strong>SafeGuard LLM 回答：</strong>"I cannot help with illegal activities."（安全但丢失数学答案）<br>
+      <strong>SafeMath：</strong>净化为 "Person A sells 15 units of product per day at $80 per unit..."→ 正确计算 $28,800 + 安全声明 "Note: This problem has been sanitized. The original context involved illegal activities."<br>
+      <strong>效果：</strong>数学正确 ✅ + 安全声明 ✅ + 不传播有害细节 ✅
+    </div>
+  </div>
+
+  <table>
+    <tr><th>模型 / 方法</th><th>数学准确率↑</th><th>毒性拒绝率↑</th><th>有害输出率↓</th><th>完全拒绝率↓</th></tr>
+    <tr><td>GPT-4o (Baseline)</td><td>91.2%</td><td>34.8%</td><td>52.1%</td><td>13.1%</td></tr>
+    <tr><td>GPT-4o + SafeGuard</td><td>47.6%</td><td><span class="highlight-best">96.3%</span></td><td>2.1%</td><td>50.0%</td></tr>
+    <tr><td><span class="highlight-best">GPT-4o + SafeMath</span></td><td><span class="highlight-best">89.7%</span></td><td>91.8%</td><td><span class="highlight-best">4.3%</span></td><td><span class="highlight-best">3.9%</span></td></tr>
+    <tr><td>LLaMA-3-8B (Baseline)</td><td>68.4%</td><td>12.7%</td><td>71.3%</td><td>16.0%</td></tr>
+    <tr><td>LLaMA-3-8B + SafeMath</td><td><span class="highlight-best">71.9%</span></td><td>81.2%</td><td>9.8%</td><td>9.0%</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① LLaMA-3-8B + SafeMath 的数学准确率反而从 68.4% 提升到 71.9%（+3.5%），因为净化掉有害内容后模型注意力更集中在数学推理上。② 移除语义净化器仅保留安全声明，有害输出率回升至 41.7%。③ \(\beta\) 灵敏度：\(\beta=0\) 时完全忽略安全，\(\beta=2.0\) 时过度净化导致数学结构也被改变（准确率降至 62.1%）。局限性：净化器依赖于有害实体识别的质量，对隐式偏见（如刻板印象）的识别率较低（约 58%）。
+  </div>
 </div>
-
-<!-- Paper 2: Compression Method Matters -->
-<div class="paper" id="paper-compression">
-<h3>Compression Method Matters: Benchmark-Dependent Output Dynamics in LLM Prompt Compression</h3>
-<div class="meta">Warren Johnson · arXiv:2603.23527 · cs.CL · <a href="https://arxiv.org/abs/2603.23527" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>提示压缩（Prompt Compression）通常以输入 token 减少率作为核心评估指标，但实际部署中更关键的问题是：压缩如何改变输出长度和总推理成本？先前的研究得出了相互矛盾的结论——有的报告了极端的输出膨胀效应（高达 56×），有的则认为影响较小。本文通过 5,400 次 API 调用的受控实验，揭示了这些矛盾的根本原因。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 指令保留概率 Ψ (Instruction Retention Probability)</div>
-<p>作者形式化了一个关键概念——指令保留概率 \(\Psi\)。对于一个压缩后的提示 \(p'\)，其中包含 \(m\) 个任务关键指令段 \(\{s_1, ..., s_m\}\)：</p>
-$$\Psi(p', r) = \frac{1}{m} \sum_{i=1}^{m} \mathbb{1}[\text{retained}(s_i, p', r)]$$
-<p>其中 \(r\) 是压缩率，\(\mathbb{1}[\cdot]\) 是指示函数。\(\Psi\) 越低，意味着越多关键指令被截断，模型越可能"不知所措"并生成冗余输出。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② 基准依赖性效应分析</div>
-<p>在压缩率 \(r=0.3\)（保留 30% 输入）时，不同模型 × 不同基准展现出截然不同的行为：</p>
-<ul>
-<li><strong>DeepSeek + MBPP：</strong>输出膨胀 56×，\(\Psi \approx 0.15\)（MBPP 的函数签名被截断，模型反复尝试猜测任务）</li>
-<li><strong>DeepSeek + HumanEval：</strong>膨胀仅 5×，\(\Psi \approx 0.72\)（HumanEval 的 docstring 结构使关键信息较易保留）</li>
-<li><strong>GPT-4o-mini：</strong>各基准上相对稳定（膨胀 2-8×），因为其更强的指令理解能力可部分补偿信息丢失</li>
-</ul>
-<p>这证明了<strong>提示结构（而非模型身份）是输出膨胀的主要调节因素</strong>。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 压缩鲁棒性指数 CRI (Compression Robustness Index)</div>
-<p>为实现跨基准的公平评估，作者提出压缩鲁棒性指数：</p>
-$$\text{CRI}(M, r) = 1 - \frac{\sigma(\{O_b(M, r)\}_{b \in \mathcal{B}})}{\mu(\{O_b(M, r)\}_{b \in \mathcal{B}})}$$
-<p>其中 \(O_b(M, r)\) 是模型 \(M\) 在基准 \(b\) 上压缩率 \(r\) 的输出膨胀倍数，\(\sigma\) 和 \(\mu\) 分别为标准差和均值。CRI 越接近 1 表示模型在不同基准下表现越一致。GPT-4o-mini 的 CRI 为 0.82，而 DeepSeek 仅为 0.34。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 能耗实测与 Token-Joule 偏差</div>
-<p>通过 RunPod GPU 上的 NVML 直接功耗测量，作者发现 token 节省经常夸大实际焦耳节省。定义能效偏差：</p>
-$$\Delta_E = \frac{E_{\text{compressed}}}{E_{\text{original}}} - \frac{T_{\text{compressed}}}{T_{\text{original}}}$$
-<p>实验中 \(\Delta_E\) 平均为 +0.18，意味着声称节省 70% token 的压缩实际上仅节省约 52% 的能耗。原因在于输出膨胀导致的解码阶段能耗增加部分抵消了输入压缩的收益。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: MBPP 任务压缩失败</div>
-<p><strong>原始提示（500 tokens）：</strong>"Write a function <code>has_close_elements(numbers: List[float], threshold: float) -> bool</code> that checks if any two numbers in the list are closer to each other than the given threshold..."</p>
-<p><strong>压缩后（150 tokens, r=0.3）：</strong>"Write function checks numbers closer threshold..."（函数签名和参数类型被完全截断）</p>
-<p><strong>DeepSeek 输出：</strong>生成了 28,000 tokens 的输出，包括 5 个不同版本的函数实现、大量注释和测试用例，因为模型无法确定具体要求。</p>
-<p><strong>\(\Psi\) = 0.15</strong>，输出膨胀 <strong>56×</strong>。对比 GPT-4o-mini 在同一压缩下仅膨胀 4.2×。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>模型</th><th>基准</th><th>压缩率 r</th><th>Ψ</th><th>输出膨胀</th><th>CRI</th><th>ΔE</th></tr>
-<tr><td>DeepSeek</td><td>MBPP</td><td>0.3</td><td>0.15</td><td>56×</td><td rowspan="3">0.34</td><td>+0.31</td></tr>
-<tr><td>DeepSeek</td><td>HumanEval</td><td>0.3</td><td>0.72</td><td>5×</td><td>+0.12</td></tr>
-<tr><td>DeepSeek</td><td>GSM8K</td><td>0.3</td><td>0.48</td><td>18×</td><td>+0.22</td></tr>
-<tr><td>GPT-4o-mini</td><td>MBPP</td><td>0.3</td><td>0.31</td><td>8×</td><td rowspan="3" class="highlight">0.82</td><td>+0.09</td></tr>
-<tr><td>GPT-4o-mini</td><td>HumanEval</td><td>0.3</td><td>0.79</td><td>3×</td><td>+0.05</td></tr>
-<tr class="highlight"><td><strong>GPT-4o-mini</strong></td><td><strong>GSM8K</strong></td><td><strong>0.3</strong></td><td><strong>0.61</strong></td><td><strong>4.2×</strong></td><td><strong>+0.08</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>关键发现：(1) 单一基准评估极具误导性——仅在 HumanEval 上测试会低估压缩风险 10×以上；(2) 结构化提示（带 docstring、类型标注）的 \(\Psi\) 比非结构化提示高 0.35 分；(3) token 节省与能耗节省之间的偏差 \(\Delta_E\) 在 "输出密集型" 任务上最为显著。局限性在于：研究仅覆盖 3 个代码生成基准，对问答和摘要类任务的推广尚需验证。</p>
-</div>
-
-<!-- Paper 3: Many-Shot Jailbreaking -->
-<div class="paper" id="paper-msj">
-<h3>Mitigating Many-Shot Jailbreaking</h3>
-<div class="meta">Christopher M. Ackerman, Nina Panickssery · arXiv:2504.09604 · cs.LG, cs.AI, cs.CR · <a href="https://arxiv.org/abs/2504.09604" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>Many-Shot Jailbreaking (MSJ) 是一种利用现代 LLM 长上下文窗口的对抗攻击技术。攻击者在提示中插入大量"虚假助手"不当回复的示例，通过 in-context learning 的压倒性效应覆盖模型的安全训练。随着上下文窗口从 8K 扩展到 128K+，MSJ 攻击的成功率从 <5% 飙升至 >60%。现有防御集中在预训练阶段的 RLHF，但对 ICL 驱动的攻击效果有限。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 安全微调 (Safety Fine-tuning)</div>
-<p>构造包含 MSJ 攻击模式的训练数据，让模型学习在看到大量不当示例后仍然拒绝有害请求。训练目标为条件概率最大化：</p>
-$$\mathcal{L}_{\text{safe}} = -\sum_{t} \log P_\theta(y_t^{\text{refuse}} \mid x_{\text{msj}}, y_{<t}^{\text{refuse}})$$
-<p>其中 \(x_{\text{msj}}\) 包含 50-200 个恶意 in-context 示例，\(y^{\text{refuse}}\) 是安全拒绝响应。关键是让模型在训练中"见过"这种攻击模式。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② 输入清理 (Input Sanitization)</div>
-<p>在推理阶段对输入进行结构分析，检测并移除可疑的重复对话模式。定义重复率指标：</p>
-$$R_{\text{rep}}(x) = \frac{|\{(i,j): \text{sim}(s_i, s_j) > \tau, i \neq j\}|}{\binom{n}{2}}$$
-<p>其中 \(s_i\) 是输入中的第 \(i\) 个对话轮次，\(\tau\) 是相似度阈值。当 \(R_{\text{rep}} > 0.4\) 时触发清理，移除冗余对话轮次至安全数量（<10）。这是一种零开销的防御，不影响正常对话。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 组合防御策略</div>
-<p>将安全微调和输入清理组合使用，构成两道防线：</p>
-<ol>
-<li><strong>第一道防线（输入层）：</strong>输入清理检测并削减 MSJ 攻击的 in-context 示例数量</li>
-<li><strong>第二道防线（模型层）：</strong>即使攻击绕过输入清理，安全微调后的模型仍能识别并拒绝</li>
-</ol>
-<p>组合效果呈超线性：设微调单独的安全率提升 \(\Delta_F\)，清理单独提升 \(\Delta_S\)，组合后提升 \(\Delta_C > \Delta_F + \Delta_S\)，因为清理降低了攻击强度，使微调更容易发挥作用。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 良性 ICL 性能保持</div>
-<p>防御不应影响模型的正常 in-context learning 能力。作者验证了在 few-shot 分类、翻译、代码补全等良性 ICL 任务上，防御后的模型性能损失 < 1.5%。这是因为：(1) 微调数据中包含正面 ICL 示例的对比样本；(2) 输入清理的 \(\tau\) 阈值经过调优，仅对高度重复的模式触发。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 100-shot MSJ 攻击与防御</div>
-<p><strong>攻击输入：</strong>在提示中插入 100 个"用户提问有害问题 → 虚假助手热心回答"的 in-context 对话轮次，然后附加真实有害请求。</p>
-<p><strong>无防御模型：</strong>攻击成功率 67.3%，模型按照虚假助手的"风格"回答了有害请求。</p>
-<p><strong>仅输入清理：</strong>检测到 \(R_{\text{rep}} = 0.89\)，删减至 8 个示例，攻击成功率降至 23.1%。</p>
-<p><strong>仅安全微调：</strong>攻击成功率降至 18.5%。</p>
-<p><strong>组合防御：</strong>攻击成功率降至 <strong>4.2%</strong>（接近无攻击基线的 2.1%），且良性 ICL 准确率仅下降 0.9%。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>防御方法</th><th>MSJ 攻击成功率 ↓</th><th>良性 ICL 保持率 ↑</th><th>对话任务保持率 ↑</th></tr>
-<tr><td>无防御 (Baseline)</td><td>67.3%</td><td>100%</td><td>100%</td></tr>
-<tr><td>仅输入清理</td><td>23.1%</td><td>99.2%</td><td>99.8%</td></tr>
-<tr><td>仅安全微调</td><td>18.5%</td><td>98.7%</td><td>99.1%</td></tr>
-<tr class="highlight"><td><strong>组合防御 (Ours)</strong></td><td><strong>4.2%</strong></td><td><strong>98.5%</strong></td><td><strong>98.9%</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融发现：(1) 微调样本中 MSJ 示例数量从 50 增到 200 时安全率持续提升，但超过 200 后边际收益递减；(2) 输入清理的阈值 \(\tau=0.6\) 最优，低于 0.4 会误删正常 few-shot 示例；(3) 攻击示例数量从 50 到 500 时，组合防御的成功率始终低于 8%，而无防御模型从 42% 升至 83%。局限性：该方法对"语义多样但意图一致"的高级 MSJ 变体（每个示例措辞不同）的效果还需进一步研究。</p>
-</div>
-
-</section>

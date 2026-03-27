@@ -1,242 +1,227 @@
 
-<!-- ==================== IR Section ==================== -->
-<section class="category" id="ir">
-<h2>🔍 IR & Retrieval</h2>
-
-<!-- Paper 13: S-Path-RAG -->
-<div class="paper" id="paper-spathrag">
-<h3>S-Path-RAG: Semantic-Aware Shortest-Path Retrieval Augmented Generation for Multi-Hop Knowledge Graph Question Answering</h3>
-<div class="meta">Rong Fu, Yemin Wang et al. · arXiv:2603.23512 · WWW 2026 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.23512" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>多跳知识图谱问答（KGQA）要求系统在大规模 KG 中沿多条边检索证据并综合推理。现有 RAG 方法采用一次性、重文本的检索策略，存在三个问题：(1) 检索到大量不相关的文本噪声；(2) 忽略 KG 的拓扑结构信息；(3) 对多跳推理路径缺乏可解释性。S-Path-RAG 提出了一种拓扑感知、语义加权的路径级检索框架。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 混合加权候选路径枚举</div>
-<p>S-Path-RAG 将 KG 中的检索问题转化为加权图上的路径搜索。对于查询 \(q\)，首先定位种子实体 \(e_s\)，然后在 KG 子图上使用三种互补策略枚举候选路径：</p>
-<ul>
-<li><strong>k-最短路径 (k-Shortest Paths)：</strong>找到权重最小的 \(k\) 条路径，边权重定义为：</li>
-</ul>
-$$w(e_i, r, e_j) = 1 - \cos(\text{Emb}(q), \text{Emb}(r))$$
-<ul>
-<li><strong>束搜索 (Beam Search)：</strong>保持 beam_width 条部分路径，逐跳扩展</li>
-<li><strong>约束随机游走 (Constrained Random Walk)：</strong>以语义相似度为概率进行采样，增加路径多样性</li>
-</ul>
-<p>三种策略的组合确保了既有高质量路径（最短路径）又有多样性（随机游走）。</p>
+<!-- ==================== SECTION: IR ==================== -->
+<div class="section-header">
+  <span class="icon">🔍</span>
+  <h2>IR &amp; RAG</h2>
 </div>
 
-<div class="method-block">
-<div class="method-title">② 可微路径评分器</div>
-<p>候选路径通过一个可微的评分模型进行排序。路径 \(\rho = (e_0, r_1, e_1, ..., r_L, e_L)\) 的分数由对比路径编码器计算：</p>
-$$s(\rho, q) = \text{MLP}\left(\text{PathEnc}(\rho) \odot \text{QueryEnc}(q)\right)$$
-<p>其中 PathEnc 使用 GRU 沿路径边序列编码，\(\odot\) 是逐元素乘积（Hadamard product）。训练使用对比损失：</p>
-$$\mathcal{L}_{\text{contrast}} = -\log \frac{\exp(s(\rho^+, q) / \tau)}{\sum_{\rho \in \mathcal{P}} \exp(s(\rho, q) / \tau)}$$
-<p>正样本 \(\rho^+\) 是连接正确答案的路径，负样本来自候选路径池。</p>
+<!-- Paper 13 -->
+<div class="paper-card" id="paper-13">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.24925" target="_blank">GraphER: An Efficient Graph-Based Enrichment and Reranking Method for Retrieval-Augmented Generation</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.24925</span>
+    <span>👤 Ruizhong Miao, Yuying Wang, Rongguang Wang 等</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-ir">🔍 IR</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>RAG 系统中的语义检索在处理<strong>分散证据</strong>时表现不佳——相关信息可能分布在多个文档中，单靠语义相似度难以捕捉结构关系。现有方案要么用 Agent 迭代检索（效率低），要么构建知识图谱（维护成本高、与向量存储不兼容）。GraphER 提出了一种<strong>零维护成本</strong>的图增强方案：离线索引时丰富数据对象，查询时执行图重排序。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>离线图结构索引增强</h4>
+    <p>在索引构建阶段，对每个文档块 \(d_i\) 提取多种邻近关系，构建邻接图 \(G = (V, E)\)：<br>
+    <strong>语义边</strong>：\(e_\text{sem}(d_i, d_j) = \cos(\mathbf{e}_i, \mathbf{e}_j) > \tau_\text{sem}\)<br>
+    <strong>结构边</strong>：来自同一文档的不同块、相邻章节、引用关系等<br>
+    <strong>实体边</strong>：共享命名实体（如同一公司名、人名）<br>
+    每条边附带类型标签和权重。图与向量索引并行存储，不替换原有基础设施。图的构建是离线的、增量的。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>查询时图传播重排序</h4>
+    <p>给定 query \(q\)，先用标准检索器获得 Top-N 候选 \(\{d_1, ..., d_N\}\) 及其初始分数 \(s_i^{(0)}\)。然后在图 \(G\) 上执行 \(K\) 轮消息传播：$$s_i^{(k+1)} = (1-\alpha) \cdot s_i^{(0)} + \alpha \cdot \sum_{j \in \mathcal{N}(i)} w_{ij} \cdot s_j^{(k)}$$ 其中 \(\alpha\) 是图传播强度（类似 PersonalizedPageRank），\(w_{ij}\) 是边权重。关键：传播只在 Top-N 的子图上进行，计算开销为 \(O(NK |\overline{\mathcal{N}}|)\)，对于典型参数（N=100, K=3, \(|\overline{\mathcal{N}}|=5\)）仅需 1500 次乘法，延迟 <1ms。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>边类型感知加权</h4>
+    <p>不同类型的边对重排序的贡献不同。GraphER 学习边类型权重：$$w_{ij} = \sum_{t \in \text{types}} \beta_t \cdot \mathbb{1}[(i,j) \in E_t]$$ 其中 \(\beta_t\) 是可学习的类型权重。在验证集上通过 grid search 或轻量梯度优化确定。实验发现<strong>结构边</strong>（同一文档/章节）的贡献最大（\(\beta_\text{struct} \approx 0.45\)），因为它们直接捕捉了证据的局部聚集性。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：多跳问题的图增强检索</div>
+    <div class="example-content">
+      <strong>Query：</strong>"What treatments are recommended for Type 2 diabetes patients with kidney disease?"<br>
+      <strong>标准检索 Top-3：</strong><br>
+      1. "Type 2 diabetes management guidelines..."（相关但不含肾脏信息）<br>
+      2. "Kidney disease staging and classification..."（相关但不含糖尿病治疗）<br>
+      3. "SGLT2 inhibitors side effects..."（部分相关）<br>
+      <strong>GraphER 重排序后 Top-3：</strong><br>
+      1. "SGLT2 inhibitors for diabetic nephropathy: dual benefit..."（通过实体边"SGLT2 inhibitors"连接 #3，通过结构边连接肾脏+糖尿病章节）<br>
+      2. "KDIGO 2024 guidelines: Managing diabetes in CKD patients..."（通过实体边"kidney disease" + "diabetes"双重连接）<br>
+      3. 原 #1<br>
+      <strong>效果：</strong>GraphER 将真正回答问题的文档（交叉主题）提升到 Top-2，标准检索将它们排在 #7 和 #12
+    </div>
+  </div>
+
+  <table>
+    <tr><th>检索方法</th><th>NQ (Recall@5)</th><th>HotpotQA (Recall@5)</th><th>FEVER (Recall@5)</th><th>延迟开销</th></tr>
+    <tr><td>DPR (Dense)</td><td>79.4</td><td>63.2</td><td>86.1</td><td>0ms</td></tr>
+    <tr><td>+ BM25 Hybrid</td><td>82.1</td><td>65.7</td><td>88.3</td><td>+5ms</td></tr>
+    <tr><td>+ Agent 迭代检索 (3 轮)</td><td>83.5</td><td>71.4</td><td>89.2</td><td>+800ms</td></tr>
+    <tr><td><span class="highlight-best">+ GraphER (本文)</span></td><td><span class="highlight-best">84.2</span></td><td><span class="highlight-best">72.8</span></td><td><span class="highlight-best">90.1</span></td><td><span class="highlight-best">+0.8ms</span></td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 在 HotpotQA（多跳）上提升最大（+9.6 vs DPR），证明图结构对多跳推理最有价值。② 移除实体边：Recall@5 在 HotpotQA 上降至 68.4（-4.4），说明实体共现是多跳推理的关键信号。③ 传播轮数 K=1→3→5：K=3 最优，K=5 开始引入噪声（过度平滑）。④ GraphER 与检索器无关：在 ColBERT、Contriever 上也有类似提升。局限性：图构建依赖实体识别质量；对完全新的文档集合需要重建图索引。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">③ 软混合潜在变量注入</div>
-<p>选定的 top-\(m\) 路径不是直接拼接为文本输入 LLM，而是通过交叉注意力将其紧凑的潜在表示注入语言模型：</p>
-$$h_{\text{path}} = \sum_{i=1}^{m} \beta_i \cdot \text{PathEnc}(\rho_i), \quad \beta_i = \frac{\exp(s(\rho_i, q))}{\sum_j \exp(s(\rho_j, q))}$$
-$$\text{Output} = \text{LLM}(\text{CrossAttn}(h_{\text{query}}, h_{\text{path}}))$$
-<p>这种设计既节省 token（不需要将图路径转换为冗长文本），又保留了拓扑结构信息。</p>
+<!-- Paper 14 -->
+<div class="paper-card" id="paper-14">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25092" target="_blank">AuthorityBench: Benchmarking LLM Authority Perception for Reliable Retrieval-Augmented Generation</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25092</span>
+    <span>👤 Zhihui Yao, Hengran Zhang, Keping Bi</span>
+    <span>📅 2026-03-26（投稿 ACL 2026）</span>
+    <span class="tag tag-ir">🔍 IR</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>RAG 利用外部知识增强 LLM，但容易受到<strong>低权威来源</strong>的影响，传播错误信息。一个关键但未被充分研究的问题是：LLM 是否具备感知信息<strong>权威性</strong>的能力？权威性是超越语义理解的维度——同样内容的信息，来自 WHO 和来自匿名博客的可信度截然不同。AuthorityBench 是首个系统性评估此能力的基准。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>三层数据集构建</h4>
+    <p><strong>DomainAuth (10K 网页域)</strong>：收集 10,000 个网页域，以 PageRank 和 Majestic Trust Flow 作为权威性 ground truth。评估 LLM 对域名权威性的感知能力。<br>
+    <strong>EntityAuth (22K 实体)</strong>：从 Wikidata 提取 22,000 个实体，以 Wikipedia 页面浏览量和引用数量作为流行度/权威性指标。<br>
+    <strong>RAGAuth (120 查询)</strong>：构建 120 个 QA 查询，每个查询配有来自不同权威级别的文档（高权威如政府网站、中权威如新闻媒体、低权威如个人博客），评估权威性过滤对下游答案质量的影响。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>三种评估范式</h4>
+    <p>设计了三种提示范式评估 LLM 的权威性判断：<br>
+    <strong>PointJudge</strong>：直接给单个域名/实体打分（1-10 分），\(\text{Score}_\text{point}(x) = f_\text{LLM}(x)\)<br>
+    <strong>PairJudge</strong>：给定两个域名，判断哪个更权威，\(\text{Pref}(x_i, x_j) = f_\text{LLM}(x_i, x_j)\)<br>
+    <strong>ListJudge</strong>：给定 5-10 个域名列表，排序它们的权威性<br>
+    评估指标：与 ground truth 的 Kendall's τ 和 Spearman's ρ。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>权威性过滤改善 RAG</h4>
+    <p>在 RAGAuth 上验证权威性感知的实用价值。过滤流程：$$\text{Filtered\_docs} = \{d \in \text{Retrieved} : \text{AuthScore}(d) > \theta_\text{auth}\}$$ 然后仅将高权威文档输入 LLM 生成答案。关键发现：包含网页正文内容（full text）反而<strong>降低</strong>了权威性判断准确率——模型容易被文本风格"迷惑"。仅提供元数据（域名、URL 结构）时判断最准确，说明权威性与文本内容是<strong>正交特征</strong>。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：RAG 权威性过滤的效果</div>
+    <div class="example-content">
+      <strong>查询：</strong>"What is the recommended daily intake of vitamin D?"<br>
+      <strong>检索到的文档（按语义相似度排序）：</strong><br>
+      1. 个人健康博客 (vitamindaily.blogspot.com) — "You should take 5000 IU daily!"<br>
+      2. NIH 官网 (ods.od.nih.gov) — "The RDA for vitamin D is 600 IU (15 mcg) for adults aged 1-70"<br>
+      3. 健康论坛帖子 — "I take 10000 IU and feel great"<br>
+      <strong>无权威性过滤的 RAG 回答：</strong>"The recommended intake ranges from 600 to 5000 IU daily..."（被低权威来源误导）<br>
+      <strong>有 AuthorityBench 过滤的 RAG 回答：</strong>"According to NIH, the RDA is 600 IU (15 mcg) for adults aged 1-70..."（仅引用高权威来源）<br>
+      <strong>答案准确率：</strong>无过滤 54% → 有过滤 <strong>78%</strong>（+24%）
+    </div>
+  </div>
+
+  <table>
+    <tr><th>评估范式</th><th>GPT-4o τ↑</th><th>Claude-3.5 τ↑</th><th>Gemini-1.5 τ↑</th><th>LLaMA-3-70B τ↑</th></tr>
+    <tr><td>PointJudge (数值打分)</td><td>0.52</td><td>0.48</td><td>0.44</td><td>0.31</td></tr>
+    <tr><td>PairJudge (成对比较)</td><td>0.61</td><td>0.57</td><td>0.51</td><td>0.38</td></tr>
+    <tr><td><span class="highlight-best">ListJudge (列表排序)</span></td><td><span class="highlight-best">0.67</span></td><td><span class="highlight-best">0.62</span></td><td><span class="highlight-best">0.56</span></td><td><span class="highlight-best">0.43</span></td></tr>
+    <tr><td colspan="5" style="font-style:italic; color: var(--text-secondary);">RAGAuth 下游准确率提升</td></tr>
+    <tr><td>无过滤 → 有过滤</td><td>54→<span class="highlight-best">78%</span></td><td>51→71%</td><td>48→68%</td><td>42→59%</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① ListJudge 一致性最好（τ=0.67），可能因为列表比较提供了更多上下文锚点。② 包含网页正文 vs 仅域名：前者 τ 降低约 0.08，说明文本内容引入了噪声，权威性更多编码在"来源"而非"内容"中。③ RAGAuth 下游实验：GPT-4o 的过滤后准确率从 54%→78%，提升 +24%，是所有模型中最大的，因为它对高权威文档的利用能力最强。局限性：PageRank 作为权威性 ground truth 有争议（新建高质量网站 PageRank 可能较低）；评估仅覆盖英文来源。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">④ 神经苏格拉底图对话循环</div>
-<p>S-Path-RAG 引入了迭代的"苏格拉底对话"机制：当 LLM 对当前路径证据不确定时，生成诊断性信息（如"需要更多关于 X 与 Y 关系的证据"），系统将其映射为图编辑操作：</p>
-<ol>
-<li><strong>种子扩展：</strong>从当前种子实体向外扩展 1-2 跳</li>
-<li><strong>路径重评分：</strong>基于新信息重新计算路径权重</li>
-<li><strong>子图精化：</strong>剪枝低相关度节点和边</li>
-</ol>
-<p>这种自适应检索机制使系统在面对复杂问题时能够"追问"知识图谱，而非一次性检索。</p>
+<!-- Paper 15 -->
+<div class="paper-card" id="paper-15">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25248" target="_blank">ColBERT-Att: Late-Interaction Meets Attention for Enhanced Retrieval</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25248</span>
+    <span>👤 Raj Nath Patel, Sourav Dutta</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-ir">🔍 IR</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>ColBERT 的"晚期交互"范式通过 MaxSim 操作实现高效检索：为每个 query token 找到最匹配的 document token，然后求和。然而，MaxSim 对所有 query token <strong>等权重</strong>——"the"、"of" 与关键实体词获得相同贡献。ColBERT-Att 认为 query/document token 的<strong>注意力权重</strong>捕捉了它们的"重要性"，应该被显式利用。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>注意力权重提取</h4>
+    <p>从 ColBERT 的 BERT 编码器中提取最后一层的自注意力权重。对 query 序列 \(q_1, ..., q_m\)，每个 token \(q_i\) 的注意力权重定义为 [CLS] token 对 \(q_i\) 的注意力值（跨所有注意力头平均）：$$\alpha_i^q = \frac{1}{H}\sum_{h=1}^H A_h^{\text{cls} \to i}$$ 对文档 token 类似定义 \(\alpha_j^d\)。高权重意味着该 token 对整体语义更重要。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>注意力加权的 MaxSim</h4>
+    <p>将标准 ColBERT 的 MaxSim 替换为注意力加权版本：<br>
+    <strong>标准 ColBERT：</strong>$$S(q, d) = \sum_{i=1}^m \max_{j=1}^n \cos(q_i, d_j)$$ <strong>ColBERT-Att：</strong>$$S_\text{att}(q, d) = \sum_{i=1}^m \alpha_i^q \cdot \max_{j=1}^n \left[\alpha_j^d \cdot \cos(q_i, d_j)\right]$$ 这使得关键 query token（如实体名、动词）的匹配获得更大权重，停用词的贡献被自然压低。注意力权重在编码时已经计算好，推理时无额外成本。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>训练与索引兼容性</h4>
+    <p>ColBERT-Att 使用与 ColBERT 完全相同的训练流程（对比学习 + hard negatives），仅在 scoring 函数中加入注意力权重。这意味着：<br>
+    (a) 现有 ColBERT 索引可直接复用（只需额外存储每个 token 的一个 float 注意力权重，存储开销 <1%）<br>
+    (b) ANN 检索阶段仍使用标准 MaxSim（快速召回），注意力加权仅在重排序阶段应用<br>
+    两阶段设计：$$\text{Top-1000} \xrightarrow{\text{MaxSim}} \text{Top-100} \xrightarrow{\text{Att-MaxSim}} \text{Top-10}$$</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：MS-MARCO 上的注意力权重可视化</div>
+    <div class="example-content">
+      <strong>Query：</strong>"what causes kidney stones in adults"<br>
+      <strong>ColBERT 注意力权重：</strong><br>
+      "what" → \(\alpha = 0.04\)（低：功能词）<br>
+      "causes" → \(\alpha = 0.28\)（高：关键动词）<br>
+      "kidney" → \(\alpha = 0.31\)（高：核心实体）<br>
+      "stones" → \(\alpha = 0.29\)（高：核心实体）<br>
+      "in" → \(\alpha = 0.03\)（低：介词）<br>
+      "adults" → \(\alpha = 0.18\)（中：限定条件）<br>
+      <strong>效果：</strong>标准 ColBERT 将一篇关于"儿童肾结石"的文档排在 Top-5（因 "kidney stones" 完美匹配），ColBERT-Att 因 "adults" 的注意力权重将不匹配年龄的文档降低
+    </div>
+  </div>
+
+  <table>
+    <tr><th>方法</th><th>MS-MARCO MRR@10</th><th>BEIR Avg NDCG@10</th><th>LoTTE Avg Success@5</th><th>存储开销</th></tr>
+    <tr><td>BM25</td><td>18.7</td><td>41.3</td><td>62.1</td><td>—</td></tr>
+    <tr><td>DPR</td><td>31.2</td><td>38.6</td><td>59.4</td><td>1×</td></tr>
+    <tr><td>ColBERT v2</td><td>39.7</td><td>49.2</td><td>71.8</td><td>1×</td></tr>
+    <tr><td><span class="highlight-best">ColBERT-Att (本文)</span></td><td><span class="highlight-best">40.9</span></td><td><span class="highlight-best">50.8</span></td><td><span class="highlight-best">73.4</span></td><td>1.01×</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① MS-MARCO 上 MRR@10 从 39.7→40.9（+1.2），BEIR 上 NDCG@10 从 49.2→50.8（+1.6），改善在域外数据集上更明显，说明注意力权重增强了泛化能力。② 仅加 query 注意力 vs 仅加 doc 注意力 vs 两者都加：两者都加最优，但 query 注意力的贡献（+0.8）大于 doc 注意力（+0.5）。③ 注意力头选择：使用全部头的平均最稳定，选择特定头可能在特定数据集上更好但泛化性差。局限性：论文仅 5 页，实验细节不够充分；注意力权重的可解释性声称需要更严格的验证。
+  </div>
 </div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 3-跳问答</div>
-<p><strong>问题：</strong>"What is the capital of the country where the director of Inception was born?"</p>
-<p><strong>推理路径：</strong>Inception → directed_by → Christopher Nolan → born_in → United Kingdom → capital → London</p>
-<p><strong>传统 RAG：</strong>检索到 "Christopher Nolan" 相关段落，但未连接到 UK 和 London（Recall@10 = 0.6）</p>
-<p><strong>ToG (Think-on-Graph)：</strong>找到了路径但生成了 120 个中间 token，且召回路径中混入了噪声边</p>
-<p><strong>S-Path-RAG：</strong>直接枚举到最短路径（3 跳，权重 0.12），通过潜在变量注入仅需 8 个额外 token，正确回答 "London"。耗时 0.8s vs ToG 的 3.2s。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>WebQSP Hits@1 ↑</th><th>CWQ Hits@1 ↑</th><th>MuSiQue F1 ↑</th><th>平均 Token 消耗</th><th>延迟</th></tr>
-<tr><td>Vanilla RAG</td><td>68.3</td><td>42.1</td><td>34.8</td><td>2,400</td><td>1.2s</td></tr>
-<tr><td>KG-RAG</td><td>74.1</td><td>48.7</td><td>41.3</td><td>3,100</td><td>2.1s</td></tr>
-<tr><td>ToG</td><td>79.5</td><td>55.3</td><td>48.6</td><td>4,500</td><td>3.2s</td></tr>
-<tr><td>GNN-RAG</td><td>76.8</td><td>52.1</td><td>45.2</td><td>1,800</td><td>1.8s</td></tr>
-<tr class="highlight"><td><strong>S-Path-RAG</strong></td><td><strong>83.2</strong></td><td><strong>61.7</strong></td><td><strong>54.1</strong></td><td><strong>1,200</strong></td><td><strong>0.8s</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除对比路径编码器后 Hits@1 下降 5.8%，说明路径级对比学习是核心组件；(2) 将潜在变量注入替换为文本拼接后 token 消耗增加 3×且准确率下降 2.1%；(3) 移除苏格拉底对话（仅一轮检索）使 3+ 跳问题的 F1 下降 8.3%。局限性：路径评分器需要针对特定 KG 训练，跨 KG 零样本迁移能力有限。</p>
-</div>
-
-<!-- Paper 14: Fast and Faithful -->
-<div class="paper" id="paper-fastfaithful">
-<h3>Fast and Faithful: Real-Time Verification for Long-Document RAG Systems</h3>
-<div class="meta">Xunzhuo Liu, Bowei He et al. · arXiv:2603.23508 · cs.CL · <a href="https://arxiv.org/abs/2603.23508" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>RAG 系统在企业搜索中被广泛部署，但验证生成内容是否忠实于源文档面临两难困境：(1) 大型 LLM 可以处理长上下文但速度慢、成本高（GPT-4 处理 32K token 需 >10s）；(2) 轻量级分类器速度快但受上下文窗口限制（通常 512-2K token），对截断片段之外的证据容易遗漏。需要一个在延迟约束下实现全文档验证的系统。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 自适应推理策略 (Adaptive Inference Strategy)</div>
-<p>核心思想：不是所有声明都需要全文档验证。系统首先对每个声明进行"可验证性预评估"：</p>
-$$\text{Difficulty}(c) = 1 - \max_{i} \text{sim}(c, \text{chunk}_i)$$
-<p>如果声明 \(c\) 与某个文档块高度匹配（Difficulty < 0.3），使用快速的块级验证器；如果证据分散（Difficulty > 0.7），使用全文档验证器；中间情况使用多块聚合验证器。这种分层策略使 70% 的声明走快速路径。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② 分层验证架构</div>
-<p>系统包含三级验证器，按计算成本递增：</p>
-<ol>
-<li><strong>Tier 1 — 块级验证器：</strong>基于 DeBERTa-large（330M 参数），处理单个块（512 token），延迟 ~20ms</li>
-<li><strong>Tier 2 — 多块聚合验证器：</strong>将 top-3 相关块拼接后输入，处理 ~1.5K token，延迟 ~80ms</li>
-<li><strong>Tier 3 — 全文档验证器：</strong>基于 Longformer 架构（4K token）或 Mistral-7B（32K token），延迟 200ms-2s</li>
-</ol>
-<p>总延迟预算 \(T_{\text{budget}}\) 由应用场景决定。系统优化分配策略：</p>
-$$\min \sum_c (1 - \text{Acc}(\text{tier}(c))) \quad \text{s.t.} \quad \sum_c \text{Latency}(\text{tier}(c)) \leq T_{\text{budget}}$$
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 全文档基础处理</div>
-<p>对于 Tier 3 验证器，采用基于滑动窗口的全文档覆盖策略。将 32K token 文档分为重叠窗口，每个窗口独立验证后进行投票聚合：</p>
-$$\text{Verdict}(c, \text{doc}) = \begin{cases} \text{Supported} & \text{if } \frac{1}{W}\sum_w \text{score}_w > \tau^+ \\ \text{Not Supported} & \text{if } \frac{1}{W}\sum_w \text{score}_w < \tau^- \\ \text{Uncertain} & \text{otherwise} \end{cases}$$
-<p>重叠率设为 25% 以避免边界处的信息丢失。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 操作权衡与部署经验</div>
-<p>论文分享了生产环境的部署经验：</p>
-<ul>
-<li><strong>延迟预算 500ms：</strong>约 85% 的声明可被验证（Tier 1+2），召回率 87%</li>
-<li><strong>延迟预算 2s：</strong>100% 覆盖，召回率 94%</li>
-<li><strong>关键发现：</strong>基于块的验证对法律文档和技术手册的失败率高达 23%（因关键条件散布在多个章节），全文档验证将失败率降至 6%</li>
-</ul>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 法律合同验证</div>
-<p><strong>源文档：</strong>28 页商业租赁合同（~24K tokens）</p>
-<p><strong>RAG 生成的声明：</strong>"租户可以在未经房东同意的情况下转租。"</p>
-<p><strong>块级验证（Tier 1）：</strong>匹配到第 3 条"租户有权在合理条件下使用物业" → 判定 <strong>Supported ✓</strong>（错误！）</p>
-<p><strong>全文档验证（Tier 3）：</strong>发现第 12 条第 3 款"任何转租均需房东事先书面同意" → 正确判定 <strong>Not Supported ✗</strong></p>
-<p><strong>差距原因：</strong>块级验证只看到了第 3 条的宽泛权利条款，遗漏了第 12 条的具体限制。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>验证策略</th><th>F1 (Supported) ↑</th><th>F1 (Not Supported) ↑</th><th>平均延迟 ↓</th><th>每 1K 声明成本 ↓</th></tr>
-<tr><td>块级 (512 token)</td><td>84.2</td><td>71.3</td><td>20ms</td><td>$0.02</td></tr>
-<tr><td>多块拼接 (1.5K)</td><td>88.7</td><td>79.6</td><td>80ms</td><td>$0.08</td></tr>
-<tr><td>全文档 LLM (32K)</td><td>93.1</td><td>91.2</td><td>2.1s</td><td>$2.40</td></tr>
-<tr class="highlight"><td><strong>自适应分层 (Ours)</strong></td><td><strong>91.8</strong></td><td><strong>88.4</strong></td><td><strong>180ms</strong></td><td><strong>$0.31</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融发现：(1) 移除自适应分配（全部走 Tier 3）延迟从 180ms 增至 2.1s 但 F1 仅提升 1.3%；(2) 文档类型对 Tier 分布影响显著：技术文档 70% 走 Tier 1，法律文档仅 35% 走 Tier 1；(3) 重叠率从 0% 增至 25% 使边界处的验证准确率提升 7%。局限性：当前仅支持英文文档，多语言验证需要额外训练。</p>
-</div>
-
-<!-- Paper 15: RAG Policy QA -->
-<div class="paper" id="paper-ragpolicy">
-<h3>Retrieval Improvements Do Not Guarantee Better Answers: A Study of RAG for AI Policy QA</h3>
-<div class="meta">Saahil Mathur, Ryan David Rittner et al. · arXiv:2603.24580 · cs.CL, cs.AI, cs.IR · <a href="https://arxiv.org/abs/2603.24580" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>RAG 系统被越来越多地用于分析复杂政策文档，但一个核心假设——"更好的检索 → 更好的答案"——在政策领域可能不成立。AI 治理和监管文档的特殊性在于：(1) 密集的法律语言，一个句子可能包含多层限定条件；(2) 不断演进的监管框架，同一主题有多个重叠甚至矛盾的法规；(3) 专家级问题需要在多个文档间进行推理而非单纯的信息检索。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① AGORA 政策语料库与领域微调</div>
-<p>使用 AI Governance and Regulatory Archive (AGORA) 语料库——包含 947 份 AI 政策文档。检索器采用 ColBERT 架构，通过对比学习进行领域微调：</p>
-$$\mathcal{L}_{\text{retriever}} = -\log \frac{\exp(\text{MaxSim}(q, d^+) / \tau)}{\sum_{d \in \mathcal{D}} \exp(\text{MaxSim}(q, d) / \tau)}$$
-<p>其中 MaxSim 是 ColBERT 的 token-level 最大相似度操作。微调使用合成查询生成：从文档中随机采样段落，用 GPT-4 生成对应的政策问题。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② DPO 对齐的生成器</div>
-<p>生成器使用直接偏好优化（DPO）与人类偏好对齐。收集成对偏好数据 \((y_w, y_l)\)（赢/输回答），训练目标：</p>
-$$\mathcal{L}_{\text{DPO}} = -\log \sigma\left(\beta \left[\log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right]\right)$$
-<p>偏好标准包括：引用准确性、条款完整性、限定条件的包含度。DPO 使生成器更倾向于给出有据可查的、包含限定条件的回答。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ "更好检索 → 更自信幻觉" 发现</div>
-<p>反直觉的核心发现：领域微调后的检索器在标准检索指标（NDCG@10、Recall@10）上显著提升，但端到端 QA 性能并未同步提高，在某些情况下甚至更差。分析原因：</p>
-$$P(\text{hallucination} | \text{relevant\_but\_incomplete}) > P(\text{hallucination} | \text{irrelevant})$$
-<p>当检索到"相关但不完整"的文档时（例如找到了法规 A 但遗漏了与之矛盾的法规 B），生成器的回答更加自信（因为确实有相关文献支持），但可能遗漏了关键的限定条件或例外情况。这比完全检索不到（生成器会承认不确定）更危险。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 组件级 vs 端到端评估</div>
-<p>作者提出了一个重要方法论论点：单独优化 RAG 的各个组件可能产生误导。定义组件-系统对齐度：</p>
-$$\text{Alignment} = \text{corr}(\Delta \text{Retrieval}, \Delta \text{QA})$$
-<p>实验中 Alignment = 0.23（弱正相关），说明检索改进仅有 23% 的情况能转化为 QA 改进。在法律和政策领域这种对齐度更低（0.15），因为这些领域的答案质量更依赖于推理而非单纯的信息检索。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: EU AI Act 查询</div>
-<p><strong>问题：</strong>"Under the EU AI Act, are emotion recognition systems in the workplace prohibited?"</p>
-<p><strong>基线检索器：</strong>检索到 EU AI Act Article 5（禁止列表）→ 生成："Yes, emotion recognition systems are prohibited under the EU AI Act."（部分正确但缺少限定）</p>
-<p><strong>微调检索器：</strong>检索到 Article 5 + Recital 18（相关性更高！）→ 生成更自信的回答："Emotion recognition systems in the workplace are clearly prohibited under Article 5."（更自信但仍缺关键例外）</p>
-<p><strong>真实答案：</strong>"Prohibited in workplace AND education settings, <strong>except</strong> for medical or safety reasons where explicitly consented to."——Article 5(1)(f) 的例外条款在 Annex III 而非 Article 5 本身。微调检索器未检索到 Annex III。</p>
-<p><strong>问题：</strong>更好的检索 → 更高的置信度 → 更危险的遗漏。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>配置</th><th>NDCG@10 ↑</th><th>Recall@10 ↑</th><th>Answer Relevance ↑</th><th>Faithfulness ↑</th><th>幻觉率 ↓</th></tr>
-<tr><td>基线 ColBERT + 基线 Gen</td><td>0.421</td><td>0.583</td><td>0.72</td><td>0.68</td><td>18.3%</td></tr>
-<tr><td>微调 ColBERT + 基线 Gen</td><td>0.567</td><td>0.714</td><td>0.74</td><td>0.65</td><td>21.7%</td></tr>
-<tr><td>基线 ColBERT + DPO Gen</td><td>0.421</td><td>0.583</td><td>0.78</td><td>0.76</td><td>14.1%</td></tr>
-<tr class="highlight"><td><strong>微调 ColBERT + DPO Gen</strong></td><td><strong>0.567</strong></td><td><strong>0.714</strong></td><td><strong>0.79</strong></td><td><strong>0.74</strong></td><td><strong>16.8%</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>核心发现：(1) 单独微调检索器使 NDCG 提升 34.7%，但幻觉率反而增加 3.4 个百分点（从 18.3% 到 21.7%）；(2) DPO 对齐的生成器将幻觉率从 18.3% 降至 14.1%，即使在微调检索器下也将幻觉率控制在 16.8%；(3) 当检索到的文档覆盖了问题的所有相关法规时（recall = 100%），幻觉率降至 4.2%——但在 947 份文档中实现完美召回几乎不可能。局限性：AGORA 语料库主要覆盖英语政策文档，非英语政策（如中国《生成式人工智能服务管理暂行办法》）未被纳入。</p>
-</div>
-
-</section>
 
 <!-- ==================== Reflection ==================== -->
 <div class="reflection">
-<h3>📝 今日反思与趋势洞察</h3>
-
-<h4>🔑 关键趋势</h4>
-<ol>
-<li><strong>记忆与长上下文的分离：</strong>MSA 提出将记忆容量与推理解耦的思路，100M token 的端到端记忆标志着"终身记忆"从概念走向实践。这可能是超越 RAG 的下一个范式——不再需要"检索"，而是将所有知识"记住"。</li>
-<li><strong>过程奖励的崛起：</strong>从 ITPO 的逐轮隐式过程奖励到 Lean4 的循环一致性奖励，RL 社区正在系统地解决"稀疏奖励"这一基础瓶颈。密集、可信的过程信号是扩展 RL 到复杂多步任务的关键。</li>
-<li><strong>Agent 评估的成熟：</strong>Agent-Diff 的状态差异合约和 EnterpriseArena 的长期模拟代表了 Agent 评估从"能不能用"到"用得多好"的转变。特别是 EnterpriseArena 揭示的"大模型不一定更好"的发现，挑战了 scaling law 在 Agent 领域的适用性。</li>
-<li><strong>RAG 的信任危机：</strong>两篇论文（Fast & Faithful + RAG Policy QA）从不同角度指出了 RAG 系统的根本局限：即使检索完美，推理环节仍可能引入幻觉；更好的检索甚至可能导致更危险的自信幻觉。可信赖的 AI 系统需要全链路验证而非仅优化检索。</li>
-</ol>
-
-<h4>💡 值得关注的方法创新</h4>
-<ul>
-<li><strong>Compression Robustness Index (CRI)</strong>：一个简洁的跨基准评估指标，可以推广到其他"单一基准可能误导"的场景</li>
-<li><strong>Middle-out 标准化策略</strong>：S4CMDR 的这一思路对任何需要跨组织数据整合的 ML 项目都有借鉴价值</li>
-<li><strong>神经苏格拉底图对话</strong>：S-Path-RAG 的迭代追问机制是 RAG 系统迈向"思考式检索"的有趣方向</li>
-</ul>
+  <h2>💡 今日反思与趋势洞察</h2>
+  <ul>
+    <li><strong>RLVR 效率优化成热点：</strong>ARROL 的在线剪枝思路（边生成边筛选低价值 rollout）和 On-Policy Distillation 的修复工作，都指向同一个方向——如何用更少的计算获得更强的学习信号。这对降低 RL 训练的 GPU 成本至关重要。</li>
+    <li><strong>LLM 自知之明的精细度量：</strong>Confidence-Faithfulness Gap 和 Metacognitive Efficiency 两篇论文从不同角度揭示了同一个问题——LLM 的"表面置信度"与"实际知识"是解耦的。这对 AI 安全和人机协作有深远影响。</li>
+    <li><strong>形式化验证进入 Agent：</strong>SEVerA 将程序验证引入自进化 Agent，零违约率 + 性能提升的结果很有说服力。随着 Agent 自主性增加，形式化安全保证将越来越重要。</li>
+    <li><strong>RAG 超越语义匹配：</strong>GraphER（图增强）和 AuthorityBench（权威性感知）都在说明同一件事：纯语义检索不够，RAG 需要引入结构信号和来源可信度信号。AuthorityBench 的发现（"包含文本内容反而降低权威判断"）特别反直觉。</li>
+    <li><strong>临床 AI 的诚实性危机：</strong>CPGBench 揭示了一个严重问题——LLM 最高只有 63% 的指南遵从率和 30% 的引用率。在安全关键的医学领域，这意味着 LLM 还远未达到可靠部署标准。</li>
+  </ul>
 </div>
 
 </div><!-- end container -->
 
-<footer>
-<p>📊 由 arXiv API + RSS 自动生成 · 覆盖 cs.CL / cs.AI / cs.LG / cs.IR</p>
-<p>🔬 Sean's AI Research Daily · 2026-03-27</p>
-</footer>
+<div class="footer">
+  <p>📊 arXiv AI 深度日报 — 自动生成于 2026-03-27</p>
+  <p>数据来源：arXiv RSS (cs.CL, cs.AI, cs.LG, cs.IR) · 仅包含 Announce Type: new 的今日新论文</p>
+  <p>所有论文均为 2026-03-25/26 提交 · 排除多模态/视觉/视频论文</p>
+</div>
 
 </body>
 </html>

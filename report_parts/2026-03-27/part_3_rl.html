@@ -1,189 +1,184 @@
 
-<!-- ==================== RL Section ==================== -->
-<section class="category" id="rl">
-<h2>🎯 LLM RL & Alignment</h2>
-
-<!-- Paper 4: Lean4 Autoformalization -->
-<div class="paper" id="paper-lean4">
-<h3>Improving Lean4 Autoformalization via Cycle Consistency Fine-tuning</h3>
-<div class="meta">Arsen Shebzukhov · arXiv:2603.24372 · cs.CL · <a href="https://arxiv.org/abs/2603.24372" target="_blank">Paper Link</a></div>
-
-<h4>背景与动机</h4>
-<p>自动形式化（Autoformalization）是将自然语言数学文本自动翻译为 Lean4 等形式证明语言的任务，可以大幅加速 AI 辅助的数学研究与证明验证。然而，这一任务面临的核心挑战是：(1) 高质量的 NL→Lean4 平行数据极度稀缺；(2) 传统监督微调（SFT）依赖于精确的参考翻译，但形式化往往有多种等价表达方式；(3) 课程学习的效果在该任务上存疑。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 循环一致性奖励 (Cycle Consistency Reward)</div>
-<p>核心创新：不依赖精确的参考翻译，而是利用"循环翻译"的一致性作为奖励信号。对于自然语言输入 \(x\)，模型先将其翻译为 Lean4 代码 \(\hat{y}\)，再将 \(\hat{y}\) 反向翻译回自然语言 \(x'\)。循环一致性奖励定义为：</p>
-$$R_{\text{cycle}}(x, \hat{y}) = \cos(\text{Emb}(x), \text{Emb}(x'))$$
-<p>其中 \(\text{Emb}(\cdot)\) 是预训练句子嵌入模型的编码函数。奖励值域 \([-1, 1]\)，越接近 1 表示翻译越忠实地保留了原始数学含义。</p>
+<!-- ==================== SECTION: RL & Alignment ==================== -->
+<div class="section-header">
+  <span class="icon">🎯</span>
+  <h2>LLM RL &amp; Alignment</h2>
 </div>
 
-<div class="method-block">
-<div class="method-title">② GRPO 强化学习训练 (Group Relative Policy Optimization)</div>
-<p>使用 GRPO 而非 PPO 来优化策略，避免训练独立的 value function。对于每个输入 \(x\)，采样一组候选翻译 \(\{\hat{y}_1, ..., \hat{y}_G\}\)，计算各自的循环一致性奖励后进行组内归一化：</p>
-$$\hat{A}_i = \frac{R_{\text{cycle}}(x, \hat{y}_i) - \mu_G}{\sigma_G}$$
-<p>其中 \(\mu_G, \sigma_G\) 是组内奖励的均值和标准差。策略梯度更新为：</p>
-$$\nabla_\theta \mathcal{L} = \mathbb{E}\left[\sum_{i=1}^{G} \hat{A}_i \cdot \nabla_\theta \log \pi_\theta(\hat{y}_i | x)\right]$$
-<p>GRPO 的关键优势是无需 critic 网络，计算开销仅比 SFT 高约 40%。</p>
+<!-- Paper 6 -->
+<div class="paper-card" id="paper-6">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25111" target="_blank">SEVerA: Verified Synthesis of Self-Evolving Agents</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25111</span>
+    <span>👤 Debangshu Banerjee, Changming Xu, Gagandeep Singh</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-rl">🎯 RL</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>自进化 LLM Agent（如让 LLM 编写并改进自己的 Agent 程序）在代码修复和科学发现中展现了强大潜力。然而，这些 Agent 程序在未见输入上自主执行时，<strong>没有任何正确性或安全性保证</strong>。现有框架只优化性能指标，完全忽略了形式化约束——如果 Agent 在关键场景中违反合约，后果不堪设想。SEVerA 将 Agent 代码生成表述为一个<strong>约束学习问题</strong>，结合硬的形式化规范与软的任务效用目标。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>形式化保护生成模型（FGGM）</h4>
+    <p>允许规划器 LLM 为每个生成模型调用指定一阶逻辑输出合约。FGGM 将底层模型包裹在带有已验证回退机制的拒绝采样器中：$$\text{FGGM}(M, \phi, x) = \begin{cases} M(x) & \text{if } \phi(M(x)) = \text{True} \\ \text{fallback}(x) & \text{otherwise} \end{cases}$$ 其中 \(\phi\) 是一阶逻辑合约（如"输出必须是合法 JSON 且金额 ≥ 0"），fallback 是安全默认行为。关键保证：对任意输入 \(x\) 和任意模型参数 \(\theta\)，FGGM 的输出始终满足 \(\phi\)。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>三阶段搜索-验证-学习框架</h4>
+    <p><strong>搜索阶段：</strong>规划器 LLM 合成 \(K\) 个候选参数化程序，每个程序包含 FGGM 调用。<br>
+    <strong>验证阶段：</strong>使用 Dafny 形式化验证器证明每个候选程序对所有参数值都满足硬约束。验证通过的程序进入学习阶段，未通过的被丢弃。这将原始的约束优化问题简化为<strong>无约束学习</strong>：$$\max_\theta f(\theta) \quad \text{s.t. } \forall x: \phi(\text{Program}(x; \theta)) \quad \xrightarrow{\text{verify}} \quad \max_\theta f(\theta)$$ <strong>学习阶段：</strong>对验证通过的程序，使用 GRPO 风格的微调优化软目标（如任务准确率），同时形式化保证确保学习过程不违反约束。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>GRPO 微调与约束保持</h4>
+    <p>在学习阶段，对 Agent 内部调用的 LLM 使用 GRPO 优化：$$\mathcal{L}_\text{GRPO} = -\mathbb{E}_{x \sim \pi_\theta} \left[\hat{A}(x) \log \pi_\theta(x)\right] - \beta D_\text{KL}(\pi_\theta \| \pi_\text{ref})$$ 由于 FGGM 的拒绝采样机制，即使 GRPO 更新导致模型输出偏离，FGGM 仍然会拒绝不满足合约的输出并回退到安全行为。这意味着形式化保证在训练过程中<strong>始终成立</strong>，不需要额外的约束惩罚项。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：\(\tau^2\)-bench 策略合规 Agent 工具使用</div>
+    <div class="example-content">
+      <strong>任务：</strong>Agent 使用 5 个 API 工具（查询余额、转账、修改限额等）完成金融操作，需遵守合规约束<br>
+      <strong>合约 \(\phi\)：</strong>"转账金额 ≤ 账户余额 ∧ 单日转账总额 ≤ 限额 ∧ 目标账户存在"<br>
+      <strong>Baseline Agent（无 FGGM）：</strong>成功率 67.3%，但违约率 18.4%（其中 7.2% 导致负余额转账）<br>
+      <strong>SEVerA Agent：</strong>成功率 <strong>72.1%</strong>，违约率 <strong>0.0%</strong><br>
+      <strong>分析：</strong>FGGM 的拒绝采样不仅避免了违约，还通过回退机制让 Agent 选择替代路径，反而提高了成功率。例如，当模型尝试超额转账时，FGGM 拒绝并触发"查询余额→调整金额→重试"的安全路径。
+    </div>
+  </div>
+
+  <table>
+    <tr><th>任务</th><th>方法</th><th>成功率↑</th><th>违约率↓</th><th>搜索候选数</th></tr>
+    <tr><td rowspan="3">Dafny 验证</td><td>Baseline (无约束)</td><td>34.2%</td><td>41.7%</td><td>—</td></tr>
+    <tr><td>Constrained Decoding</td><td>38.5%</td><td>12.3%</td><td>—</td></tr>
+    <tr><td><span class="highlight-best">SEVerA</span></td><td><span class="highlight-best">51.8%</span></td><td><span class="highlight-best">0.0%</span></td><td>8</td></tr>
+    <tr><td rowspan="2">符号数学合成</td><td>Baseline</td><td>56.7%</td><td>23.1%</td><td>—</td></tr>
+    <tr><td><span class="highlight-best">SEVerA</span></td><td><span class="highlight-best">63.4%</span></td><td><span class="highlight-best">0.0%</span></td><td>12</td></tr>
+    <tr><td rowspan="2">\(\tau^2\)-bench</td><td>Baseline</td><td>67.3%</td><td>18.4%</td><td>—</td></tr>
+    <tr><td><span class="highlight-best">SEVerA</span></td><td><span class="highlight-best">72.1%</span></td><td><span class="highlight-best">0.0%</span></td><td>6</td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 移除验证阶段（只搜索+学习），违约率回升至 8.7%，且成功率降至 64.2%，说明形式化验证不仅保证安全还引导了更好的程序结构。② 搜索候选数从 4→8→16：成功率分别为 67.8%→72.1%→73.2%，边际收益递减。③ 学习阶段用 SFT 替代 GRPO：成功率 68.5%（vs 72.1%），GRPO 的探索性更适合这种需要发现替代路径的场景。局限性：形式化验证目前仅支持 Dafny，对更复杂的现实世界合约表达力有限。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">③ LoRA 高效微调</div>
-<p>基于 Qwen3.5-2B 使用 LoRA 进行参数高效微调，仅更新不到 1% 的参数。LoRA 矩阵分解为：</p>
-$$W' = W + \alpha \cdot B \cdot A, \quad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times d}, r \ll d$$
-<p>其中 rank \(r = 16\)，缩放因子 \(\alpha = 32\)。在 FineLeanCorpus 数据集上训练，结合循环一致性奖励和 GRPO，使得 2B 参数的小模型也能取得显著的形式化提升。</p>
+<!-- Paper 7 -->
+<div class="paper-card" id="paper-7">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25464" target="_blank">Maximum Entropy Behavior Exploration for Sim2Real Zero-Shot Reinforcement Learning</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25464</span>
+    <span>👤 Jiajun Hu, Nuria Armengol Urpi, Jin Cheng, Stelian Coros</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-rl">🎯 RL</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>零样本 RL 旨在从无奖励数据集中预训练策略库，测试时直接恢复任意奖励函数的最优策略。关键挑战：如何在没有下游任务先验的情况下收集足够多样化的数据？无方向探索导致数据低多样性、策略不自然，无法直接部署到真实硬件。本文提出 FB-MEBE，结合最大熵行为探索与正则化 Critic，在模拟中预训练、真实四足机器人上零样本部署。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>Forward-Backward (FB) 表示学习</h4>
+    <p>FB 算法学习两个网络：前向特征 \(F(s, a)\) 和后向特征 \(B(s)\)，使得任意奖励函数 \(r(s)\) 的 Q 值可以表示为：$$Q^r(s, a) = F(s, a)^\top z_r, \quad z_r = \mathbb{E}_{s \sim d^\pi}[B(s) \cdot r(s)]$$ 其中 \(z_r\) 是奖励向量嵌入。这允许在测试时给定新的 \(r\)，直接通过 \(\arg\max_a F(s,a)^\top z_r\) 恢复策略，无需重新训练。关键：预训练数据的多样性决定了 \(F, B\) 的表达能力。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>最大熵行为探索（MEBE）</h4>
+    <p>为了最大化预训练数据的多样性，定义行为分布 \(d_\text{behavior}(b)\)，其中 \(b = B(s)\) 是后向特征空间中的行为向量。MEBE 优化的目标：$$\max_\pi H(d_\text{behavior}) = -\int d_\text{behavior}(b) \log d_\text{behavior}(b) \, db$$ 即最大化行为空间的熵。实践中使用 k-nearest neighbor 熵估计器，在每个 batch 中计算：$$\hat{H}_k = \frac{d}{N}\sum_{i=1}^N \log \|b_i - b_i^{(k)}\| + \text{const}$$ 其中 \(b_i^{(k)}\) 是第 \(i\) 个样本的第 \(k\) 近邻。将 \(\hat{H}_k\) 作为探索奖励，鼓励机器人尝试尽可能不同的行为模式。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>正则化 Critic 的行为约束</h4>
+    <p>纯粹的最大熵探索可能学到物理上不自然甚至危险的行为（如翻滚、剧烈抖动），无法部署到硬件。引入正则化 Critic \(C_\text{reg}\)：$$r_\text{total} = r_\text{entropy} + \gamma \cdot C_\text{reg}(s, a)$$ 其中 \(C_\text{reg}\) 惩罚不自然的关节角度、过大的力矩和跌倒状态。具体：$$C_\text{reg}(s, a) = -w_1\|\tau\|^2 - w_2\|q - q_\text{default}\|^2 - w_3 \cdot \mathbb{1}[\text{fall}]$$ \(\tau\) 是关节力矩，\(q\) 是关节角度，\(q_\text{default}\) 是默认站姿。这在多样性和物理可行性之间取得平衡。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：Unitree Go1 四足机器人零样本部署</div>
+    <div class="example-content">
+      <strong>预训练环境：</strong>Isaac Gym 模拟器，无特定任务奖励，纯探索 50M 时间步<br>
+      <strong>FB-MEBE 探索后的行为覆盖：</strong>前进、后退、侧移、转弯、不同步态、不同速度 — 共覆盖 23 种可辨别行为模式<br>
+      <strong>对比 RND 探索：</strong>仅覆盖 11 种行为模式，大量样本集中在"原地小幅抖动"<br>
+      <strong>测试时部署任务：</strong>"以 0.8m/s 向前行走" → FB-MEBE 直接从 \(z_r\) 恢复策略，<strong>零样本</strong>部署到真实 Go1，成功稳定行走<br>
+      <strong>RND 对比：</strong>恢复的策略关节抖动剧烈，部署到真实机器人后 3 秒内跌倒
+    </div>
+  </div>
+
+  <table>
+    <tr><th>方法</th><th>行为覆盖↑</th><th>前进任务↑</th><th>转弯任务↑</th><th>硬件部署成功率</th></tr>
+    <tr><td>FB + Random Explore</td><td>8</td><td>0.42</td><td>0.31</td><td>10%</td></tr>
+    <tr><td>FB + RND</td><td>11</td><td>0.58</td><td>0.44</td><td>20%</td></tr>
+    <tr><td>FB + APT</td><td>14</td><td>0.63</td><td>0.51</td><td>40%</td></tr>
+    <tr><td><span class="highlight-best">FB-MEBE (本文)</span></td><td><span class="highlight-best">23</span></td><td><span class="highlight-best">0.81</span></td><td><span class="highlight-best">0.72</span></td><td><span class="highlight-best">90%</span></td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① 移除正则化 Critic：行为覆盖增至 27，但硬件部署成功率降至 15%，因为策略中包含大量物理不可行的行为。② k-NN 中 k 的选择：k=5 最优，k=1 噪声过大，k=20 熵估计过于平滑。③ 预训练步数从 10M→50M→100M：前进任务分数从 0.62→0.81→0.83，边际收益在 50M 后趋于平坦。局限性：目前仅在四足机器人上验证，灵巧操控等高维任务的效果未知；正则化项的权重需要领域知识调节。
+  </div>
 </div>
 
-<div class="method-block">
-<div class="method-title">④ 课程学习对比实验</div>
-<p>对比了三种训练方案：(a) SFT + 课程学习（难度 1→10 递进）、(b) SFT 无课程（随机顺序）、(c) GRPO + 循环一致性奖励。结果显示课程学习在该任务上无可测量的收益，而 RL 方案在所有测试集上均显著优于 SFT。这可能因为形式化任务中"难度"不是单调的——简单的数学概念可能对应复杂的 Lean4 语法。</p>
+<!-- Paper 8 -->
+<div class="paper-card" id="paper-8">
+  <div class="paper-title"><a href="https://arxiv.org/abs/2603.25562" target="_blank">Revisiting On-Policy Distillation: Empirical Failure Modes and Simple Fixes</a></div>
+  <div class="paper-meta">
+    <span>📋 arXiv:2603.25562</span>
+    <span>👤 Yuqian Fu, Haohuan Huang, Kaiwen Jiang, Yuanheng Zhu, Dongbin Zhao</span>
+    <span>📅 2026-03-26</span>
+    <span class="tag tag-rl">🎯 RL</span>
+  </div>
+
+  <div class="module-title">背景与动机</div>
+  <p>On-Policy Distillation (OPD) 让学生模型生成 rollout、教师模型在学生轨迹上提供反馈，比 Off-Policy（固定教师轨迹）更适合 LLM 后训练。然而在长序列场景中，标准的 token-level OPD 极其脆弱：它将分布匹配压缩为<strong>单 token 信号</strong>，随着 rollout 偏离教师分布，教师的指导越来越不可靠。本文系统分析了三种失败模式并提出简单有效的修复。</p>
+
+  <div class="module-title">核心方法详解</div>
+
+  <div class="method-block">
+    <span class="step-num">①</span>
+    <h4>理论分析：Token-level vs Sequence-level OPD</h4>
+    <p>标准 token-level OPD 目标：$$\mathcal{L}_\text{token} = \mathbb{E}_{x_{1:t} \sim \pi_S}\left[D_\text{KL}(\pi_T(\cdot|x_{1:t}) \| \pi_S(\cdot|x_{1:t}))\right]$$ 序列级目标：$$\mathcal{L}_\text{seq} = D_\text{KL}(\pi_T(\cdot) \| \pi_S(\cdot))$$ 论文证明 \(\mathcal{L}_\text{token}\) 是 \(\mathcal{L}_\text{seq}\) 的有偏估计，偏差项为：$$\text{Bias} = \sum_t \mathbb{E}_{x_{1:t} \sim \pi_S}\left[\text{Cov}(\log\frac{\pi_T(x_t|x_{<t})}{\pi_S(x_t|x_{<t})}, \text{FutureReward}(x_{>t}))\right]$$ 但 token-level 的最坏情况方差界限为 \(O(|\mathcal{V}|)\)，远紧于序列级的 \(O(|\mathcal{V}|^T)\)。这构成了偏差-方差权衡。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">②</span>
+    <h4>三种经验失败模式</h4>
+    <p><strong>FM1 — 不平衡的单 token 信号：</strong>当教师和学生在大多数 token 上一致时，梯度集中在少数分歧 token 上，导致更新方向极度不稳定。<br>
+    <strong>FM2 — 学生前缀上的教师不可靠：</strong>教师在自己的分布上训练，被要求在学生生成的（可能异常的）前缀上给出指导时，教师的 logit 本身变得不可靠甚至随机。<br>
+    <strong>FM3 — 分词器与特殊 token 不匹配：</strong>教师和学生使用不同分词器时，同一文本的 token 序列不同；特殊 token（&lt;eos&gt;、&lt;pad&gt;）的处理差异导致分布对齐失败。</p>
+  </div>
+
+  <div class="method-block">
+    <span class="step-num">③</span>
+    <h4>Teacher Top-K 局部支持匹配</h4>
+    <p>核心修复方案：将教师分布截断到 Top-K token 支持集：$$\tilde{\pi}_T(v|x_{<t}) = \begin{cases} \frac{\pi_T(v|x_{<t})}{\sum_{v' \in \text{TopK}} \pi_T(v'|x_{<t})} & v \in \text{TopK}(\pi_T) \\ 0 & \text{otherwise} \end{cases}$$ 然后计算截断反向 KL：$$\mathcal{L} = D_\text{KL}(\tilde{\pi}_T \| \pi_S) = \sum_{v \in \text{TopK}} \tilde{\pi}_T(v) \log\frac{\tilde{\pi}_T(v)}{\pi_S(v)}$$ 搭配 top-p rollout 采样（学生使用 nucleus sampling 生成以增加多样性）和特殊 token 掩码（从 KL 计算中排除所有特殊 token）。</p>
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">🔬 深度案例：Mistral-7B → Qwen-2.5-1.5B 数学蒸馏</div>
+    <div class="example-content">
+      <strong>设定：</strong>Mistral-7B 作为教师蒸馏到 Qwen-2.5-1.5B（不同分词器！）<br>
+      <strong>标准 token OPD：</strong>训练 2000 步后 MATH 准确率 32.4%，loss 曲线振荡剧烈（FM1+FM3）<br>
+      <strong>+特殊 token 掩码：</strong>准确率升至 36.1%，loss 稳定性提高（解决 FM3）<br>
+      <strong>+Top-K 截断 (K=50)：</strong>准确率升至 39.8%，梯度方差降低 60%（解决 FM1+FM2）<br>
+      <strong>+Top-p rollout (p=0.9)：</strong>准确率达 <strong>41.7%</strong>，因为多样性采样避免了学生在教师不熟悉区域的过度停留<br>
+      <strong>对比标准 SFT（教师轨迹）：</strong>38.2%，OPD 修复后超过离线蒸馏 +3.5%
+    </div>
+  </div>
+
+  <table>
+    <tr><th>方法</th><th>MATH</th><th>GSM8K</th><th>ARC-Agent</th><th>梯度方差 (相对)</th></tr>
+    <tr><td>SFT (教师轨迹)</td><td>38.2</td><td>61.4</td><td>42.3</td><td>1.0×</td></tr>
+    <tr><td>Token OPD (标准)</td><td>32.4</td><td>55.8</td><td>38.1</td><td>3.2×</td></tr>
+    <tr><td>Seq-level OPD (reverse KL)</td><td>34.9</td><td>58.2</td><td>40.5</td><td>8.7×</td></tr>
+    <tr><td><span class="highlight-best">Top-K 局部支持匹配 (本文)</span></td><td><span class="highlight-best">41.7</span></td><td><span class="highlight-best">65.3</span></td><td><span class="highlight-best">46.8</span></td><td><span class="highlight-best">1.3×</span></td></tr>
+  </table>
+
+  <div class="ablation-text">
+    <strong>消融与讨论：</strong>① K 值：K=10 太激进（信息损失），K=200 改善不明显，K=50 最优。② Top-p 采样 p=0.9 vs 贪心：贪心 rollout 使学生总是在同一条轨迹上被教师指导，多样性不足。③ 多任务实验（Agent + Math 联合蒸馏）：本方法在 Agent 任务上也优于基线 +4.5，泛化性良好。局限性：Top-K 截断假设教师分布的 Top-K 是可靠的，但当教师对学生前缀完全不确定时（熵极高），Top-K 内部也不可靠，此时可能需要更保守的策略。
+  </div>
 </div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 数学定理形式化</div>
-<p><strong>输入（自然语言）：</strong>"For any real number x, if x² + 2x + 1 = 0, then x = -1."</p>
-<p><strong>SFT 输出：</strong><code>theorem ex1 (x : ℝ) : x^2 + 2*x + 1 = 0 → x = -1</code>（缺少 <code>:= by</code> 部分和 <code>sorry</code>，Lean4 报语法错误）</p>
-<p><strong>RL (GRPO) 输出：</strong><code>theorem ex1 (x : ℝ) (h : x^2 + 2*x + 1 = 0) : x = -1 := by nlinarith [sq_nonneg (x+1)]</code>（Lean4 编译通过 ✓）</p>
-<p><strong>循环一致性：</strong>RL 输出的 \(R_{\text{cycle}} = 0.94\)，SFT 输出的 \(R_{\text{cycle}} = 0.71\)。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>训练策略</th><th>FLC 循环一致性 ↑</th><th>PutnamBench ↑</th><th>交叉熵损失 ↓</th></tr>
-<tr><td>Qwen3.5-2B (Base)</td><td>—</td><td>0.381</td><td>0.298</td><td>2.14</td></tr>
-<tr><td>SFT + 课程学习</td><td>难度递进</td><td>0.513</td><td>0.422</td><td>1.87</td></tr>
-<tr><td>SFT 无课程</td><td>随机</td><td>0.509</td><td>0.418</td><td>1.86</td></tr>
-<tr class="highlight"><td><strong>GRPO + 循环一致性</strong></td><td><strong>RL</strong></td><td><strong>0.669</strong></td><td><strong>0.561</strong></td><td><strong>1.88</strong></td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>关键消融结果：(1) 将嵌入模型从 all-MiniLM-L6 换为 text-embedding-3-large 使循环一致性提升 0.03，但训练速度降低 2×；(2) GRPO 组大小 \(G\) 从 4 增至 16 时一致性提升 0.04，但 GPU 内存需求翻倍；(3) RL 仅使交叉熵增加 0.011 nats，表明形式化质量的提升几乎不以牺牲流畅性为代价。局限性：当前方法依赖现成的句子嵌入模型质量，对高度专业化的数学领域（如范畴论）的嵌入质量可能不够。</p>
-</div>
-
-<!-- Paper 5: ITPO -->
-<div class="paper" id="paper-itpo">
-<h3>ITPO: Implicit Turn-Wise Policy Optimization for Proactive User-LLM Interaction</h3>
-<div class="meta">Haoyu Wang, Yuxin Chen, Liang Luo et al. · arXiv:2603.23550 · cs.LG · <a href="https://arxiv.org/abs/2603.23550" target="_blank">Paper Link</a> · <a href="https://github.com/Graph-COM/ITPO" target="_blank">Code</a></div>
-
-<h4>背景与动机</h4>
-<p>多轮人机协作（如自适应辅导、对话推荐、专业咨询）是交互式 AI 服务的核心。但用强化学习优化这类多轮交互面临两大难题：(1) 可验证的中间奖励极度稀疏——通常只有交互结束后才有明确反馈（如学生是否学会）；(2) 用户响应高度随机，同一策略在不同用户身上效果可能截然不同。现有方法要么依赖 token 级奖励（不稳定），要么完全使用结果奖励（稀疏）。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 隐式过程奖励模型 (Implicit Process Reward Model)</div>
-<p>ITPO 的核心是从稀疏的结果信号中推导出逐轮的过程奖励。给定一个 \(T\) 轮对话 \(\tau = (a_1, u_1, a_2, u_2, ..., a_T, u_T)\)，结果奖励为 \(R(\tau)\)。ITPO 学习一个隐式价值函数 \(V_\phi\)，使得第 \(t\) 轮的过程奖励可以由差分推导：</p>
-$$r_t = V_\phi(\tau_{\leq t}) - V_\phi(\tau_{\leq t-1})$$
-<p>其中 \(\tau_{\leq t}\) 是到第 \(t\) 轮为止的对话前缀。价值函数通过 TD 学习训练：</p>
-$$\mathcal{L}_V = \sum_{t=1}^{T} \left(V_\phi(\tau_{\leq t}) - \gamma V_\phi(\tau_{\leq t+1}) - R(\tau) \cdot \mathbb{1}[t=T]\right)^2$$
-</div>
-
-<div class="method-block">
-<div class="method-title">② 逐轮信号的归一化与鲁棒性</div>
-<p>与 token 级奖励不同，逐轮信号在更粗粒度上操作，天然具有更低的方差。为进一步增强稳定性，ITPO 引入批次归一化：</p>
-$$\hat{r}_t = \frac{r_t - \mu_B}{\sigma_B + \epsilon}$$
-<p>其中 \(\mu_B, \sigma_B\) 是 mini-batch 内所有轮次奖励的统计量。这种归一化使得不同长度的对话可以在统一尺度下比较，避免长对话的过程奖励因为更多的累积步数而天然偏高。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 与 PPO/GRPO/RLOO 的集成</div>
-<p>ITPO 推导出的逐轮奖励 \(\hat{r}_t\) 可以直接替换任何 RL 算法中的奖励信号。以 GRPO 为例，优势函数变为：</p>
-$$\hat{A}_t^{\text{GRPO}} = \frac{\hat{r}_t - \mu_G}{\sigma_G}$$
-<p>作者证明这种集成在 PPO（使用 \(\hat{r}_t\) 作为 per-step reward）、GRPO（组内归一化）和 RLOO（leave-one-out baseline）三种算法上都一致优于使用结果奖励的对应版本。关键原因：更密集的奖励信号加速了信用分配。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 语义对齐验证</div>
-<p>为验证推导出的逐轮偏好是否合理，作者设计了人工标注实验：让 3 名标注员对 200 段多轮对话的每一轮标注质量分（1-5），然后计算 ITPO 推导的 \(\hat{r}_t\) 与人类标注之间的 Spearman 相关系数。结果显示 \(\rho = 0.71\)（p < 0.001），证明隐式推导的奖励与人类判断在语义上高度一致。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: 数学辅导多轮交互</div>
-<p><strong>场景：</strong>AI 辅导员教学生解一元二次方程 \(x^2 - 5x + 6 = 0\)。</p>
-<p><strong>Turn 1 (AI)：</strong>"你能看出这个方程可以因式分解吗？试试看。" → ITPO \(\hat{r}_1 = +0.82\)（引导性好）</p>
-<p><strong>Turn 2 (学生)：</strong>"我觉得是 (x-2)(x-3)？"</p>
-<p><strong>Turn 3 (AI, 无 ITPO)：</strong>"正确！答案是 x=2 或 x=3。" → \(\hat{r}_3 = +0.15\)（直接给答案，缺乏深化）</p>
-<p><strong>Turn 3 (AI, 有 ITPO)：</strong>"很好！你是怎么找到 2 和 3 的？你能用求根公式验证一下吗？" → \(\hat{r}_3 = +0.91\)（促进深层理解）</p>
-<p><strong>结果：</strong>有 ITPO 的策略使学生在后续测试中独立解题正确率提升 18.3%。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>数学辅导 ↑</th><th>文档写作 ↑</th><th>医疗推荐 ↑</th><th>收敛速度</th></tr>
-<tr><td>PPO (结果奖励)</td><td>62.4</td><td>58.7</td><td>55.1</td><td>慢</td></tr>
-<tr><td>GRPO (结果奖励)</td><td>65.1</td><td>61.3</td><td>57.8</td><td>中</td></tr>
-<tr><td>PPO + ITPO</td><td>71.8</td><td>66.2</td><td>63.5</td><td>快</td></tr>
-<tr class="highlight"><td><strong>GRPO + ITPO</strong></td><td><strong>74.3</strong></td><td><strong>68.9</strong></td><td><strong>66.1</strong></td><td><strong>最快</strong></td></tr>
-<tr><td>RLOO + ITPO</td><td>73.1</td><td>67.4</td><td>64.8</td><td>快</td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除批次归一化后，PPO+ITPO 的训练方差增大 3.2×，最终性能下降 4.7 分；(2) 将隐式 reward 替换为 token 级 reward，性能下降 6.8 分且训练不稳定；(3) 对话轮数从 3 增至 10 时，ITPO 的收益更显著（Δ从 +5.2 增至 +12.1），说明多轮场景下逐轮信号的价值更大。局限性：当前 ITPO 假设用户行为是固定的（不随 AI 策略改变），未建模用户的自适应行为。</p>
-</div>
-
-<!-- Paper 6: PrefPO -->
-<div class="paper" id="paper-prefpo">
-<h3>PrefPO: Pairwise Preference Prompt Optimization</h3>
-<div class="meta">Rahul Singhal, Pradyumna Tambwekar, Karime Maamari · arXiv:2603.19311 · cs.CL · <a href="https://arxiv.org/abs/2603.19311" target="_blank">Paper Link</a> · <a href="https://github.com/DistylAI/prefpo" target="_blank">Code</a></div>
-
-<h4>背景与动机</h4>
-<p>提示工程（Prompt Engineering）虽然有效但劳动密集，催生了自动化提示优化方法。然而现有方法（如 TextGrad、MIPRO、GEPA）存在三大问题：(1) 需要标注数据集（往往不可得）；(2) 生成的提示冗长且重复——平均比原始提示长 14.7×或含 34% 重复内容；(3) 存在"提示 hacking"现象，即优化器博弈评估标准而非真正提升质量。</p>
-
-<h4>核心方法详解</h4>
-
-<div class="method-block">
-<div class="method-title">① 基于偏好的提示评估 (Preference-based Evaluation)</div>
-<p>PrefPO 不使用绝对分数评估提示质量，而是使用成对偏好比较。给定两个候选提示 \(p_A, p_B\) 及其对应输出 \(o_A, o_B\)，LLM 判别器按照自然语言标准 \(c\) 表达偏好：</p>
-$$\text{Pref}(p_A, p_B | c) = \text{LLM}_{\text{judge}}(o_A, o_B, c) \in \{A, B, \text{tie}\}$$
-<p>这种设计受 RLHF 中 Bradley-Terry 偏好模型的启发：人类（和 LLM）更擅长做相对比较而非绝对评分。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">② 迭代优化循环</div>
-<p>PrefPO 在每次迭代中：(1) 生成多个候选提示变体；(2) 执行任务并收集输出；(3) 通过成对比较选出最佳变体；(4) 将偏好反馈给 LLM 优化器生成下一轮候选。形式化为：</p>
-$$p^{(t+1)} = \text{LLM}_{\text{opt}}(p^{(t)}, \text{feedback}^{(t)}, c)$$
-<p>其中反馈包含：赢的示例为什么更好、输的示例的具体弱点。这种"元反馈"使优化器不仅知道方向，还理解原因。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">③ 提示卫生控制 (Prompt Hygiene)</div>
-<p>为解决提示膨胀和重复问题，PrefPO 在优化过程中引入长度和多样性约束：</p>
-$$\mathcal{C}_{\text{hygiene}} = \lambda_L \cdot \max(0, |p| - L_{\max}) + \lambda_D \cdot \text{Dup}(p)$$
-<p>其中 \(L_{\max}\) 是最大允许长度，\(\text{Dup}(p)\) 是重复段检测率。实验表明 PrefPO 将膨胀和重复问题减少了 3-5×。</p>
-</div>
-
-<div class="method-block">
-<div class="method-title">④ 无标签优化能力</div>
-<p>PrefPO 的一大优势是不依赖标注数据。在无标签设置下，LLM 判别器完全基于自然语言标准 \(c\) 进行成对比较。实验显示无标签的 PrefPO 在 9 个 BBH 任务中的 6 个上紧追有标签版本（差距 < 2%），这意味着只需一个初始提示和一段文字描述期望即可开始优化。</p>
-</div>
-
-<h4>深度案例</h4>
-<div class="example-box">
-<div class="label">📋 案例: BBH-Logical Deduction 任务优化</div>
-<p><strong>初始提示：</strong>"Please solve the following logical deduction problem."</p>
-<p><strong>TextGrad 优化后：</strong>"You are an expert in logical reasoning. Please carefully analyze each premise step by step. Consider all possible orderings. Think about contrapositive implications. Use systematic elimination..."（膨胀至 278 tokens，重复率 41%）</p>
-<p><strong>PrefPO 优化后：</strong>"Solve the logical deduction. List each constraint, then eliminate impossible orderings one by one."（仅 19 tokens）</p>
-<p><strong>BBH 准确率：</strong>TextGrad = 84.2%，PrefPO = 86.7%（更短的提示反而更好）。</p>
-<p><strong>提示 hacking 率：</strong>TextGrad = 86%，PrefPO = 37%。</p>
-</div>
-
-<h4>实验结果</h4>
-<table>
-<tr><th>方法</th><th>BBH 平均 ↑</th><th>IFEval-Hard ↑</th><th>提示长度</th><th>重复率 ↓</th><th>Hacking 率 ↓</th></tr>
-<tr><td>Zero-shot Baseline</td><td>68.4</td><td>71.2</td><td>1×</td><td>0%</td><td>—</td></tr>
-<tr><td>GEPA</td><td>79.1</td><td>78.5</td><td>9.2×</td><td>28%</td><td>71%</td></tr>
-<tr><td>MIPRO</td><td>81.3</td><td>80.1</td><td>11.4×</td><td>31%</td><td>68%</td></tr>
-<tr><td>TextGrad</td><td>83.8</td><td>84.5</td><td>14.7×</td><td>34%</td><td>86%</td></tr>
-<tr class="highlight"><td><strong>PrefPO (有标签)</strong></td><td><strong>84.1</strong></td><td><strong>82.4</strong></td><td><strong>3.1×</strong></td><td><strong>7%</strong></td><td><strong>37%</strong></td></tr>
-<tr><td>PrefPO (无标签)</td><td>82.3</td><td>80.8</td><td>2.9×</td><td>6%</td><td>34%</td></tr>
-</table>
-
-<h4>消融与讨论</h4>
-<p>消融结果：(1) 移除提示卫生约束后膨胀率从 3.1× 升至 11.2×，说明无约束的 LLM 优化器天然倾向于生成冗长提示；(2) 将判别器从 GPT-4 换为 GPT-3.5 仅导致 BBH 下降 1.8 分，成本降低 90%；(3) 迭代次数在 5-8 次时最优，超过 10 次出现过拟合。局限性：PrefPO 的效果高度依赖判别器的质量——如果判别器对某类任务有系统性偏差，优化方向也会偏移。</p>
-</div>
-
-</section>
