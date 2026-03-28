@@ -1,0 +1,254 @@
+
+<!-- ==================== LLM SECTION ==================== -->
+<h2 class="section-title llm">🧠 LLM — 大语言模型</h2>
+
+<!-- Paper 1 -->
+<div class="paper-card" id="p1">
+<h3><a href="https://arxiv.org/abs/2603.25052" target="_blank">Closing the Confidence-Faithfulness Gap in Large Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Miranda Muqing Miao, Lyle Ungar</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 University of Pennsylvania</span><br>
+<span class="tag tag-llm">LLM · 可解释性 · 校准</span>
+</div>
+<div class="summary">
+本文揭示了一个关键发现：LLM 内部的校准信号（模型知道自己对不对）和语言化置信度（模型嘴上说的信心）在隐藏层中编码在<strong>几乎正交</strong>的方向上（余弦相似度 < 0.04）。作者提出了一种两阶段自适应转向流水线，通过 Contrastive Activation Addition (CAA) 在推理时注入校准信号，将 ECE 降低了 4-7 倍，且该转向向量跨数据集、跨模型迁移。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① 黄金校准线性探针</div>
+<p>在模型的残差流上训练岭回归探针，预测二元正确性标签或经验准确率。结果显示，单一线性方向即可清晰区分正确和错误回答（Cohen's d = 1.88），投影值与经验准确率的 Pearson 相关系数 \(r = 0.80\)。但这个"知道"信号几乎无法影响模型的语言化输出。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 对比激活添加 (CAA) 向量构建</div>
+<p>使用 \(K=11\) 种从"极度谨慎"到"极度自信"的提示框架收集激活。将实例分为高置信组 \(\mathcal{H}_q\) (\(c > 0.75\)) 和低置信组 \(\mathcal{L}_q\) (\(c < 0.25\))，计算对比向量：</p>
+<p>$$\boldsymbol{\delta}_q^{(\ell)} = \frac{1}{|\mathcal{H}_q|}\sum_{k \in \mathcal{H}_q} \mathbf{h}_{q,k}^{(\ell)} - \frac{1}{|\mathcal{L}_q|}\sum_{k \in \mathcal{L}_q} \mathbf{h}_{q,k}^{(\ell)}$$</p>
+<p>最终转向向量 \(\mathbf{v}^{(\ell)} = \frac{1}{|\mathcal{Q}|}\sum_{q} \boldsymbol{\delta}_q^{(\ell)}\)，推理时注入：\(\tilde{\mathbf{h}}_t^{(\ell)} = \mathbf{h}_t^{(\ell)} + \alpha \hat{\mathbf{v}}^{(\ell)}\)。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 两阶段自适应转向流水线</div>
+<p><strong>阶段 1</strong>：用黄金校准探针预测目标置信度 \(c_q^*\)，经保序回归校准。</p>
+<p><strong>阶段 2</strong>：在验证集上扫描 \(\alpha \in [-2.0, +2.0]\)，建立 \(\alpha\) → 平均语言化置信度的映射。使用 PCHIP 插值求逆：给定 \(c_q^*\)，找到特定转向强度 \(\alpha_q^*\)，实现逐样本自适应校准。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 正交性四重验证</div>
+<p>通过四种互补分析确认正交性：主角度分析（76.0°–79.6°，接近随机基线 79.1°）、CCA（最大典型相关 0.23–0.40）、子空间移除交叉预测（保留 72–99%）、方差分解（共享 \(R^2 < 0.03\)）。更关键地，联合推理提示会<strong>反转</strong>置信度方向（余弦从 +0.26 变为 -0.63）。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>原始 ECE</th><th>转向后 ECE</th><th>降低倍数</th><th>Brier Score 变化</th></tr>
+<tr><td>Llama-3.1-8B-Inst.</td><td>14.9</td><td class="highlight">3.7</td><td>4.0×</td><td>8.4 → 2.4</td></tr>
+<tr><td>Mistral-7B-Inst.-v0.3</td><td>35.1</td><td class="highlight">3.3</td><td>10.6×</td><td>15.9 → 2.1</td></tr>
+<tr><td>Qwen2.5-7B-Inst.</td><td>—</td><td class="highlight">—</td><td>4–7×</td><td>显著降低</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>跨数据集迁移</strong>：仅在 MATH 上计算的 CAA 向量，直接应用于 Llama-3.1-8B-Inst. 的 MMLU 数据集，将语言化置信度从 18.7% 控制到 76.2%（α=0.75）</li>
+<li><strong>基座→指令模型迁移</strong>：Qwen2.5-7B 基座模型的向量直接控制指令模型置信度（α=-0.75: 38.6%, α=+0.75: 98.6%）</li>
+<li><strong>推理污染效应</strong>：纯置信度条件下，相似度 +0.26（第21层）；联合推理条件下反转为 -0.63（第15层）——推理过程会「劫持」置信度通道</li>
+</ol>
+<p class="insight">🔑 启示：模型"知道"自己何时可能出错，但生成管道无法提取利用这一信号。CAA 是一种轻量级桥接方案。</p>
+</div>
+</div>
+
+<!-- Paper 2 -->
+<div class="paper-card" id="p2">
+<h3><a href="https://arxiv.org/abs/2603.25112" target="_blank">Do LLMs Know What They Know? Measuring Metacognitive Efficiency with Signal Detection Theory</a></h3>
+<div class="paper-meta">
+<span>👤 Jon-Paul Cacioli</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 Independent Researcher, Melbourne</span><br>
+<span class="tag tag-llm">LLM · 元认知 · 评估</span>
+</div>
+<div class="summary">
+传统 ECE/AUROC 指标将"模型知道多少"与"模型知道自己知道多少"混为一谈。本文引入 Type-2 信号检测理论框架，用 meta-d' 和 M-ratio 分解这两种能力，揭示了一个反直觉发现：AUROC₂ 排名第一的 Mistral 其 M-ratio 排名<strong>垫底</strong>，而 AUROC₂ 排名最后的 Gemma-2 M-ratio 最高——在 50% 覆盖率下，Gemma-2 准确率比 Mistral 高出 6.7%。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① Type-2 SDT 理论框架</div>
+<p>区分两种能力：<strong>Type-1 敏感性 \(d'\)</strong>（区分正确/错误答案的能力）和 <strong>Type-2 元认知敏感性</strong>（通过置信度区分自己回答对错的能力）。关键指标 meta-d' 定义为：理想观察者为产生观察到的（置信度×准确性）联合分布所需的 \(d'\) 值。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② M-ratio 元认知效率比率</div>
+<p>$$M\text{-ratio} = \frac{\text{meta-}d'}{d'}$$</p>
+<p>\(M=1\)：置信度信号最优利用底层证据；\(M<1\)：元认知损失（置信度丢弃了证据信息）；\(M>1\)：置信度捕获了结果之外的信息。使用标准化对数概率 \(\text{NLP} = (1/L)\sum_{i=1}^{L}\log p(t_i|t_{<i})\) 作为置信度变量。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 大规模实验设计</div>
+<p>4 个模型（Llama-3-8B-Inst/Base、Mistral-7B-Inst、Gemma-2-9B-Inst），224,000 次 QA 试验（TriviaQA + NQ），7 个温度设置。通过 MLE 计算 meta-d'，结合贝叶斯 Bootstrap 估计 95% 置信区间。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 领域特异性与温度解耦分析</div>
+<p>元认知效率具有<strong>领域特异性</strong>：Llama-3-Inst 在科学技术领域最弱（\(M=0.788\)），Mistral 在文学艺术最弱（\(M=0.677\)）。温度变化主要影响 Type-2 判据（偏差），而 meta-d' 保持稳定——可通过温度调节校准而不破坏元认知容量。指令调优在某些领域导致 M 从 1.202 降至 0.788。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>Acc</th><th>\(d'\) (Type-1)</th><th>meta-d'</th><th>M-ratio</th><th>AUROC₂</th></tr>
+<tr><td>Mistral-Inst.</td><td>0.427</td><td class="highlight">1.597</td><td>1.361</td><td>0.852 (最低)</td><td class="highlight">0.861 (最高)</td></tr>
+<tr><td>Llama-3-Inst.</td><td>0.543</td><td>1.386</td><td>1.362</td><td>0.983</td><td>0.838</td></tr>
+<tr><td>Llama-3-Base</td><td>0.428</td><td>1.407</td><td>1.474</td><td>1.048</td><td>0.843</td></tr>
+<tr><td>Gemma-2-Inst.</td><td>0.600</td><td>0.946</td><td>0.991</td><td class="highlight">1.048 (最高)</td><td>0.752 (最低)</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>排名完全倒置</strong>：AUROC₂ 第一的 Mistral 在 M-ratio 排名垫底（0.852），因为其高 AUROC₂ 完全依赖于高 Type-1 敏感性（d'=1.597），而非优秀的元认知</li>
+<li><strong>选择性预测实战</strong>：在 50% 覆盖率下，根据 M-ratio 选择 Gemma-2 准确率 <span class="highlight-text">77.4%</span>，而 AUROC₂ 推荐的 Mistral 仅 <span class="highlight-text">70.7%</span></li>
+<li><strong>指令调优的副作用</strong>：Llama-3 在科学技术领域，指令调优使 M 从 1.202 降至 0.788——RLHF 可能让模型"更不清楚自己不知道什么"</li>
+</ol>
+<p class="insight">🔑 启示：在高风险应用（医疗问答、法律咨询）中选择模型时，应优先考虑高 M-ratio 而非高 AUROC₂。</p>
+</div>
+</div>
+
+<!-- Paper 3 -->
+<div class="paper-card" id="p3">
+<h3><a href="https://arxiv.org/abs/2603.25201" target="_blank">SafeMath: Inference-time Safety improves Math Accuracy</a></h3>
+<div class="paper-meta">
+<span>👤 Sagnik Basu, Subhrajit Mitra, Aman Juneja, Somnath Banerjee, Rima Hazra, Animesh Mukherjee</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 IIT Kharagpur, Cisco Systems, NUS</span><br>
+<span class="tag tag-llm">LLM · 安全 · 数学推理</span>
+</div>
+<div class="summary">
+本文发现数学应用题可以成为传播有害内容的隐秘载体。构建了 ToxicGSM 数据集（~1,900 道有毒数学题），并提出 SafeMath 框架——通过在推理时向隐藏层注入安全向量 (ICV<sub>sf</sub>) 和数学向量 (ICV<sub>ma</sub>)，<strong>安全性提升同时数学准确率反而提高了约 3%</strong>。原因是安全干预将模型注意力从有害叙事转移回数值信息。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① ToxicGSM 数据集构建</div>
+<p>基于 GSM8K，筛选 4,000 道 2-3 步推理题目，使用未对齐 LLM 将自然语言叙事替换为涉及多种有害类别的内容（暴力、欺诈、隐私侵犯等）。经人工验证确保数学结构和数值一致性，最终包含约 1,900 道有效题目。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 上下文向量 (ICV) 计算</div>
+<p>通过 PCA 计算两类向量：<strong>安全向量 ICV<sub>sf</sub></strong>（有毒问题+有毒答案 vs. 有毒问题+安全答案）和<strong>数学向量 ICV<sub>ma</sub></strong>（数学问题+错误答案 vs. 数学问题+正确答案）。推理时注入所有层：</p>
+<p>$$\tilde{h}_{t,l} = h_{t,l} + \alpha \cdot \text{ICV}_{\text{ma}}^l + \beta \cdot \text{ICV}_{\text{sf}}^l$$</p>
+<p>通过网格搜索 \(\alpha, \beta\) 找到最佳平衡点，注入后进行归一化保持原分布特性。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 安全→准确性的因果解释</div>
+<p>归因分析揭示：基础模型处理有毒题时过度关注有害叙事词，干扰数学推理。安全干预后：<strong>数值标记归因分数显著增加</strong>，有害标记归因分数显著下降。模型注意力从有害语境重新分配到解题所需数据上。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 多维度安全评估</div>
+<p>使用 Beaver 成本模型评估安全性，ICV<sub>sf</sub> 和 ICV<sub>sfm</sub> 在所有有害类别中得分均显著低于基础模型。同时在 GSM8K、MATH 等标准基准上性能保持稳定，证明方法不牺牲通用能力。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>基础 θ<sub>M</sub></th><th>安全提示 θ<sub>B</sub></th><th>仅安全 θ<sub>SF</sub></th><th>SafeMath θ<sub>SFM</sub></th><th>提升</th></tr>
+<tr><td>LlamaMath 8B</td><td>84.90%</td><td>86.35%</td><td>88.02%</td><td class="highlight">89.84%</td><td>+4.94%</td></tr>
+<tr><td>DeepSeekMath 7B</td><td>86.98%</td><td>87.76%</td><td>87.86%</td><td class="highlight">88.23%</td><td>+1.25%</td></tr>
+<tr><td>Qwen2Math 7B</td><td>78.18%</td><td>70.89%</td><td>78.80%</td><td class="highlight">80.83%</td><td>+2.65%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>Few-shot 的陷阱</strong>：Qwen2Math 的少样本提示准确率暴跌至 <span class="highlight-text">4.06%</span>（从 78.18%），说明传统提示方法在有毒场景下完全失效</li>
+<li><strong>安全=准确</strong>：仅使用安全向量 θ<sub>SF</sub>（不加数学向量）就在所有模型上提升了准确率，证实安全干预本身能改善数学推理</li>
+<li><strong>NaN 消除</strong>：LlamaMath 干预后生成的 NaN（无意义输出）从 3 个降为 0</li>
+</ol>
+<p class="insight">🔑 启示：安全对齐不是数学能力的对手——相反，安全干预通过重新聚焦注意力在数值上，成为了数学推理的盟友。</p>
+</div>
+</div>
+
+<!-- Paper 4 -->
+<div class="paper-card" id="p4">
+<h3><a href="https://arxiv.org/abs/2603.25340" target="_blank">Large Language Model as Token Compressor and Decompressor</a></h3>
+<div class="paper-meta">
+<span>👤 Wenbing Li, Zikai Song, Jielei Zhang, Tianhao Zhao, Junkai Lin et al. (8 authors)</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 Unknown (未公开)</span><br>
+<span class="tag tag-llm">LLM · 压缩 · 效率</span>
+</div>
+<div class="summary">
+本文提出一个新洞见：现成的 LLM 可以同时充当优秀的 Token 压缩器和解压缩器。设计了自表达自编码框架，将长文本翻译成紧凑的离散"Z-tokens"内部语言，实现最高 <strong>18× token 压缩</strong>，在重构任务上 BLEU-4 达到 99.31（4×压缩），并在 QA 任务上超越现有所有基线。Z-tokens 具有多义性（polysemy），相同 token 在不同上下文解码为不同词汇但保持语义一致。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① LLM 压缩器：Z-token 生成</div>
+<p>扩展词汇表为 \([V_{\text{base}}, V_z]\)，其中 \(V_z\) 专用于 Z-tokens。自回归生成变长 Z-token 序列：\(p_\phi(\mathbf{Z}|\mathbf{X}) = \prod_{t=1}^{K} p_\phi(z_t|\mathbf{X}, z_1\dots z_{t-1})\)，其中 \(K \ll N\)。通过 Gumbel-Softmax + Straight-Through Estimator 保持离散性同时允许梯度流动。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 滑动窗口与一致性约束</div>
+<p>支持超长文本分段压缩（窗口 \(W=1024\)，步长 \(S=256\)）。重叠区域施加一致性损失：\(\mathcal{L}_{\text{overlap}} = 1 - \cos(\mathbf{Z}_i^{\text{overlap}}, \mathbf{Z}_{i+1}^{\text{overlap}})\)，确保相邻窗口的 Z-token 在重叠区域语义连贯。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 解压缩器双范式</div>
+<p><strong>Inferencer</strong>：直接在 Z-token 空间进行推理（如 QA），跳过文本重构步骤。<strong>Reconstructor</strong>：先将 Z-tokens 解码回自然语言（强制使用 \(V_{\text{base}}\) 词汇），再由 LLM 处理。解压缩概率：\(p_\theta(\mathbf{Y}|\mathbf{Z}) = \prod_{t=1}^{T} p_\theta(y_t|y_1\dots y_{t-1}, \mathbf{Z})\)。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 多义性与语义一致性</div>
+<p>Z-tokens 具有上下文依赖的多义性——同一 Z-token 在不同语境中可解码为不同表面词（如"fiscal restructuring" vs "economic reforms"），但语义一致性均值达到 \(0.75 \pm 0.11\)。总训练损失：\(\mathcal{L}_{\text{total}} = \mathcal{L}_{tr} + \lambda\mathcal{L}_{KL} + \beta\mathcal{L}_{com}\)（\(\lambda\approx0.1, \beta\approx0.25\)）。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>任务</th><th>数据集</th><th>压缩比</th><th>本方法</th><th>ICAE</th><th>Qwen3-0.6B</th></tr>
+<tr><td>重构</td><td>Wikipedia</td><td>4×</td><td class="highlight">99.31 BLEU-4</td><td>98.45</td><td>—</td></tr>
+<tr><td>重构</td><td>Wikipedia</td><td>8×</td><td class="highlight">96.28 BLEU-4</td><td>93.44</td><td>—</td></tr>
+<tr><td>QA</td><td>QuALITY</td><td>4×</td><td class="highlight">39.25 F1</td><td>34.68</td><td>38.48</td></tr>
+<tr><td>QA</td><td>HotpotQA</td><td>4×</td><td class="highlight">33.35 F1</td><td>31.65</td><td>32.18</td></tr>
+<tr><td>续写</td><td>—</td><td>8×</td><td>PPL +0.44</td><td>—</td><td>—</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>实际压缩倍率超标</strong>：名义 4× 设置下实际平均压缩比 <span class="highlight-text">5.1×</span>，8× 设置下达 <span class="highlight-text">9.4×</span>，得益于变长机制对简单文本更激进压缩</li>
+<li><strong>推理加速</strong>：大批次输入下实现 <span class="highlight-text">2.1×</span> 推理加速，摘要任务从 35 分钟缩至 17 分钟</li>
+<li><strong>极端压缩</strong>：即使 16× 压缩，BLEU-4 仍达 54.3——长文本的大量冗余被 Z-tokens 高效编码</li>
+</ol>
+<p class="insight">🔑 启示：LLM 自身就是最好的语义压缩器，Z-tokens 为长上下文推理提供了一条全新路径。</p>
+</div>
+</div>
+
+<!-- Paper 5 -->
+<div class="paper-card" id="p5">
+<h3><a href="https://arxiv.org/abs/2603.25325" target="_blank">How Pruning Reshapes Features: Sparse Autoencoder Analysis of Weight-Pruned Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Hector Borobia, Elies Seguí-Mas, Guillermina Tormo-Carbó</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 VRAIN, Universitat Politècnica de València</span><br>
+<span class="tag tag-llm">LLM · 剪枝 · 可解释性</span>
+</div>
+<div class="summary">
+首次系统性研究非结构化剪枝如何重塑语言模型的特征几何。使用 TopK 稀疏自编码器（SAE）作为可解释性探针，在三个模型家族上发现了一个强烈反直觉的规律：<strong>稀有特征存活率远高于频繁特征</strong>（最高 225 倍差异），而且几何上的存活并不等于因果重要性。Wanda 剪枝在特征保留上比幅度剪枝优 3.7 倍。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① TopK SAE 特征提取</div>
+<p>在残差流上训练 TopK SAE（扩展因子 8×，\(k=64\)），输入归一化后编码：\(\mathbf{z} = \text{TopK}(\mathbf{W}_{\text{enc}}\hat{\mathbf{x}} + \mathbf{b}_{\text{enc}}, k)\)，解码重构：\(\hat{\mathbf{x}}_{\text{rec}} = \mathbf{W}_{\text{dec}}\mathbf{z} + \mathbf{b}_{\text{dec}}\)。对比不同稀疏度下 SAE 特征的余弦相似度，使用互近邻 (MNN) 率（阈值 \(\tau=0.7\)）衡量存活。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 频率-存活率反直觉发现</div>
+<p>将特征按激活频率分为五分位：<strong>稀有特征（Q1）存活率远超频繁特征（Q5）</strong>。Gemma 3（Mag. 30%）：Q1 = 76.0%，Q5 = 14.6%（5.2倍）。50% 稀疏度下：Q1 = 22.5%，Q5 = 0.1%（<span class="highlight-text">225 倍差异</span>）。Spearman \(\rho = -1.0\)（17 条件中 11 条为完美负相关）。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 因果消融协议</div>
+<p>将特征分为"鲁棒"（高余弦匹配）和"脆弱"（低余弦匹配），单独将特征激活置零并测量 KL 散度。结果：<strong>两类特征的消融 KL 几乎相同</strong>（0.695 vs 0.696），证明几何存活不代表功能重要性。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ Wanda vs 幅度剪枝对比</div>
+<p>Wanda（基于权重×激活范数）在特征保留上显著优于幅度剪枝。Gemma 2（30%稀疏度）：Wanda MNN = 0.794，幅度剪枝仅 0.213（3.7倍差异）。可用简单逻辑回归预测特征存活（AUC > 0.79）。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>剪枝法</th><th>稀疏度</th><th>PPL</th><th>MNN 存活率</th><th>Q1/Q5 比</th></tr>
+<tr><td>Gemma 3 1B</td><td>Wanda</td><td>30%</td><td>—</td><td class="highlight">0.669</td><td>~3×</td></tr>
+<tr><td>Gemma 3 1B</td><td>Magnitude</td><td>30%</td><td>—</td><td>0.521</td><td>5.2×</td></tr>
+<tr><td>Llama 3.2 1B</td><td>Wanda</td><td>50%</td><td>53.1</td><td class="highlight">0.711</td><td>—</td></tr>
+<tr><td>Llama 3.2 1B</td><td>Magnitude</td><td>50%</td><td>2,583</td><td>—</td><td>—</td></tr>
+<tr><td>Gemma 3 1B</td><td>Magnitude</td><td>50%</td><td>10⁶+</td><td>—</td><td>225×</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>剪枝=隐式特征选择</strong>：高频特征占据共享权重子空间更容易被移除，而稀有（专业化）特征拥有独立权重路径因而更鲁棒</li>
+<li><strong>预训练 SAE 可迁移</strong>：官方 Gemma SAE 在 50% Wanda 剪枝后 FVU 仅 0.024（密集基线 0.011），可直接复用</li>
+<li><strong>实践建议</strong>：若关注可解释性，优先 Wanda；重点监控高频特征（最脆弱）；官方 SAE 直接适用于 ≤50% Wanda 剪枝模型</li>
+</ol>
+<p class="insight">🔑 启示：剪枝不只是"删除不重要的"——它系统性地保护专业特征、牺牲通用特征，这一隐式选择机制值得被设计层面利用。</p>
+</div>
+</div>

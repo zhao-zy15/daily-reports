@@ -1,0 +1,208 @@
+
+<!-- ==================== RL SECTION ==================== -->
+<h2 class="section-title rl">🎯 RL — 强化学习</h2>
+
+<!-- Paper 6 -->
+<div class="paper-card" id="p6">
+<h3><a href="https://arxiv.org/abs/2603.24840" target="_blank">Prune as You Generate: Online Rollout Pruning for Faster and Better RLVR (ARRoL)</a></h3>
+<div class="paper-meta">
+<span>👤 Haobo Xu, Sirui Chen, Ruizhong Qiu, Yuchen Yan, Chen Luo et al. (8 authors)</span><br>
+<span>📅 2026-03-25</span><br>
+<span>🏛 UIUC, Amazon</span><br>
+<span class="tag tag-rl">RL · RLVR · 训练加速</span>
+</div>
+<div class="summary">
+GRPO/DAPO 等 RLVR 方法的计算瓶颈在于为每个 prompt 采样大量 rollout，但多数样本要么全对要么全错（低方差=无学习信号）。ARRoL 引入轻量级"质量头"在生成过程中预测成功概率，在检测点 \(L_{\text{detect}}=512\) 处剪枝低价值 rollout，实现 <strong>1.7× 端到端加速</strong>和 <strong>+2.3–2.99 准确率</strong>提升，并支持推理时加权投票。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module rl-mod">
+<div class="module-title">① 质量预测头</div>
+<p>2 层 MLP，类似 next-token 头。使用 RL 过程中自然获得的（推理路径, 最终奖励）对在线训练，梯度与骨干断开避免开销。采用在线分箱概率估计器校准原始分数为后验概率 \(q_i \in [0,1]\)：</p>
+<p>$$q(s') = P(Y=1|b(s')) = \frac{\pi P(b(s')|Y=1)}{\pi P(b(s')|Y=1) + (1-\pi)P(b(s')|Y=0)}$$</p>
+<p>其中 \(\pi=P(Y=1)\) 是先验概率，类条件似然基于历史缓冲区估计。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">② 概率剪枝机制</div>
+<p>目标：将保留路径的正样本比率控制在 \(\rho=0.5\)，最大化组内奖励方差。每条路径根据 \(q_i\) 和 \(\rho\) 分配生存概率 \(p_i\)（\((\rho - q_i)\) 的单调函数），通过二分搜索偏置 \(\delta\) 使期望保留率匹配 \(\kappa\)。理论保证：剪枝后真实正比率与 \(\rho\) 的偏差满足：</p>
+<p>$$|\hat{p}_{-\hat{\jmath}} - \rho| \le \min_{j \in [G]}|\mu^*_{-j} - \rho| + 2\epsilon + \sqrt{\frac{\log(2/\delta)}{2(G-1)}}$$</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">③ 系统级集成</div>
+<p>剪枝在 vLLM 推理后端内部执行。路径达到 \(L_{\text{detect}}\) 即被评估，被剪枝路径释放的 GPU 容量立即重新分配。前端接收剪枝掩码后对幸存路径重批处理计算 log-prob。效率分解：生成加速 1.46×，log-prob 1.84×，模型更新 2.08×。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">④ 测试时加权投票</div>
+<p>训练好的质量头复用为正确性预测器，将质量分数线性重缩放为 [0,1] 作为投票权重，替代简单多数投票。在 AMC'23 上 60.0%（DeepConf 57.5%），AIME'25 上 13.3%（DeepConf 6.7%）。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型 + 算法</th><th>基线准确率</th><th>ARRoL 准确率</th><th>提升</th><th>加速比</th></tr>
+<tr><td>Qwen-3-1.7B + GRPO</td><td>34.79</td><td class="highlight">37.09</td><td>+2.30</td><td>1.63×</td></tr>
+<tr><td>Qwen-3-4B + GRPO</td><td>51.01</td><td class="highlight">53.54</td><td>+2.53</td><td>1.61×</td></tr>
+<tr><td>Qwen-3-8B + GRPO</td><td>56.66</td><td class="highlight">59.53</td><td>+2.87</td><td>1.62×</td></tr>
+<tr><td>LLaMA-3.2-1B + GRPO</td><td>14.63</td><td class="highlight">17.49</td><td>+2.86</td><td>1.67×</td></tr>
+<tr><td>Qwen-3-1.7B + DAPO</td><td>36.43</td><td class="highlight">39.42</td><td>+2.99</td><td>1.70×</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>AIME'24 单项飙升</strong>：Qwen-3-8B 在 AIME'24 上提升 <span class="highlight-text">+10.00</span>（56.67→66.67），难题上剪枝的学习信号聚焦效果最为显著</li>
+<li><strong>样本平衡效果</strong>：正样本比率均值从 0.32 提升至 0.40（目标 0.5），奖励方差指标从 0.21 提升至 0.23</li>
+<li><strong>即插即用</strong>：与 GRPO、DAPO 均兼容，且质量头可在测试时复用为投票加权器</li>
+</ol>
+<p class="insight">🔑 启示：RLVR 的计算浪费根源在于无差别采样——智能剪枝通过聚焦"信息丰富"的 rollout，同时提速和提准。</p>
+</div>
+</div>
+
+<!-- Paper 7 -->
+<div class="paper-card" id="p7">
+<h3><a href="https://arxiv.org/abs/2603.25184" target="_blank">HIVE: Online-Verified Prompt Selection for Efficient RL Training of Large Reasoning Model</a></h3>
+<div class="paper-meta">
+<span>👤 Jiahao Wu, Ning Lu, Shengcai Liu, Kun Wang, Yanting Yang, Qing Li, Ke Tang</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 Unknown (投稿 ICML)</span><br>
+<span class="tag tag-rl">RL · 训练效率 · 提示选择</span>
+</div>
+<div class="summary">
+RL 训练中大量 rollout 浪费在"太简单"或"太难"的 prompt 上——HIVE 追踪随训练移动的"学习边缘"，通过两阶段筛选（历史感知 + 在线验证）将 rollout 数量减少 <strong>70%</strong>（3.4×），同时精度提升 +1.9%，rollout 时间加速 <strong>3.8×</strong>，总训练时间加速 <strong>2.3×</strong>，在线验证开销仅占总迭代时间的 0.4%。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module rl-mod">
+<div class="module-title">① 历史感知选择（阶段一）</div>
+<p>利用零成本历史数据初步筛选。<strong>零方差计数</strong>：\(z_i = \max\{k: \prod_{j=n-k+1}^{n}\mathbb{I}_{i,j}=1\}\)，连续产生相同奖励的 prompt 被降权。<strong>历史响应熵</strong>：\(H_i = \frac{1}{G}\sum_{r=1}^{G} U^{(r)}(x_i)\)，高熵=高多样性=高学习价值。综合选择概率：\(P_{\text{select}} = \lambda \cdot P_{\text{Rew}} + (1-\lambda)\cdot P_{\text{Ent}}\)。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">② 在线验证选择（阶段二）</div>
+<p>解决"数据陈旧性"——历史指标无法反映当前模型状态。使用<strong>提示熵</strong>作为低成本代理：\(V(x) = \frac{1}{L_p-1}\sum_{l=2}^{L_p}\mathcal{H}(p_\theta(\cdot|x_{<l}))\)，仅需对 prompt 单次前向传播（复杂度 \(O(1)\) vs rollout 的 \(O(G \cdot L_r)\)）。动态阈值 \(\gamma = \text{median}(\{V(x)\})\)，仅保留 \(V(x_i) \ge \gamma\) 的 prompt。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">③ 移动边缘策略</div>
+<p>高梯度效用样本集中在<strong>中间难度 × 高熵</strong>的交集处，该"边缘"随训练动态移动。HIVE 通过在线中位数阈值实时追踪边缘，防止过度采样已掌握或仍无法解决的 prompt。理论保证：排名一致性定理证明 \(\text{sign}(V(x)-V(x')) = \text{sign}(\hat{U}(x)-\hat{U}(x'))\)（提示熵排序与真实响应熵排序一致）。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">④ 开销极低的设计</div>
+<p>阶段二每步额外延迟仅 <strong>0.82 秒</strong>，占总迭代时间（~147s）的 <strong>0.4%</strong>。核心洞见：提示熵（仅看 prompt 自身）足以近似完整 rollout 的信息价值，无需采样任何响应。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>方法</th><th>Rollout数</th><th>平均精度</th><th>Rollout时间</th><th>总训练时间</th></tr>
+<tr><td>Qwen2.5-Math-7B</td><td>DS(基线)</td><td>13.1M</td><td>57.8%</td><td>153.7h</td><td>198.4h</td></tr>
+<tr><td>Qwen2.5-Math-7B</td><td class="highlight">HIVE</td><td>3.9M (-70%)</td><td class="highlight">59.7%</td><td>40.2h (3.8×)</td><td>85.8h (2.3×)</td></tr>
+<tr><td>Qwen2.5-Math-1.5B</td><td>DS</td><td>7.6M</td><td>48.4%</td><td>—</td><td>—</td></tr>
+<tr><td>Qwen2.5-Math-1.5B</td><td class="highlight">HIVE</td><td>3.1M (-59%)</td><td class="highlight">48.8%</td><td>—</td><td>—</td></tr>
+<tr><td>Llama3.2-3B-Inst.</td><td>DS</td><td>11.4M</td><td>34.1%</td><td>—</td><td>249.1h</td></tr>
+<tr><td>Llama3.2-3B-Inst.</td><td class="highlight">HIVE</td><td>4.8M (-58%)</td><td class="highlight">34.4%</td><td>—</td><td>123.2h</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>零方差浪费</strong>：DS 基线在训练后期近 <span class="highlight-text">50%</span> 的 rollout 产生零方差奖励（全对或全错），完全浪费计算</li>
+<li><strong>精度与效率双赢</strong>：Qwen2.5-Math-7B 上 rollout 减少 70% 但精度反而提升 +1.9%，说明低价值样本实际上是噪声</li>
+<li><strong>理论与实践结合</strong>：排名一致性定理保证了 prompt 熵作为代理的可靠性，0.82s 的开销使方法几乎零成本</li>
+</ol>
+<p class="insight">🔑 启示：RL 训练中"练什么"比"练多少"重要——聪明的 prompt 选择可以在砍掉 70% 工作量的同时提升效果。</p>
+</div>
+</div>
+
+<!-- Paper 8 -->
+<div class="paper-card" id="p8">
+<h3><a href="https://arxiv.org/abs/2603.25562" target="_blank">Revisiting On-Policy Distillation: Empirical Failure Modes and Simple Fixes</a></h3>
+<div class="paper-meta">
+<span>👤 Yuqian Fu, Haohuan Huang, Kaiwen Jiang, Yuanheng Zhu, Dongbin Zhao</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 CASIA (中科院自动化所), UCAS</span><br>
+<span class="tag tag-rl">RL · 知识蒸馏 · 策略优化</span>
+</div>
+<div class="summary">
+On-policy distillation (OPD) 在长期任务中脆弱的根因是什么？本文识别出三种失效模式：(1) 采样 token 信号严重不平衡，(2) 教师在学生前缀上的信号不可靠，(3) 分词器/特殊 token 不匹配。提出 Teacher Top-K Local Support Matching——在教师的高概率 token 集上做分布级比较替代单 token 比较，将平均分从 36.4 提升至 <strong>41.5</strong>，并在多任务设置（数学+Agent）中达到 ALFWorld 97.7%。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module rl-mod">
+<div class="module-title">① 三种失效模式诊断</div>
+<p><strong>模式 1</strong>：大多数采样 token 的奖励为负值（教师概率低于学生），正向优势极少，训练信号不平衡。<strong>模式 2</strong>：学生生成的前缀对教师来说是分布外的，教师会给表面合理但方向错误的 token 高概率。<strong>模式 3</strong>：不同分词器将相同内容切分不同（如 &lt;think&gt; vs &lt;th+ink+&gt;），单 token 比较将分词差异误判为语义错误。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">② Teacher Top-K 局部支持匹配</div>
+<p>不再基于单个采样 token 更新，而是在教师 Top-K token 集 \(S(c_{i,t})\) 上计算截断反向 KL：</p>
+<p>$$\mathcal{L}_{\text{LSM}} = \mathbb{E}_{x,\{o_i\}\sim\pi_{\theta,\text{infer}}}\left[\frac{1}{\sum_i|o_i|}\sum_i\sum_t\sum_{v\in S(c_{i,t})}\hat{\pi}_\theta(v|c_{i,t})\log\frac{\hat{\pi}_\theta(v|c_{i,t})}{\hat{q}(v|c_{i,t})}\right]$$</p>
+<p>其中 \(\hat{\pi}_\theta\) 和 \(\hat{q}\) 在局部支持集上重新归一化。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">③ Top-p 推理采样 + 特殊 token 掩码</div>
+<p>使用 top-p 核采样生成推理轨迹，避免极低概率 token，保持轨迹在教师分布的典型延续范围内。对容易产生假阴性的特殊 token 进行掩码处理。消融实验：仅 Teacher Top-K 无 top-p 时 AIME24 avg@32 从 20.4 降至 17.7，结合后升至 23.6。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">④ 方差分析与理论基础</div>
+<p>序列级 OPD 梯度估计器方差增长 \(O(T^4)\)，token 级近似降至 \(O(T^2)\)，但引入了即时奖励偏差。局部支持匹配在保持 \(O(T^2)\) 方差的同时，通过分布级比较消除了单 token 的偏差源。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>Math500</th><th>AIME24</th><th>Minerva</th><th>平均分</th><th>ALFWorld</th></tr>
+<tr><td>初始模型</td><td>75.4</td><td>6.7</td><td>27.2</td><td>28.2</td><td>—</td></tr>
+<tr><td>Sampled-token OPD</td><td>81.4</td><td>16.7</td><td>34.2</td><td>36.4</td><td>—</td></tr>
+<tr><td>+ mask</td><td>82.0</td><td>26.7</td><td>33.8</td><td>40.7</td><td>93.8</td></tr>
+<tr><td class="highlight">Ours w/ mask</td><td class="highlight">82.0</td><td class="highlight">23.3</td><td class="highlight">34.9</td><td class="highlight">41.5</td><td class="highlight">97.7</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>数学+Agent 多任务</strong>：在数学和 ALFWorld 智能体联合训练中，本方法在 ALFWorld 达到 <span class="highlight-text">97.7%</span>，同时数学平均分 41.7（基线 36.6），证明修复对多任务泛化有效</li>
+<li><strong>重归一化至关重要</strong>：消融显示不在支持集上重归一化会导致优化迅速崩溃</li>
+<li><strong>对噪声鲁棒</strong>：即使不使用特殊 token 掩码，局部支持匹配也达 41.0（vs 基线的 36.4），说明方法本身对分词器噪声具有鲁棒性</li>
+</ol>
+<p class="insight">🔑 启示：OPD 的脆弱性源于将分布匹配退化为单 token 比较——恢复分布级视角是根本修复。</p>
+</div>
+</div>
+
+<!-- Paper 9 -->
+<div class="paper-card" id="p9">
+<h3><a href="https://arxiv.org/abs/2603.25464" target="_blank">Maximum Entropy Behavior Exploration for Sim2Real Zero-Shot Reinforcement Learning (FB-MEBE)</a></h3>
+<div class="paper-meta">
+<span>👤 Jiajun Hu, Núria Armengol Urpí, Jin Cheng, Stelian Coros</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 ETH Zurich, Max Planck ETH Center</span><br>
+<span class="tag tag-rl">RL · Sim2Real · 探索</span>
+</div>
+<div class="summary">
+零样本 RL 的核心挑战是：不知道下游任务时，如何在无奖励数据集中覆盖足够广的行为空间？FB-MEBE 在 Forward-Backward 框架上引入最大熵行为探索——最大化"已实现行为分布"的熵，同时用正则化评论家抑制不自然动作。在 Unitree Go2 四足机器人上实现了<strong>零微调直接部署</strong>，成功跟踪速度、调整姿态。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module rl-mod">
+<div class="module-title">① Forward-Backward 表示学习</div>
+<p>将后继度量分解为前向和后向表示：\(M^{\pi_z}(ds'|s,a) \approx F(s,a,z)^\top B(s')\rho(ds')\)，其中 \(z\) 是任务嵌入。策略定义为：\(\pi_z(s) = \arg\max_a F(s,a,z)^\top z\)。这种分解使得策略可以在测试时通过切换 \(z\) 直接适配新任务。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">② 最大熵行为探索</div>
+<p>目标：最大化已实现行为分布 \(p^t_{z^a_r}\) 的熵 \(J_{\text{MEBE}} = -H[p^t_{z^a_r}]\)。实践中通过密度模型 \(q_\Psi\) 估计访问密度，按逆密度采样探索行为：\(z_r^E \propto (q_\psi(z^a_r)+\epsilon)^{-\beta}\)，\(\beta=2.0\)。80% 使用 MEBE 策略，20% 均匀随机嵌入。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">③ 正则化评论家</div>
+<p>为确保策略自然且物理可行，修改 Actor 损失加入正则化项：</p>
+<p>$$\mathcal{L}_{\text{FB-Critic}} = -\mathbb{E}\left[F(s,a,z)^\top z + \lambda_{\text{reg}} Q_{\text{reg}}(s,a)\right]$$</p>
+<p>\(Q_{\text{reg}}\) 预测行为正则化奖励（关节加速度惩罚 + 动作率惩罚 + 脚滑惩罚）的长期回报，\(\lambda_{\text{reg}}=20\)。这抑制了拖地等不自然行为，使策略可直接部署。</p>
+</div>
+<div class="method-module rl-mod">
+<div class="module-title">④ Sim2Real 零样本部署</div>
+<p>在 IsaacLab（Unitree Go2, 12 自由度）中训练，直接部署到真实机器人。通过操纵杆接口发送指令，复合奖励函数结合速度 \(r_v\)、基础方向 \(r_g\) 和高度 \(r_h\)。机器人成功跟踪平移速度、调整俯仰/横滚角、在保持 15° 俯仰角同时向前行走。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>速度跟踪</th><th>方向任务</th><th>策略熵 [v_x,v_y,w_z]</th><th>脚滑惩罚</th></tr>
+<tr><td>FB (基线)</td><td>中等</td><td>中等</td><td>低</td><td>高</td></tr>
+<tr><td>FB-Critic</td><td>中等</td><td>中等</td><td>低</td><td>最低</td></tr>
+<tr><td class="highlight">FB-MEBE (β=2)</td><td class="highlight">最优</td><td class="highlight">最优</td><td class="highlight">最高</td><td>略高于 FB-Critic</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>零样本硬件部署</strong>：无需微调直接在 Unitree Go2 上运行——复合指令如"在 0.32m 基础高度跟踪偏航角速度"均能稳定执行</li>
+<li><strong>探索覆盖优势</strong>：在高速任务中，其他基线因回放缓冲区收缩到低速区域而性能下降，FB-MEBE 保持强劲</li>
+<li><strong>自然性保证</strong>：正则化评论家显著抑制脚滑（vs 纯 FB），熵增加的代价是略高脚滑，但反映了更广行为覆盖</li>
+</ol>
+<p class="insight">🔑 启示：最大熵探索 + 行为正则化 = 多样而自然的技能库，使零样本 Sim2Real 部署成为现实。</p>
+</div>
+</div>

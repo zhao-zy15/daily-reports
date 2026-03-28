@@ -1,0 +1,230 @@
+
+<!-- ==================== AGENT SECTION ==================== -->
+<h2 class="section-title agent">🤖 Agent — 智能体</h2>
+
+<!-- Paper 10 -->
+<div class="paper-card" id="p10">
+<h3><a href="https://arxiv.org/abs/2603.25268" target="_blank">CRAFT: Grounded Multi-Agent Coordination Under Partial Information</a></h3>
+<div class="paper-meta">
+<span>👤 Abhijnan Nath, Hannah VanderHoeven, Nikhil Krishnaswamy</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 Colorado State University (SIGNAL Lab)</span><br>
+<span class="tag tag-agent">Agent · 多智能体 · 协调</span>
+</div>
+<div class="summary">
+当多个 LLM Agent 只能看到局部信息时，它们能协调到什么程度？CRAFT 构建了一个积木协调基准：两个"总监"Agent 各有独特视角，需要通过自然语言指导一个"建造者"搭建积木。测试 15 个模型后发现一个悖论：<strong>前沿模型的个体沟通质量更高，但任务完成率反而更低</strong>。原因是前沿模型过度利用私有视角进行精细推理，导致过多"修正指令"，消耗回合预算却不推进任务。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module agent-mod">
+<div class="module-title">① 基准设计：部分可观测协调</div>
+<p>环境：积木搭建世界。两个总监 Agent（D1, D2）各从不同角度看到部分棋盘状态，一个建造者执行操作。总监只能通过自然语言消息沟通，建造者根据综合指令执行。游戏引擎强制物理规则（不能移除底层积木等）。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">② 三维 LLM 自动评分</div>
+<p>使用 GPT-4o-mini 作为评分器，诊断通信失败：<strong>SG（空间基础）</strong>：私有推理是否正确识别缺失块；<strong>MM（心智建模）</strong>：消息是否增加新信息、利用独特视角、解决冲突；<strong>PS（语用充分性）</strong>：集体输出是否足够让理性建造者识别正确操作。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">③ 因果中介分析</div>
+<p>发现"独特视角利用"(MM5) 与任务进度的相关性被<strong>移除缺口完全中介</strong>：<br>- 独特视角单独解释进度 \(R^2=0.330\)<br>- 移除缺口单独解释 \(R^2=0.609\)<br>- 两者结合 \(R^2=0.633\)（增益仅 0.024）<br>- 控制移除缺口后偏相关不显著（\(r=-0.247, p=0.374\)）<br>结论：精细推理→过多修正指令→回合浪费。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">④ 修正螺旋失效模式</div>
+<p>典型案例（Qwen-32B）：第 10-14 回合，D1 和 D2 持续指示从"底层"移除橙色积木（实际在第 1 层），游戏引擎拒绝执行。Agent 缺乏跨回合失败追踪机制，重复相同错误指令消耗多个回合。前沿模型的移除缺口是开源模型的 2-5 倍。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>类别</th><th>进度 ↑</th><th>完成率 ↑</th><th>SG ↑</th><th>MM ↑</th><th>移除缺口 ↓</th></tr>
+<tr><td class="highlight">Gemini-3-Flash</td><td>前沿</td><td class="highlight">0.675</td><td class="highlight">0.716</td><td>0.874</td><td>0.676</td><td>低</td></tr>
+<tr><td>Mistral-7B</td><td>开源</td><td>0.631</td><td>—</td><td>0.658</td><td>0.502</td><td>低</td></tr>
+<tr><td>Qwen-2.5-7B</td><td>开源</td><td>0.612</td><td>—</td><td>—</td><td>—</td><td>低</td></tr>
+<tr><td>GPT-4o</td><td>前沿</td><td>0.588</td><td>—</td><td>—</td><td>—</td><td>高</td></tr>
+<tr><td>GPT-4.1-Mini</td><td>前沿</td><td>0.312</td><td>—</td><td class="highlight">0.937</td><td class="highlight">0.787</td><td>最高</td></tr>
+<tr><td>Claude-Sonnet-4.6</td><td>前沿</td><td>0.285</td><td>—</td><td>—</td><td>—</td><td>高</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>能力悖论</strong>：GPT-4.1-Mini 的 SG/MM 评分最高（0.937, 0.787），但进度仅 <span class="highlight-text">0.312</span>；7B 开源模型 Mistral 进度反而是其两倍</li>
+<li><strong>根因：过度修正</strong>：前沿模型的移除缺口（过多移除操作 vs 放置操作）是开源模型的 2-5 倍，与进度呈强负相关（\(\rho=-0.543, p<0.001\)）</li>
+<li><strong>个体能力 ≠ 集体智慧</strong>：个体语用能力是集体任务成功的必要非充分条件——协调能力才是瓶颈</li>
+</ol>
+<p class="insight">🔑 启示：在多 Agent 系统中，"更聪明"的模型可能因过度思考而表现更差——约束搜索空间和控制修正冲动同样重要。</p>
+</div>
+</div>
+
+<!-- Paper 11 -->
+<div class="paper-card" id="p11">
+<h3><a href="https://arxiv.org/abs/2603.25723" target="_blank">Natural-Language Agent Harnesses (NLAH)</a></h3>
+<div class="paper-meta">
+<span>👤 Linyue Pan, Lexiao Zou, Shuo Guo, Jingchen Ni, Hai-Tao Zheng</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 清华大学深圳国际研究生院, 哈尔滨工业大学（深圳）</span><br>
+<span class="tag tag-agent">Agent · 框架工程 · 编排</span>
+</div>
+<div class="summary">
+Agent 的性能越来越依赖"harness 工程"（编排逻辑），但这些逻辑通常被埋藏在控制器代码中。NLAH 将 harness 的控制逻辑外部化为可编辑的结构化自然语言文档，由"智能 Harness 运行时 (IHR)"直接解释执行。在 OSWorld 基准上，将代码 harness 迁移到 NLAH 后性能从 30.4% 飙升至 <strong>47.2%</strong>，LLM 调用从 1.2k 降至 34，运行时间从 361 分钟降至 141 分钟。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module agent-mod">
+<div class="module-title">① NLAH 六大组件规范</div>
+<p>一个可执行的 NLAH 必须包含：<strong>契约</strong>（I/O、验证关卡、权限、停止规则）、<strong>角色</strong>（如解决者/验证者，职责不重叠）、<strong>阶段结构</strong>（显式工作流拓扑：计划→执行→验证）、<strong>适配器</strong>（确定性操作钩子）、<strong>状态语义</strong>（跨步骤持久化的产物和重开机制）、<strong>失败分类</strong>（命名失败模式驱动恢复策略）。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">② 智能 Harness 运行时 (IHR)</div>
+<p>共享运行时环境，将运行时章程（通用规则）与任务族的 harness 逻辑分离。循环内 LLM 直接解释 NLAH 文档并执行。关键设计：约 90% 的 Prompt Tokens 和 LLM 调用发生在委托的子 Agent 中而非父线程。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">③ 文件支持的状态模块</div>
+<p>解决长周期自主性中的稳定性问题。强制三个属性：<strong>外部化</strong>（状态写入产物文件）、<strong>路径可寻址</strong>（通过路径重新打开对象）、<strong>压缩稳定</strong>（在截断或重启中存活）。在 OSWorld 上带来 +5.5% 提升。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">④ 模块化消融与自进化</div>
+<p>逐模块消融显示：<strong>自进化模块</strong>在 SWE-bench 上 +4.8%（通过收紧接受关卡改进解决循环）。但验证器 (-0.8%) 和多候选搜索 (-2.4%) 反而有害——结构增加不等于性能提升，开销敏感场景需谨慎。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>实现方式</th><th>基准</th><th>性能</th><th>LLM 调用</th><th>运行时间</th></tr>
+<tr><td>OS-Symphony 代码实现</td><td>OSWorld</td><td>30.4%</td><td>1,200</td><td>361.5 min</td></tr>
+<tr><td class="highlight">NLAH 实现</td><td>OSWorld</td><td class="highlight">47.2%</td><td class="highlight">34</td><td class="highlight">140.8 min</td></tr>
+<tr><td>TRAE Full IHR</td><td>SWE Verified</td><td>74.4%</td><td>414</td><td>32.5 min</td></tr>
+<tr><td>Basic + 自进化</td><td>SWE Verified</td><td class="highlight">80.0%</td><td>—</td><td>—</td></tr>
+<tr><td>Basic + 文件状态</td><td>OSWorld</td><td>47.2% (+5.5)</td><td>—</td><td>—</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>代码→文本：性能飙升</strong>：OSWorld 上同一任务从代码 harness 迁移到 NLAH 后，性能从 30.4% 升至 <span class="highlight-text">47.2%</span>，LLM 调用降低 <span class="highlight-text">35×</span></li>
+<li><strong>行为模式转变</strong>：代码 harness 倾向于基于屏幕的 GUI 修复循环，NLAH 更倾向于文件级验证和确定性修复（直接编辑 .pptx 包或配置文件），更高效</li>
+<li><strong>并非所有结构都有益</strong>：验证器和多候选搜索在 OSWorld 上分别导致 -8.4% 和 -5.6%，过度结构化在开销敏感场景中反成负担</li>
+</ol>
+<p class="insight">🔑 启示：Agent 的控制逻辑用自然语言表达反而比代码更好——LLM 更擅长解释文本指令而非执行代码框架。</p>
+</div>
+</div>
+
+<!-- ==================== MULTIMODAL SECTION ==================== -->
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态</h2>
+
+<!-- Paper 12 -->
+<div class="paper-card" id="p12">
+<h3><a href="https://arxiv.org/abs/2603.25537" target="_blank">Humans vs Vision-Language Models: A Unified Measure of Narrative Coherence</a></h3>
+<div class="paper-meta">
+<span>👤 Nikolai Ilinykh, Hyewon Jang, Shalom Lappin, Asad Sayeed, Sharid Loáiciga</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 University of Gothenburg, Queen Mary University of London, King's College London</span><br>
+<span class="tag tag-multimodal">Multimodal · VLM · 叙事评估</span>
+</div>
+<div class="summary">
+当 VLM 根据图片序列讲故事时，它们的叙事连贯性与人类相比如何？本文提出 5 维叙事连贯性评分（NCS），测试 5 个顶级 VLM 后发现：<strong>人类在所有文本导向指标上均占优</strong>（NCS<sup>arith</sup> 0.50 vs 最佳模型 0.46），但在多模态角色定位上人类反而不占优——模型更受视觉内容字面约束。所有模型对人类文本赋予更高困惑度，表明人类叙事更具多样性和"惊喜感"。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module mm-mod">
+<div class="module-title">① 五维叙事连贯性指标</div>
+<p><strong>指代连贯 R</strong>：平均链大小/链数量，衡量实体引用集中度。<strong>话语关系类型 D</strong>：独特关系类型/总关系数量，衡量逻辑多样性。<strong>主题切换 T</strong>：相邻片段主题改变频率。<strong>角色持久度 ChP</strong>：角色在故事中的连续性（结合连续性和分布）。<strong>多模态角色定位 MCG</strong>：文本角色引用与视觉序列角色出现的一致性。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">② 综合叙事连贯性分数 (NCS)</div>
+<p>两种聚合方式：算术平均 \(NCS^{arith}\) 和几何平均 \(NCS^{geom}\)。几何平均对各维度不均衡更敏感——Llama 4 Scout 的 \(NCS^{geom}\) 仅 0.06（vs 人类 0.36），暴露其极不均衡的连贯性表现。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">③ 实验设计与规模</div>
+<p>使用 Visual Writing Prompts (VWP) 语料库，功效分析后采样 60 个视觉故事序列。5 个 VLM：InternVL3-78B、Qwen3-VL-235B、Claude-4.5 Sonnet、GPT-4o、Llama-4-Scout。两种提示条件（短提示/长提示），人类数据来自 VWP 原始标注和 AMT 新收集。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">④ 困惑度与多样性分析</div>
+<p>所有评估模型对人类文本赋予更高困惑度——人类叙事比模型生成更不可预测（更多样化）。长提示条件下人类仍然保持最高 NCS，提示工程未能使模型收敛于人类的连贯性特征。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>系统</th><th>R (指代)</th><th>D (话语)</th><th>T (主题)</th><th>ChP (角色)</th><th>NCS<sup>arith</sup></th></tr>
+<tr><td class="highlight">人类</td><td class="highlight">0.77</td><td class="highlight">0.46</td><td class="highlight">0.43</td><td class="highlight">0.39</td><td class="highlight">0.50</td></tr>
+<tr><td>GPT-4o</td><td>0.65</td><td>0.41</td><td>0.28</td><td>0.36</td><td>0.46</td></tr>
+<tr><td>Claude 4.5</td><td>0.58</td><td>0.43</td><td>0.27</td><td>0.32</td><td>0.41</td></tr>
+<tr><td>Qwen3-VL</td><td>0.70</td><td>0.35</td><td>0.38</td><td>0.30</td><td>0.45</td></tr>
+<tr><td>Llama 4 Scout</td><td>0.73</td><td>0.39</td><td>0.26</td><td>0.08</td><td>0.32</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>角色持久度是最大差距</strong>：Llama 4 Scout 的角色持久度仅 <span class="highlight-text">0.08</span>（vs 人类 0.39），几乎无法维持角色在多图之间的连贯出现</li>
+<li><strong>多模态定位的悖论</strong>：人类在 MCG 上仅 0.45，GPT-4o 达 0.58——模型更"忠实"于视觉内容，人类更自由地创造超越画面的叙事</li>
+<li><strong>几何平均暴露短板</strong>：Llama 4 Scout 算术平均 0.32 看似尚可，但几何平均仅 0.06，反映单项极差拖垮整体（t=8.21, p<0.01）</li>
+</ol>
+<p class="insight">🔑 启示：VLM 的叙事能力距人类仍有系统性差距——不在于单项指标，而在于多维度的均衡性和叙事自由度。</p>
+</div>
+</div>
+
+<!-- Paper 13 -->
+<div class="paper-card" id="p13">
+<h3><a href="https://arxiv.org/abs/2603.25157" target="_blank">Vision Hopfield Memory Networks (V-HMN)</a></h3>
+<div class="paper-meta">
+<span>👤 Jianfeng Wang, Amine M'Charrak, Luk Koska, Xiangtao Wang et al. (10 authors)</span><br>
+<span>📅 2026-03-26</span><br>
+<span>🏛 University of Vienna, TU Wien (推断自 FWF 资助)</span><br>
+<span class="tag tag-multimodal">Multimodal · 视觉 · 记忆网络</span>
+</div>
+<div class="summary">
+受大脑 Hopfield 联想记忆启发，V-HMN 提出了一种不依赖卷积或自注意力的视觉骨干网络，使用分层记忆检索作为核心构建模块。在 CIFAR-10/100、SVHN、Fashion-MNIST 上<strong>全面超越 ViT、Swin、MLP-Mixer、Vim</strong>（93.94% vs 92.97%），在仅 10% 标注数据下优势更加显著（80.22% vs 76.14%），ImageNet-1k 达到 80.3%。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module mm-mod">
+<div class="module-title">① Hopfield 记忆检索机制</div>
+<p>给定表示 \(z \in \mathbb{R}^D\) 和记忆库 \(M \in \mathbb{R}^{K \times D}\)，\(\ell_2\) 归一化后计算检索权重和原型：</p>
+<p>$$\alpha = \text{softmax}(\sqrt{D} \, \hat{z}\hat{M}^\top), \quad m = \sum_{j=1}^{K}\alpha_j M_j$$</p>
+<p>缩放因子 \(\sqrt{D}\) 恢复余弦相似度方差至单位方差，防止 softmax 过平。记忆库使用类平衡环形缓冲区，训练时动态更新，推理时冻结。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">② 局部+全局双记忆路径</div>
+<p><strong>局部记忆</strong>：对每个 token 的 \(k \times k\) 空间邻域展开、展平、投影，通过 Hopfield 检索对局部模式去噪补全（类似卷积但基于原型先验）。<strong>全局记忆</strong>：对所有 token 均值池化形成查询向量，检索场景级原型并广播回所有 token 作为上下文先验。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">③ 迭代细化（预测编码）</div>
+<p>通过预测编码启发的更新规则进行误差校正：$$z^{(t+1)} = z^{(t)} + \beta(m - z^{(t)})$$</p>
+<p>其中 \(\beta\) 是可学习参数。\(t=0\) 到 \(t=1\) 提升 CIFAR-10 准确率 0.38%，在噪声/遮挡鲁棒性测试中平均准确率从 71.65% 升至 74.35%，\(t=2\) 后收益递减。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">④ 数据效率优势</div>
+<p>V-HMN 的记忆机制提供了显式的原型先验，在标注数据稀缺时优势突出。10% 标注数据下 CIFAR-10：V-HMN 80.22% vs ViT 72.73% vs MLP-Mixer 76.14%（+4–7.5%），因为记忆库中的原型补偿了标注不足。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>CIFAR-10</th><th>CIFAR-100</th><th>SVHN</th><th>Fashion-MNIST</th><th>参数量</th></tr>
+<tr><td>ViT</td><td>91.66</td><td>72.56</td><td>96.11</td><td>91.83</td><td>7.16M</td></tr>
+<tr><td>Swin-ViT</td><td>87.94</td><td>66.58</td><td>95.89</td><td>91.79</td><td>6.92M</td></tr>
+<tr><td>MLP-Mixer</td><td>92.65</td><td>73.35</td><td>96.91</td><td>91.46</td><td>8.71M</td></tr>
+<tr><td>AiT</td><td>92.97</td><td>72.91</td><td>95.98</td><td>91.51</td><td>7.15M</td></tr>
+<tr><td class="highlight">V-HMN (Ours)</td><td class="highlight">93.94</td><td class="highlight">76.58</td><td class="highlight">97.16</td><td class="highlight">92.27</td><td>7.12M</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>10% 数据效率</strong>：CIFAR-10 仅用 10% 标注，V-HMN <span class="highlight-text">80.22%</span> vs ViT 72.73%——记忆机制提供了强大的归纳偏置</li>
+<li><strong>鲁棒性</strong>：在高斯噪声、遮挡和对比度退化下，迭代细化将平均准确率从 71.65% 提升至 <span class="highlight-text">74.35%</span></li>
+<li><strong>ImageNet 竞争力</strong>：ImageNet-1k 达 80.3%，与 ResNet-50/ViT-B/16 相当，但 V-HMN 未经大量架构调优</li>
+</ol>
+<p class="insight">🔑 启示：Hopfield 联想记忆为视觉表征提供了一条与 Transformer/SSM 截然不同的路径——显式原型存储在数据稀缺和对抗场景中独具优势。</p>
+</div>
+</div>
+
+<!-- ==================== REFLECTION ==================== -->
+<div class="reflection">
+<h3>📝 今日总结与反思</h3>
+<ul>
+<li><strong>置信度校准新范式</strong>：Paper 1&2 揭示了 LLM 内部的"知道-说出"脱节问题。CAA 转向和 M-ratio 分别从因果干预和测量理论角度提供了解决方案。</li>
+<li><strong>RL 训练效率革命</strong>：ARRoL（剪枝 rollout）和 HIVE（选择 prompt）从不同维度砍掉 RLVR 的计算浪费，均实现了"少练但练得更好"。OPD 的三种失效模式诊断则为蒸馏方法提供了 debug 指南。</li>
+<li><strong>安全与能力不矛盾</strong>：SafeMath 证明安全干预可以同时提升数学准确率，因为安全和准确的注意力分配存在协同效应。</li>
+<li><strong>Agent 的"聪明陷阱"</strong>：CRAFT 揭示前沿模型在多 Agent 协调中反而更差，NLAH 显示自然语言框架优于代码框架——Agent 设计需要反直觉思维。</li>
+<li><strong>记忆驱动的视觉骨干</strong>：V-HMN 展示了 Hopfield 记忆作为 Transformer 替代方案的潜力，尤其在数据稀缺场景下。</li>
+</ul>
+</div>
+
+</div><!-- end container -->
+<footer>
+<p>🧪 arXiv AI 日报 · 自动生成于 2026-03-28</p>
+<p>数据来源：<a href="https://arxiv.org" target="_blank">arXiv.org</a> · 仅供学术交流</p>
+</footer>
+</body>
+</html>
