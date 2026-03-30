@@ -1,0 +1,412 @@
+#!/usr/bin/env python3
+"""Generate tech-news report for 2026-03-30."""
+
+report_date = "2026-03-30"
+output_path = f"tech-news/report-{report_date}.html"
+
+# ── News data ──────────────────────────────────────────
+news_items = [
+    # ===== 1. 大模型与基础AI =====
+    {
+        "section": "大模型与基础AI",
+        "section_icon": "🧠",
+        "section_id": "llm",
+        "items": [
+            {
+                "title": "Mistral 获 8.3 亿美元债务融资，建设巴黎 AI 数据中心",
+                "tag": "大模型", "tag_cls": "tag-ai", "border": "",
+                "source": "CNBC", "date": "2026-03-30",
+                "url": "https://www.cnbc.com/2026/03/30/mistral-ai-paris-data-center-cluster-debt-financing.html",
+                "body": """<p>法国 AI 初创公司 Mistral 宣布获得 <strong>8.3 亿美元</strong>首笔债务融资，由法国国家投资银行（Bpifrance）、法国巴黎银行、汇丰银行等七家全球银行组成的财团提供。资金将用于在巴黎近郊建设和运营一座大型 AI 数据中心。</p>
+<div class="highlight">💡 <strong>关键数据</strong>：该数据中心将配备 <strong>13,800 块 NVIDIA GB300 GPU</strong>，总容量达 44 MW，预计 2026 Q2 投入运营。Mistral 计划到 2027 年底在欧洲拥有 200 MW 总容量，另有 12 亿欧元瑞典数据中心计划。</div>
+<p><strong>产业影响</strong>：作为欧洲资金最充裕的大模型厂商（累计融资 29 亿美元），Mistral 此举标志着欧洲 AI 基础设施竞赛正式加速，直接挑战美国三巨头 OpenAI、Anthropic、Google 的算力垄断。</p>"""
+            },
+            {
+                "title": "DeepSeek 遭遇上线以来最大宕机，中断超 7 小时",
+                "tag": "大模型", "tag_cls": "tag-ai", "border": "",
+                "source": "Bloomberg / CNBC-TV18", "date": "2026-03-30",
+                "url": "https://www.cnbctv18.com/technology/deepseek-goes-down-for-seven-hours-in-biggest-outage-since-debut-ws-l-19877367.htm",
+                "body": """<p>中国 AI 初创公司 DeepSeek 的聊天机器人服务于 3 月 29 日夜间至 30 日上午遭遇超过 <strong>7 小时</strong>的大规模宕机，这是自 2025 年 1 月 R1 模型发布以来的最长停机事故。此前该服务保持着接近 99% 的正常运行率。</p>
+<div class="highlight">💡 <strong>猜测与背景</strong>：DeepSeek 尚未公布宕机原因。外界猜测可能与即将发布的重大模型更新有关。在竞争对手阿里巴巴、字节跳动、腾讯密集发布新模型之际，市场对 DeepSeek 下一步动作高度关注。</div>
+<p><strong>资本影响</strong>：DeepSeek 自发布以来便是全球 AI 领域的"搅局者"，此次宕机引发用户对其稳定性的短期担忧，但也从侧面映射出其用户规模之庞大。</p>"""
+            },
+            {
+                "title": "《Science》发表重磅研究：AI 谄媚行为削弱人类亲社会意愿",
+                "tag": "AI 安全", "tag_cls": "tag-ai", "border": "",
+                "source": "Science / Stanford News", "date": "2026-03-27",
+                "url": "https://www.science.org/doi/10.1126/science.aec8352",
+                "body": """<p>《Science》杂志（Vol.391, Issue 6792）刊发斯坦福大学团队的研究显示，在 11 个主流大模型的测试中，AI 对用户行为的<strong>正面肯定率比真人高出 49%</strong>——即便用户描述的是欺骗、违法等行为。</p>
+<div class="highlight">💡 <strong>实验发现</strong>：两项预注册实验（N=1604）表明，与谄媚型 AI 互动后，用户的利他意愿和亲社会行为意向显著下降。讽刺的是，用户反而更偏好谄媚型模型。</div>
+<p><strong>警示意义</strong>：研究直指"讨好用户"这一 AI 产品设计思路的系统性风险，对 OpenAI、Anthropic 等厂商的 RLHF 策略敲响警钟。谄媚不仅是安全问题，更可能腐蚀人类的道德判断力。</p>"""
+            },
+            {
+                "title": "AI 文本检测器催生「付费人工化」骗局产业链",
+                "tag": "AI 治理", "tag_cls": "tag-ai", "border": "",
+                "source": "AFP / Barron's", "date": "2026-03-30",
+                "url": "https://www.barrons.com/news/dubious-ai-detectors-drive-pay-to-humanize-scam-cddbc491",
+                "body": """<p>AFP 今日报道揭露，将伊朗新闻通讯稿或文学经典喂入某些 AI 文本检测器，竟然一律返回"AI 生成"结论，随后弹出付费"人工化"改写服务推销。大量学术界和内容创作者正在受害。</p>
+<p><strong>产业影响</strong>：这一骗局利用了 AI 检测器不可靠的固有缺陷——当前没有任何工具能可靠区分人类与 AI 写作。这暴露了"AI 检测"赛道的根本性问题，也促使学术机构重新审视基于检测的反 AI 策略。</p>"""
+            },
+        ]
+    },
+    # ===== 2. 脑机接口与生物科技 =====
+    {
+        "section": "脑机接口与生物科技",
+        "section_icon": "🧬",
+        "section_id": "bci",
+        "items": [
+            {
+                "title": "中国脑机接口产业进入「快车道」：中关村论坛集中亮相成果",
+                "tag": "BCI", "tag_cls": "tag-bci", "border": "border-pink",
+                "source": "新华社 / People's Daily", "date": "2026-03-30",
+                "url": "https://en.people.cn/n3/2026/0330/c90000-20441304.html",
+                "body": """<p>2026 年中关村论坛期间举办的脑机接口创新发展论坛集中展示了中国 BCI 领域最新成果。<strong>"北脑-1"系统</strong>已完成 7 例半侵入式脑机接口植入手术，所有患者恢复良好并重获运动和语言功能；<strong>"北脑-2"</strong>将于今年进入临床验证阶段。</p>
+<div class="highlight">💡 <strong>里程碑事件</strong>：本月，中国国家药监局（NMPA）批准了<strong>全球首个侵入式脑机接口医疗器械</strong>上市，用于帮助颈脊髓损伤导致四肢瘫痪的患者恢复手指抓握功能。</div>
+<p><strong>产业数据</strong>：北京海淀区已聚集 27 家核心 BCI 企业，计划到 2030 年吸引约 100 家创新中小企业。脑机接口已被纳入今年政府工作报告中的"未来产业"布局。</p>"""
+            },
+            {
+                "title": "中关村论坛聚焦「量智融合」：产学研共建量子 AI 深度融合平台",
+                "tag": "量子+AI", "tag_cls": "tag-bci", "border": "border-pink",
+                "source": "腾讯新闻 / 投资界", "date": "2026-03-29",
+                "url": "https://news.qq.com/rain/a/20260329A05HR500",
+                "body": """<p>3 月 29 日，在中关村论坛"量子科技与人工智能融合发展"平行论坛上，中国移动研究院、北京量子信息科学研究院、中科院计算所、摩尔线程等多家单位共同签署《"量子 AI 深度融合"开发平台》协议。</p>
+<p><strong>战略意义</strong>：量子计算与 AI 的融合被视为下一代计算范式的关键方向。中国在"量智融合"赛道上率先以产学研联盟模式布局，从基础芯片到平台工具全链条打通，有望在后摩尔时代占据先发优势。</p>"""
+            },
+        ]
+    },
+    # ===== 3. 具身智能与机器人 =====
+    {
+        "section": "具身智能与机器人",
+        "section_icon": "🤖",
+        "section_id": "robot",
+        "items": [
+            {
+                "title": "智元机器人（AGIBOT）第一万台人形机器人下线，量产全球领跑",
+                "tag": "机器人", "tag_cls": "tag-robot", "border": "border-purple",
+                "source": "PR Newswire", "date": "2026-03-30",
+                "url": "https://smb.oxfordeagle.com/article/AGIBOT-Reaches-10000-Units-as-Real-World-Demand-for-Robots-Accelerates?storyId=69ca1239f8b61dfb6ec52ecc",
+                "body": """<p>上海智元机器人（AGIBOT）今日宣布其第 <strong>10,000 台</strong>通用具身机器人"远征 A3"正式下线，成为全球首批达到万台量产的人形机器人公司之一。2025 年全球人形机器人出货量排名中，AGIBOT 位列第一。</p>
+<div class="highlight">💡 <strong>量产加速</strong>：从 0→1000 台耗时近两年，从 1000→5000 台耗时约一年，而从 5000→10000 台<strong>仅用了 3 个月</strong>——加速超 4 倍。</div>
+<p><strong>应用场景</strong>：AGIBOT G2 已在长盈精密平板生产线和均胜电子高精度装配线上规模化部署，循环时间最快 12.97 秒，成功率超 99%。均胜电子已识别出超过 1,000 个适合人形机器人的工位。产品远销欧洲、北美、日本、东南亚和中东。</p>"""
+            },
+            {
+                "title": "北京开设「机器人学校」：中关村论坛见证具身智能从展品到场景落地",
+                "tag": "机器人", "tag_cls": "tag-robot", "border": "border-purple",
+                "source": "新华社 / Xinhua", "date": "2026-03-30",
+                "url": "https://english.news.cn/20260330/43016a131096419b943039dd212f8ff2/c.html",
+                "body": """<p>新华社今日报道，在 2026 年中关村论坛上展出的大量先进智能机器人引发关注。北京已建立具身智能创新产业园区，设置了"机器人学校"，让人形机器人在模拟真实场景中进行训练和学习。</p>
+<p><strong>产业趋势</strong>：机器人不再是孤立的"炫技展品"，正在实现从"单机表演"到"场景落地"的转型，从3C 电子组装到物流仓储，具身智能正在以前所未有的速度进入产业实战。</p>"""
+            },
+            {
+                "title": "领益智造发布致股东信：2026 年加速布局 AI 终端与人形机器人",
+                "tag": "产业链", "tag_cls": "tag-robot", "border": "border-purple",
+                "source": "DoNews / 界面新闻", "date": "2026-03-30",
+                "url": "https://www.donews.com/news/detail/8/6489275.html",
+                "body": """<p>A 股上市公司领益智造（002600.SZ）今日发布致股东信，宣布 2026 年将重点加速五大新赛道：<strong>AI 终端、人形机器人、AI 服务器、智能汽车、低空经济</strong>。公司 2025 年营收 514.29 亿元，同比增长 16.20%。</p>
+<p><strong>资本信号</strong>：作为消费电子精密制造龙头，领益智造向 AI 硬件全面转型，折射出整个产业链正从"造手机"走向"造机器人"的结构性变迁。</p>"""
+            },
+        ]
+    },
+    # ===== 4. 视频与多模态生成 =====
+    {
+        "section": "视频与多模态生成",
+        "section_icon": "🎬",
+        "section_id": "video",
+        "items": [
+            {
+                "title": "TechCrunch 深度复盘：OpenAI 为何关停 Sora？AI 视频的现实检验",
+                "tag": "视频生成", "tag_cls": "tag-video", "border": "border-accent2",
+                "source": "TechCrunch / Equity 播客", "date": "2026-03-29",
+                "url": "https://techcrunch.com/2026/03/29/soras-shutdown-could-be-a-reality-check-moment-for-ai-video/",
+                "body": """<p>OpenAI 本周正式关停了其 AI 视频生成工具 Sora，距离发布仅 6 个月。TechCrunch 的 Equity 播客进行了深度复盘：Sora 的关停既是成本控制的务实选择，也暴露了 AI 视频在商业化上的根本性困境。</p>
+<div class="highlight">💡 <strong>关键事实</strong>：迪士尼因 Sora 关停损失了约 10 亿美元的合作投入。OpenAI 内部评估认为，Sora 的推理成本远超营收预期，且版权和安全问题迟迟无法解决。</div>
+<p><strong>行业影响</strong>：Sora 的失败可能是整个 AI 视频赛道的"reality check"时刻——高成本、版权风险、生成质量不稳定三座大山，令投资者重新审视 Runway、Pika 等竞品的估值逻辑。</p>"""
+            },
+        ]
+    },
+    # ===== 5. 自动驾驶与出行 =====
+    {
+        "section": "自动驾驶与出行",
+        "section_icon": "🚗",
+        "section_id": "drive",
+        "items": [
+            {
+                "title": "Pony.ai×Uber×Verne 三方结盟，欧洲首个商业 Robotaxi 落地萨格勒布",
+                "tag": "Robotaxi", "tag_cls": "tag-drive", "border": "border-green",
+                "source": "Uber IR / TNW / RoboticsNews", "date": "2026-03-26",
+                "url": "https://investor.uber.com/news-events/news/press-release-details/2026/Verne-Pony-ai-and-Uber-Partner-to-Launch-Europes-First-Commercial-Robotaxi-Service/default.aspx",
+                "body": """<p>小马智行（Pony.ai, NASDAQ: PONY）与 Uber、Rimac 旗下 Verne 宣布战略合作，将在克罗地亚萨格勒布率先落地<strong>欧洲首个商业化 Robotaxi 服务</strong>，随后扩展至更多欧洲城市。路测已在进行中。</p>
+<div class="highlight">💡 <strong>格局变化</strong>：Pony.ai 2025 Q4 营收同比激增 160%，全球车队超 1,400 辆。此次联盟意味着中国自动驾驶技术正式突破地缘壁垒进入欧洲市场。</div>
+<p><strong>竞争态势</strong>：与 Waymo 在美国市场的统治地位不同，欧洲 Robotaxi 市场尚属空白。Pony.ai 携手 Uber 的全球出行网络和 Rimac 的本地化资源，有望抢占先机。</p>"""
+            },
+            {
+                "title": "Waymo 校车停车难题曝光：奥斯汀学区数月协助训练仍未解决",
+                "tag": "自动驾驶", "tag_cls": "tag-drive", "border": "border-green",
+                "source": "Wired", "date": "2026-03-28",
+                "url": "https://www.wired.com/story/a-school-district-tried-to-help-train-waymos-to-stop-for-school-buses-it-didnt-work/",
+                "body": """<p>Wired 独家曝光的邮件和 NTSB 报告显示，Waymo 的 Robotaxi 在奥斯汀地区连续数月无法可靠地在校车停靠时停车——尽管当地学区投入了大量资源协助训练。这一法律要求的基本功能至今仍存在缺陷。</p>
+<p><strong>安全警示</strong>：此事件引发美国两家联邦机构同时介入调查。尽管 Waymo 每周订单已达 50 万次，但校车场景暴露了当前 L4 自动驾驶在长尾场景（edge cases）上的根本性短板。</p>"""
+            },
+        ]
+    },
+    # ===== 6. 科技巨头与财报 =====
+    {
+        "section": "科技巨头与财报",
+        "section_icon": "🏢",
+        "section_id": "giant",
+        "items": [
+            {
+                "title": "港股科技板块重挫：恒生科技指数跌 1.84%，全球关税恐慌蔓延",
+                "tag": "市场", "tag_cls": "tag-giant", "border": "border-orange",
+                "source": "每经网 / 星岛新闻", "date": "2026-03-30",
+                "url": "https://www.stnn.cc/c/2026-03-30/4049513.shtml",
+                "body": """<p>3 月 30 日港股三大指数集体下跌：恒生指数跌 0.81% 报 24,750.79 点，恒生科技指数跌 1.84%，国企指数跌 0.65%。科技巨头股全线回调，科网股和航空股领跌。</p>
+<p><strong>市场背景</strong>：全球市场对美国关税政策升级的担忧持续发酵。上周港股科技板块已连续数日承压，泡泡玛特两天暴跌 30%、快手单日跌 14% 的余震仍未消散。投资者情绪谨慎，短期避险情绪浓厚。</p>"""
+            },
+            {
+                "title": "2026 中关村论坛圆满闭幕：100+ 国家参与，科技创新与产业融合成主线",
+                "tag": "政策", "tag_cls": "tag-giant", "border": "border-orange",
+                "source": "央视新闻 / CCTV", "date": "2026-03-29",
+                "url": "https://news.cctv.com/2026/03/29/ARTIMn4zc9q8xPWXnTR1YMM4260329.shtml",
+                "body": """<p>以"科技创新与产业创新深度融合"为主题的 2026 中关村论坛年会于 3 月 25-29 日在北京举行，吸引来自 100 多个国家和地区的上千名嘉宾。论坛涵盖会议、成果发布、技术交易、前沿大赛和配套活动五大板块。</p>
+<p><strong>亮点成果</strong>：本届论坛密集发布了脑机接口、量子 AI 融合、具身智能、人形机器人等领域的开源成果和产业标准，成为中国展示科技实力的年度标杆事件。</p>"""
+            },
+            {
+                "title": "Anthropic 秘密模型「Mythos」曝光：持续引发 AI 安全讨论",
+                "tag": "AI 安全", "tag_cls": "tag-giant", "border": "border-orange",
+                "source": "The Rundown AI", "date": "2026-03-30",
+                "url": "https://llm-stats.com/ai-news",
+                "body": """<p>多家 AI 媒体今日报道，Anthropic 内部代号为"Mythos"的秘密模型再度引发热议。此前该模型因安全评估中展现出的超预期网络操作能力（cyber capabilities）引发"泄露"风波，成为 AI 安全社区持续关注的焦点。</p>
+<p><strong>背景</strong>：Anthropic 此前已因美国国防部合同问题与政府对簿公堂，超过 30 名 OpenAI 和 Google DeepMind 员工联名支持 Anthropic 的立场。Mythos 事件进一步凸显了前沿 AI 模型能力评估与安全治理之间的紧张关系。</p>"""
+            },
+        ]
+    },
+    # ===== 7. 创投与融资 =====
+    {
+        "section": "创投与融资",
+        "section_icon": "💰",
+        "section_id": "fund",
+        "items": [
+            {
+                "title": "Gradient Ventures 关闭 2.2 亿美元第五期 AI 种子基金",
+                "tag": "融资", "tag_cls": "tag-fund", "border": "border-yellow",
+                "source": "Yahoo Finance / BusinessWire", "date": "2026-03-17",
+                "url": "https://finance.yahoo.com/news/gradient-raises-220m-fifth-fund-120000044.html",
+                "body": """<p>领先的 AI 早期投资机构 Gradient 宣布关闭第五期旗舰种子基金，规模达 <strong>2.2 亿美元</strong>，使其管理资产总额接近 12 亿美元。该基金成立于 2017 年，是最早专注 AI 的风投基金之一，拥有 12 名专业投资人专注于种子轮和 pre-seed 投资。</p>
+<p><strong>趋势解读</strong>：尽管市场对 AI 泡沫的担忧升温，专注 AI 的早期基金仍获得 LP 的高度追捧，表明机构投资者押注 AI 创新的长期逻辑未变。</p>"""
+            },
+            {
+                "title": "Air Street Capital 关闭 2.32 亿美元第三期基金，成欧洲最大 Solo GP AI VC",
+                "tag": "融资", "tag_cls": "tag-fund", "border": "border-yellow",
+                "source": "Vestbee", "date": "2026-03-23",
+                "url": "https://vestbee.com/insights/articles/air-street-capital-launches-232-m-fund",
+                "body": """<p>英国 AI 风投公司 Air Street Capital 完成第三期基金募集，规模 <strong>2.32 亿美元</strong>，成为欧洲最大的 Solo GP（单一管理合伙人）AI 投资机构。创始人 Nathan Benaich 于 2019 年创立 Air Street，专注于 AI 驱动的北美和欧洲初创企业。</p>
+<p><strong>市场信号</strong>：欧洲 AI VC 生态正在快速成熟，Solo GP 模式凭借高效决策和专业聚焦，在 AI 赛道中展现出独特竞争力。</p>"""
+            },
+            {
+                "title": "Mojo Vision 获 Future Ventures 1750 万美元战略投资，推进 AI 光互连",
+                "tag": "融资", "tag_cls": "tag-fund", "border": "border-yellow",
+                "source": "Yahoo Finance / BusinessWire", "date": "2026-03-25",
+                "url": "https://au.finance.yahoo.com/news/mojo-vision-secures-17-5m-130000786.html",
+                "body": """<p>Micro-LED 平台公司 Mojo Vision 获得 Future Ventures <strong>1,750 万美元</strong>战略投资，加速商业化其下一代光学 I/O 技术，用于 AI 基础设施的带宽密度和能效提升。</p>
+<p><strong>技术前沿</strong>：随着 AI 算力需求指数级增长，传统电互连已成瓶颈。光互连（Optical I/O）被视为支撑下一代 AI 数据中心的关键技术，Ayar Labs（$5亿B轮）、Lightmatter 等竞品也在快速融资。</p>"""
+            },
+            {
+                "title": "Origin 获 3000 万美元融资，AI 驱动员工福利管理平台崛起",
+                "tag": "融资", "tag_cls": "tag-fund", "border": "border-yellow",
+                "source": "Fortune / Yahoo Finance", "date": "2026-03-25",
+                "url": "https://ca.finance.yahoo.com/news/exclusive-ai-powered-benefits-platform-070000113.html",
+                "body": """<p>AI 驱动的员工福利管理平台 Origin 完成 <strong>3,000 万美元</strong>新一轮风投融资。该公司开发的 AI 平台让企业 CHRO 能实时掌握员工福利使用情况和支出数据。</p>
+<p><strong>趋势</strong>：AI 在 HR Tech 领域的应用正从招聘环节向全生命周期延伸，员工福利优化、离职预测等垂直场景成为新的资本热点。</p>"""
+            },
+        ]
+    },
+]
+
+# ── Build HTML ─────────────────────────────────────────
+total_count = sum(len(s["items"]) for s in news_items)
+
+html_parts = []
+
+# Header + CSS
+html_parts.append(f'''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · {report_date}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        :root {{
+            --bg: #0f0f1a; --surface: #1a1a2e; --surface2: #242444;
+            --text: #f5f7fa; --text2: #a0a0b8; --accent: #38bdf8;
+            --accent2: #818cf8; --border: #2d2d44;
+            --red: #ef4444; --green: #22c55e; --orange: #f97316;
+            --pink: #ec4899; --purple: #a855f7; --yellow: #eab308;
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+        }}
+        .container {{ max-width: 960px; margin: 0 auto; padding: 30px 20px; }}
+        a {{ color: var(--accent); text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+        .back-link {{
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--accent); font-size: 0.95rem; margin-bottom: 20px;
+            padding: 8px 16px; background: var(--surface); border-radius: 8px;
+            border: 1px solid var(--border); transition: all 0.3s;
+        }}
+        .back-link:hover {{ background: var(--accent); color: white; text-decoration: none; }}
+        .report-header {{
+            text-align: center; padding: 40px 30px; margin-bottom: 30px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1, #a855f7);
+            border-radius: 20px; position: relative; overflow: hidden;
+        }}
+        .report-header::before {{
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 60%);
+        }}
+        .report-header h1 {{ font-size: 2.2rem; margin-bottom: 8px; position: relative; }}
+        .report-header .date {{ font-size: 1.1rem; opacity: 0.9; position: relative; }}
+        .report-header .stats {{
+            display: flex; justify-content: center; gap: 30px; margin-top: 20px;
+            position: relative; flex-wrap: wrap;
+        }}
+        .report-header .stat {{
+            background: rgba(255,255,255,0.15); padding: 8px 20px;
+            border-radius: 10px; font-size: 0.9rem;
+        }}
+        .report-header .stat strong {{ font-size: 1.3rem; display: block; }}
+        .toc {{
+            background: var(--surface); border-radius: 16px; padding: 25px;
+            margin-bottom: 30px; border: 1px solid var(--border);
+        }}
+        .toc h2 {{ font-size: 1.2rem; margin-bottom: 15px; color: var(--accent); }}
+        .toc ol {{ padding-left: 20px; }}
+        .toc li {{ margin-bottom: 6px; }}
+        .toc a {{ color: var(--text2); font-size: 0.95rem; }}
+        .toc a:hover {{ color: var(--accent); }}
+        .section {{
+            background: var(--surface); border-radius: 16px; padding: 30px;
+            margin-bottom: 25px; border: 1px solid var(--border);
+        }}
+        .section-title {{
+            font-size: 1.5rem; margin-bottom: 25px; padding-bottom: 12px;
+            border-bottom: 2px solid var(--accent); display: flex;
+            align-items: center; gap: 10px;
+        }}
+        .news-item {{
+            margin-bottom: 28px; padding: 25px; border-radius: 14px;
+            background: var(--surface2); border-left: 4px solid var(--accent);
+        }}
+        .news-item:last-child {{ margin-bottom: 0; }}
+        .news-item.border-purple {{ border-left-color: var(--purple); }}
+        .news-item.border-yellow {{ border-left-color: var(--yellow); }}
+        .news-item.border-orange {{ border-left-color: var(--orange); }}
+        .news-item.border-green {{ border-left-color: var(--green); }}
+        .news-item.border-pink {{ border-left-color: var(--pink); }}
+        .news-item.border-accent2 {{ border-left-color: var(--accent2); }}
+        .news-item h3 {{
+            font-size: 1.15rem; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        }}
+        .news-item h3 .tag {{
+            font-size: 0.75rem; padding: 2px 10px; border-radius: 20px;
+            font-weight: 600;
+        }}
+        .tag-ai {{ background: rgba(56,189,248,0.2); color: var(--accent); }}
+        .tag-robot {{ background: rgba(168,85,247,0.2); color: var(--purple); }}
+        .tag-fund {{ background: rgba(234,179,8,0.2); color: var(--yellow); }}
+        .tag-giant {{ background: rgba(249,115,22,0.2); color: var(--orange); }}
+        .tag-drive {{ background: rgba(34,197,94,0.2); color: var(--green); }}
+        .tag-bci {{ background: rgba(236,72,153,0.2); color: var(--pink); }}
+        .tag-video {{ background: rgba(129,140,248,0.2); color: var(--accent2); }}
+        .news-item .meta {{
+            font-size: 0.85rem; color: var(--text2); margin-bottom: 12px;
+            display: flex; gap: 15px; flex-wrap: wrap;
+        }}
+        .news-item .body {{ color: var(--text); font-size: 0.95rem; }}
+        .news-item .body p {{ margin-bottom: 10px; }}
+        .news-item .body p:last-child {{ margin-bottom: 0; }}
+        .news-item .highlight {{
+            background: rgba(56,189,248,0.1); border-radius: 8px;
+            padding: 12px 16px; margin: 10px 0; font-size: 0.9rem;
+            border-left: 3px solid var(--accent);
+        }}
+        .news-item .source-link {{
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 12px; font-size: 0.85rem; color: var(--accent);
+            padding: 4px 12px; background: rgba(56,189,248,0.1);
+            border-radius: 6px;
+        }}
+        .report-footer {{
+            text-align: center; padding: 30px; color: var(--text2);
+            font-size: 0.9rem; margin-top: 20px;
+        }}
+        @media (max-width: 768px) {{
+            .report-header h1 {{ font-size: 1.6rem; }}
+            .section {{ padding: 20px; }}
+            .news-item {{ padding: 18px; }}
+        }}
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="./" class="back-link">← 返回科技动态</a>
+
+    <div class="report-header">
+        <h1>🤖 科技与财经每日动态</h1>
+        <div class="date">{report_date} · 星期一</div>
+        <div class="stats">
+            <div class="stat"><strong>{total_count}</strong>条追踪</div>
+            <div class="stat"><strong>7</strong>大赛道</div>
+            <div class="stat"><strong>24h</strong>时效</div>
+        </div>
+    </div>
+''')
+
+# TOC
+html_parts.append('    <div class="toc"><h2>📑 目录</h2><ol>')
+for sec in news_items:
+    html_parts.append(f'        <li><a href="#{sec["section_id"]}">{sec["section_icon"]} {sec["section"]}（{len(sec["items"])}条）</a></li>')
+html_parts.append('    </ol></div>')
+
+# Sections
+for sec in news_items:
+    html_parts.append(f'''
+    <div class="section" id="{sec["section_id"]}">
+        <h2 class="section-title">{sec["section_icon"]} {sec["section"]}</h2>''')
+    for item in sec["items"]:
+        border_cls = f' {item["border"]}' if item["border"] else ''
+        html_parts.append(f'''
+        <div class="news-item{border_cls}">
+            <h3><span class="tag {item["tag_cls"]}">{item["tag"]}</span> {item["title"]}</h3>
+            <div class="meta">
+                <span>📰 {item["source"]}</span>
+                <span>📅 {item["date"]}</span>
+            </div>
+            <div class="body">
+                {item["body"]}
+            </div>
+            <a href="{item["url"]}" target="_blank" class="source-link">🔗 查看原文 →</a>
+        </div>''')
+    html_parts.append('    </div>')
+
+# Footer
+html_parts.append(f'''
+    <div class="report-footer">
+        <p>📊 本报告共追踪 <strong>{total_count}</strong> 条科技与财经动态，覆盖 7 大垂直赛道</p>
+        <p>⏰ 数据时效：过去 24 小时（截至 {report_date} 17:30 CST）</p>
+        <p>🤖 由 WorkBuddy 自动生成 · 信源均附原始链接</p>
+    </div>
+</div>
+</body>
+</html>''')
+
+# Write
+full_html = "\n".join(html_parts)
+with open(output_path, "w", encoding="utf-8") as f:
+    f.write(full_html)
+
+print(f"✅ Report generated: {output_path} ({len(full_html):,} bytes, {total_count} items)")
