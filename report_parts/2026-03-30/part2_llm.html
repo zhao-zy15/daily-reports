@@ -1,0 +1,284 @@
+
+<section class="category section-llm" id="section-llm">
+<h2>🧠 LLM — 大语言模型</h2>
+
+<!-- Paper 1 -->
+<div class="paper-card" id="p1">
+<h3><a href="https://arxiv.org/abs/2603.25681" target="_blank">Self-Improvement of Large Language Models: A Technical Overview and Future Outlook</a></h3>
+<div class="paper-meta">
+<span>👤 Haoyan Yang, Mario Xerri, Solha Park, Huajian Zhang, Yiyang Feng, Sai Akhil Kogilathota, Jiawei Zhou</span>
+<span>📅 2026-03-26 | arXiv:2603.25681</span>
+<span>🏛 Independent Research Group</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag" style="background:linear-gradient(135deg,#2a4a6a,#3a6a9a)">Survey</span></span>
+</div>
+<div class="summary">
+<p>本文提出了一个<strong>统一的系统级框架</strong>来组织 LLM 自我改进技术。将自改进系统概念化为一个闭环生命周期，包含四个紧密耦合的过程：<strong>数据获取</strong>、<strong>数据选择</strong>、<strong>模型优化</strong>和<strong>推理优化</strong>，以及一个<strong>自主评估层</strong>。当模型能力接近人类水平时，人类反馈难以提供足够信号，自我改进成为关键方向。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 数据获取（Data Acquisition）</div>
+<p>模型自主收集或生成训练数据。包括自指令生成（Self-Instruct）、自博弈数据生成（Self-Play）、基于推理链的自数据合成（Self-CoT Synthesis）。核心思路是让模型利用自身能力产生高质量数据，摆脱对人类标注的依赖。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 数据选择（Data Selection）</div>
+<p>并非所有自生成数据都有效。该阶段通过模型自身的评估能力筛选高质量样本。关键技术包括：基于奖励模型的过滤、基于一致性的验证（多次采样取共识）、以及基于难度梯度的课程选择。数学上可表示为：</p>
+<p>\(\mathcal{D}_{\text{selected}} = \{(x, y) \in \mathcal{D}_{\text{gen}} \mid R_\theta(x, y) \geq \tau\}\)</p>
+<p>其中 \(R_\theta\) 是模型自身作为评估器打出的分数，\(\tau\) 为质量阈值。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 模型优化（Model Optimization）</div>
+<p>利用筛选后的数据更新模型参数。涵盖监督微调（SFT on self-generated data）、强化学习（RLHF / RLVR / DPO）、以及直接偏好优化。闭环结构使模型能迭代地 <strong>"generate → evaluate → train → generate"</strong>。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 推理优化与自主评估（Inference Refinement & Autonomous Evaluation）</div>
+<p>在推理阶段进一步优化输出质量。关键技术：自一致性解码（Self-Consistency）、思维链自修正（Self-Refinement）、树搜索与验证器引导（Best-of-N with Verifier）。自主评估层贯穿整个生命周期，持续监控各阶段的质量。评估方式包括 LLM-as-Judge、基于规则的验证、以及循环一致性检查。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>自改进范式</th><th>代表方法</th><th>关键特征</th><th>典型提升</th></tr>
+<tr><td>自指令生成</td><td>Self-Instruct, Evol-Instruct</td><td>模型生成训练指令</td><td>+5-15% 任务覆盖</td></tr>
+<tr><td>自博弈训练</td><td>SPIN, Self-Play RL</td><td>模型与自身对弈</td><td>+3-8% 推理准确率</td></tr>
+<tr><td>推理时扩展</td><td>Self-Consistency, ToT</td><td>多路径搜索与验证</td><td>+10-20% 困难问题</td></tr>
+<tr><td>自反馈 RL</td><td>Self-Rewarding, RLVR</td><td>模型自评估奖励</td><td>+5-12% 对齐质量</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 自改进的"天花板"问题</div>
+<ol>
+<li><strong>模式坍缩风险</strong>：模型在自数据上反复训练可能导致多样性丧失。论文指出需要外部锚点（如规则验证器）来维持分布健康</li>
+<li><strong>评估可靠性</strong>：LLM-as-Judge 存在自偏好偏差（self-preference bias），即模型倾向于给自己生成的内容更高分</li>
+<li><strong>收敛保证</strong>：目前缺乏理论上的收敛保证。实践中发现 2-3 轮迭代后增益递减</li>
+<li><strong>未来方向</strong>：论文提出"社会化自改进"愿景——多个模型形成生态系统，通过互评、竞争和协作实现群体智能涌现</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 2 -->
+<div class="paper-card" id="p2">
+<h3><a href="https://arxiv.org/abs/2603.25052" target="_blank">Closing the Confidence-Faithfulness Gap in Large Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Miranda Muqing Miao, Lyle Ungar</span>
+<span>📅 2026-03-26 | arXiv:2603.25052</span>
+<span>🏛 University of Pennsylvania</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag" style="background:linear-gradient(135deg,#4a2a6a,#6a3a9a)">Calibration</span></span>
+</div>
+<div class="summary">
+<p>通过<strong>机制可解释性分析</strong>发现，LLM 的校准信号和语言化置信度信号虽然都是线性编码的，但彼此<strong>正交</strong>（余弦相似度 < 0.04）。更关键的是，当模型同时推理问题和输出置信度时，推理过程会<strong>破坏</strong>置信度方向，称为"推理污染效应"。提出两阶段自适应引导流水线，将校准误差降低 <strong>4-7×</strong>。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 线性探针解耦分析</div>
+<p>在模型残差流上训练岭回归探针，分别预测：(a) 金标校准信号（二元正确性标签）和 (b) 语言化置信度分数。关键发现：两种信号各自在残差流中占据<strong>独立线性方向</strong>，余弦相似度在所有层保持 &lt; 0.04。</p>
+<p>这意味着模型"知道"自己何时可能出错（校准方向可预测正确性），但生成过程<strong>无法提取</strong>这一信号到输出文本中。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 推理污染效应的发现</div>
+<p>三种提示条件对比实验：</p>
+<ul>
+<li><strong>纯正确性提示</strong>：仅回答问题</li>
+<li><strong>纯置信度提示</strong>：仅输出置信度，不回答</li>
+<li><strong>联合提示</strong>：同时回答并输出置信度</li>
+</ul>
+<p>发现联合提示下，置信度方向与准确性方向的余弦从 \(+0.26\) 反转为 \(-0.63\)，表明联合推理<strong>主动反转</strong>了内部知识与外部表达的关系。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 对比激活添加（CAA）引导</div>
+<p>构建对比激活向量：</p>
+<p>$$\mathbf{v}^{(\ell)} = \frac{1}{|\mathcal{Q}|}\sum_{q\in\mathcal{Q}} \left(\frac{1}{|\mathcal{H}_q|}\sum_{k\in\mathcal{H}_q}\mathbf{h}_{q,k}^{(\ell)} - \frac{1}{|\mathcal{L}_q|}\sum_{k\in\mathcal{L}_q}\mathbf{h}_{q,k}^{(\ell)}\right)$$</p>
+<p>在生成时注入残差流：\(\tilde{\mathbf{h}}_t^{(\ell)} = \mathbf{h}_t^{(\ell)} + \alpha\hat{\mathbf{v}}^{(\ell)}\)。该向量在 MATH 上计算，可<strong>零样本迁移</strong>到 MMLU、TriviaQA、TruthfulQA。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 两阶段自适应校准流水线</div>
+<p><strong>阶段1</strong>：用金标校准探针在推理前读取模型内部准确性估计 \(c^*_q\) 作为目标置信度。<strong>阶段2</strong>：构建传递函数 \(\alpha \mapsto \text{mean confidence}\)，通过单调插值找到引导强度 \(\alpha^*_q = f^{-1}(c^*_q)\)。对过度自信的问题向下引导，对不自信的问题向上引导。</p>
+<p>结果：Llama-3.1-8B-Inst 的 ECE 从 14.9 降至 <strong>3.7</strong>；Mistral-7B-Inst 的 ECE 从 35.1 降至 <strong>3.3</strong>。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>未引导 ECE</th><th>引导后 ECE</th><th>改善倍数</th></tr>
+<tr><td>Llama-3.1-8B-Inst</td><td>14.9</td><td>3.7</td><td>4.0×</td></tr>
+<tr><td>Mistral-7B-Inst-v0.3</td><td>35.1</td><td>3.3</td><td>10.6×</td></tr>
+<tr><td>Qwen2.5-7B-Inst</td><td>36.0</td><td>10.7</td><td>3.4×</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 推理污染的机制</div>
+<ol>
+<li><strong>正交编码</strong>：模型在内部空间里为"我是否正确"和"我应该说多自信"分配了独立的线性子空间</li>
+<li><strong>联合推理的破坏</strong>：当同时要求推理+置信度时，推理过程的注意力机制会覆盖（overwrite）置信度编码方向，导致 Cohen's d 从 1.88 降至接近 0</li>
+<li><strong>实际启示</strong>：不应让模型在同一次生成中同时给出答案和置信度估计。分两步效果更好</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 3 -->
+<div class="paper-card" id="p3">
+<h3><a href="https://arxiv.org/abs/2603.25112" target="_blank">Do LLMs Know What They Know? Measuring Metacognitive Efficiency with Signal Detection Theory</a></h3>
+<div class="paper-meta">
+<span>👤 Jon-Paul Cacioli</span>
+<span>📅 2026-03-26 | arXiv:2603.25112</span>
+<span>🏛 Independent Researcher, Melbourne</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag" style="background:linear-gradient(135deg,#4a2a6a,#6a3a9a)">Metacognition</span></span>
+</div>
+<div class="summary">
+<p>引入<strong>Type-2 信号检测理论</strong>框架评估 LLM 的元认知效率。核心指标 <strong>M-ratio = meta-d′/d′</strong> 将"模型知道多少"与"模型对自己知道什么的了解程度"分离。关键发现：AUROC2 和 M-ratio 产生<strong>完全倒序</strong>的模型排名——Mistral 拥有最高 d′ 但最低 M-ratio。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① M-ratio：元认知效率度量</div>
+<p>定义核心指标：</p>
+<p>$$M\text{-ratio} = \frac{\text{meta-}d'}{d'}$$</p>
+<p>其中 \(d'\) 衡量 Type-1 敏感性（模型区分正确/错误答案的能力），\(\text{meta-}d'\) 衡量元认知信号质量。\(M=1\) 表示最优元认知；\(M<1\) 表示信心信号丢失了决策证据中的信息。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 归一化对数概率（NLP）作为信心度量</div>
+<p>使用归一化对数概率作为连续信心变量：</p>
+<p>$$\text{NLP} = \frac{1}{L}\sum_{i=1}^{L}\log p(t_i \mid t_{<i})$$</p>
+<p>将 NLP 值分箱为 \(2 \times K\) 个有序类别（\(K=4\)），构建计数数组，通过极大似然估计拟合 SDT 参数。所有置信区间基于 10,000 次 bootstrap 重采样。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 温度解离实验</div>
+<p>每个模型在 7 个温度 \(T \in \{0.1, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0\}\) 下回答每个问题，总计 224,000 次试验。发现 Mistral 和 Gemma-2 中 \(d'\) 随温度变化，但 <strong>meta-d′ 保持稳定</strong>，证明温度改变的是信心策略（Type-2 标准），而非元认知信号质量。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 排名倒序现象</div>
+<p>AUROC2（传统信心评估指标）和 M-ratio 产生完全倒序：Mistral 在 AUROC2 上第一但 M-ratio 最后。原因是 AUROC2 混淆了"模型多准确"和"模型多了解自己"两种不同能力。对于需要选择性预测的应用（如拒绝回答），应选 M-ratio 高的模型而非 AUROC2 高的。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>d′ (Type-1)</th><th>M-ratio</th><th>AUROC2 排名</th><th>M-ratio 排名</th></tr>
+<tr><td>Mistral-7B-Inst</td><td>1.597</td><td>0.852</td><td>🥇 第1</td><td>🥉 第4</td></tr>
+<tr><td>Llama-3-8B-Base</td><td>1.445</td><td>1.024</td><td>🥈 第2</td><td>🥇 第1</td></tr>
+<tr><td>Llama-3-8B-Inst</td><td>1.312</td><td>0.976</td><td>🥉 第3</td><td>第3</td></tr>
+<tr><td>Gemma-2-9B-Inst</td><td>1.289</td><td>1.031</td><td>第4</td><td>🥇 第1</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 元认知的领域特异性</div>
+<ol>
+<li><strong>各模型弱点不同</strong>：Llama-3-Inst 在 Science & Tech 最差（M=0.788），Mistral 在 Arts & Literature 最差（M=0.677）</li>
+<li><strong>指令微调的效果</strong>：指令微调将信心策略与元认知信号解耦，使温度操纵只影响策略不影响信号。基础模型不具备这一特性</li>
+<li><strong>实用建议</strong>：对于依赖信心的系统（如知识库检索、医疗诊断），应优先选择 M-ratio 高的模型，而非仅看准确率或传统校准指标</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 4 -->
+<div class="paper-card" id="p4">
+<h3><a href="https://arxiv.org/abs/2603.25702" target="_blank">S2D2: Fast Decoding for Diffusion LLMs via Training-Free Self-Speculation</a></h3>
+<div class="paper-meta">
+<span>👤 Ligong Han, Hao Wang, Han Gao, Kai Xu, Akash Srivastava</span>
+<span>📅 2026-03-26 | arXiv:2603.25702</span>
+<span>🏛 Red Hat AI Innovation, MIT-IBM Watson AI Lab, Iowa State University</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag" style="background:linear-gradient(135deg,#3a5a2a,#5a8a3a)">Inference</span></span>
+</div>
+<div class="summary">
+<p>针对分块扩散语言模型（Block Diffusion LLMs）的解码瓶颈，提出<strong>S2D2</strong>——一种<strong>无需训练</strong>的自推测解码框架。核心洞察：当块大小减为 1 时，扩散模型退化为自回归模型，因此同一模型可同时充当草稿器和验证器。在 SDAR 上实现 <strong>4.7× 加速</strong>，准确率提升 4.5 个百分点。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 扩散-自回归双角色</div>
+<p>分块扩散模型使用块大小 \(B\) 并行生成多个 token。S2D2 的核心发现：同一预训练模型在 \(B=1\) 时等价于自回归模型。因此：</p>
+<ul>
+<li><strong>草稿器</strong>：标准扩散模式（\(B>1\)），并行提议多个 token</li>
+<li><strong>验证器</strong>：\(B=1\) 自回归模式，作为序列级批评者</li>
+</ul>
+<p>无需额外训练任何模型，实现即插即用。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 推测验证流程</div>
+<p>每个去噪步骤中：(1) 草稿器提议 token \(\hat{x}\) 和概率 \(p\)；(2) 验证器计算验证概率 \(q\)；(3) 以概率 \(\min(1, q_i/p_i)\) 接受。关键公式——局部残差能量：</p>
+<p>$$E_i(\hat{x}_i) = -\log q_i + \log p_i$$</p>
+<p>低残差能量的 token 更可能被接受，高能量不匹配通过残差重采样修正。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 自验证掩码（2LL Trick）</div>
+<p>对于位置对齐的扩散 LLM（如 LLaDA, SDAR），构建特殊验证器掩码：</p>
+<p>$$\mathbf{M}_{\mathrm{ver}} = \begin{bmatrix}\mathbf{A}_L & \mathbf{0}_L \\ \mathbf{A}_L^{<} & \mathbf{I}_L\end{bmatrix}$$</p>
+<p>该掩码允许在<strong>单次前向传播</strong>中同时获得所有草稿 token 的验证概率，避免逐 token 验证的开销。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 轻量级路由策略</div>
+<p>验证增加一次额外前向传播，因此需要判断何时值得验证：</p>
+<ul>
+<li><strong>最小跨度</strong>：当连续被掩码跨度 \(|C_t| \geq \tau_{\text{span}}\) 时触发</li>
+<li><strong>分数阈值</strong>：估算预期接受前缀长度 \(\hat{K} = \sum_{k=1}^L \prod_{i=1}^k \alpha_i\)，当超过阈值时触发</li>
+<li><strong>滞后机制</strong>：防止推测/扩散模式间振荡</li>
+</ul>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>基线速度</th><th>S2D2 加速</th><th>准确率变化</th></tr>
+<tr><td>SDAR-1.7B</td><td>1× (AR)</td><td><strong>4.7×</strong></td><td>+4.5 pts</td></tr>
+<tr><td>SDAR-1.7B (vs Dynamic)</td><td>1× (Dynamic)</td><td><strong>1.57×</strong></td><td>+4.5 pts</td></tr>
+<tr><td>Fast-dLLM v2</td><td>1× (Dynamic)</td><td>1.07×</td><td>+4.5 pts</td></tr>
+<tr><td>LLaDA2.1-Mini</td><td>1× (Static)</td><td><strong>4.4×</strong></td><td>≈ 持平</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 扩散 LLM 的加速前景</div>
+<ol>
+<li><strong>零成本自验证</strong>：不同于传统推测解码需要单独的小模型，S2D2 重用同一模型的不同块大小模式，零额外参数</li>
+<li><strong>与 EDLM 的对比</strong>：EDLM 使用全局多样本重加权，S2D2 使用在线局部修正。S2D2 不需要多次完整解码，计算效率更高</li>
+<li><strong>混合解码轨迹</strong>：S2D2 产生扩散与自回归交替的混合轨迹，验证器充当"质量守门员"</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 5 -->
+<div class="paper-card" id="p5">
+<h3><a href="https://arxiv.org/abs/2603.25309" target="_blank">Separate Before You Compress: The WWHO Tokenization Architecture</a></h3>
+<div class="paper-meta">
+<span>👤 Kusal Darshana</span>
+<span>📅 2026-03-26 | arXiv:2603.25309</span>
+<span>🏛 Remeinium Research</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag" style="background:linear-gradient(135deg,#5a3a2a,#8a5a3a)">Tokenization</span></span>
+</div>
+<div class="summary">
+<p>标准 BPE 分词器对元音附标文字（如僧伽罗语、印地语）造成严重的"token 税"。本文提出三层架构 <strong>WWHO</strong> 和算法 <strong>SGPE</strong>，将语言学规则与统计压缩解耦。僧伽罗语减少 <strong>61.7%</strong> token，上下文窗口扩展 <strong>4.38×</strong>，保证<strong>零语言破坏</strong>。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① Layer 1: Router (Where) — 脚本路由</div>
+<p>基于 Unicode 范围的 \(O(N)\) 线性扫描，识别脚本边界。将文本段路由到对应处理器（拉丁文 → BPE，元音附标文字 → LinguisTrie+SGPE）。特殊处理 ZWJ/ZWNJ 控制字符，防止错误分割。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② Layer 2: LinguisTrie (What) — 音节原子化</div>
+<p>利用有限状态自动机（DFA）将 Unicode 字符分组为原子音节。形式化为正则语言：</p>
+<p>$$S_s = \mathbf{C}(\mathbf{H}\mathbf{Z}?\mathbf{C})^*(\mathbf{P} \mid \mathbf{H})?\mathbf{M}? \mid \mathbf{V}\mathbf{M}?$$</p>
+<p>保证<strong>零破坏</strong>：任何有效音节永不跨多个 token 拆分。在 1.22 亿字符的往返测试中一致性 100%。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ Layer 3: SGPE (How Often) — 音节感知压缩</div>
+<p>SGPE (Syllable-aware Grapheme Pair Encoding) 在原子音节上进行统计合并，而非字节上。与 BPE 的三个关键区别：</p>
+<ul>
+<li><strong>音节初始化</strong>：初始词汇为完整原子音节，非单字节</li>
+<li><strong>边界感知合并</strong>：只在音节对之间合并，不跨越音节边界</li>
+<li><strong>低频修剪</strong>：低频异常标记为 [UNK]，避免词汇表膨胀</li>
+</ul>
+</div>
+<div class="method-step">
+<div class="step-title">④ 统一元词汇表</div>
+<p>将 BPE 和 SGPE 的词汇空间映射到连续数组：\(ID_{\text{SGPE}} = ID_{\text{SGPE\_local}} + V_{\text{BPE}}\)，避免 ID 冲突。支持无缝多语言混合分词。上下文窗口容量乘数：\(\text{Capacity} = \frac{\text{Tokens}_{\text{baseline}}}{\text{Tokens}_{\text{SGPE}}}\)。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>语言</th><th>分词器</th><th>TWR</th><th>CPT</th><th>Token 减少率</th></tr>
+<tr><td>僧伽罗语</td><td>SGPE (本文)</td><td><strong>1.274</strong></td><td><strong>4.83</strong></td><td>—</td></tr>
+<tr><td>僧伽罗语</td><td>OpenAI o200k</td><td>3.324</td><td>1.85</td><td>61.7%</td></tr>
+<tr><td>僧伽罗语</td><td>DeepSeek V3</td><td>5.581</td><td>1.10</td><td>77.2%</td></tr>
+<tr><td>印地语</td><td>SGPE (本文)</td><td><strong>1.181</strong></td><td><strong>4.29</strong></td><td>—</td></tr>
+<tr><td>印地语</td><td>OpenAI o200k</td><td>1.617</td><td>3.13</td><td>27.0%</td></tr>
+<tr><td>整体混合</td><td>SGPE (本文)</td><td><strong>1.240</strong></td><td><strong>4.47</strong></td><td>—</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: "Token 税"的不平等影响</div>
+<ol>
+<li><strong>成本不平等</strong>：同样一句话，僧伽罗语用户使用 GPT 的 API 费用是英语用户的 <strong>4-5 倍</strong>，因为 token 数多 4-5 倍</li>
+<li><strong>推理效率</strong>：token 膨胀迫使模型花费大量容量学习基本正字法，而非语义理解</li>
+<li><strong>WWHO 的通用性</strong>：架构完全语言无关，通过 JSON Schema 注入特定脚本规则。理论上可扩展到所有 Abugida 文字系统</li>
+</ol>
+</div>
+</div>
+
+</section>

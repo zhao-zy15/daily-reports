@@ -1,0 +1,183 @@
+
+<section class="category section-agent" id="section-agent">
+<h2>🤖 Agent — 智能体</h2>
+
+<!-- Paper 10 -->
+<div class="paper-card" id="p10">
+<h3><a href="https://arxiv.org/abs/2603.25723" target="_blank">Natural-Language Agent Harnesses</a></h3>
+<div class="paper-meta">
+<span>👤 Linyue Pan, Shuo Guo, Jingchen Ni, Lexiao Zou, Hai-Tao Zheng</span>
+<span>📅 2026-03-26 | arXiv:2603.25723</span>
+<span>🏛 Tsinghua University (清华大学), HIT Shenzhen (哈工大深圳)</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag" style="background:linear-gradient(135deg,#4a4a2a,#8a8a3a)">Framework</span></span>
+</div>
+<div class="summary">
+<p>Agent 性能越来越依赖控制套件（harness）工程，但控制逻辑分散在代码和运行时约定中。本文提出<strong>自然语言代理控制套件（NLAH）</strong>和<strong>智能控制套件运行时（IHR）</strong>，将高级控制逻辑外部化为可移植的可执行文本工件。OSWorld 上成功率从 30.4% 提升至 <strong>47.2%</strong>，LLM 调用从 1.2k 降至 34。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 控制套件的模式层形式化</div>
+<p>将 Agent 控制套件形式化为明确的表示对象，区分三层：</p>
+<ul>
+<li><strong>运行时策略</strong>：底层执行引擎（工具调用、文件系统、终端）</li>
+<li><strong>设计模式层</strong>：控制逻辑的核心——角色、阶段、契约、状态语义（本文关注重点）</li>
+<li><strong>底层执行钩子</strong>：确定性操作脚本</li>
+</ul>
+<p>Agent 调用形式化：\(\text{AgentCall}(T, \Omega_t^{\text{in}}) = (A_t, \Delta\Omega_t, y_t)\)，其中 \(T = (p, F_{\text{in}}, \kappa)\) 定义任务提示、输入文件和执行契约。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 自然语言控制套件（NLAH）组件</div>
+<p>NLAH 是控制套件控制逻辑的结构化自然语言表示，包含七大要素：</p>
+<ul>
+<li><strong>契约</strong>：I/O 格式、验证门控、权限边界、停止规则</li>
+<li><strong>角色</strong>：不重叠职责（求解器、验证器、研究员、编排器）</li>
+<li><strong>阶段结构</strong>：工作负载拓扑（Plan → Execute → Verify → Fix）</li>
+<li><strong>适配器/脚本</strong>：确定性操作的命名钩子</li>
+<li><strong>状态语义</strong>：跨步骤持久化的工件和账本</li>
+<li><strong>失败分类法</strong>：命名失败模式驱动恢复策略</li>
+</ul>
+</div>
+<div class="method-step">
+<div class="step-title">③ 智能控制套件运行时（IHR）</div>
+<p>IHR 将 LLM 置于运行时循环内部：每步读取 (i) 控制套件、(ii) 当前状态/环境、(iii) 运行时宪章，选择符合契约和预算的下一步操作。运行时宪章与控制套件逻辑清晰分离，支持模块级组合与消融。使用 Codex CLI + GPT-5.4。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 代码到文本的控制套件迁移</div>
+<p>实验验证 NLAH 的可移植性：将 OS-Symphony 的代码控制套件迁移为 NLAH 文本。迁移不丢失高级编排能力，而是将可靠性机制从本地屏幕修复<strong>重定位</strong>到持久运行时状态和工件支持的关闭。文件支持状态通过外部化、路径可寻址、压缩稳定三属性增强跨上下文截断的稳定性。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>基准</th><th>控制套件类型</th><th>成功率</th><th>Token 使用</th></tr>
+<tr><td>OSWorld</td><td>原生代码控制套件</td><td>30.4%</td><td>~1.2k 调用</td></tr>
+<tr><td>OSWorld</td><td><strong>NLAH (迁移后)</strong></td><td><strong>47.2%</strong></td><td><strong>~34 调用</strong></td></tr>
+<tr><td>SWE-bench Verified</td><td>基线</td><td>基线</td><td>—</td></tr>
+<tr><td>SWE-bench Verified</td><td>NLAH + IHR</td><td>边界案例改善</td><td>过程更结构化</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 为什么 NLAH 能大幅减少调用次数</div>
+<ol>
+<li><strong>显式阶段结构</strong>：代码控制套件中隐式的探索-验证循环被显式化为 Plan→Execute→Verify→Fix，减少了盲目重试</li>
+<li><strong>文件支持状态</strong>：关键信息持久化到文件系统，不再需要反复读取上下文来恢复状态</li>
+<li><strong>失败分类法</strong>：命名的失败模式直接触发对应恢复策略，而非让 Agent 自行推断该怎么做</li>
+<li><strong>搜索空间启示</strong>：一旦控制套件成为显式对象，它们就变成了可自动搜索和优化的空间</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 11 -->
+<div class="paper-card" id="p11">
+<h3><a href="https://arxiv.org/abs/2603.24639" target="_blank">Experiential Reflective Learning for Self-Improving LLM Agents</a></h3>
+<div class="paper-meta">
+<span>👤 Marc-Antoine Allard, Arnaud Teinturier, Victor Xing, Gautier Viaud</span>
+<span>📅 2026-03-25 | arXiv:2603.24639</span>
+<span>🏛 Illuin Technology</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag" style="background:linear-gradient(135deg,#4a2a6a,#6a3a9a)">Self-Improve</span></span>
+</div>
+<div class="summary">
+<p>LLM Agent 难以适应专业环境，每次从零开始。本文提出<strong>体验式反思学习（ERL）</strong>：从单次任务轨迹中反思生成结构化启发式规则，测试时检索注入上下文。在 Gaia2 基准上比 ReAct 提升 <strong>7.8%</strong> 成功率（56.1% vs 48.3%），优于 ExpeL 和 AutoGuide。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 启发式规则生成</div>
+<p>每次任务执行后，Agent 对完整轨迹（推理步骤 + 工具调用 + 输出 + 成功/失败信号）进行反思，生成结构化规则：</p>
+<ul>
+<li><strong>分析</strong>：识别成功/失败原因（如"API 调用顺序错误导致空返回"）</li>
+<li><strong>触发条件 + 推荐操作</strong>：如"当需要发送邮件给日历参与者时 → 先通过联系人工具将姓名解析为邮箱"</li>
+</ul>
+<p>仅需单次尝试轨迹，无需多次重试或参数微调。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② LLM 驱动的检索增强执行</div>
+<p>面对新任务时：(1) LLM 将任务分解为子任务和行动步骤；(2) 对存储池中每条启发式规则进行相关性评分（基于任务描述相似度、经验多样性、信息量）；(3) 选出 Top-k=20 条规则注入系统提示词。关键：基于 LLM 的语义检索优于嵌入检索（56.1% vs 53.3%）。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 成败经验的差异化价值</div>
+<p>消融实验揭示有趣的非对称性：</p>
+<ul>
+<li><strong>失败经验</strong>对搜索类任务更有利（+14.3%）——通过负面约束修剪无效策略空间</li>
+<li><strong>成功经验</strong>对执行类任务更有利（+9.0%）——通过加强已验证的操作序列</li>
+</ul>
+<p>两种经验互补，混合使用效果最佳。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 启发式规则 vs 原始轨迹</div>
+<p>直接用原始轨迹作为 Few-shot 示例反而降低性能（-1.9%）。原因：轨迹包含大量环境特定细节（工具输出、错误消息），不具可迁移性。启发式规则将经验<strong>抽象</strong>为触发条件-操作对，更具泛化能力。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>总成功率</th><th>Search</th><th>Execution</th><th>pass³</th></tr>
+<tr><td>ReAct (基线)</td><td>48.3%</td><td>46.4%</td><td>50.0%</td><td>低</td></tr>
+<tr><td>Few-shot (轨迹)</td><td>46.4%</td><td>44.6%</td><td>48.1%</td><td>低</td></tr>
+<tr><td>ExpeL</td><td>50.9%</td><td>48.2%</td><td>53.3%</td><td>中</td></tr>
+<tr><td><strong>ERL (本文)</strong></td><td><strong>56.1%</strong></td><td><strong>53.6%</strong></td><td><strong>58.3%</strong></td><td><strong>高</strong></td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 经验的可迁移性</div>
+<ol>
+<li><strong>抽象层次</strong>：从"在任务 X 中我做了 A→B→C"到"当遇到类型 Y 的情况时，先做 A 再做 B"。这种抽象是迁移学习的关键</li>
+<li><strong>检索质量 > 数量</strong>：随机选 60 条规则的效果远不如 LLM 精选 20 条。说明规则的相关性比数量更重要</li>
+<li><strong>成本权衡</strong>：ERL 增加约 40% API 成本（检索步骤），但通过 Prompt Caching 可缓解</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 12 -->
+<div class="paper-card" id="p12">
+<h3><a href="https://arxiv.org/abs/2603.25268" target="_blank">CRAFT: Grounded Multi-Agent Coordination Under Partial Information</a></h3>
+<div class="paper-meta">
+<span>👤 Abhijnan Nath, Hannah VanderHoeven, Nikhil Krishnaswamy</span>
+<span>📅 2026-03-26 | arXiv:2603.25268</span>
+<span>🏛 Colorado State University</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag" style="background:linear-gradient(135deg,#6a2a2a,#9a3a3a)">Multi-Agent</span></span>
+</div>
+<div class="summary">
+<p>引入 <strong>CRAFT</strong> 基准评估 LLM 在严格部分信息下的多智能体协调。3 个 Director（各看一面墙）+ 1 个 Builder 通过自然语言协作构建 3D 结构。<strong>反直觉发现</strong>：前沿模型表现并不优于开源模型——Mistral-7B (0.631) > GPT-4.1-Mini (0.312)，更强的个体通信不保证更好的集体结果。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 多发送者有界语用说话者（BPS）理论</div>
+<p>将 CRAFT 形式化为多发送者 BPS 问题。最优联合导演策略：</p>
+<p>$$\pi^*(u_1, u_2, u_3 \mid z^*, c) \propto \left(\prod_{i=1}^3 S_{\text{base}_i}(u_i \mid z_i^*, c_i)\right) \cdot L_{\text{ToM}_{\text{joint}}}(z^* \mid u_1, u_2, u_3, c)$$</p>
+<p>每个 Director 必须建模联合倾听者：\(L_{\text{ToM}_{\text{joint}}} \propto \exp\left(\sum_{i=1}^3 \lambda_i R_i(u_i, s_t, \mathcal{T})\right)\)，即同时考虑三个信息源的聚合效果。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② 部分可观察性设计</div>
+<p>三个 Director 各自观察一面墙（D1：左墙，D2：远墙，D3：右墙）。只有 D2 能看到内部位置。每回合生成私有推理（\(\langle\text{think}\rangle\)，对他人不可见）和公开消息（\(\langle\text{message}\rangle\)，被广播）。Builder 使用 Oracle 辅助：提供最多 5 个经验证的候选移动，任务是根据指令选择正确候选。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 三维度 LLM 评分器</div>
+<p>用 LLM 评分器进行大规模诊断：</p>
+<ul>
+<li><strong>SG (空间基础)</strong>：Director 是否正确识别缺失块、层、大小</li>
+<li><strong>MM (心智建模)</strong>：是否建模了 Builder 和其他 Director 的心理状态</li>
+<li><strong>PS (语用充分性)</strong>：集体输出是否为理性 Builder 提供足够信息</li>
+</ul>
+<p>关键发现：SG 和 MM 得分无法区分成功/失败回合，但 PS 得分在失败回合中急剧下降。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ "修正螺旋"现象</div>
+<p>前沿模型普遍表现出更高方差和更大的"移除差距"（不必要移除 2-5× 多于开源模型）。原因：当 Director 无法通过通信克服信息不对称时，倾向于过度纠正感知到的错误，导致浪费回合。Gemini-3-Flash 是唯一例外（0.675），可能得益于更好的 ToM 能力。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>进度</th><th>SG 得分</th><th>MM 得分</th><th>移除差距</th></tr>
+<tr><td><strong>Gemini-3-Flash</strong></td><td><strong>0.675</strong></td><td>0.891</td><td>0.743</td><td>低</td></tr>
+<tr><td>Mistral-7B</td><td>0.631</td><td>0.823</td><td>0.698</td><td>低</td></tr>
+<tr><td>Qwen-7B</td><td>0.612</td><td>0.815</td><td>0.691</td><td>低</td></tr>
+<tr><td>GPT-4.1-Mini</td><td>0.312</td><td><strong>0.937</strong></td><td><strong>0.787</strong></td><td>高 (5×)</td></tr>
+<tr><td>Claude-Sonnet-4.6</td><td>0.387</td><td>0.912</td><td>0.761</td><td>高 (3×)</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 为什么更强的模型反而更差</div>
+<ol>
+<li><strong>过度纠正假说</strong>：前沿模型有更强的 Theory of Mind 能力，但在信息不完整时更倾向于"我觉得对方搞错了，让我移除重来"，导致大量回合被浪费在移除操作上</li>
+<li><strong>个体 vs 集体</strong>：GPT-4.1-Mini 的个体 SG/MM 得分最高，但集体 PS 得分低。说明每个 Director 都在"说正确的话"，但三人的消息未能形成协同</li>
+<li><strong>开源模型的优势</strong>：较弱的 ToM 能力反而使 Mistral/Qwen 采取更保守的策略——按部就班地描述自己看到的，减少了过度推理带来的错误</li>
+</ol>
+</div>
+</div>
+
+</section>

@@ -1,0 +1,101 @@
+
+<section class="category section-multimodal" id="section-multimodal">
+<h2>🌐 Multimodal — 多模态</h2>
+
+<!-- Paper 13 -->
+<div class="paper-card" id="p13">
+<h3><a href="https://arxiv.org/abs/2603.25720" target="_blank">R-C2: Cycle-Consistent Reinforcement Learning Improves Multimodal Reasoning</a></h3>
+<div class="paper-meta">
+<span>👤 Zirui Zhang, Haoyu Dong, Kexin Pei, Chengzhi Mao</span>
+<span>📅 2026-03-26 | arXiv:2603.25720</span>
+<span>🏛 Rutgers University, Columbia University, University of Chicago</span>
+<span><span class="tag tag-multimodal">Multimodal</span> <span class="tag" style="background:linear-gradient(135deg,#5a2a4a,#8a3a6a)">RL</span></span>
+</div>
+<div class="summary">
+<p>多模态模型对同一概念的视觉和文本表示经常产生矛盾预测，投票机制会放大系统性偏差。本文提出 <strong>R-C2</strong>，通过强制跨模态<strong>循环一致性</strong>作为自监督奖励信号。模型需执行"反向推理→切换模态→前向重建"的循环，一致性即奖励。推理准确率提升高达 <strong>7.6 个百分点</strong>。</p>
+</div>
+<div class="method-detail">
+<h4>核心方法详解</h4>
+<div class="method-step">
+<div class="step-title">① 4 路循环一致性框架</div>
+<p>给定候选答案 \(a_{\text{orig}}\)，执行四条循环路径：</p>
+<ul>
+<li><strong>T→T</strong>：文本反向推断查询 → 文本前向重建答案</li>
+<li><strong>T→I</strong>：文本反向推断查询 → <em>图像</em>前向重建答案（模态切换）</li>
+<li><strong>I→T</strong>：图像反向推断查询 → <em>文本</em>前向重建答案（模态切换）</li>
+<li><strong>I→I</strong>：图像反向推断查询 → 图像前向重建答案</li>
+</ul>
+<p>重建答案 \(\hat{a}\) 与原始 \(a_{\text{orig}}\) 匹配则获得二进制奖励 \(r=1\)。</p>
+</div>
+<div class="method-step">
+<div class="step-title">② GRPO 优化</div>
+<p>使用 Group Relative Policy Optimization：</p>
+<p>$$\mathcal{L}_{\text{GRPO}} = \mathbb{E}\left[\log \pi_\theta(\hat{a}_i \mid x_i, q_i) \cdot \hat{A}(\hat{a}_i, a_i)\right]$$</p>
+<p>优势函数基于组内奖励归一化：\(\hat{A} = \frac{r_i - \text{mean}(\mathbf{r})}{\text{std}(\mathbf{r})}\)。无需人工标注查询-答案对——循环一致性本身提供密集的自监督信号。</p>
+</div>
+<div class="method-step">
+<div class="step-title">③ 投票机制的缺陷分析</div>
+<p>传统方法（如 R-zero）通过多数投票确定伪标签。问题：</p>
+<ul>
+<li><strong>单模态投票</strong>：若模型有系统性偏差（如总选 B），投票强化错误</li>
+<li><strong>多模态投票</strong>：视觉/文本预测经常不一致，投票结果不稳定或任意</li>
+</ul>
+<p>R-C2 不依赖投票共识，而是利用<strong>不一致性本身</strong>作为学习信号。</p>
+</div>
+<div class="method-step">
+<div class="step-title">④ 冲突数据的价值</div>
+<p>实验发现增加训练数据中跨模态不一致样本的比例可进一步提升性能。直觉：不一致的样本提供了更丰富的梯度信号。自引导模式（使用模型自生成答案作为循环起点）与使用数据集参考答案性能相当，展示了大规模无标签应用的潜力。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>数据集</th><th>基线 (Text/Vision)</th><th>R-C2 (Text/Vision)</th><th>Text 提升</th><th>一致性提升</th></tr>
+<tr><td>ScienceQA</td><td>68.9 / 76.0</td><td><strong>76.7 / 83.3</strong></td><td>+7.8</td><td>+10.0%</td></tr>
+<tr><td>ChartQA</td><td>71.1 / 82.8</td><td><strong>77.2 / 84.8</strong></td><td>+6.1</td><td>+6.1%</td></tr>
+<tr><td>MathVista</td><td>49.8 / 64.8</td><td><strong>55.8 / 67.6</strong></td><td>+6.0</td><td>—</td></tr>
+<tr><td>A-OKVQA</td><td>70.3 / 86.1</td><td><strong>75.2 / 88.8</strong></td><td>+4.9</td><td>+12.5%</td></tr>
+<tr><td>平均</td><td>65.5 / 76.7</td><td><strong>70.3 / 79.5</strong></td><td>+4.8</td><td>—</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 Deep Dive: 循环一致性为什么有效</div>
+<ol>
+<li><strong>信息论视角</strong>：循环一致性约束强制不同模态对概念的表示相互对齐。如果模型从图像推断的查询能用文本重建出原答案，说明视觉-语言表示是一致的</li>
+<li><strong>无标签优势</strong>：传统 RLHF 需要偏好标签，R-C2 只需要输入数据本身。奖励信号来自模型的内部一致性</li>
+<li><strong>A-OKVQA 的一致性飞跃</strong>：从 67.8% 提升到 80.3%（+12.5%），说明该数据集中视觉-文本不一致问题特别严重，R-C2 有效修复了这一差距</li>
+<li><strong>3B vs 8B</strong>：在 Qwen2.5-VL-3B 上提升更大（+4.8% 平均），8B 上也有一致提升（+2.2%），说明方法对模型规模鲁棒</li>
+</ol>
+</div>
+</div>
+
+</section>
+
+<!-- Reflection -->
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;margin:40px 0">
+<h2 style="color:var(--accent3);margin-bottom:18px">📊 今日趋势洞察</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div style="padding:16px;background:rgba(88,166,255,0.06);border-radius:8px;border-left:3px solid var(--tag-llm)">
+<strong style="color:var(--tag-llm)">🧠 LLM 趋势</strong>
+<p style="font-size:0.9em;margin-top:8px">本期 LLM 论文聚焦于<strong>内省与自我认知</strong>：Confidence-Faithfulness Gap 和 Metacognitive Efficiency 从不同角度揭示了模型"知道自己不知道"的能力远未达标。Self-Improvement 综述则描绘了自改进的完整生命周期。推理加速（S2D2）和分词公平性（WWHO）代表了基础设施层面的进步。</p>
+</div>
+<div style="padding:16px;background:rgba(240,136,62,0.06);border-radius:8px;border-left:3px solid var(--tag-rl)">
+<strong style="color:var(--tag-rl)">🎯 RL 趋势</strong>
+<p style="font-size:0.9em;margin-top:8px">RL 研究正在从"做对一个答案"走向<strong>更丰富的目标</strong>：多答案分布推理、最大熵行为探索。同时，<strong>训练效率</strong>成为核心关注——HIVE 的 3.8× rollout 加速和 OPD 失败模式修复都指向"更聪明地训练"而非简单堆算力。</p>
+</div>
+<div style="padding:16px;background:rgba(126,231,135,0.06);border-radius:8px;border-left:3px solid var(--tag-agent)">
+<strong style="color:var(--tag-agent)">🤖 Agent 趋势</strong>
+<p style="font-size:0.9em;margin-top:8px">Agent 领域呈现两个方向：(1) <strong>可移植的控制逻辑</strong>——NLAH 将 Agent 的控制套件从代码中解放为可编辑文本，成功率翻倍；(2) <strong>协调的困难</strong>——CRAFT 证明个体能力强不等于集体协调好，前沿模型的过度修正反而不如开源模型稳定。</p>
+</div>
+<div style="padding:16px;background:rgba(188,140,255,0.06);border-radius:8px;border-left:3px solid var(--tag-multimodal)">
+<strong style="color:var(--tag-multimodal)">🌐 Multimodal 趋势</strong>
+<p style="font-size:0.9em;margin-top:8px">R-C2 展示了一个优雅思路：不用额外标注，<strong>利用模态间的不一致性自身</strong>作为学习信号。循环一致性约束是一种通用的自监督方法，未来可能扩展到音频、视频等更多模态的对齐。</p>
+</div>
+</div>
+</div>
+
+<footer>
+<p>🔬 arXiv AI 日报 · 自动生成于 2026-03-30 · 数据来源：arXiv.org (cs.CL, cs.AI, cs.LG)</p>
+<p>📮 共收录 13 篇论文 · LLM(5) + RL(4) + Agent(3) + Multimodal(1)</p>
+</footer>
+
+</div>
+</body>
+</html>
