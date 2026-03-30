@@ -1,101 +1,142 @@
+<!-- ========== Multimodal Section ========== -->
+<div class="section-title multimodal">🌐 Multimodal · 多模态</div>
 
-<section class="category section-multimodal" id="section-multimodal">
-<h2>🌐 Multimodal — 多模态</h2>
-
-<!-- Paper 13 -->
-<div class="paper-card" id="p13">
-<h3><a href="https://arxiv.org/abs/2603.25720" target="_blank">R-C2: Cycle-Consistent Reinforcement Learning Improves Multimodal Reasoning</a></h3>
+<!-- Paper 12: RealChart2Code -->
+<div class="paper" id="paper-12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.25804" target="_blank">RealChart2Code: Advancing Chart-to-Code Generation with Real Data and Multi-Task Evaluation</a></div>
 <div class="paper-meta">
-<span>👤 Zirui Zhang, Haoyu Dong, Kexin Pei, Chengzhi Mao</span>
-<span>📅 2026-03-26 | arXiv:2603.25720</span>
-<span>🏛 Rutgers University, Columbia University, University of Chicago</span>
-<span><span class="tag tag-multimodal">Multimodal</span> <span class="tag" style="background:linear-gradient(135deg,#5a2a4a,#8a3a6a)">RL</span></span>
+<span>👤 Jiajun Zhang, Yuying Li, Zhixun Li, ... , Qiang Liu, Liang Wang (16 authors)</span>
+<span>📅 2026-03-26 | arXiv: 2603.25804</span>
+<span>🏛 USTC, Tsinghua University, CUHK</span>
+<span><span class="tag tag-multimodal">🌐 Multimodal</span> <span class="tag tag-multimodal">VLM</span> <span class="tag tag-multimodal">Chart Understanding</span></span>
 </div>
+
 <div class="summary">
-<p>多模态模型对同一概念的视觉和文本表示经常产生矛盾预测，投票机制会放大系统性偏差。本文提出 <strong>R-C2</strong>，通过强制跨模态<strong>循环一致性</strong>作为自监督奖励信号。模型需执行"反向推理→切换模态→前向重建"的循环，一致性即奖励。推理准确率提升高达 <strong>7.6 个百分点</strong>。</p>
+视觉语言模型 (VLM) 从真实世界数据中复制复杂图表的能力尚未得到充分评估。<strong>RealChart2Code</strong> 引入了一个包含 2,800+ 实例的大规模基准，首次系统评估 VLM 从大规模原始数据生成图表、以及在多轮对话中迭代优化代码的能力。对 14 个领先 VLM 的评估显示：与简单基准相比性能显著下降，专有模型和开源模型之间存在巨大差距，最先进的 VLM 也频繁无法准确复制复杂多面板图表。
 </div>
+
 <div class="method-detail">
-<h4>核心方法详解</h4>
-<div class="method-step">
-<div class="step-title">① 4 路循环一致性框架</div>
-<p>给定候选答案 \(a_{\text{orig}}\)，执行四条循环路径：</p>
+<h4>🔬 核心方法详解</h4>
+
+<div class="method-module">
+<div class="module-title">① 真实数据驱动的基准构建</div>
+<p>不同于使用合成数据的现有基准，RealChart2Code 从真实数据集出发构建 2,800+ 个评测实例。每个实例包含：(1) 原始数据表 \(D\)、(2) 目标可视化图表 \(V\)、(3) 明确的分析意图描述 \(I\)。任务要求模型从 \((V, I)\) 或 \((V, D, I)\) 生成可执行的绘图代码 \(C\)，使得 \(\text{render}(C) \approx V\)。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">② 多任务评估维度</div>
+<p>基准设计了递进式评估：</p>
 <ul>
-<li><strong>T→T</strong>：文本反向推断查询 → 文本前向重建答案</li>
-<li><strong>T→I</strong>：文本反向推断查询 → <em>图像</em>前向重建答案（模态切换）</li>
-<li><strong>I→T</strong>：图像反向推断查询 → <em>文本</em>前向重建答案（模态切换）</li>
-<li><strong>I→I</strong>：图像反向推断查询 → 图像前向重建答案</li>
+<li><strong>图表重绘 (Chart Reproduction)</strong>: 给定图表图像，生成代码复制相同可视化</li>
+<li><strong>数据到图表 (Data-to-Chart)</strong>: 给定原始数据表 + 分析意图，从零生成图表</li>
+<li><strong>多轮迭代优化 (Multi-Turn Refinement)</strong>: 在对话中根据反馈迭代修正代码</li>
 </ul>
-<p>重建答案 \(\hat{a}\) 与原始 \(a_{\text{orig}}\) 匹配则获得二进制奖励 \(r=1\)。</p>
+<p>评估指标包括视觉相似度 \(\text{SSIM}(V_{\text{gen}}, V_{\text{ref}})\)、数据准确性（图表中数值的正确性）、代码可执行率。</p>
 </div>
-<div class="method-step">
-<div class="step-title">② GRPO 优化</div>
-<p>使用 Group Relative Policy Optimization：</p>
-<p>$$\mathcal{L}_{\text{GRPO}} = \mathbb{E}\left[\log \pi_\theta(\hat{a}_i \mid x_i, q_i) \cdot \hat{A}(\hat{a}_i, a_i)\right]$$</p>
-<p>优势函数基于组内奖励归一化：\(\hat{A} = \frac{r_i - \text{mean}(\mathbf{r})}{\text{std}(\mathbf{r})}\)。无需人工标注查询-答案对——循环一致性本身提供密集的自监督信号。</p>
+
+<div class="method-module">
+<div class="module-title">③ 14 个 VLM 的系统评测</div>
+<p>测试了包括 GPT-4o、Claude Sonnet、Gemini Pro、以及 LLaVA、InternVL2 等开源模型在内的 14 个 VLM。实验发现的性能梯度: \(\text{GPT-4o} > \text{Claude} > \text{Gemini} \gg \text{开源 VLM}\)。在复杂多面板图表上，即使最强的 GPT-4o 也仅能准确复制约 60% 的图表元素，显示出 VLM 在精确视觉理解方面的系统性不足。</p>
 </div>
-<div class="method-step">
-<div class="step-title">③ 投票机制的缺陷分析</div>
-<p>传统方法（如 R-zero）通过多数投票确定伪标签。问题：</p>
-<ul>
-<li><strong>单模态投票</strong>：若模型有系统性偏差（如总选 B），投票强化错误</li>
-<li><strong>多模态投票</strong>：视觉/文本预测经常不一致，投票结果不稳定或任意</li>
-</ul>
-<p>R-C2 不依赖投票共识，而是利用<strong>不一致性本身</strong>作为学习信号。</p>
-</div>
-<div class="method-step">
-<div class="step-title">④ 冲突数据的价值</div>
-<p>实验发现增加训练数据中跨模态不一致样本的比例可进一步提升性能。直觉：不一致的样本提供了更丰富的梯度信号。自引导模式（使用模型自生成答案作为循环起点）与使用数据集参考答案性能相当，展示了大规模无标签应用的潜力。</p>
+
+<div class="method-module">
+<div class="module-title">④ 多轮对话中的迭代改进分析</div>
+<p>在多轮设置中，VLM 接收反馈"图表中 X 部分与目标不一致"，然后修改代码。分析发现：(1) 大多数模型在第 2-3 轮显著改善，但第 4 轮后收益递减；(2) 模型倾向于过度修改——修复一处问题时破坏其他正确部分；(3) 多面板图表的面板间一致性是最大瓶颈。</p>
 </div>
 </div>
-<table class="results-table">
-<tr><th>数据集</th><th>基线 (Text/Vision)</th><th>R-C2 (Text/Vision)</th><th>Text 提升</th><th>一致性提升</th></tr>
-<tr><td>ScienceQA</td><td>68.9 / 76.0</td><td><strong>76.7 / 83.3</strong></td><td>+7.8</td><td>+10.0%</td></tr>
-<tr><td>ChartQA</td><td>71.1 / 82.8</td><td><strong>77.2 / 84.8</strong></td><td>+6.1</td><td>+6.1%</td></tr>
-<tr><td>MathVista</td><td>49.8 / 64.8</td><td><strong>55.8 / 67.6</strong></td><td>+6.0</td><td>—</td></tr>
-<tr><td>A-OKVQA</td><td>70.3 / 86.1</td><td><strong>75.2 / 88.8</strong></td><td>+4.9</td><td>+12.5%</td></tr>
-<tr><td>平均</td><td>65.5 / 76.7</td><td><strong>70.3 / 79.5</strong></td><td>+4.8</td><td>—</td></tr>
+
+<table>
+<tr><th>VLM 类型</th><th>简单图表</th><th>复杂多面板</th><th>多轮改进</th></tr>
+<tr><td>GPT-4o</td><td>~85%</td><td>~60%</td><td>3 轮后收益递减</td></tr>
+<tr><td>Claude Sonnet</td><td>~80%</td><td>~55%</td><td>类似模式</td></tr>
+<tr><td>开源 VLM (best)</td><td>~65%</td><td>~35%</td><td>改进幅度更小</td></tr>
+<tr><td><strong>差距</strong></td><td>20 pts</td><td><strong>25 pts</strong></td><td>开源模型多轮能力更弱</td></tr>
 </table>
+
 <div class="example-box">
-<div class="box-title">💡 Deep Dive: 循环一致性为什么有效</div>
+<strong>💡 VLM 图表理解的真实能力边界</strong>
 <ol>
-<li><strong>信息论视角</strong>：循环一致性约束强制不同模态对概念的表示相互对齐。如果模型从图像推断的查询能用文本重建出原答案，说明视觉-语言表示是一致的</li>
-<li><strong>无标签优势</strong>：传统 RLHF 需要偏好标签，R-C2 只需要输入数据本身。奖励信号来自模型的内部一致性</li>
-<li><strong>A-OKVQA 的一致性飞跃</strong>：从 67.8% 提升到 80.3%（+12.5%），说明该数据集中视觉-文本不一致问题特别严重，R-C2 有效修复了这一差距</li>
-<li><strong>3B vs 8B</strong>：在 Qwen2.5-VL-3B 上提升更大（+4.8% 平均），8B 上也有一致提升（+2.2%），说明方法对模型规模鲁棒</li>
+<li><strong>简单 ≠ 真实</strong>：现有基准（如 ChartQA）使用的图表结构简单、数据量小。RealChart2Code 用真实数据暴露了 VLM 在复杂可视化上的严重不足。</li>
+<li><strong>视觉精度 vs 语义理解</strong>：VLM 在理解"图表想表达什么"方面表现不错，但在精确复制视觉细节（轴范围、图例位置、颜色编码）上系统性地失败。</li>
+<li><strong>多面板是硬骨头</strong>：涉及多面板布局时，VLM 难以维持面板间的数据一致性和空间布局——这需要同时处理全局结构和局部细节。</li>
 </ol>
 </div>
 </div>
 
-</section>
+<!-- Paper 13: VLAAD -->
+<div class="paper" id="paper-13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.25946" target="_blank">Collision-Aware Vision-Language Learning for End-to-End Driving with Multimodal Infraction Datasets</a></div>
+<div class="paper-meta">
+<span>👤 Alex Koran, Dimitrios Sinodinos, Hadi Hojjati, Takuya Nanri, Fangge Chen, Narges Armanfard</span>
+<span>📅 2026-03-26 | arXiv: 2603.25946</span>
+<span>🏛 McGill University, Mila, Nissan Motor Corporation</span>
+<span><span class="tag tag-multimodal">🌐 Multimodal</span> <span class="tag tag-multimodal">Autonomous Driving</span> <span class="tag tag-multimodal">Vision-Language</span></span>
+</div>
 
-<!-- Reflection -->
-<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;margin:40px 0">
-<h2 style="color:var(--accent3);margin-bottom:18px">📊 今日趋势洞察</h2>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-<div style="padding:16px;background:rgba(88,166,255,0.06);border-radius:8px;border-left:3px solid var(--tag-llm)">
-<strong style="color:var(--tag-llm)">🧠 LLM 趋势</strong>
-<p style="font-size:0.9em;margin-top:8px">本期 LLM 论文聚焦于<strong>内省与自我认知</strong>：Confidence-Faithfulness Gap 和 Metacognitive Efficiency 从不同角度揭示了模型"知道自己不知道"的能力远未达标。Self-Improvement 综述则描绘了自改进的完整生命周期。推理加速（S2D2）和分词公平性（WWHO）代表了基础设施层面的进步。</p>
+<div class="summary">
+端到端自动驾驶的主要瓶颈是高违规率。本文提出 <strong>VLAAD (Video-Language-Augmented Anomaly Detector)</strong>，利用多示例学习获取稳定的碰撞检测信号，作为即插即用模块集成到现有驾驶模型中。同时发布两个数据集：模拟器端的 <strong>CARLA-Collide</strong> 和真实世界的 <strong>Real-Collide</strong>。集成到 TransFuser++ 后驾驶分数提升 14.12%；在真实数据上以 0.6B 参数超越数十亿参数 VLM，AUC 提升 23.3%。
 </div>
-<div style="padding:16px;background:rgba(240,136,62,0.06);border-radius:8px;border-left:3px solid var(--tag-rl)">
-<strong style="color:var(--tag-rl)">🎯 RL 趋势</strong>
-<p style="font-size:0.9em;margin-top:8px">RL 研究正在从"做对一个答案"走向<strong>更丰富的目标</strong>：多答案分布推理、最大熵行为探索。同时，<strong>训练效率</strong>成为核心关注——HIVE 的 3.8× rollout 加速和 OPD 失败模式修复都指向"更聪明地训练"而非简单堆算力。</p>
+
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+
+<div class="method-module">
+<div class="module-title">① VLAAD: 视频-语言增强异常检测器</div>
+<p>VLAAD 采用多示例学习 (MIL) 框架：视频被分割为片段 bag \(\mathcal{B} = \{s_1, \ldots, s_K\}\)，每个片段通过视频编码器 \(f_V\) 和语言编码器 \(f_L\) 获得双模态表示。MIL 聚合器: \(p_{\text{collision}} = \max_{k} \sigma(W \cdot [f_V(s_k); f_L(d_k)])\)，其中 \(d_k\) 为片段的语言描述。该设计在弱监督（仅视频级标签）下实现了时间局部的碰撞信号定位。</p>
 </div>
-<div style="padding:16px;background:rgba(126,231,135,0.06);border-radius:8px;border-left:3px solid var(--tag-agent)">
-<strong style="color:var(--tag-agent)">🤖 Agent 趋势</strong>
-<p style="font-size:0.9em;margin-top:8px">Agent 领域呈现两个方向：(1) <strong>可移植的控制逻辑</strong>——NLAH 将 Agent 的控制套件从代码中解放为可编辑文本，成功率翻倍；(2) <strong>协调的困难</strong>——CRAFT 证明个体能力强不等于集体协调好，前沿模型的过度修正反而不如开源模型稳定。</p>
+
+<div class="method-module">
+<div class="module-title">② CARLA-Collide: 大规模模拟器碰撞数据集</div>
+<p>解决现有 CARLA 数据集的两大缺陷：(1) 场景单一（仅简单交叉路口）、(2) 缺乏多模态标注。CARLA-Collide 通过多样化的道路网络生成器构建，覆盖城市、高速、乡村等场景，包含 RGB、LiDAR、语义分割等多模态数据。碰撞场景通过对抗性行人/车辆行为和交通违规驾驶策略自动生成。</p>
 </div>
-<div style="padding:16px;background:rgba(188,140,255,0.06);border-radius:8px;border-left:3px solid var(--tag-multimodal)">
-<strong style="color:var(--tag-multimodal)">🌐 Multimodal 趋势</strong>
-<p style="font-size:0.9em;margin-top:8px">R-C2 展示了一个优雅思路：不用额外标注，<strong>利用模态间的不一致性自身</strong>作为学习信号。循环一致性约束是一种通用的自监督方法，未来可能扩展到音频、视频等更多模态的对齐。</p>
+
+<div class="method-module">
+<div class="module-title">③ 即插即用的碰撞感知模块</div>
+<p>VLAAD 作为碰撞感知模块，通过特征融合集成到现有端到端驾驶模型中。对于 TransFuser++，融合方式为：\(h_{\text{drive}} = h_{\text{orig}} + \alpha \cdot \text{MLP}(\text{VLAAD\_feat})\)，其中 \(\alpha\) 为可学习的融合权重。仅需少量微调（冻结 VLAAD 的大部分参数），即可将碰撞预测能力注入到驾驶决策中。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">④ Real-Collide: 真实世界行车记录仪数据集</div>
+<p>从网络收集的行车记录仪视频中构建 Real-Collide 数据集，包含语义丰富的多模态标注：碰撞类型（追尾、侧面、行人等）、严重程度、时间定位、视觉描述和原因分析。VLAAD 以仅 0.6B 参数在 Real-Collide 上超越了使用数十亿参数的通用 VLM（如 GPT-4V），AUC 提升 23.3%。</p>
 </div>
 </div>
+
+<table>
+<tr><th>评估场景</th><th>指标</th><th>VLAAD (0.6B)</th><th>对比方法</th></tr>
+<tr><td>CARLA 闭环</td><td>驾驶分数</td><td>+14.12% (相对)</td><td>TransFuser++ baseline</td></tr>
+<tr><td>Real-Collide 开环</td><td>AUC</td><td><strong>+23.3%</strong></td><td>多十亿参数 VLM</td></tr>
+<tr><td>参数量</td><td>—</td><td>0.6B</td><td>数十亿</td></tr>
+</table>
+
+<div class="example-box">
+<strong>💡 小模型击败大模型的秘密：任务特化 vs 通用能力</strong>
+<ol>
+<li><strong>领域专精的力量</strong>：VLAAD 虽然仅 0.6B 参数，但通过 MIL 在碰撞检测这一特定任务上做到了极致优化。通用 VLM 的大量参数分散在广泛的视觉-语言理解上。</li>
+<li><strong>MIL 的优势</strong>：碰撞发生在视频的特定时刻。MIL 框架天然适合这种"大海捞针"式的时间局部检测，无需帧级标注。</li>
+<li><strong>即插即用的实用性</strong>：不需要重新训练整个驾驶模型，只需在现有模型上"接入"VLAAD 模块并微调——这大大降低了实际部署的门槛。</li>
+</ol>
 </div>
+</div>
+
+<!-- ========== Reflection ========== -->
+<div class="reflection">
+<h3>📝 今日观察与反思</h3>
+<p>今日 13 篇论文呈现出几个显著的研究趋势：</p>
+<ul>
+<li><strong>效率与质量的精细平衡</strong>：SwiAttn（动态注意力路由）、Hybrid-KDA（混合模型蒸馏）、AgentCollab（模型协作）——三篇论文从不同角度探索如何在保持质量的前提下降低计算成本。动态、自适应的资源分配正在取代静态设计。</li>
+<li><strong>RL 在 LLM 训练中的深化</strong>：PAPO 解决了 GRPO + PRM 的奖励黑客问题，ReinPatch 将 GRPO 思想迁移到 token 化优化——RL 不再仅是对齐工具，正在成为 LLM 训练栈的核心组件。</li>
+<li><strong>评估方法论的反思</strong>：CoT 忠实性分歧揭示了内部推理与外部输出的断裂，When Perplexity Lies 证明了 PPL 作为蒸馏评估指标的不可靠性——社区正在认识到"我们以为在衡量的东西，可能并不是我们真正关心的"。</li>
+<li><strong>代理安全的紧迫性</strong>：BeSafe-Bench 的&lt;40%安全完成率数据是一个警醒。在竞相提升代理能力的同时，安全对齐正在被忽视——"能力诅咒"（能力越强安全风险越大）需要引起重视。</li>
+<li><strong>Muon 优化器的理论突破</strong>：从"它好用但不知道为什么"到"精确的存储容量缩放定律"——Muon 的理论理解正在迅速追赶其实践表现。频谱均衡化的洞察可能指导下一代优化器设计。</li>
+</ul>
+</div>
+
+</div><!-- end container -->
 
 <footer>
-<p>🔬 arXiv AI 日报 · 自动生成于 2026-03-30 · 数据来源：arXiv.org (cs.CL, cs.AI, cs.LG)</p>
-<p>📮 共收录 13 篇论文 · LLM(5) + RL(4) + Agent(3) + Multimodal(1)</p>
+<p>📮 本报告由 AI 自动生成 | 数据来源: <a href="https://arxiv.org" target="_blank">arXiv.org</a> | 日期: 2026-03-30</p>
+<p>🧠 Powered by arXiv AI Daily Report Automation</p>
 </footer>
 
-</div>
 </body>
 </html>

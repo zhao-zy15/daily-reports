@@ -1,222 +1,176 @@
+<!-- ========== RL Section ========== -->
+<div class="section-title rl">🎯 RL · 强化学习</div>
 
-<section class="category section-rl" id="section-rl">
-<h2>🎯 RL — 强化学习</h2>
-
-<!-- Paper 6 -->
-<div class="paper-card" id="p6">
-<h3><a href="https://arxiv.org/abs/2603.24844" target="_blank">Reaching Beyond the Mode: RL for Distributional Reasoning in Language Models</a></h3>
+<!-- Paper 6: PAPO -->
+<div class="paper" id="paper-6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.26535" target="_blank">Stabilizing Rubric Integration Training via Decoupled Advantage Normalization (PAPO)</a></div>
 <div class="paper-meta">
-<span>👤 Isha Puri, Mehul Damani, Idan Shenfeld, Marzyeh Ghassemi, Jacob Andreas, Yoon Kim</span>
-<span>📅 2026-03-25 | arXiv:2603.24844</span>
-<span>🏛 Massachusetts Institute of Technology (MIT)</span>
-<span><span class="tag tag-rl">RL</span> <span class="tag" style="background:linear-gradient(135deg,#2a4a6a,#3a6a9a)">Distributional</span></span>
-</div>
-<div class="summary">
-<p>标准 RL 后训练将答案分布坍缩为单一模式。本文提出<strong>多答案强化学习</strong>框架，训练模型在单次前向传播中显式生成多个候选答案，将推理时搜索内部化。在编码任务上 Top-1 准确率从 0.29 提升至 <strong>0.49</strong>（+69%），token 用量减少 44%。</p>
-</div>
-<div class="method-detail">
-<h4>核心方法详解</h4>
-<div class="method-step">
-<div class="step-title">① 多答案 RLVR 目标</div>
-<p>扩展标准 RLVR：策略 \(\pi_\theta\) 在单次 CoT 中生成 \(K\) 个不同候选答案 \(A = \{a_1, \dots, a_K\}\)，使用集合级奖励：</p>
-<p>$$R_{\text{RLVR}}^{\text{multi}}(A, \mathcal{Y}^*) = \sum_{i=1}^K \mathbf{1}[a_i \in \mathcal{Y}^*]$$</p>
-<p>该目标统一涵盖标准 RLVR（K=1）、Pass@K、以及完整集合恢复等场景。</p>
-</div>
-<div class="method-step">
-<div class="step-title">② 多答案 RLCR：校准奖励</div>
-<p>模型同时生成答案集 \(A\) 和置信度集 \(Q = \{q_1, \dots, q_K\}\)。引入多 Brier 分数：</p>
-<p>$$R_{\text{Brier}}^{\text{multi}} = \frac{1}{K}\sum_{i=1}^K (q_i - \mathbf{1}[a_i \in \mathcal{Y}^*])^2$$</p>
-<p>完整目标联合激励覆盖率和校准：\(R_{\text{RLCR}}^{\text{multi}} = R_{\text{RLVR}}^{\text{multi}} - R_{\text{Brier}}^{\text{multi}}\)。模型输出可解释为定义了合理答案的分布。</p>
-</div>
-<div class="method-step">
-<div class="step-title">③ 格式奖励与多样性约束</div>
-<p>为防止答案重复（模式坍缩），引入格式奖励：要求 \(K\) 个答案互不相同。训练时使用 Qwen3-8B，最大响应长度 1536 token。关键发现：多答案训练使独特答案数量接近独立采样 30 次的水平，但 token 开销仅为后者的 56%。</p>
-</div>
-<div class="method-step">
-<div class="step-title">④ 内部化推理时搜索</div>
-<p>传统方法通过 Best-of-K 外部采样提高覆盖率，但产生大量冗余 token。多答案 RL 将搜索过程<strong>内部化</strong>到模型的单次生成中。效果：在 MBPP 上，多答案 RLVR 的 Top-1 准确率 0.49 vs 单答案 0.29，且总 token 用量更少。模型学会了在思维链中系统探索不同解法路径。</p>
-</div>
-</div>
-<table class="results-table">
-<tr><th>数据集</th><th>指标</th><th>单答案 RLVR</th><th>多答案 RLVR</th><th>多答案 RLCR</th></tr>
-<tr><td>DDXPlus (医学)</td><td>覆盖率</td><td>0.35</td><td><strong>0.58</strong></td><td>0.55</td></tr>
-<tr><td>MBPP (编程)</td><td>Top-1 准确率</td><td>0.29</td><td><strong>0.49</strong></td><td>0.47</td></tr>
-<tr><td>HotPotQA</td><td>Pass@K</td><td>0.41</td><td><strong>0.56</strong></td><td>0.54</td></tr>
-</table>
-<div class="example-box">
-<div class="box-title">💡 Deep Dive: 打破模式坍缩</div>
-<ol>
-<li><strong>核心问题</strong>：标准 RL 只奖励单一正确答案，导致模型只学会生成最常见答案，忽略其他有效解</li>
-<li><strong>医学应用</strong>：症状可能对应多个诊断。多答案模型显著提高了鉴别诊断的覆盖率</li>
-<li><strong>代码生成</strong>：同一需求可有多种正确实现。模型学会了在 CoT 中"先生成方案A，再生成方案B"</li>
-<li><strong>扩展性</strong>：K 从 2 增到 5，正确答案数单调递增且训练稳定</li>
-</ol>
-</div>
+<span>👤 Zelin Tan, Zhouliang Yu, Bohan Lin, Zijie Geng, ... , Chen Zhang, Lei Bai (12 authors)</span>
+<span>📅 2026-03-27 | arXiv: 2603.26535</span>
+<span>🏛 USTC, Shanghai AI Laboratory, University of Oxford</span>
+<span><span class="tag tag-rl">🎯 RL</span> <span class="tag tag-rl">RLHF</span> <span class="tag tag-rl">Process Reward</span></span>
 </div>
 
-<!-- Paper 7 -->
-<div class="paper-card" id="p7">
-<h3><a href="https://arxiv.org/abs/2603.25184" target="_blank">HIVE: Online-Verified Prompt Selection for Efficient RL Training of Large Reasoning Model</a></h3>
-<div class="paper-meta">
-<span>👤 Jiahao Wu, Ning Lu, Shengcai Liu, Kun Wang, Yanting Yang, Qing Li, Ke Tang</span>
-<span>📅 2026-03-26 | arXiv:2603.25184</span>
-<span>🏛 SUSTech, ICML 2026</span>
-<span><span class="tag tag-rl">RL</span> <span class="tag" style="background:linear-gradient(135deg,#3a5a2a,#5a8a3a)">Efficiency</span></span>
-</div>
 <div class="summary">
-<p>在 GRPO 等算法中，大量 prompt 提供零梯度（过易或过难），造成计算浪费。本文提出 <strong>HIVE</strong>，一个双阶段数据高效 RL 框架：历史信息粗筛 + prompt 熵在线验证。实现 <strong>3.8× rollout 加速</strong>、<strong>2.2× 总训练时间加速</strong>，精度持平或更优。</p>
-</div>
-<div class="method-detail">
-<h4>核心方法详解</h4>
-<div class="method-step">
-<div class="step-title">① "学习边缘"的发现</div>
-<p>通过分析 GRPO 训练中每个 prompt 的梯度贡献，发现最强学习信号集中在<strong>中等难度 × 高不确定性</strong>的交集（"学习边缘"），且该边缘随训练<strong>动态移动</strong>。过易 prompt（全对→零方差→零梯度）和过难 prompt（全错→零方差→零梯度）均浪费计算。</p>
-</div>
-<div class="method-step">
-<div class="step-title">② 阶段1：历史信息选择（零成本）</div>
-<p>基于奖励轨迹和响应熵的粗筛：</p>
-<p>选择概率：\(P_{\text{select}} = \lambda \cdot P_{\text{Rew}}(x_i) + (1-\lambda) \cdot P_{\text{Ent}}(x_i)\)</p>
-<p>其中 \(P_{\text{Rew}}(x_i) = p_e^{z_i}\)（\(z_i\) 为连续零方差次数，频繁零方差的 prompt 被指数衰减）。\(P_{\text{Ent}}\) 为归一化历史响应熵，优先选高熵样本。</p>
-</div>
-<div class="method-step">
-<div class="step-title">③ 阶段2：在线 Prompt 熵验证</div>
-<p>为解决历史指标陈旧性问题，利用 <strong>Prompt 熵</strong>作为实时代理：</p>
-<p>$$V(x) = \frac{1}{L_p - 1}\sum_{l=2}^{L_p} \mathcal{H}(p_\theta(\cdot \mid x_{<l}))$$</p>
-<p>仅需<strong>一次前向传播</strong>（计算 prompt 本身的 token 级熵），开销 &lt; 0.4%。论文证明 Prompt 熵与响应熵具有<strong>排序一致性</strong>。选择标准：\(V(x_i) \geq \text{median}(\{V(x)\})\)，始终选前 50% 信息量最大的样本。</p>
-</div>
-<div class="method-step">
-<div class="step-title">④ 理论保证与整合</div>
-<p>核心定理：在高概率下，若两个 prompt 的 prompt 熵差异足够大，其排序与真实响应熵排序一致。两阶段层级过滤：历史先验 → 在线熵验证 → rollout。每一步淘汰约 50% 低效用样本，最终仅对约 25% 的原始 prompt 执行完整 rollout。</p>
-</div>
-</div>
-<table class="results-table">
-<tr><th>模型</th><th>方法</th><th>Rollout 数</th><th>Rollout 加速</th><th>总时间加速</th><th>Math500</th></tr>
-<tr><td>Qwen2.5-Math-7B</td><td>Dynamic Sampling</td><td>13.1M</td><td>1×</td><td>1×</td><td>83.4</td></tr>
-<tr><td>Qwen2.5-Math-7B</td><td>GRESO</td><td>6.3M</td><td>2.1×</td><td>1.5×</td><td>83.0</td></tr>
-<tr><td>Qwen2.5-Math-7B</td><td><strong>HIVE</strong></td><td><strong>3.9M</strong></td><td><strong>3.8×</strong></td><td><strong>2.2×</strong></td><td><strong>83.6</strong></td></tr>
-</table>
-<div class="example-box">
-<div class="box-title">💡 Deep Dive: 为什么 Prompt 熵有效</div>
-<ol>
-<li><strong>直觉</strong>：模型对 prompt 本身的困惑度反映了它对该任务的不确定性。高 prompt 熵 ≈ 模型对这道题"拿不准" ≈ 有学习空间</li>
-<li><strong>与 Active Learning 的联系</strong>：本质上是一种在线主动学习，但优化的是 RL 训练效率而非标注效率</li>
-<li><strong>工程收益</strong>：Qwen2.5-Math-7B 的 rollout 时间从 153.7h 降至 40.2h，总训练从 198.4h 降至 85.8h</li>
-</ol>
-</div>
+现有强化学习训练 LLM 的奖励设计面临两难：结果奖励模型 (ORM) 仅评估最终正确性，信号随模型变强而消失；过程奖励模型 (PRM) 提供丰富监督但直接使用导致"冗长性奖励黑客"。本文提出 <strong>PAPO (Process-Aware Policy Optimization)</strong>，通过解耦优势正则化将过程评估集成到 GRPO 中。在 OlympiadBench 上达到 51.3%（vs ORM 的 46.3%），在 ORM 出现停滞时仍持续改进。
 </div>
 
-<!-- Paper 8 -->
-<div class="paper-card" id="p8">
-<h3><a href="https://arxiv.org/abs/2603.25464" target="_blank">FB-MEBE: Maximum Entropy Behavior Exploration for Sim2Real Zero-Shot RL</a></h3>
-<div class="paper-meta">
-<span>👤 Jiajun Hu†, Núria Armengol Urpí†, Jin Cheng, Stelian Coros</span>
-<span>📅 2026-03-26 | arXiv:2603.25464</span>
-<span>🏛 ETH Zurich, Max Planck ETH Center</span>
-<span><span class="tag tag-rl">RL</span> <span class="tag" style="background:linear-gradient(135deg,#2a6a4a,#3a9a6a)">Sim2Real</span></span>
-</div>
-<div class="summary">
-<p>在线零样本 RL（无奖励函数预训练策略库）面临数据多样性不足和步态不自然导致无法直接部署到硬件的问题。本文提出 <strong>FB-MEBE</strong>，通过最大化已实现行为分布的熵引导探索，结合正则化批评者约束步态自然性。在 <strong>Unitree Go2</strong> 四足机器人上实现<strong>零样本 Sim2Real 部署</strong>。</p>
-</div>
 <div class="method-detail">
-<h4>核心方法详解</h4>
-<div class="method-step">
-<div class="step-title">① Forward-Backward (FB) 算法基础</div>
-<p>学习前向表示 \(F\) 和后向表示 \(B\)，使后继测度低秩分解：</p>
-<p>$$M^{\pi_z}(ds' \mid s, a) \approx F(s, a, z)^\top B(s')\rho(ds')$$</p>
-<p>任务嵌入 \(z\) 指定目标，策略 \(\pi_z(s) = \arg\max_a F(s,a,z)^\top z\)。测试时给定任意奖励函数，可直接恢复最优策略。</p>
-</div>
-<div class="method-step">
-<div class="step-title">② 最大熵行为探索（MEBE）</div>
-<p>传统无指导探索（均匀采样随机奖励嵌入）导致行为多样性低。MEBE 通过<strong>最小密度采样</strong>引导探索：</p>
-<p>$$z_r^E \propto (q_\psi(z_r^a) + \epsilon)^{-\beta}$$</p>
-<p>使用 <strong>Normalizing Flows</strong> 拟合密度模型 \(q_\psi\)，在已实现行为分布的低密度区域采样探索策略，最大化行为熵 \(H[p^t_{z_r^a}]\)。</p>
-</div>
-<div class="method-step">
-<div class="step-title">③ 正则化批评者</div>
-<p>结合步态正则化奖励防止不自然动作：</p>
-<p>$$\mathcal{L}_{\text{actor}} = -\mathbb{E}[Q_{\text{FB}}(s,a,z) + \lambda_{\text{reg}} Q_{\text{reg}}(s,a)]$$</p>
-<p>正则化奖励 \(r_{\text{reg}} = -2.5 \times 10^{-7} r_{\text{joint\_acc}} - 0.1 r_{\text{action\_rate}} - 0.1 r_{\text{feet\_slide}}\)，惩罚关节加速度、动作变化率和足部滑移。</p>
-</div>
-<div class="method-step">
-<div class="step-title">④ 低维行为空间投影</div>
-<p>探索在状态空间的低维投影上进行（如基座速度 \([v_x, v_y]\) 或重力向量 \([g_x, g_y, g_z]\)），聚焦相关行为空间。在 IsaacLab 中使用 Unitree Go2（12 DoF），200Hz 模拟频率。17 个速度跟踪任务 + 17 个姿态任务。</p>
-</div>
-</div>
-<table class="results-table">
-<tr><th>方法</th><th>速度任务 (归一化)</th><th>姿态任务 (归一化)</th><th>行为熵</th><th>Sim2Real</th></tr>
-<tr><td>FB (无指导)</td><td>0.72</td><td>0.68</td><td>低</td><td>❌ 拖行</td></tr>
-<tr><td>FB-Critic (正则化)</td><td>0.78</td><td>0.74</td><td>更低</td><td>⚠️ 有限</td></tr>
-<tr><td>FB-MEBE (β=0)</td><td>0.83</td><td>0.80</td><td>中</td><td>✅</td></tr>
-<tr><td><strong>FB-MEBE (β=2)</strong></td><td><strong>0.89</strong></td><td><strong>0.84</strong></td><td><strong>最高</strong></td><td><strong>✅ 零样本</strong></td></tr>
-</table>
-<div class="example-box">
-<div class="box-title">💡 Deep Dive: 零样本 Sim2Real 部署</div>
-<ol>
-<li><strong>硬件验证</strong>：真实 Unitree Go2 机器人上成功跟踪 commanded 速度、调整俯仰/横滚角度，行为稳定无明显足部打滑</li>
-<li><strong>探索-利用平衡</strong>：β=2 的逆密度权重使算法优先探索稀有行为，大幅扩展了策略库覆盖范围</li>
-<li><strong>首创性</strong>：第一个完全在线、不依赖外部数据集的 FB 算法硬件部署</li>
-</ol>
-</div>
+<h4>🔬 核心方法详解</h4>
+
+<div class="method-module">
+<div class="module-title">① ORM 与 PRM 的局限性分析</div>
+<p>ORM 基于结果正确性赋予奖励 \(r_{\text{out}} \in \{0, 1\}\)。当模型变强（正确率上升）后，GRPO 中的组内优势 \(A_i = r_i - \bar{r}_{\text{group}}\) 趋近于零——优势信号消失，训练停滞。直接使用 PRM 分数 \(r_{\text{proc}} = \text{PRM}(\text{steps})\) 作为奖励时，模型学会生成冗长但无实质的推理步骤来获取高分——<strong>冗长性奖励黑客</strong>。</p>
 </div>
 
-<!-- Paper 9 -->
-<div class="paper-card" id="p9">
-<h3><a href="https://arxiv.org/abs/2603.25562" target="_blank">Revisiting On-Policy Distillation: Empirical Failure Modes and Simple Fixes</a></h3>
-<div class="paper-meta">
-<span>👤 Yuqian Fu, Haohuan Huang, Kaiwen Jiang, Yuanheng Zhu, Dongbin Zhao</span>
-<span>📅 2026-03-26 | arXiv:2603.25562</span>
-<span>🏛 CASIA (中国科学院自动化研究所), UCAS</span>
-<span><span class="tag tag-rl">RL</span> <span class="tag" style="background:linear-gradient(135deg,#5a2a4a,#8a3a6a)">Distillation</span></span>
-</div>
-<div class="summary">
-<p>在线策略蒸馏（OPD）在 LLM 后训练中广泛使用，但采样 token 变体存在三种失败模式。本文提出<strong>教师 Top-K 局部支持匹配</strong>，通过截断反向 KL + Top-p 滚动 + 特殊 token 掩码实现更稳定的优化。多任务训练中数学平均分从 36.6 提升至 <strong>41.7</strong>。</p>
-</div>
-<div class="method-detail">
-<h4>核心方法详解</h4>
-<div class="method-step">
-<div class="step-title">① 三种失败模式诊断</div>
-<p>采样 token OPD 的致命缺陷：</p>
+<div class="method-module">
+<div class="module-title">② 解耦优势函数设计</div>
+<p>PAPO 将优势函数分解为两个独立组件：</p>
 <ul>
-<li><strong>信号极度不平衡</strong>：大多数采样 token 获负奖励（惩罚），正学习信号集中在极少数 token，优化对填充词过度敏感</li>
-<li><strong>教师信号不可靠</strong>：当 rollout 偏离教师常见前缀时，教师对错误 token 赋高概率（如重复循环、自我重置推理）</li>
-<li><strong>分词器不匹配</strong>：单 token 比较无法处理学生和教师分词策略差异，语义正确但分词不同的输出被错误惩罚</li>
+<li>\(A_{\text{out}}^{(i)} = r_{\text{out}}^{(i)} - \mu_{\text{out}}\)：结果优势，在 <strong>所有</strong> 响应上归一化，锚定正确性方向</li>
+<li>\(A_{\text{proc}}^{(i)} = \frac{r_{\text{proc}}^{(i)} - \mu_{\text{proc}}^+}{\sigma_{\text{proc}}^+}\)：过程优势，<strong>仅在正确响应子集内</strong>归一化，区分推理质量</li>
 </ul>
+<p>总优势: \(A^{(i)} = A_{\text{out}}^{(i)} + \beta \cdot \mathbf{1}[r_{\text{out}}^{(i)}=1] \cdot A_{\text{proc}}^{(i)}\)。\(\beta\) 控制过程信号强度，指示函数确保 \(A_{\text{proc}}\) 仅对正确答案起作用。</p>
 </div>
-<div class="method-step">
-<div class="step-title">② 教师 Top-K 局部支持匹配</div>
-<p>在每个前缀处，取教师概率最高的 \(K\) 个 token 作为支持集 \(S(c_{i,t}) = \text{TopK}_q(c_{i,t})\)。在支持集内重新归一化：</p>
-<p>$$\hat{\pi}_\theta(v \mid c_{i,t}) = \frac{\pi_\theta(v \mid c_{i,t})}{\sum_{u \in S} \pi_\theta(u \mid c_{i,t})}$$</p>
-<p>损失函数为所有位置的截断反向 KL 平均：</p>
-<p>$$\mathcal{L}_{\text{LSM}} = \mathbb{E}\left[\frac{1}{\sum_i |o_i|}\sum_i\sum_t\sum_{v \in S} \hat{\pi}_\theta(v) \log\frac{\hat{\pi}_\theta(v)}{\hat{q}(v)}\right]$$</p>
+
+<div class="method-module">
+<div class="module-title">③ 防止奖励黑客的机制</div>
+<p>关键设计：过程优势 \(A_{\text{proc}}\) 仅在正确响应子集内归一化。即使模型通过冗长文本获得高 PRM 分数，其 \(A_{\text{out}}\) 仍由答案正确性决定。错误但冗长的响应得到 \(A_{\text{out}} < 0\)（负激励）+ \(A_{\text{proc}} = 0\)（不参与过程评估），双重抑制了冗长性黑客。同时，正确响应间的 \(A_{\text{proc}}\) 归一化确保了推理质量的精细区分。</p>
 </div>
-<div class="method-step">
-<div class="step-title">③ 三重稳定化措施</div>
-<ul>
-<li><strong>支持集归一化</strong>：必须的——移除会导致快速崩溃，因为支持集内外质量不可直接比较</li>
-<li><strong>Top-p 滚动采样</strong>：以 Top-p=0.9 采样生成轨迹，避免极低概率 token 带来的噪声</li>
-<li><strong>特殊 token 掩码</strong>：掩码有问题的特殊 token（如 EOS），减少分词不匹配的假阴性</li>
-</ul>
-</div>
-<div class="method-step">
-<div class="step-title">④ 估计器理论分析</div>
-<p>令牌级 OPD 相对于序列级反向 KL 是有偏的，但最坏情况方差界更紧。序列级估计器的方差随序列长度 \(T\) 指数增长，而令牌级方差仅线性增长。因此在长视距 LLM 后训练中，令牌级更实用——但需要用局部支持匹配修补其信号质量问题。</p>
+
+<div class="method-module">
+<div class="module-title">④ 训练稳定性保证</div>
+<p>PAPO 的策略梯度为: \(\nabla J = \mathbb{E}\left[\sum_i A^{(i)} \nabla \log \pi_\theta(a_i|s_i)\right]\)。由于 \(A_{\text{out}}\) 在所有响应上是零均值的（\(\sum_i A_{\text{out}}^{(i)} = 0\)），\(A_{\text{proc}}\) 在正确子集上是零均值的，整体梯度方差被有效控制。当所有答案都正确时，\(A_{\text{out}} \to 0\) 但 \(A_{\text{proc}}\) 仍提供非零梯度——解决了 ORM 信号消失问题。</p>
 </div>
 </div>
-<table class="results-table">
-<tr><th>设置</th><th>方法</th><th>Math500</th><th>AIME24</th><th>AIME25</th><th>Avg</th></tr>
-<tr><td>单任务数学</td><td>Sampled-token OPD</td><td>81.4</td><td>26.7</td><td>16.7</td><td>40.7</td></tr>
-<tr><td>单任务数学</td><td><strong>LSM (本文)</strong></td><td><strong>82.0</strong></td><td>23.3</td><td><strong>23.3</strong></td><td><strong>41.5</strong></td></tr>
-<tr><td>多任务(Agent+数学)</td><td>Sampled-token OPD</td><td>76.0</td><td>20.0</td><td>13.3</td><td>36.6</td></tr>
-<tr><td>多任务(Agent+数学)</td><td><strong>LSM (本文)</strong></td><td><strong>82.0</strong></td><td><strong>33.3</strong></td><td>16.7</td><td><strong>41.7</strong></td></tr>
+
+<table>
+<tr><th>基准</th><th>ORM-only</th><th>PAPO</th><th>提升</th></tr>
+<tr><td>OlympiadBench</td><td>46.3%</td><td><strong>51.3%</strong></td><td>+5.0</td></tr>
+<tr><td>多基准 (6个)</td><td>出现停滞/下降</td><td><strong>持续改进</strong></td><td>—</td></tr>
+<tr><td>多模型规模</td><td>—</td><td>一致有效</td><td>—</td></tr>
 </table>
+
 <div class="example-box">
-<div class="box-title">💡 Deep Dive: 为什么单 Token 信号不够</div>
+<strong>💡 为什么"解耦"是关键？</strong>
 <ol>
-<li><strong>信号稀疏性</strong>：在一个 1000 token 的 rollout 中，可能只有 5-10 个 token 贡献正信号，其余 990+ 个都在惩罚</li>
-<li><strong>前缀偏移</strong>：学生模型生成的前缀可能是教师从未见过的，此时教师的 logits 不可靠</li>
-<li><strong>局部支持匹配的直觉</strong>：不问"教师更喜欢哪个具体 token"，而问"在教师关心的 K 个 token 中，学生的分布匹配得如何"</li>
+<li><strong>不解耦的后果</strong>：如果 \(A = A_{\text{out}} + A_{\text{proc}}\) 简单相加，冗长但错误的响应可以通过高 \(A_{\text{proc}}\) 抵消负 \(A_{\text{out}}\)，导致奖励黑客。</li>
+<li><strong>解耦的妙处</strong>：通过 \(\mathbf{1}[r_{\text{out}}=1]\) 的门控，过程奖励 <em>永远不能</em> 挽救错误答案。它只在正确答案之间起作用——让模型学会"用更好的推理获得正确答案"。</li>
+<li><strong>归一化范围的意义</strong>：\(A_{\text{proc}}\) 在正确子集内归一化而非全局归一化，避免了正确性信号被稀释。</li>
 </ol>
 </div>
 </div>
 
-</section>
+<!-- Paper 7: ReinPatch -->
+<div class="paper" id="paper-7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.26097" target="_blank">Dynamic Tokenization via Reinforcement Patching: End-to-end Training and Zero-shot Transfer</a></div>
+<div class="paper-meta">
+<span>👤 Yulun Wu, Sravan Kumar Ankireddy, Samuel Sharpe, Nikita Seleznev, Dehao Yuan, Hyeji Kim, Nam H. Nguyen</span>
+<span>📅 2026-03-27 | arXiv: 2603.26097</span>
+<span>🏛 Capital One, University of Texas at Austin</span>
+<span><span class="tag tag-rl">🎯 RL</span> <span class="tag tag-rl">Tokenization</span> <span class="tag tag-rl">Policy Gradient</span></span>
+</div>
+
+<div class="summary">
+<strong>ReinPatch</strong> 是首个用强化学习联合优化序列补丁策略及下游骨干模型的框架。将补丁边界放置建模为离散决策过程，通过 <strong>Group Relative Policy Gradient (GRPG)</strong> 优化，避免了连续松弛。方法严格控制压缩率，支持分层建模，且修补模块可提取为独立的"基础修补器"进行零样本迁移。时间序列预测实验优于现有数据驱动补丁策略。
+</div>
+
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+
+<div class="method-module">
+<div class="module-title">① 补丁边界决策的 MDP 建模</div>
+<p>将序列分割建模为 MDP: 状态 \(s_t\) 为已处理的序列前缀，动作 \(a_t \in \{0, 1\}\) 决定是否在位置 \(t\) 放置补丁边界，奖励 \(R\) 为下游任务的预测性能。策略网络 \(\pi_\phi(a_t | s_t)\) 学习数据自适应的分割策略。关键优势：无需连续松弛，直接处理离散决策。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">② Group Relative Policy Gradient (GRPG)</div>
+<p>对每个序列采样 \(K\) 组不同的分割策略 \(\{(a^{(k)}_1, \ldots, a^{(k)}_T)\}_{k=1}^K\)，计算各组的回报 \(R^{(k)}\)。策略梯度：
+$$\nabla_\phi J = \frac{1}{K} \sum_{k=1}^K \left(\frac{R^{(k)} - \bar{R}}{\sigma_R}\right) \sum_{t=1}^T \nabla_\phi \log \pi_\phi(a_t^{(k)} | s_t)$$
+组内相对归一化 \((R^{(k)} - \bar{R})/\sigma_R\) 降低了方差，提高了策略梯度的稳定性。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">③ 压缩率约束与分层建模</div>
+<p>通过在策略网络中引入拉格朗日乘子约束补丁数量: \(\max_\phi \min_\lambda J(\phi) - \lambda \left(\mathbb{E}[\text{num\_patches}] - C_{\text{target}}\right)\)，严格控制压缩率 \(C = T / \text{num\_patches}\)。支持多级分层：在粗粒度补丁上进一步做细粒度分割，实现 \(L\) 级层次化的 token 表示。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">④ 基础修补器的零样本迁移</div>
+<p>由于策略网络 \(\pi_\phi\) 与下游骨干模型 \(f_\theta\) 是解耦设计的，训练好的 \(\pi_\phi\) 可以作为独立模块提取。在新的下游任务或新的骨干模型上，无需重新训练即可直接使用同一修补器——实现零样本迁移。实验显示，在不同预测任务间迁移的性能损失极小。</p>
+</div>
+</div>
+
+<table>
+<tr><th>方法</th><th>分割策略</th><th>端到端训练</th><th>压缩率控制</th><th>零样本迁移</th></tr>
+<tr><td>固定补丁</td><td>均匀</td><td>✗</td><td>隐式</td><td>N/A</td></tr>
+<tr><td>软离散化</td><td>数据驱动</td><td>✓</td><td>✗</td><td>✗</td></tr>
+<tr><td><strong>ReinPatch</strong></td><td>数据驱动</td><td>✓</td><td>✓ 严格</td><td>✓</td></tr>
+</table>
+
+<div class="example-box">
+<strong>💡 从 GRPO 到 GRPG：RL 思想的跨域迁移</strong>
+<ol>
+<li><strong>灵感来源</strong>：GRPG 直接借鉴了 GRPO（LLM 对齐中的 Group Relative Policy Optimization），将组内相对归一化应用于序列分割的离散优化。</li>
+<li><strong>为什么不用 Gumbel-Softmax</strong>：连续松弛会引入近似误差，且无法精确控制补丁数量。RL 直接优化离散决策空间，更自然地处理约束。</li>
+<li><strong>跨域潜力</strong>：这一思路可扩展到 NLP 的动态分词（BPE 替代）、视觉的自适应 Patch 划分等场景。</li>
+</ol>
+</div>
+</div>
+
+<!-- Paper 8: KAE-LSPI -->
+<div class="paper" id="paper-8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.26464" target="_blank">Automatic Feature Identification in Least-Squares Policy Iteration Using the Koopman Operator Framework</a></div>
+<div class="paper-meta">
+<span>👤 Christian Mugisho Zagabe, Sebastian Petiz</span>
+<span>📅 2026-03-27 | arXiv: 2603.26464</span>
+<span>🏛 (Independent Researchers)</span>
+<span><span class="tag tag-rl">🎯 RL</span> <span class="tag tag-rl">Feature Learning</span> <span class="tag tag-rl">Koopman</span></span>
+</div>
+
+<div class="summary">
+线性强化学习方法的核心挑战在于特征函数的选择缺乏系统方法。本文提出 <strong>KAE-LSPI</strong> 算法，将 Koopman 自编码器与最小二乘策略迭代相结合，通过将 LSPI 的不动点近似重新表述为扩展动态模态分解 (EDMD)，实现了数据驱动的自动特征学习。在随机链游走和倒立摆问题上，KAE-LSPI 无需预设特征或核函数即可收敛到最优或近最优策略。
+</div>
+
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+
+<div class="method-module">
+<div class="module-title">① Koopman 算子理论基础</div>
+<p>对于动力系统 \(s_{t+1} = T(s_t, a_t)\)，Koopman 算子 \(\mathcal{K}\) 将非线性动态提升到无穷维函数空间中变为线性: \(\mathcal{K}\psi(s) = \psi(T(s,a))\)。EDMD 用有限基函数 \(\{\psi_1, \ldots, \psi_p\}\) 近似 \(\mathcal{K}\)，求解 \(K = \Psi_X^+ \Psi_Y\)，其中 \(\Psi_X, \Psi_Y\) 为提升后的状态矩阵。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">② LSPI 到 EDMD 的重新表述</div>
+<p>经典 LSPI 求解不动点 \(\hat{A}\hat{w} = \hat{b}\)，其中 \(\hat{A} = \Phi^T(\Phi - \gamma \Phi')\)、\(\hat{b} = \Phi^T R\)。本文观察到这等价于 EDMD 格式：将状态-动作特征 \(\phi(s,a)\) 视为 Koopman 观测量，LSTD 不动点等价于 Koopman 矩阵 \(K\) 的最小二乘拟合。这一对应允许用 Koopman 自编码器自动学习最优基函数。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">③ Koopman 自编码器 (KAE) 特征学习</div>
+<p>KAE 由编码器 \(\psi_\theta: \mathcal{S} \to \mathbb{R}^p\)、线性动态矩阵 \(K \in \mathbb{R}^{p \times p}\) 和解码器 \(\psi_\theta^{-1}: \mathbb{R}^p \to \mathcal{S}\) 组成。训练目标：
+$$\min_{\theta, K} \sum_t \|\psi_\theta(s_{t+1}) - K\psi_\theta(s_t)\|^2 + \|\psi_\theta^{-1}(\psi_\theta(s_t)) - s_t\|^2$$
+第一项保证提升空间中的线性预测性，第二项保证重构性。学习到的 \(\psi_\theta\) 直接替换 LSPI 中的手工特征。</p>
+</div>
+
+<div class="method-module">
+<div class="module-title">④ KAE-LSPI 算法流程</div>
+<p>完整流程: (1) 收集交互数据 \(\{(s_t, a_t, r_t, s_{t+1})\}\)；(2) 训练 KAE 学习特征映射 \(\psi_\theta\)；(3) 用学习到的特征 \(\phi(s,a) = \psi_\theta(s) \otimes e_a\) 执行 LSPI 策略迭代；(4) 评估策略并迭代。实验显示 KAE 学习的特征数量合理（不会爆炸），收敛性与手工特征 LSPI/KLSPI 相当。</p>
+</div>
+</div>
+
+<table>
+<tr><th>方法</th><th>特征选择</th><th>核函数需求</th><th>链游走</th><th>倒立摆</th></tr>
+<tr><td>LSPI</td><td>手工</td><td>✗</td><td>收敛到最优</td><td>需精心设计</td></tr>
+<tr><td>KLSPI</td><td>自动(核)</td><td>✓ 需预设</td><td>收敛到最优</td><td>依赖核选择</td></tr>
+<tr><td><strong>KAE-LSPI</strong></td><td>自动(学习)</td><td>✗ 不需要</td><td>收敛到最优</td><td>自适应特征</td></tr>
+</table>
+
+<div class="example-box">
+<strong>💡 Koopman 算子 × RL：一个优雅的统一视角</strong>
+<ol>
+<li><strong>核心洞察</strong>：LSTD（RL 中的值函数近似）和 EDMD（动力系统的 Koopman 近似）在数学形式上完全等价——都是在提升空间中做线性最小二乘。</li>
+<li><strong>实际价值</strong>：这意味着动力系统领域成熟的 Koopman 学习技术可以直接迁移到 RL 的特征学习中，打破了两个社区之间的壁垒。</li>
+<li><strong>局限性</strong>：当前在简单环境（链游走、倒立摆）上验证，扩展到高维连续控制仍需进一步研究。</li>
+</ol>
+</div>
+</div>
