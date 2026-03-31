@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026年3月31日</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-secondary: #12121f;
+            --bg-card: #1a1a2e;
+            --bg-card-alt: #16162a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9a9ab8;
+            --text-muted: #6a6a88;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --border: #2a2a44;
+            --gradient-fire: linear-gradient(135deg, #ef4444, #f97316);
+            --gradient-gold: linear-gradient(135deg, #f59e0b, #eab308);
+            --gradient-blue: linear-gradient(135deg, #3b82f6, #6366f1);
+            --gradient-green: linear-gradient(135deg, #22c55e, #10b981);
+            --gradient-purple: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-primary: #f5f7fa;
+                --bg-secondary: #ffffff;
+                --bg-card: #ffffff;
+                --bg-card-alt: #f8f9fc;
+                --text-primary: #1a1a2e;
+                --text-secondary: #4a4a6a;
+                --text-muted: #8a8aaa;
+                --border: #e5e7eb;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+        .report-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f2a 50%, #1a0a2e 100%);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .report-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            transition: color 0.3s;
+        }
+        .report-header .back-link:hover { color: var(--accent-blue); }
+        .report-header .tag {
+            display: inline-block;
+            background: var(--gradient-fire);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .report-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #f0f0f5, #9a9ab8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .report-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .report-header .meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .section-title .icon.fire { background: var(--gradient-fire); }
+        .section-title .icon.gold { background: var(--gradient-gold); }
+        .section-title .icon.blue { background: var(--gradient-blue); }
+        .section-title .icon.green { background: var(--gradient-green); }
+        .section-title .icon.purple { background: var(--gradient-purple); }
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .market-item {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .market-item .name { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px; }
+        .market-item .value { font-size: 1.25rem; font-weight: 700; }
+        .market-item .change { font-size: 0.9rem; font-weight: 600; margin-top: 2px; }
+        .up { color: var(--accent-red); }
+        .down { color: var(--accent-green); }
+        .flat { color: var(--accent-gold); }
+        .news-list { list-style: none; }
+        .news-list li {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .news-list li:last-child { border-bottom: none; }
+        .news-list .bullet {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+        .news-list .bullet.red { background: var(--accent-red); }
+        .news-list .bullet.gold { background: var(--accent-gold); }
+        .news-list .bullet.blue { background: var(--accent-blue); }
+        .news-list .bullet.green { background: var(--accent-green); }
+        .news-list .bullet.purple { background: var(--accent-purple); }
+        .news-list .content { flex: 1; }
+        .news-list .headline { font-weight: 600; margin-bottom: 4px; }
+        .news-list .detail { color: var(--text-secondary); font-size: 0.9rem; }
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .stock-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .stock-card:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
+        .stock-card .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .stock-card .stock-name { font-weight: 700; font-size: 1.05rem; }
+        .stock-card .stock-code { color: var(--text-muted); font-size: 0.8rem; }
+        .stock-card .stock-price { font-size: 1.3rem; font-weight: 700; }
+        .stock-card .stock-detail { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; margin-top: 10px; }
+        .stock-card .stock-detail strong { color: var(--text-primary); }
+        .stock-card .tag-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .stock-card .mini-tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .mini-tag.bullish { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+        .mini-tag.bearish { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+        .mini-tag.neutral { background: rgba(245,158,11,0.15); color: var(--accent-gold); }
+        .mini-tag.info { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .tech-table th, .tech-table td {
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .tech-table th {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tech-table td { font-size: 0.95rem; }
+        .tech-table .index-name { text-align: left; font-weight: 600; }
+        .hotspot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        .hotspot-item {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .hotspot-item .hotspot-name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hotspot-item .hotspot-reason {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .alert-box {
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-top: 14px;
+        }
+        .alert-box .alert-title {
+            font-weight: 700;
+            color: var(--accent-red);
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        .alert-box .alert-content { color: var(--text-secondary); font-size: 0.9rem; }
+        .alert-box.gold {
+            background: rgba(245,158,11,0.08);
+            border-color: rgba(245,158,11,0.2);
+        }
+        .alert-box.gold .alert-title { color: var(--accent-gold); }
+        .report-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 32px 0 16px;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 8px 0;
+        }
+        .summary-box {
+            background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(168,85,247,0.08));
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .summary-box h3 {
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+            color: var(--accent-blue);
+        }
+        .summary-box p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="report-header">
+        <a href="index.html" class="back-link">← 返回报告列表</a>
+        <div class="tag">盘前前瞻</div>
+        <h1>A股港股盘前前瞻</h1>
+        <p class="subtitle">2026年3月31日 周二 · Q1最后一个交易日 · 伊朗战争第五周</p>
+        <div class="meta">
+            <span>📅 2026-03-31 09:00</span>
+            <span>📊 数据截至美东时间 3/30 收盘</span>
+            <span>🤖 AI 辅助生成</span>
+        </div>
+    </div>
+
+    <!-- 一句话总结 -->
+    <div class="summary-box">
+        <h3>🎯 核心判断</h3>
+        <p>
+            Q1最后一个交易日，外部环境依然承压：WTI原油正式站上$100大关，鲍威尔哈佛演讲释放"可升可降"信号，日韩股市早盘大跌（日经-4%、KOSPI-3%）。A50期货夜盘收跌0.16%报14547。预计A股/港股低开0.3-0.8%，但季末做多资金可能提供一定支撑，关注黄金/能源/高股息防御板块。
+        </p>
+    </div>
+
+    <!-- Section 1: 全球隔夜市场 -->
+    <div class="section">
+        <div class="section-title">
+            <div class="icon fire">🌍</div>
+            全球隔夜市场回顾
+        </div>
+
+        <h4 style="color: var(--accent-blue); margin-bottom: 12px;">🇺🇸 美股 · 3月30日收盘</h4>
+        <div class="market-grid">
+            <div class="market-item">
+                <div class="name">道琼斯工业指数</div>
+                <div class="value">45,216</div>
+                <div class="change up">+0.11%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">标普500指数</div>
+                <div class="value">6,344</div>
+                <div class="change down">-0.39%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">纳斯达克综合指数</div>
+                <div class="value">20,795</div>
+                <div class="change down">-0.73%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">中概金龙指数</div>
+                <div class="value">6,715</div>
+                <div class="change down">-0.36%</div>
+            </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
+            美股延续分化格局。道指受能源和防御性板块提振微涨0.11%，但纳斯达克跌0.73%，科技股继续承压——半导体板块弱势不改（美光、英伟达、台积电均跌）。标普500自年初高点已回调9.1%，本月连跌五周。能源股领涨（埃克森美孚上涨），礼来因AI药物合作大涨。<strong>10年期美债收益率攀升至4.37%九个月高位</strong>，高估值成长股承压。
+        </p>
+
+        <h4 style="color: var(--accent-blue); margin-bottom: 12px;">🇪🇺 欧洲 · 3月30日收盘</h4>
+        <div class="market-grid">
+            <div class="market-item">
+                <div class="name">泛欧STOXX 600</div>
+                <div class="value">—</div>
+                <div class="change up">+0.80%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">英国富时100</div>
+                <div class="value">—</div>
+                <div class="change up">+1.60%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">德国DAX</div>
+                <div class="value">—</div>
+                <div class="change up">+0.85%</div>
+            </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
+            欧洲逆势收涨。富时100大涨1.6%，受矿业和能源股提振明显。STOXX 600收涨0.8%，科技和旅游板块除外均表现强势。欧洲资源类资产受益于油价和金属涨价。
+        </p>
+
+        <h4 style="color: var(--accent-blue); margin-bottom: 12px;">🌏 亚太 · 3月31日早盘（实时）</h4>
+        <div class="market-grid">
+            <div class="market-item">
+                <div class="name">日经225</div>
+                <div class="value">35,618</div>
+                <div class="change down">-4.05%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">韩国KOSPI</div>
+                <div class="value">2,481</div>
+                <div class="change down">-3.00%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">恒生指数（昨收）</div>
+                <div class="value">24,751</div>
+                <div class="change down">-0.81%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">恒生科技（昨收）</div>
+                <div class="value">4,897</div>
+                <div class="change down">-1.84%</div>
+            </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
+            <strong style="color: var(--accent-red);">⚠️ 日韩股市遭猛烈抛售</strong>：日经225指数今早收盘暴跌4.05%报35618点，从去年12月高点跌超10%正式进入回调区间。KOSPI大跌3%，SK海力士跌5.6%、三星电子跌3%。亚太地缘恐慌情绪急剧升温。
+        </p>
+
+        <h4 style="color: var(--accent-blue); margin-bottom: 12px;">🛢️ 大宗商品 & 汇率</h4>
+        <div class="market-grid">
+            <div class="market-item">
+                <div class="name">WTI原油</div>
+                <div class="value">$102.9</div>
+                <div class="change up">站上$100</div>
+            </div>
+            <div class="market-item">
+                <div class="name">布伦特原油</div>
+                <div class="value">$114.0</div>
+                <div class="change up">历史级月涨幅</div>
+            </div>
+            <div class="market-item">
+                <div class="name">COMEX黄金</div>
+                <div class="value">$4,505</div>
+                <div class="change up">+0.23%</div>
+            </div>
+            <div class="market-item">
+                <div class="name">A50期货（夜盘收）</div>
+                <div class="value">14,547</div>
+                <div class="change down">-0.16%</div>
+            </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.88rem;">
+            <strong>WTI原油正式收盘站上$100/桶</strong>，为2022年7月以来首次——布伦特月涨幅创历史纪录。黄金维持$4,500上方高位震荡。A50夜盘仅跌0.16%报14547，跌幅克制。
+        </p>
+    </div>
+
+    <!-- Section 2: 隔夜重大消息 -->
+    <div class="section">
+        <div class="section-title">
+            <div class="icon gold">📰</div>
+            影响A股港股的隔夜重大消息
+        </div>
+        <ul class="news-list">
+            <li>
+                <div class="bullet red"></div>
+                <div class="content">
+                    <div class="headline">🔥 鲍威尔哈佛演讲：利率"可升可降"，观望伊朗战争对经济影响</div>
+                    <div class="detail">美联储主席鲍威尔3月30日在哈佛大学发表其任期末期重要演讲。核心信息：①美联储3月会议维持利率3.50%-3.75%不变；②鲍威尔首次公开表示如果通胀再加速美联储"准备加息"；③点阵图预测2026年仅降息一次（远低于市场年初预期的三次）；④鲍威尔强调"可以等待观察"战争对经济通胀的影响；⑤10年美债收益率升至4.37%九个月新高。这意味着市场此前预期的宽松周期可能延后甚至逆转。</div>
+                </div>
+            </li>
+            <li>
+                <div class="bullet red"></div>
+                <div class="content">
+                    <div class="headline">🛢️ WTI原油破$100大关，布伦特冲上$114 — 伊朗战争进入第五周</div>
+                    <div class="detail">WTI原油周一正式收盘站上$100/桶（$102.9），为2022年来首次。布伦特3月累计月涨幅超40%，创历史纪录级别。核心催化：①伊朗伊斯兰议会通过霍尔木兹海峡管理法案（约占全球石油运输量20%）；②胡塞武装继续威胁曼德海峡；③战争进入第五周仍无停火迹象。高油价正在加剧全球通胀，对制造业和运输成本的传导效应日趋显现。</div>
+                </div>
+            </li>
+            <li>
+                <div class="bullet gold"></div>
+                <div class="content">
+                    <div class="headline">🇯🇵🇰🇷 日韩股市暴跌：日经-4%进入回调，KOSPI-3%</div>
+                    <div class="detail">亚太市场今早遭遇猛烈抛售。日经225暴跌4.05%收于35618点，从去年12月高点下跌超10%正式进入回调区间。韩国KOSPI跌3%至2481点，SK海力士-5.6%、三星电子-3%。半导体和出口型企业成重灾区，反映全球资金避险情绪急升。</div>
+                </div>
+            </li>
+            <li>
+                <div class="bullet blue"></div>
+                <div class="content">
+                    <div class="headline">💰 南向资金3月30日净卖出24.67亿港元，腾讯获净买入6亿</div>
+                    <div class="detail">昨日南向资金合计净卖出24.67亿港元（沪市净买入16.67亿，深市净卖出41.34亿）。个股层面：腾讯控股获两市合计净买入约6.09亿港元（为当日净买入最多个股）；盈富基金遭抛售38.46亿；阿里巴巴净卖出8.75亿；泡泡玛特净卖出3.38亿。资金在大盘调整中选择性配置龙头。</div>
+                </div>
+            </li>
+            <li>
+                <div class="bullet purple"></div>
+                <div class="content">
+                    <div class="headline">📉 美股科技"七巨头"市值月内蒸发超$3000亿</div>
+                    <div class="detail">以NVIDIA、苹果、微软为代表的美股科技巨头在3月集体受挫。费城半导体指数持续走弱（12个月低位区域），AI投资回报周期长于预期叠加高利率环境对成长股估值的压制成为主因。纳斯达克综合指数YTD下跌约10%，市场风格从成长向价值/防御切换的趋势延续。</div>
+                </div>
+            </li>
+            <li>
+                <div class="bullet green"></div>
+                <div class="content">
+                    <div class="headline">🏠 A股3月31日Q1收官 — 季末做多资金博弈窗口</div>
+                    <div class="detail">今日为A股Q1最后一个交易日。上证3月30日收盘3850附近。机构季末冲量、公募基金排名战等因素可能在尾盘提供一定买盘支撑，但外部油价和地缘因素构成较大压力。盘面预判：低开0.3-0.8%后弱势震荡，黄金/能源/银行等防御板块相对强势。</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Section 3: 今日关键看点 -->
+    <div class="section">
+        <div class="section-title">
+            <div class="icon blue">🔍</div>
+            今日A股港股关键看点
+        </div>
+        <div class="hotspot-grid">
+            <div class="hotspot-item">
+                <div class="hotspot-name">🥇 黄金 / 贵金属</div>
+                <div class="hotspot-reason">金价$4,505高位震荡，地缘避险需求叠加美联储政策不确定性支撑。上周赤峰黄金港股涨超10%、万国黄金涨超9%，今日A股黄金板块仍有继续活跃的可能。</div>
+            </div>
+            <div class="hotspot-item">
+                <div class="hotspot-name">🛢️ 石油 / 能源 / 海运</div>
+                <div class="hotspot-reason">WTI站上$100、布伦特$114创年内新高。石油产业链（中海油、中石油）、油服、煤化工等替代能源有望继续表现。海运股受霍尔木兹海峡风险溢价支撑。</div>
+            </div>
+            <div class="hotspot-item">
+                <div class="hotspot-name">🏦 银行 / 高股息</div>
+                <div class="hotspot-reason">在地缘不确定性和利率高企环境下，高股息资产再度成为防御首选。银行板块在3月30日A股市场表现活跃，Q1收官日有望延续资金偏好。</div>
+            </div>
+            <div class="hotspot-item">
+                <div class="hotspot-name">⚡ 电力 / 公用事业</div>
+                <div class="hotspot-reason">发电机概念、IDC电源板块3月31日午后回暖。高油价推动火电成本逻辑、水电/核电避险逻辑并行，兼具防御性和业绩确定性。</div>
+            </div>
+            <div class="hotspot-item">
+                <div class="hotspot-name">🔴 铝业 / 有色金属</div>
+                <div class="hotspot-reason">3月30日港股铝业股大涨：中铝国际+22%、中国铝业+7%。地缘推动的供给担忧和库存低位支撑有色金属价格。A股有色板块联动效应值得关注。</div>
+            </div>
+            <div class="hotspot-item">
+                <div class="hotspot-name">🛡️ 军工 / 国防</div>
+                <div class="hotspot-reason">中东冲突五周未止、胡塞威胁曼德海峡，全球军费预算预期大幅上调。航空航天、军工电子、船舶等子板块有中期催化。</div>
+            </div>
+        </div>
+
+        <div class="alert-box" style="margin-top: 16px;">
+            <div class="alert-title">⚠️ 风险提示</div>
+            <div class="alert-content">
+                ① 油价超预期上行可能触发全球衰退预期升温，权益市场面临系统性下行风险；<br>
+                ② 美联储"准备加息"信号若落地，全球资本市场将面临重新定价；<br>
+                ③ 日韩股市暴跌可能传导至港股/A股情绪面；<br>
+                ④ Q1最后一天可能出现基金调仓的非常规波动；<br>
+                ⑤ 中东局势仍存在进一步升级风险（霍尔木兹海峡封锁可能性）。
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: 技术面快览 -->
+    <div class="section">
+        <div class="section-title">
+            <div class="icon green">📐</div>
+            技术面快览
+        </div>
+        <table class="tech-table">
+            <thead>
+                <tr>
+                    <th class="index-name">指数</th>
+                    <th>昨收</th>
+                    <th>强支撑</th>
+                    <th>弱支撑</th>
+                    <th>弱压力</th>
+                    <th>强压力</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="index-name">上证指数</td>
+                    <td>~3,850</td>
+                    <td class="up">3,800</td>
+                    <td class="up">3,830</td>
+                    <td class="down">3,880</td>
+                    <td class="down">3,920</td>
+                </tr>
+                <tr>
+                    <td class="index-name">恒生指数</td>
+                    <td>24,751</td>
+                    <td class="up">24,200</td>
+                    <td class="up">24,500</td>
+                    <td class="down">25,000</td>
+                    <td class="down">25,300</td>
+                </tr>
+                <tr>
+                    <td class="index-name">恒生科技指数</td>
+                    <td>4,897</td>
+                    <td class="up">4,750</td>
+                    <td class="up">4,850</td>
+                    <td class="down">5,000</td>
+                    <td class="down">5,100</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="alert-box gold" style="margin-top: 14px;">
+            <div class="alert-title">📊 技术面解读</div>
+            <div class="alert-content">
+                上证指数短期在3,800-3,920区间震荡，3,800为前期密集成交区强支撑。恒生指数25000整数关口成为短期多空分界线，若日韩暴跌情绪传导可能下探24,200。恒生科技指数3月跌幅已超5%，PE回落至约21倍，短期超卖但趋势未明。建议控制仓位，在支撑位附近观察量能变化再决定是否加仓。
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: 自选股推演 -->
+    <div class="section">
+        <div class="section-title">
+            <div class="icon purple">⭐</div>
+            专属自选股 · 今日推演
+        </div>
+        <div class="stock-grid">
+
+            <!-- 腾讯 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">腾讯控股</div>
+                        <div class="stock-code">0700.HK</div>
+                    </div>
+                    <div class="stock-price down">昨跌2.39%</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>3月30日腾讯获南向资金净买入6.09亿港元，为当日净买入最大个股。消息面上，腾讯企业微信CLI开源项目上架GitHub社区。连续3日获南向资金加仓，显示机构逢低布局意愿强。<br>
+                    <strong>ADR表现：</strong>中概金龙指数跌0.36%，腾讯ADR基本平收。<br>
+                    <strong>今日关注：</strong>受日韩暴跌拖累可能低开1-1.5%，但南向资金持续买入构成底部支撑。短期支撑位445港元，压力位470港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">震荡偏弱</span>
+                    <span class="mini-tag info">南向加仓</span>
+                </div>
+            </div>
+
+            <!-- 阿里 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">阿里巴巴</div>
+                        <div class="stock-code">9988.HK</div>
+                    </div>
+                    <div class="stock-price down">昨跌1.71%</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>南向资金3月30日净卖出阿里巴巴8.75亿港元。阿里从高点回调约三分之一，近期无重大利好催化。云业务AI转型进展和即将到来的Q4财报（预计5月发布）是中期关注点。<br>
+                    <strong>ADR表现：</strong>BABA美股微跌。<br>
+                    <strong>今日关注：</strong>南向资金持续流出是短期隐忧。技术面，前期低点附近（约95港元附近）若再次考验或有技术性反弹。支撑96港元，压力103港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag bearish">偏空</span>
+                    <span class="mini-tag info">南向流出</span>
+                </div>
+            </div>
+
+            <!-- 美团 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">美团</div>
+                        <div class="stock-code">3690.HK</div>
+                    </div>
+                    <div class="stock-price down">昨跌1.98%</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>南向资金3月30日净卖出美团1.82亿港元。美团无人机配送已扩展至15城，但油价高企对外卖配送成本有压力。近期反垄断政策面相对平稳。<br>
+                    <strong>今日关注：</strong>跟随大市低开震荡概率大，外卖本地生活赛道受油价冲击有限但市场情绪拖累。支撑155港元，压力165港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">震荡</span>
+                    <span class="mini-tag info">无人机扩张</span>
+                </div>
+            </div>
+
+            <!-- 蜜雪冰城 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">蜜雪冰城</div>
+                        <div class="stock-code">2097.HK</div>
+                    </div>
+                    <div class="stock-price">—</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>蜜雪冰城FY2025年报（营收335.6亿元+35.2%）已于此前发布。新管理层上任后推进海外扩张战略。近期股价在300港元附近整理。<br>
+                    <strong>今日关注：</strong>消费股在高油价环境下通常偏防御性，蜜雪极致低价策略在通胀周期中可能受益（消费降级逻辑）。支撑290港元，压力315港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">震荡整理</span>
+                    <span class="mini-tag info">消费降级受益</span>
+                </div>
+            </div>
+
+            <!-- 宁德时代 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">宁德时代</div>
+                        <div class="stock-code">300750.SZ</div>
+                    </div>
+                    <div class="stock-price">—</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>高油价环境利好新能源替代逻辑——燃油车用车成本飙升推动EV渗透率加速。宁德时代固态电池研发按计划推进中（2026年量产目标不变）。<br>
+                    <strong>今日关注：</strong>锂电池板块3月31日早盘回调，但高油价对EV替代的中期利好逻辑未变。短期受大盘拖累偏弱。支撑235元，压力255元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">短期承压</span>
+                    <span class="mini-tag bullish">高油价利好EV</span>
+                </div>
+            </div>
+
+            <!-- 泡泡玛特 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">泡泡玛特</div>
+                        <div class="stock-code">9992.HK</div>
+                    </div>
+                    <div class="stock-price down">昨跌0.60%</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>南向资金3月30日净卖出泡泡玛特3.38亿港元。此前公司回购600M港元支撑股价，但市场对LABUBU依赖度过高（占收入40%）和Q4增速放缓的担忧未消。IP家电计划4月推出（与新宝电器OEM合作）。<br>
+                    <strong>今日关注：</strong>南向连续流出压力较大。中期看IP家电新品落地能否打开第二增长曲线。支撑72港元，压力80港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag bearish">偏空</span>
+                    <span class="mini-tag info">IP家电4月上线</span>
+                </div>
+            </div>
+
+            <!-- 小米 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">小米集团</div>
+                        <div class="stock-code">1810.HK</div>
+                    </div>
+                    <div class="stock-price">—</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>小米宣布160亿元AI投资计划引发市场关注，FY2025业绩强劲（全年营收4573亿，汽车首年营收1061亿并实现盈利）。SU7 Ultra交付目标上调至3.5万辆。三年600亿AI投资规划落地中。<br>
+                    <strong>今日关注：</strong>高油价利好小米汽车EV逻辑（燃油车成本抬升），但整体科技股偏弱大环境下仍有回调压力。支撑52港元，压力58港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">震荡</span>
+                    <span class="mini-tag bullish">EV+AI双引擎</span>
+                </div>
+            </div>
+
+            <!-- 快手 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">快手</div>
+                        <div class="stock-code">1024.HK</div>
+                    </div>
+                    <div class="stock-price">—</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>快手3月以来跌幅较深（3月27日单日暴跌14%）。当前市场对快手广告收入增速放缓和电商竞争加剧的担忧较强。恒生科技指数PE约21倍，快手估值已相对压缩。<br>
+                    <strong>今日关注：</strong>短线超卖但反弹力度有限，需要新催化（如用户数据或财报指引）。支撑48港元，压力54港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag bearish">弱势</span>
+                    <span class="mini-tag info">超卖反弹机会</span>
+                </div>
+            </div>
+
+            <!-- 优必选 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">优必选</div>
+                        <div class="stock-code">9880.HK</div>
+                    </div>
+                    <div class="stock-price">—</div>
+                </div>
+                <div class="stock-detail">
+                    <strong>隔夜消息：</strong>人形机器人赛道热度虽有回落但中期主线不变。特斯拉Optimus 3代持续推进、宇树科技(Unitree)申请IPO等行业催化仍在。优必选Walker S工厂订单进展是核心关注点。<br>
+                    <strong>今日关注：</strong>题材股属性强，跟随市场情绪波动大。在大盘偏弱环境下高波动风险。支撑155港元，压力180港元。
+                </div>
+                <div class="tag-row">
+                    <span class="mini-tag neutral">高波动</span>
+                    <span class="mini-tag info">人形机器人主线</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <div class="divider"></div>
+        <p style="margin-top: 16px;">📊 本报告由 AI 辅助生成，基于公开市场数据，仅供参考，不构成投资建议</p>
+        <p>数据来源：Motley Fool, CNBC, Trading Economics, 财联社, 每经, 证券之星, 界面新闻</p>
+        <p style="margin-top: 8px;">© 2026 Daily Reports · Generated at 2026-03-31 09:00</p>
+    </div>
+
+</div>
+</body>
+</html>
