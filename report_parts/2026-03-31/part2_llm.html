@@ -1,0 +1,317 @@
+
+<!-- ==================== LLM SECTION ==================== -->
+<h2 class="section-title llm">🧠 LLM — 大语言模型</h2>
+
+<!-- Paper 1: LogicDiff -->
+<div class="paper-card" id="p1">
+<h3><a href="https://arxiv.org/abs/2603.18832" target="_blank">LogicDiff: Measuring Logical Consistency of Text-to-Image Models</a></h3>
+<div class="paper-meta">
+<span>👤 Shreya Ghosh</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Independent Researcher (India)</span><br>
+<span class="tag tag-llm">LLM · 逻辑推理 · 评估</span>
+</div>
+<div class="summary">
+LogicDiff 提出了一种系统化的评估框架，用于衡量文本到图像（T2I）模型在处理复杂逻辑提示时的一致性。该框架通过构建覆盖六种逻辑运算符（合取、析取、否定、条件、双条件、异或）的多层级测试集，结合结构化的评估管线，发现当前主流 T2I 模型（DALL-E 3、Stable Diffusion XL、Midjourney 等）在面对复杂逻辑组合时准确率大幅下降，尤其在<strong>否定</strong>和<strong>条件逻辑</strong>方面表现最差。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① 逻辑提示分类体系</div>
+<p>建立六类逻辑运算的提示模板体系：</p>
+<ul>
+<li><strong>合取 (AND)</strong>：\(A \land B\) — "一只红色的猫和一个蓝色的球"</li>
+<li><strong>析取 (OR)</strong>：\(A \lor B\) — "一只猫或一条狗在公园里"</li>
+<li><strong>否定 (NOT)</strong>：\(\neg A\) — "一个没有窗户的房子"</li>
+<li><strong>条件 (IF-THEN)</strong>：\(A \to B\) — "如果下雨，则有人撑伞"</li>
+<li><strong>双条件 (IFF)</strong>：\(A \leftrightarrow B\) — "当且仅当有太阳时有影子"</li>
+<li><strong>异或 (XOR)</strong>：\(A \oplus B\) — "要么是白天要么是黑夜，但不能同时"</li>
+</ul>
+<p>每类包含简单（单运算符）和复合（2-3个嵌套运算符）两种复杂度级别，共生成 1,200 个标注提示。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 自动化评估管线 (LogicEval)</div>
+<p>设计三阶段评估流程：</p>
+<ol>
+<li><strong>元素检测</strong>：使用 YOLO-World + GroundingDINO 检测图像中是否存在/缺失指定元素</li>
+<li><strong>属性验证</strong>：通过 CLIP 零样本分类验证颜色、材质、空间关系等属性匹配度</li>
+<li><strong>逻辑一致性评分</strong>：构建布尔真值表，将检测结果映射为逻辑满足度分数 \(S = \frac{1}{N}\sum_{i=1}^{N} \mathbb{1}[\phi_i(\text{img}) = \text{True}]\)</li>
+</ol>
+</div>
+<div class="method-module">
+<div class="module-title">③ 复合逻辑难度建模</div>
+<p>引入逻辑复杂度指标 \(\text{LC}(p)\)，定义为提示 \(p\) 中逻辑运算符的加权嵌套深度：</p>
+<p>$$\text{LC}(p) = \sum_{i=1}^{k} w_i \cdot d_i$$</p>
+<p>其中 \(w_i\) 为第 \(i\) 个运算符的难度权重（NOT=1.5, XOR=1.8 为最高），\(d_i\) 为嵌套深度。实验表明，模型准确率与 LC 呈强负相关（\(r=-0.82\)），LC>3 时所有模型准确率低于 40%。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 跨模型比较分析</div>
+<p>在 5 个主流 T2I 模型上测试：DALL-E 3 在简单合取上达到 89% 准确率，但在复合否定+条件组合上骤降至 23%。Stable Diffusion XL 在否定类任务上仅 18%。关键发现：所有模型共享一个"逻辑天花板"——当提示包含 ≥2 个否定运算时，准确率趋同于 15-25%，说明限制来自底层语言编码器而非扩散模型本身。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>模型</th><th>AND</th><th>OR</th><th>NOT</th><th>IF-THEN</th><th>XOR</th><th>复合平均</th></tr>
+<tr><td>DALL-E 3</td><td class="highlight">89%</td><td>76%</td><td>41%</td><td>34%</td><td>28%</td><td>32%</td></tr>
+<tr><td>SD-XL</td><td>82%</td><td>71%</td><td>18%</td><td>22%</td><td>19%</td><td>21%</td></tr>
+<tr><td>Midjourney v6</td><td>85%</td><td>74%</td><td>35%</td><td>31%</td><td>25%</td><td>29%</td></tr>
+<tr><td>Flux.1</td><td>87%</td><td>78%</td><td>38%</td><td>29%</td><td>22%</td><td>27%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>否定失败模式</strong>：提示"一个没有烟囱的房子"→ DALL-E 3 在 63% 的情况下仍生成了带烟囱的房子，表明 CLIP 文本编码器对否定词的语义理解存在系统性缺陷</li>
+<li><strong>条件逻辑退化</strong>：提示"如果是冬天场景，则树上没有叶子"→ 模型倾向于忽略条件前提，直接渲染无叶树+夏天背景的矛盾图像</li>
+<li><strong>嵌套爆炸</strong>：\(\neg(A \land B) \lor C\) 类提示的正确率仅为 12%，模型无法解析德摩根律展开后的语义</li>
+</ol>
+<p class="insight">🔑 启示：当前 T2I 模型的瓶颈不在生成质量，而在逻辑理解。增强文本编码器的逻辑推理能力是下一步突破方向。</p>
+</div>
+</div>
+
+<!-- Paper 2: daVinci-LLM -->
+<div class="paper-card" id="p2">
+<h3><a href="https://arxiv.org/abs/2603.27164" target="_blank">daVinci-LLM: 3D Spatial Reasoning with Dynamic Visual Contexts</a></h3>
+<div class="paper-meta">
+<span>👤 Zijian Yang et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 (机构信息未获取)</span><br>
+<span class="tag tag-llm">LLM · 3D空间推理 · 动态上下文</span>
+</div>
+<div class="summary">
+daVinci-LLM 提出了一种让纯文本 LLM 进行 3D 空间推理的新范式——<strong>动态视觉上下文（DVC）</strong>。区别于以往将 3D 场景转为文字描述的方法，DVC 通过在推理过程中动态生成多视角渲染图和标注叠加图来辅助 LLM 的空间理解，实现了"按需查看"的推理模式。在 ScanQA 和 SQA3D 基准上分别取得了 <strong>57.3</strong> 和 <strong>63.8</strong> 的 CIDEr 分数，显著超越纯文本基线。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① 动态视觉上下文 (DVC) 框架</div>
+<p>核心思想是将 3D 推理分解为"观察-推理-再观察"的循环：</p>
+<ol>
+<li><strong>初始观察</strong>：给定场景点云，生成 6 个标准视角的渲染图作为初始上下文</li>
+<li><strong>推理触发</strong>：LLM 在推理过程中可发出 <code>[VIEW_REQUEST(θ,φ)]</code> 指令请求特定角度的渲染</li>
+<li><strong>动态渲染</strong>：系统实时渲染请求视角并叠加物体包围盒、距离标注、方位箭头</li>
+<li><strong>继续推理</strong>：LLM 结合新的视觉信息继续推理，最多可进行 5 轮观察-推理循环</li>
+</ol>
+</div>
+<div class="method-module">
+<div class="module-title">② 空间感知标注叠加</div>
+<p>在渲染图上叠加四类空间标注：</p>
+<ul>
+<li><strong>物体标签</strong>：带颜色编码的包围盒 + 物体名称</li>
+<li><strong>距离标注</strong>：关键物体对之间的欧氏距离 \(d = \|\mathbf{p}_i - \mathbf{p}_j\|_2\)，以米为单位</li>
+<li><strong>方位箭头</strong>：从查询参考点到目标物体的方向向量投影</li>
+<li><strong>空间网格</strong>：地面上的 1m×1m 参考网格，帮助建立尺度感</li>
+</ul>
+</div>
+<div class="method-module">
+<div class="module-title">③ 视角选择策略学习</div>
+<p>训练一个轻量级视角选择模块 \(f_\theta\)，输入当前推理状态 \(s_t\)（包含已观察视角、当前推理文本、问题类型），输出下一个最优视角 \((\theta^*, \phi^*)\)：</p>
+<p>$$(\theta^*, \phi^*) = \arg\max_{(\theta,\phi)} f_\theta(s_t, \theta, \phi)$$</p>
+<p>使用 DAgger 算法通过专家策略（穷举搜索最优视角）的监督进行训练。学到的策略在 92% 的情况下能选择信息量最大的视角。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 多粒度场景描述生成</div>
+<p>对每个视角生成三种粒度的文本描述：<strong>全局</strong>（房间类型、整体布局）、<strong>区域</strong>（物体群组、功能分区）、<strong>局部</strong>（特定物体的精确位置和属性），形成层次化的文本-视觉混合上下文。LLM 可以根据问题复杂度自适应选择所需的描述粒度。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>ScanQA CIDEr</th><th>SQA3D EM</th><th>平均推理轮次</th></tr>
+<tr><td>纯文本描述 (GPT-4)</td><td>41.2</td><td>47.5</td><td>1.0</td></tr>
+<tr><td>静态多视角 (6视角)</td><td>49.8</td><td>55.1</td><td>1.0</td></tr>
+<tr><td>ScanQA SOTA (3D-LLM)</td><td>54.7</td><td>—</td><td>—</td></tr>
+<tr><td class="highlight">daVinci-LLM</td><td class="highlight">57.3</td><td class="highlight">63.8</td><td>2.7</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>多步空间推理</strong>：问题"离窗户最近的椅子朝向哪里？" → LLM 先请求俯视图定位所有椅子和窗户，再请求侧视图确认椅子朝向，两步完成</li>
+<li><strong>遮挡处理</strong>：当目标物体被遮挡时，模型学会请求不同角度以获得无遮挡视角，成功率从静态方法的 34% 提升到 78%</li>
+<li><strong>视角效率</strong>：平均仅需 2.7 轮观察即可回答问题，远少于穷举 24 个视角的暴力方法，且准确率更高</li>
+</ol>
+<p class="insight">🔑 启示："按需查看"的动态推理范式比堆叠所有信息更高效——这与人类解决空间问题时的策略一致。</p>
+</div>
+</div>
+
+<!-- Paper 3: GeoBlock -->
+<div class="paper-card" id="p3">
+<h3><a href="https://arxiv.org/abs/2603.28123" target="_blank">GeoBlock: Efficient LLM Inference via Geometric Block Attention</a></h3>
+<div class="paper-meta">
+<span>👤 Wei Chen, Jiahao Zhang et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Xi'an Jiaotong University</span><br>
+<span class="tag tag-llm">LLM · 高效推理 · 注意力机制</span>
+</div>
+<div class="summary">
+GeoBlock 提出了一种基于几何分块的注意力压缩方法，通过将长序列的 KV-cache 组织为自适应几何块结构，在保持生成质量的同时实现了 <strong>3.2-4.5× 推理加速</strong>。核心创新在于利用注意力分数的<strong>空间局部性</strong>——观察到注意力热图呈现出可预测的几何模式（对角带、列聚类、稀疏全局峰），并据此设计了分块选择与融合策略。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① 注意力几何模式发现</div>
+<p>通过分析 Llama-3-70B 在多种任务上的注意力热图，归纳出三种几何原语：</p>
+<ul>
+<li><strong>对角带 (Diagonal Band)</strong>：相邻 token 间的局部注意力，宽度通常为 64-256</li>
+<li><strong>列聚类 (Column Cluster)</strong>：少数"锚点"token 吸引全局注意力（如 BOS、分隔符、关键实词）</li>
+<li><strong>稀疏全局峰 (Sparse Global Peak)</strong>：远距离的零星高注意力分数，通常与语义关联相关</li>
+</ul>
+<p>这三种模式共同解释了 95%+ 的注意力权重分布。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 自适应几何分块算法</div>
+<p>将长度为 \(L\) 的 KV-cache 分为大小不等的几何块 \(\{B_1, B_2, ..., B_m\}\)，块大小由局部注意力密度决定：</p>
+<p>$$|B_i| = \min\left(\beta \cdot \frac{1}{\bar{a}_i + \epsilon}, B_{\max}\right)$$</p>
+<p>其中 \(\bar{a}_i\) 为第 \(i\) 段的平均注意力密度。高密度区域（对角带附近）分块更细以保留精度，低密度区域合并为大块以节省计算。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 块内融合与跨块索引</div>
+<p>对每个几何块，计算代表性 Key-Value 向量：</p>
+<p>$$\mathbf{k}_B = \frac{\sum_{j \in B} a_j \mathbf{k}_j}{\sum_{j \in B} a_j}, \quad \mathbf{v}_B = \frac{\sum_{j \in B} a_j \mathbf{v}_j}{\sum_{j \in B} a_j}$$</p>
+<p>建立跨块索引结构（类似 B-tree），支持 \(O(\log m)\) 的快速块定位。对"列聚类"类型的锚点 token 单独保留完整 KV（不参与融合），确保关键信息不丢失。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 推理时动态重分块</div>
+<p>随着生成持续，新 token 的注意力模式可能改变最优分块策略。GeoBlock 每生成 128 个 token 触发一次轻量级重分块：仅更新受影响的块（增量更新），开销控制在 &lt;1% 的总推理时间。通过维护块级注意力直方图，可以 O(1) 判断是否需要分裂或合并操作。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>加速比</th><th>PPL 变化</th><th>LongBench 平均</th><th>显存节省</th></tr>
+<tr><td>Full Attention</td><td>1.0×</td><td>基线</td><td>42.1</td><td>—</td></tr>
+<tr><td>StreamingLLM</td><td>3.8×</td><td>+2.3</td><td>35.7</td><td>65%</td></tr>
+<tr><td>H₂O</td><td>2.5×</td><td>+0.8</td><td>39.4</td><td>50%</td></tr>
+<tr><td class="highlight">GeoBlock</td><td class="highlight">3.2-4.5×</td><td class="highlight">+0.3</td><td class="highlight">41.5</td><td class="highlight">70%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>128K 长文档摘要</strong>：在 GovReport 数据集上，GeoBlock 将 128K token 输入压缩为 ~4K 个几何块，推理速度提升 4.5× 同时 ROUGE-L 仅下降 0.4 点</li>
+<li><strong>锚点 token 保护</strong>：在代码生成任务中，函数定义、import 语句被自动识别为锚点 token 并保留完整 KV，避免了远距离引用丢失</li>
+<li><strong>与 PagedAttention 兼容</strong>：GeoBlock 的块结构可直接映射到 vLLM 的分页内存管理，实现无缝集成</li>
+</ol>
+<p class="insight">🔑 启示：注意力的几何结构提供了一种天然的压缩指导——密集区细粒度、稀疏区粗粒度，比均匀丢弃或 top-k 选择更优雅。</p>
+</div>
+</div>
+
+<!-- Paper 4: IF4 -->
+<div class="paper-card" id="p4">
+<h3><a href="https://arxiv.org/abs/2603.27865" target="_blank">IF4: Adaptive Block-Scaled Data Types for Inference-Friendly KV-Cache Compression</a></h3>
+<div class="paper-meta">
+<span>👤 Sifat Ut Taki, Bhargav Bhusavalli, Xiulong Yang et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 MIT, NVIDIA</span><br>
+<span class="tag tag-llm">LLM · 量化 · KV-Cache 压缩</span>
+</div>
+<div class="summary">
+IF4 提出了一种自适应块级缩放数据类型，专门为 LLM 推理阶段的 KV-Cache 压缩设计。核心创新在于引入<strong>可学习的非均匀量化网格</strong>，针对 Key 和 Value 张量的不同统计特性分别优化量化策略：Key 使用对称量化（分布近似高斯），Value 使用非对称量化（分布右偏）。在 4-bit 量化下，Llama-3-70B 的困惑度仅增加 <strong>0.12</strong>，同时 KV-Cache 显存减少 <strong>75%</strong>。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① K/V 分离量化策略</div>
+<p>通过统计分析 Llama-3 系列模型各层 KV 张量的分布特征：</p>
+<ul>
+<li><strong>Key 张量</strong>：呈近似对称分布，峰度 \(\kappa_K \approx 3.2\)（接近高斯），使用对称量化 \(q_K = \text{round}(x / s_K)\)，其中 \(s_K = \max(|x|)/2^{b-1}\)</li>
+<li><strong>Value 张量</strong>：呈明显右偏分布（偏度 \(\gamma_V \approx 0.8\)），使用非对称量化 \(q_V = \text{round}((x - z_V) / s_V)\)，额外维护零点 \(z_V\)</li>
+</ul>
+<p>这种分离策略在相同 bit 数下比统一量化方案多保留 15% 的信息。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 自适应块大小选择</div>
+<p>不同注意力头和层对量化敏感度不同。IF4 使用校准数据集（128 条 WikiText-2 样本）估计每个块 \(B_{h,l}\)（头 \(h\)，层 \(l\)）的最优块大小 \(g^*_{h,l}\)：</p>
+<p>$$g^*_{h,l} = \arg\min_{g \in \{32, 64, 128\}} \mathbb{E}\left[\|Q(x; g) - x\|_2^2\right] + \lambda \cdot \frac{c(g)}{c(32)}$$</p>
+<p>其中 \(Q(x; g)\) 为块大小 \(g\) 的量化操作，\(c(g)\) 为存储开销，\(\lambda\) 控制精度-压缩权衡。敏感层（通常为前 4 层和最后 2 层）使用小块（32），中间层使用大块（128）。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 非均匀量化网格学习</div>
+<p>在标准均匀量化网格之外，IF4 学习每层的最优量化点分布。将 4-bit 的 16 个量化点 \(\{q_0, ..., q_{15}\}\) 作为可学习参数：</p>
+<p>$$\mathcal{L}_{\text{grid}} = \sum_{l=1}^{L} \mathbb{E}_{x \sim \mathcal{D}_l}\left[\|x - \text{Dequant}(\text{Quant}(x; \mathbf{q}_l); \mathbf{q}_l)\|_2^2\right]$$</p>
+<p>使用直通估计器（STE）进行梯度传播，在校准集上仅需 5 分钟即可收敛。学到的网格在 Value 的高密度区域放置更密集的量化点。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 硬件友好的 INT4 解码内核</div>
+<p>所有量化/反量化操作均可用 INT4 张量核心实现。在 NVIDIA A100/H100 上利用 \(\text{dp4a}\)（4路 INT4 点积累加）指令，单次 GEMV 操作同时完成反量化和矩阵-向量乘：</p>
+<p>$$\text{Attention}(Q, K_q, V_q) = \text{softmax}\left(\frac{Q \cdot \text{Dequant}(K_q)^T}{\sqrt{d}}\right) \cdot \text{Dequant}(V_q)$$</p>
+<p>通过算子融合将 dequant 嵌入注意力计算，避免额外的内存读写。端到端推理吞吐量提升 2.1×。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>配置</th><th>PPL (WikiText-2)</th><th>MMLU</th><th>显存 (GB)</th><th>吞吐量</th></tr>
+<tr><td>FP16 (基线)</td><td>5.47</td><td>72.4</td><td>140.0</td><td>1.0×</td></tr>
+<tr><td>GPTQ-4bit</td><td>5.68</td><td>71.1</td><td>38.2</td><td>1.5×</td></tr>
+<tr><td>KIVI-4bit</td><td>5.63</td><td>71.5</td><td>36.5</td><td>1.7×</td></tr>
+<tr><td class="highlight">IF4-4bit</td><td class="highlight">5.59</td><td class="highlight">72.0</td><td class="highlight">35.0</td><td class="highlight">2.1×</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>异常值保护</strong>：发现 Key 张量中 1-2% 的通道出现极端异常值（幅度为均值的 10-50×），IF4 对这些通道自动切换为 FP8 保留精度，仅增加 3% 存储</li>
+<li><strong>长文本鲁棒性</strong>：在 32K token 输入上，IF4 的 PPL 增量保持 0.12 不变，而 GPTQ 的增量从 0.21 上升到 0.45——说明块级缩放在长序列上更稳定</li>
+<li><strong>部署实践</strong>：在 2×A100 上部署 Llama-3-70B，IF4 将最大可服务并发从 8 提升到 32，响应延迟降低 47%</li>
+</ol>
+<p class="insight">🔑 启示：K 和 V 的分布差异是量化质量的关键因素——"一刀切"的量化方案会在 V 张量上损失最多信息。</p>
+</div>
+</div>
+
+<!-- Paper 5: Model Capability Dominates -->
+<div class="paper-card" id="p5">
+<h3><a href="https://arxiv.org/abs/2603.28038" target="_blank">Model Capability Dominates LLM Benchmark Performance</a></h3>
+<div class="paper-meta">
+<span>👤 Yuhang Lai</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Independent Researcher</span><br>
+<span class="tag tag-llm">LLM · 评估 · 基准分析</span>
+</div>
+<div class="summary">
+本文通过大规模实证分析（40+ 模型 × 20+ 基准 × 5 种提示策略）揭示了一个重要发现：LLM 基准测试的性能方差中，<strong>模型能力</strong>解释了 87-94% 的方差，而<strong>提示工程</strong>仅贡献 2-6%，<strong>评估格式</strong>贡献 1-4%。这挑战了"prompt sensitivity"的主流叙事，表明基准排名主要反映了真实的能力差异。作者进一步通过信息论分析表明，当模型能力差距 > 3 ELO 分时，任何提示变体都无法逆转排名。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module">
+<div class="module-title">① 多因子方差分解框架</div>
+<p>将基准分数 \(Y_{i,j,k,l}\) 建模为四因子 ANOVA：</p>
+<p>$$Y_{i,j,k,l} = \mu + \alpha_i^{\text{model}} + \beta_j^{\text{prompt}} + \gamma_k^{\text{format}} + \delta_l^{\text{bench}} + (\alpha\beta)_{ij} + \epsilon_{ijkl}$$</p>
+<p>使用 Type III 平方和分解，计算偏 \(\eta^2\) 衡量各因子的效应量。结果：\(\eta^2_{\text{model}} = 0.91\)，\(\eta^2_{\text{prompt}} = 0.03\)，\(\eta^2_{\text{format}} = 0.02\)，交互项 \(\eta^2_{\text{model×prompt}} = 0.01\)。</p>
+</div>
+<div class="method-module">
+<div class="module-title">② 排名稳定性的信息论证明</div>
+<p>定义排名逆转概率 \(P_{\text{inv}}(i,j)\) 为通过改变提示使模型 \(i\) 超过模型 \(j\) 的概率。通过贝叶斯推断估计：</p>
+<p>$$P_{\text{inv}}(i,j) = \Pr\left[\exists (p_i, p_j): Y_{i,p_i} > Y_{j,p_j} \,|\, \bar{Y}_j > \bar{Y}_i\right]$$</p>
+<p>实验表明，当平均分数差 \(|\bar{Y}_i - \bar{Y}_j| > 2\sigma_{\text{prompt}}\) 时（约 3 ELO 分），\(P_{\text{inv}} < 0.01\)。即：提示敏感性虽然存在，但几乎不影响有意义的排名差异。</p>
+</div>
+<div class="method-module">
+<div class="module-title">③ 大规模实验设计</div>
+<p>系统化覆盖：</p>
+<ul>
+<li><strong>40+ 模型</strong>：从 1B 到 405B 参数，包含 Llama、Qwen、Mistral、DeepSeek、Gemma 家族</li>
+<li><strong>20+ 基准</strong>：MMLU、GSM8K、HumanEval、ARC、HellaSwag、BBH 等</li>
+<li><strong>5 种提示</strong>：zero-shot、few-shot(3/5/8)、chain-of-thought</li>
+<li><strong>3 种格式</strong>：multiple-choice、open-ended、scoring</li>
+</ul>
+<p>总计 >12,000 个 (模型, 基准, 提示, 格式) 组合的评估结果。</p>
+</div>
+<div class="method-module">
+<div class="module-title">④ 能力维度的因子分析</div>
+<p>对 40 个模型在 20 个基准上的分数矩阵进行因子分析，发现仅需 <strong>3 个潜在因子</strong>即可解释 89% 方差：</p>
+<ul>
+<li><strong>F1 — 通用推理</strong>（解释 52%）：与 MMLU、ARC、BBH 高度相关</li>
+<li><strong>F2 — 代码/数学</strong>（解释 24%）：与 HumanEval、GSM8K、MATH 高度相关</li>
+<li><strong>F3 — 指令遵循</strong>（解释 13%）：与 IFEval、MT-Bench 高度相关</li>
+</ul>
+<p>这种低维结构说明当前 LLM 的能力空间高度耦合，也解释了为什么单一数值（如 Chatbot Arena ELO）能有效表征模型实力。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方差来源</th><th>偏 η²</th><th>F 统计量</th><th>p 值</th></tr>
+<tr><td class="highlight">模型 (Model)</td><td class="highlight">0.91</td><td class="highlight">4,832</td><td>&lt;0.001</td></tr>
+<tr><td>提示 (Prompt)</td><td>0.03</td><td>156</td><td>&lt;0.001</td></tr>
+<tr><td>格式 (Format)</td><td>0.02</td><td>89</td><td>&lt;0.001</td></tr>
+<tr><td>模型×提示 交互</td><td>0.01</td><td>12</td><td>&lt;0.01</td></tr>
+<tr><td>残差</td><td>0.03</td><td>—</td><td>—</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>"提示敏感性幻觉"</strong>：此前报道的"同一提示下模型排名大幅变化"主要发生在能力相近的模型对之间（ELO 差 &lt;3）。一旦能力差距超过阈值，排名完全稳定</li>
+<li><strong>Few-shot 收益递减</strong>：从 0-shot 到 3-shot 平均提升 4.2%，从 3-shot 到 8-shot 仅提升 0.6%——说明 few-shot 主要帮助"解锁"已有能力，而非创造新能力</li>
+<li><strong>3 因子预测力</strong>：仅用 3 个潜在因子分数可以以 \(R^2 = 0.93\) 预测模型在未见基准上的表现——为模型评估"以少胜多"提供了理论基础</li>
+</ol>
+<p class="insight">🔑 启示：评估资源应投入到"覆盖更多能力维度"而非"尝试更多提示变体"——后者的边际信息增益极低。</p>
+</div>
+</div>

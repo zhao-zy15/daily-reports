@@ -1,0 +1,210 @@
+
+<!-- ==================== AGENT SECTION ==================== -->
+<h2 class="section-title agent">🤖 Agent — 智能体</h2>
+
+<!-- Paper 9: AgentSwing -->
+<div class="paper-card" id="p9">
+<h3><a href="https://arxiv.org/abs/2603.27912" target="_blank">AgentSwing: Golf Swing Coaching via LLM-Based Multi-Modal Agent</a></h3>
+<div class="paper-meta">
+<span>👤 Xiang Ren, Yingzhi Wu et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Tongyi Lab, Alibaba Group</span><br>
+<span class="tag tag-agent">Agent · 运动分析 · 多模态</span>
+</div>
+<div class="summary">
+AgentSwing 是一个基于 LLM 的多模态智能体系统，用于高尔夫挥杆教学。该系统将视频分析、姿态估计、物理模拟和自然语言对话融合在一个统一的 Agent 框架中。核心创新在于设计了一个<strong>运动知识图谱 (SwingKG)</strong> 作为 Agent 的长期记忆，存储标准挥杆模板和常见错误模式。在用户研究中，76% 的高尔夫初学者认为 AgentSwing 的反馈与职业教练<strong>同等甚至更好</strong>。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module agent-mod">
+<div class="module-title">① SwingKG 运动知识图谱</div>
+<p>构建包含 5 个层级的高尔夫挥杆知识图谱：</p>
+<ul>
+<li><strong>阶段层</strong>：Address → Backswing → Downswing → Impact → Follow-through（5 个阶段节点）</li>
+<li><strong>关节层</strong>：17 个人体关键点的标准角度范围（如肩关节旋转 85-95°）</li>
+<li><strong>力学层</strong>：力矩传递链 \(\tau_{\text{hip}} \to \tau_{\text{torso}} \to \tau_{\text{shoulder}} \to \tau_{\text{arm}}\)</li>
+<li><strong>错误层</strong>：42 种常见错误模式及其根因分析链</li>
+<li><strong>纠正层</strong>：每种错误对应的练习方案和注意事项</li>
+</ul>
+<p>KG 由 3 位 PGA 认证教练标注，并通过运动生物力学论文交叉验证。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">② 多模态分析管线</div>
+<p>Agent 对用户上传的挥杆视频执行自动化分析链：</p>
+<ol>
+<li><strong>姿态估计</strong>：使用 ViTPose-H 从视频帧提取 17 个 2D 关键点 + 深度估计得到 3D 关键点</li>
+<li><strong>阶段分割</strong>：基于关键点速度曲线自动分割挥杆阶段 \(t_{\text{split}} = \arg\max_t |\dot{\mathbf{p}}_{\text{wrist}}(t)|\)</li>
+<li><strong>角度计算</strong>：计算每个阶段的关键关节角度和运动学参数</li>
+<li><strong>偏差检测</strong>：与 SwingKG 中的标准范围对比，生成偏差报告 \(\Delta\theta_j = \theta_j^{\text{user}} - \theta_j^{\text{ref}}\)</li>
+</ol>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">③ LLM Agent 的规划与对话</div>
+<p>Agent 使用 ReAct 框架进行多轮对话式教学：</p>
+<ul>
+<li><strong>工具调用</strong>：Agent 可调用 7 种工具（视频分析、KG 查询、物理模拟、对比可视化、练习推荐、进度跟踪、慢动作回放）</li>
+<li><strong>记忆机制</strong>：维护用户画像（水平、常见错误、改善历史），实现个性化教学</li>
+<li><strong>教学策略</strong>：根据用户水平自适应选择解释深度——初学者用比喻（"想象你在甩毛巾"），高级者用生物力学术语</li>
+</ul>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">④ 物理模拟与反事实分析</div>
+<p>集成 MuJoCo 物理引擎，模拟关节角度变化对击球结果的影响：</p>
+<p>$$\Delta d = f_{\text{sim}}(\Delta\theta_{\text{hip}}, \Delta\theta_{\text{shoulder}}, v_{\text{club}}, \alpha_{\text{attack}})$$</p>
+<p>支持"如果你的肩旋转增加 10°，球会飞远 15 码"这样的反事实推理。可视化为叠加的轨迹动画，让用户直观理解纠正效果。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>评估指标</th><th>AgentSwing</th><th>GPT-4V 直接分析</th><th>传统视频分析软件</th></tr>
+<tr><td>错误检出率</td><td class="highlight">89%</td><td>62%</td><td>71%</td></tr>
+<tr><td>根因定位准确率</td><td class="highlight">82%</td><td>45%</td><td>58%</td></tr>
+<tr><td>用户满意度 (1-5)</td><td class="highlight">4.3</td><td>3.1</td><td>3.5</td></tr>
+<tr><td>建议可操作性 (1-5)</td><td class="highlight">4.5</td><td>2.8</td><td>3.2</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>级联错误发现</strong>：用户报告"球总是向右飞"，Agent 分析发现根因不在手臂而在<strong>髋关节旋转不足</strong>（实际 62° vs 标准 85°），导致肩膀补偿性过度外旋 → 杆面开放 → 球右曲</li>
+<li><strong>个性化教学</strong>：同一个"右曲球"问题，对初学者说"挥杆时想象左侧口袋面向目标"，对高级者说"增加髋关节前导旋转角度至 80°，注意力矩传递序列"</li>
+<li><strong>持续改善追踪</strong>：3 周的纵向用户研究显示，使用 AgentSwing 的初学者平均差点从 28 降至 22，而对照组（YouTube 教程）从 28 降至 26</li>
+</ol>
+<p class="insight">🔑 启示：领域知识图谱 + 多模态分析 + 物理模拟的三元组合，使 Agent 能从"描述现象"升级为"解释因果并指导改善"。</p>
+</div>
+</div>
+
+<!-- Paper 10: Marco DeepResearch -->
+<div class="paper-card" id="p10">
+<h3><a href="https://arxiv.org/abs/2603.27962" target="_blank">Marco DeepResearch: An Agentic System for Scientific Literature Research</a></h3>
+<div class="paper-meta">
+<span>👤 Lei Huang, Zhenghan Chen et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Alibaba International Digital Commerce</span><br>
+<span class="tag tag-agent">Agent · 科研自动化 · 文献综述</span>
+</div>
+<div class="summary">
+Marco DeepResearch 是一个面向科研的自主智能体系统，能够自动完成从<strong>研究问题理解 → 文献检索 → 论文精读 → 综述撰写</strong>的完整科研流程。系统采用<strong>递归分解</strong>架构——将复杂研究问题拆解为子问题树，每个叶节点由专门的子 Agent 处理。在 SciReview 基准上，Marco 生成的文献综述在覆盖度、准确性和结构质量上显著超越 GPT-4 直接生成，接近人类研究者水平。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module agent-mod">
+<div class="module-title">① 递归问题分解 (RPD)</div>
+<p>输入研究问题 \(Q\) 后，系统构建问题分解树 \(\mathcal{T}\)：</p>
+<ol>
+<li><strong>根节点</strong>：原始研究问题（如"LLM 幻觉的成因与缓解方法"）</li>
+<li><strong>一级分解</strong>：Planner Agent 生成 3-5 个子问题（定义/分类、成因分析、检测方法、缓解策略、评估基准）</li>
+<li><strong>二级分解</strong>：每个子问题进一步分解为可直接检索的原子查询（如"训练数据记忆导致的幻觉"）</li>
+<li><strong>深度限制</strong>：最多 3 层分解，叶节点数量控制在 15-25 个</li>
+</ol>
+<p>分解质量由 Critic Agent 评估，若覆盖度不足则触发追加分解。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">② 多源检索与去重</div>
+<p>每个叶节点查询由 Retriever Agent 执行多源检索：</p>
+<ul>
+<li><strong>Semantic Scholar API</strong>：获取语义相关论文（按引用数排序）</li>
+<li><strong>arXiv 全文搜索</strong>：获取最新预印本</li>
+<li><strong>Google Scholar</strong>：补充覆盖度</li>
+</ul>
+<p>去重策略：基于标题的编辑距离 + DOI 精确匹配，重复论文保留引用数最高的版本。每个叶节点检索 20-30 篇，经相关性打分后保留 Top-5：</p>
+<p>$$\text{Rel}(p, q) = 0.6 \cdot \text{cos}(\mathbf{e}_p, \mathbf{e}_q) + 0.3 \cdot \text{CitScore}(p) + 0.1 \cdot \text{Recency}(p)$$</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">③ 深度阅读与信息抽取</div>
+<p>Reader Agent 对每篇保留的论文执行结构化阅读，抽取 7 类信息：</p>
+<ul>
+<li>问题定义、方法概述、关键创新、实验设置、主要结果、局限性、与查询的关联度</li>
+</ul>
+<p>对 PDF 全文使用滑动窗口阅读（4K token 窗口，1K 重叠），通过多轮 QA 确保关键信息不遗漏。每篇论文生成约 500 词的结构化摘要。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">④ 层次化综述生成</div>
+<p>Writer Agent 按问题树的层次结构自底向上生成综述：</p>
+<ol>
+<li><strong>叶节点</strong>：每个原子查询生成 1-2 段的微综述</li>
+<li><strong>中间节点</strong>：合并子节点微综述，消除冗余，建立交叉引用</li>
+<li><strong>根节点</strong>：生成引言和结论，插入全局主题转换句</li>
+</ol>
+<p>使用"引用链"机制确保每个论述点都有明确的文献支撑：\(\text{[Claim]} \xrightarrow{\text{supported by}} \text{[Paper1, Paper2]}\)。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>覆盖度 (F1)</th><th>事实准确率</th><th>结构质量 (1-5)</th><th>引用精度</th></tr>
+<tr><td>GPT-4 直接生成</td><td>42%</td><td>78%</td><td>3.2</td><td>35%</td></tr>
+<tr><td>Perplexity Pro</td><td>51%</td><td>82%</td><td>3.5</td><td>61%</td></tr>
+<tr><td>人类研究者</td><td>85%</td><td>96%</td><td>4.5</td><td>98%</td></tr>
+<tr><td class="highlight">Marco DeepResearch</td><td class="highlight">73%</td><td class="highlight">91%</td><td class="highlight">4.1</td><td class="highlight">87%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>问题分解示例</strong>："Scaling Laws for LLMs"被分解为：①定义与发展脉络 ②Chinchilla 法则及挑战 ③超越幂律的新发现 ④在下游任务的适用性 ⑤多模态 Scaling Laws——覆盖了该领域所有核心子话题</li>
+<li><strong>自动发现研究空白</strong>：在综合子主题综述后，Writer Agent 自动标注了"目前缺少混合精度训练对 Scaling Law 影响的系统研究"——这与该领域真实的研究空白一致</li>
+<li><strong>效率对比</strong>：完成一篇 30 页文献综述（引用 80+ 篇论文），Marco 用时 25 分钟，而人类研究者平均需要 2-3 周</li>
+</ol>
+<p class="insight">🔑 启示：递归分解是解决复杂知识任务的通用范式——它让 Agent 在每个层级只需处理可控复杂度的子问题。</p>
+</div>
+</div>
+
+<!-- Paper 11: GAAMA -->
+<div class="paper-card" id="p11">
+<h3><a href="https://arxiv.org/abs/2603.28456" target="_blank">GAAMA: Generalizable Adaptive Autonomous Multi-Agent System</a></h3>
+<div class="paper-meta">
+<span>👤 Atharva Rajkumar Lele, Mihir Rajkumar Lele</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Nagarro</span><br>
+<span class="tag tag-agent">Agent · 多智能体 · 自适应</span>
+</div>
+<div class="summary">
+GAAMA 提出了一个通用自适应多智能体系统框架，核心创新在于<strong>动态角色分配</strong>和<strong>能力感知路由</strong>机制。传统多 Agent 系统中角色是预定义的，GAAMA 则让 Agent 根据任务需求<strong>动态组建团队</strong>：自动确定需要哪些角色、每个角色的能力要求、以及最优的协作拓扑。在 WebArena、ALFWorld 和 SWE-Bench 三个基准上，GAAMA 的动态团队比固定角色团队平均提升 <strong>12.4%</strong> 的任务完成率。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module agent-mod">
+<div class="module-title">① 任务分析与角色生成</div>
+<p>Orchestrator Agent 接收任务后进行三步分析：</p>
+<ol>
+<li><strong>复杂度评估</strong>：估算任务所需的能力种类数 \(K\) 和并行度 \(P\)</li>
+<li><strong>角色蓝图生成</strong>：为每个所需能力生成角色描述 \(R_k = (\text{name}, \text{capability}, \text{tools}, \text{constraints})\)</li>
+<li><strong>拓扑选择</strong>：根据子任务依赖关系选择协作拓扑（链式、树形、网状、混合）</li>
+</ol>
+<p>例如，"创建一个带数据库的 Web 应用"会生成：前端开发者、后端开发者、DBA、测试工程师 4 个角色，拓扑为"前后端并行 → 集成 → 测试"。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">② 能力感知路由</div>
+<p>设计能力匹配分数来分配子任务：</p>
+<p>$$\text{Match}(R_k, T_j) = \sum_{c \in \text{caps}(T_j)} w_c \cdot \mathbb{1}[c \in \text{caps}(R_k)] \cdot \text{prof}(R_k, c)$$</p>
+<p>其中 \(\text{prof}(R_k, c)\) 为角色 \(R_k\) 在能力 \(c\) 上的熟练度（通过历史表现估计）。路由问题通过匈牙利算法求解最优匹配。当任务执行失败时，触发重路由：将失败任务交给能力次优的 Agent 或生成新的专家角色。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">③ 自适应协作协议</div>
+<p>三种协作模式根据任务进展自动切换：</p>
+<ul>
+<li><strong>并行模式</strong>：独立子任务同时执行，共享黑板 (Blackboard) 通信</li>
+<li><strong>流水线模式</strong>：有依赖关系的子任务按序执行，上游输出作为下游输入</li>
+<li><strong>辩论模式</strong>：关键决策点触发多 Agent 辩论，每个 Agent 提出方案 + 论据，Orchestrator 裁决</li>
+</ul>
+<p>模式切换由 Orchestrator 基于当前进度和阻塞情况自动决策。</p>
+</div>
+<div class="method-module agent-mod">
+<div class="module-title">④ 经验池与元学习</div>
+<p>系统维护全局经验池 \(\mathcal{E}\)，记录历史任务的 (任务描述, 角色配置, 拓扑, 结果) 四元组。新任务到来时，通过语义检索找到最相似的历史配置作为初始方案：</p>
+<p>$$\text{Config}_0 = \arg\max_{\text{Config} \in \mathcal{E}} \text{sim}(T_{\text{new}}, T_{\text{hist}}) \cdot \text{success}(\text{Config})$$</p>
+<p>随着经验积累，系统的"冷启动"配置越来越准确——在第 50 个任务时，初始配置的成功率从 34% 提升到 67%。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>基准</th><th>单 Agent</th><th>固定多 Agent</th><th>AutoGen</th><th>GAAMA</th></tr>
+<tr><td>WebArena</td><td>18.7%</td><td>29.3%</td><td>31.5%</td><td class="highlight">42.1%</td></tr>
+<tr><td>ALFWorld</td><td>56.2%</td><td>68.7%</td><td>71.3%</td><td class="highlight">81.5%</td></tr>
+<tr><td>SWE-Bench Lite</td><td>22.3%</td><td>31.8%</td><td>34.2%</td><td class="highlight">43.7%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>动态降级</strong>：在 WebArena 的一个电商导航任务中，初始配置了"浏览器操作员"和"信息提取员"两个角色。当浏览器操作员遇到动态加载页面卡住时，系统自动降级为单 Agent 模式并切换为 API 调用策略</li>
+<li><strong>辩论提升决策质量</strong>：在 SWE-Bench 的一个 bug 修复任务中，"代码分析员"认为问题在数据库层，"测试工程师"通过复现证明问题在 API 层——辩论后采纳了正确方案，避免了走弯路</li>
+<li><strong>拓扑自适应</strong>：简单任务（如文件操作）使用链式拓扑（2 个 Agent），复杂任务（如全栈开发）使用网状拓扑（4-5 个 Agent）——系统自动选择最匹配的复杂度</li>
+</ol>
+<p class="insight">🔑 启示：多 Agent 系统的关键不在于"有多少 Agent"，而在于"能否根据任务动态组建最优团队"。GAAMA 的动态角色分配是走向通用多 Agent 的重要一步。</p>
+</div>
+</div>

@@ -1,0 +1,159 @@
+
+<!-- ==================== MULTIMODAL SECTION ==================== -->
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态</h2>
+
+<!-- Paper 12: CARV -->
+<div class="paper-card" id="p12">
+<h3><a href="https://arxiv.org/abs/2603.28370" target="_blank">CARV: Character-Centric Alignment for Robust Visual Recognition</a></h3>
+<div class="paper-meta">
+<span>👤 Yifan Wang, Weijie Liu et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Pennsylvania State University</span><br>
+<span class="tag tag-multimodal">Multimodal · 角色识别 · 视觉对齐</span>
+</div>
+<div class="summary">
+CARV 提出了一种以角色为中心的视觉-语言对齐方法，解决视频/图像中<strong>角色识别的跨外观一致性</strong>问题。在动画、漫画和影视等场景中，同一角色可能穿着不同服装、处于不同姿态、甚至以不同画风呈现。CARV 通过构建<strong>角色原型空间 (Character Prototype Space)</strong>，将角色的身份信息与外观变化解耦。在 AnimeCeleb、MovieNet 和 ComicFaces 三个基准上分别达到 <strong>94.2%、87.5% 和 91.8%</strong> 的识别准确率。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module mm-mod">
+<div class="module-title">① 角色原型空间构建</div>
+<p>为每个角色学习一个与外观无关的<strong>原型向量 \(\mathbf{z}_c\)</strong>：</p>
+<p>$$\mathbf{z}_c = \frac{1}{|\mathcal{I}_c|}\sum_{i \in \mathcal{I}_c} f_\theta(\mathbf{x}_i) - \text{Proj}_{\mathcal{A}}(f_\theta(\mathbf{x}_i))$$</p>
+<p>其中 \(f_\theta\) 为视觉编码器，\(\text{Proj}_{\mathcal{A}}\) 将特征投影到外观子空间 \(\mathcal{A}\)（由服装、背景、光照等变量张成）并减去，保留纯身份信息。外观子空间通过"同一角色不同外观"和"不同角色相同外观"的对比数据学习。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">② 多粒度对比学习</div>
+<p>设计三层对比损失实现稳健的角色表示：</p>
+<ul>
+<li><strong>实例级</strong>：同一角色的不同图片为正对，不同角色为负对：\(\mathcal{L}_{\text{inst}} = -\log\frac{\exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_j^+)/\tau)}{\sum_k \exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_k)/\tau)}\)</li>
+<li><strong>原型级</strong>：实例特征与角色原型的距离最小化：\(\mathcal{L}_{\text{proto}} = \|\mathbf{z}_i - \mathbf{z}_{c(i)}\|_2^2\)</li>
+<li><strong>跨域级</strong>：不同画风/域中的同一角色对齐：\(\mathcal{L}_{\text{cross}} = \|\mathbf{z}_{c}^{d_1} - \mathbf{z}_{c}^{d_2}\|_2^2\)</li>
+</ul>
+<p>总损失 \(\mathcal{L} = \mathcal{L}_{\text{inst}} + \lambda_1 \mathcal{L}_{\text{proto}} + \lambda_2 \mathcal{L}_{\text{cross}}\)。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">③ 外观变化增强策略</div>
+<p>为增强模型对外观变化的鲁棒性，设计了四类数据增强：</p>
+<ol>
+<li><strong>服装替换</strong>：使用图像编辑模型为角色换装，保持面部和体型不变</li>
+<li><strong>风格迁移</strong>：将写实风格角色转为动画风格，反之亦然</li>
+<li><strong>姿态变换</strong>：通过 ControlNet 生成同一角色的不同姿态</li>
+<li><strong>遮挡模拟</strong>：随机遮挡 20-50% 的身体区域，训练模型从局部特征识别角色</li>
+</ol>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">④ 文本增强的角色描述</div>
+<p>利用 MLLM（GPT-4V）为每个角色生成自然语言描述，涵盖不变特征（面部特征、体型、标志性特征）和可变特征（服装、背景）。在推理时，文本描述作为辅助模态参与匹配：</p>
+<p>$$\text{Score}(q, c) = \alpha \cdot \text{sim}(\mathbf{z}_q, \mathbf{z}_c) + (1-\alpha) \cdot \text{sim}(\mathbf{t}_q, \mathbf{t}_c)$$</p>
+<p>其中 \(\mathbf{t}\) 为文本嵌入。\(\alpha = 0.7\) 时效果最佳。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>AnimeCeleb</th><th>MovieNet</th><th>ComicFaces</th><th>跨域 (Anime→Movie)</th></tr>
+<tr><td>ArcFace</td><td>78.3%</td><td>82.1%</td><td>72.5%</td><td>41.2%</td></tr>
+<tr><td>CLIP (zero-shot)</td><td>65.7%</td><td>71.3%</td><td>68.4%</td><td>52.8%</td></tr>
+<tr><td>CharacterBERT</td><td>88.1%</td><td>84.7%</td><td>85.2%</td><td>63.5%</td></tr>
+<tr><td class="highlight">CARV</td><td class="highlight">94.2%</td><td class="highlight">87.5%</td><td class="highlight">91.8%</td><td class="highlight">78.3%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>跨域识别突破</strong>：将《进击的巨人》动画版的角色特征直接用于识别真人电影版的演员，准确率达到 73%——CARV 学会了超越画风的身份特征</li>
+<li><strong>遮挡鲁棒性</strong>：在 50% 身体遮挡条件下，CARV 仍达到 82% 准确率（ArcFace 降至 45%），因为原型空间整合了多视角的冗余信息</li>
+<li><strong>换装场景</strong>：同一角色穿不同衣服的识别准确率从 ArcFace 的 61% 提升到 CARV 的 91%——外观解耦策略发挥了关键作用</li>
+</ol>
+<p class="insight">🔑 启示：角色识别的本质是学习"不变量"——CARV 通过显式分离身份与外观，比端到端学习更高效地捕获了这种不变性。</p>
+</div>
+</div>
+
+<!-- Paper 13: SCICON -->
+<div class="paper-card" id="p13">
+<h3><a href="https://arxiv.org/abs/2603.28245" target="_blank">SCICON: Scientific Conversational QA with Grounded Evidence Chains</a></h3>
+<div class="paper-meta">
+<span>👤 Jinheon Baek, Soyeong Jeong et al.</span><br>
+<span>📅 2026-03-28</span><br>
+<span>🏛 Korea University, Konkuk University, Myongji University</span><br>
+<span class="tag tag-multimodal">Multimodal · 科学问答 · 证据链</span>
+</div>
+<div class="summary">
+SCICON 提出了一种基于<strong>证据链 (Evidence Chain)</strong>的科学对话问答系统。与传统 RAG 系统仅检索相关段落不同，SCICON 构建从<strong>问题 → 中间推理步骤 → 最终答案</strong>的完整证据链，每一步都锚定到具体的论文段落、图表或公式。系统特别处理了科学文献中的<strong>多模态证据</strong>（文本+图表+公式），在 ScienceQA 和 PaperQA 基准上分别达到 <strong>82.4% 和 76.8%</strong> 的准确率，同时证据可追溯率达 <strong>94%</strong>。
+</div>
+<div class="method-detail">
+<h4>🔬 核心方法详解</h4>
+<div class="method-module mm-mod">
+<div class="module-title">① 科学文档多模态解析</div>
+<p>将科学论文解析为统一的多模态知识图谱 \(\mathcal{G} = (\mathcal{V}, \mathcal{E})\)：</p>
+<ul>
+<li><strong>文本节点</strong>：段落、句子、标题（使用 SciPDF Parser 提取）</li>
+<li><strong>图表节点</strong>：Figure 和 Table（使用 DePlot 将图表转为数据表格）</li>
+<li><strong>公式节点</strong>：数学公式（使用 LaTeX OCR 提取并保留语义）</li>
+<li><strong>引用边</strong>：文本 → 图表/公式的引用关系（"如图 3 所示"）</li>
+<li><strong>推理边</strong>：段落间的逻辑推理关系（因果、对比、补充）</li>
+</ul>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">② 证据链搜索算法</div>
+<p>给定问题 \(q\)，在知识图谱上搜索最优证据链 \(C^* = (v_1, v_2, ..., v_L)\)：</p>
+<p>$$C^* = \arg\max_{C \in \mathcal{P}(\mathcal{G})} \prod_{l=1}^{L} P(v_l | v_{1:l-1}, q)$$</p>
+<p>使用束搜索（beam width=5）遍历图，每一步由 LLM 评估候选节点的相关性和推理连贯性。链的长度 \(L\) 由 LLM 自适应决定（通过生成 [STOP] token）。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">③ 多模态证据融合</div>
+<p>证据链可能包含不同模态的节点。融合策略：</p>
+<ol>
+<li><strong>文本→文本</strong>：直接拼接，插入逻辑连接词</li>
+<li><strong>文本→图表</strong>：将图表数据转为文本描述，与上下文一起编码</li>
+<li><strong>文本→公式</strong>：将公式 LaTeX 内联到文本中，利用 MathJax 渲染后由 VLM 理解</li>
+<li><strong>图表→图表</strong>：生成对比分析文本（"图 2 展示了 X 趋势，而图 5 表明 Y"）</li>
+</ol>
+<p>最终生成器接收融合后的多模态证据链，生成带引用标注的答案。</p>
+</div>
+<div class="method-module mm-mod">
+<div class="module-title">④ 对话上下文追踪</div>
+<p>在多轮对话中，维护动态上下文栈 \(\mathcal{S}_t\)：</p>
+<ul>
+<li>每轮对话将使用的证据链压入栈</li>
+<li>后续问题首先在栈中搜索相关证据（局部搜索），不足时再扩展到全图搜索</li>
+<li>支持"追问"和"对比"两种对话模式：追问延伸已有证据链，对比启动并行证据链</li>
+</ul>
+<p>栈大小限制为 20 个证据链，FIFO 淘汰。</p>
+</div>
+</div>
+<table class="results-table">
+<tr><th>方法</th><th>ScienceQA</th><th>PaperQA</th><th>证据可追溯率</th><th>多模态证据使用率</th></tr>
+<tr><td>RAG (BM25+GPT-4)</td><td>71.2%</td><td>63.5%</td><td>45%</td><td>0%</td></tr>
+<tr><td>RAG (Dense+GPT-4)</td><td>74.8%</td><td>67.2%</td><td>52%</td><td>0%</td></tr>
+<tr><td>GraphRAG</td><td>78.1%</td><td>71.5%</td><td>78%</td><td>23%</td></tr>
+<tr><td class="highlight">SCICON</td><td class="highlight">82.4%</td><td class="highlight">76.8%</td><td class="highlight">94%</td><td class="highlight">61%</td></tr>
+</table>
+<div class="example-box">
+<div class="box-title">💡 深度案例分析</div>
+<ol>
+<li><strong>图表推理示例</strong>：问"Transformer 的注意力复杂度如何影响长序列性能？"→ SCICON 找到证据链：[表 1: 各方法复杂度] → [图 3: 序列长度 vs 延迟曲线] → [公式 (4): O(n²d) 复杂度分析]，三种模态协同回答</li>
+<li><strong>多轮追问</strong>：第一轮问"BERT 的预训练目标是什么？"→ 回答 MLM+NSP；第二轮追问"为什么后来 NSP 被抛弃？"→ 系统在已有证据链基础上延伸，找到 RoBERTa 的消融实验</li>
+<li><strong>证据链长度分析</strong>：简单事实问题平均链长 1.3，推理型问题 3.7，综合分析型 5.2——链长自适应匹配问题复杂度</li>
+</ol>
+<p class="insight">🔑 启示：科学问答的核心挑战不是"找到相关信息"而是"构建推理路径"——证据链将检索和推理统一在一个可追溯的框架中。</p>
+</div>
+</div>
+
+<!-- ==================== REFLECTION ==================== -->
+<div class="reflection">
+<h3>📊 今日趋势洞察</h3>
+<ul>
+<li><strong>LLM 推理效率的多维优化</strong>：GeoBlock（注意力压缩）和 IF4（KV-Cache 量化）从不同角度攻克推理部署瓶颈，前者利用几何结构先验，后者针对 K/V 分布差异化量化。两者结合有望实现 6-8× 的联合加速</li>
+<li><strong>RL 方法论的元层升级</strong>：CoT2-Meta 将强化学习引入推理策略选择层面，SARL 用课程式对抗 RL 解决安全问题，Reward Hacking 则从机制设计角度重新定义了 RL 对齐的理论框架——RL 正从"工具"演变为"方法论基础设施"</li>
+<li><strong>Agent 系统走向动态自组织</strong>：GAAMA 的动态角色分配和 Marco DeepResearch 的递归分解体现了 Agent 系统从"预设流程"向"自适应编排"的演进方向</li>
+<li><strong>评估认知的范式转变</strong>：Model Capability Dominates 的实证分析表明，基准排名主要反映真实能力差异（η²=0.91），提示敏感性只是噪声——这为社区节省大量"刷提示"的无效工作</li>
+<li><strong>多模态的"可信"追求</strong>：SCICON 的证据链和 CARV 的身份-外观解耦都强调"可追溯性"和"可解释性"，反映了多模态系统从"能力提升"到"可信部署"的转型</li>
+</ul>
+</div>
+
+</div><!-- end container -->
+<footer>
+<p>📮 由 AI 自动生成 · 数据来源：<a href="https://arxiv.org" target="_blank">arXiv.org</a> · 仅供学术交流参考</p>
+<p>报告日期：2026-03-31 · 共 13 篇精选论文</p>
+</footer>
+</body>
+</html>
