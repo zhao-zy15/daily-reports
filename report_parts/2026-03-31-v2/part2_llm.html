@@ -1,0 +1,303 @@
+<!-- ========== LLM Section ========== -->
+<div class="section-header">
+  <h2>🧠 LLM — 大语言模型</h2>
+</div>
+
+<!-- Paper 1: Model Capability Dominates -->
+<div class="paper-card" id="paper-1">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27844" target="_blank">Model Capability Dominates: Inference-Time Optimization Lessons from AIMO 3</a></h3>
+    <div class="paper-meta">
+      <span>👤 Natapong Nitarach</span>
+      <span>📅 2026-03-29 · arXiv:2603.27844</span>
+      <span>🏛 Independent Researcher (Kaggle)</span>
+      <span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Inference-Time</span> <span class="tag tag-llm">Math Reasoning</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>在数学推理竞赛中，多数投票（majority voting）是提升 LLM 准确率的标准手段，但相关误差（correlated errors）限制了投票的有效样本量。一个自然的改进思路是为不同投票者分配结构差异化的推理策略（如倒推法、分类求解法等），以去相关误差。然而，这种"多样化提示词混合器"（Diverse Prompt Mixer）是否真的有效？本文通过 AIMO 3 竞赛的 50 道 IMO 级别数学题、23+ 实验、3 个模型的系统性实验，给出了否定的答案。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 系统架构：单 H100 上的并行推理管线</strong><br>
+      使用 gpt-oss-120b（116.8B 总参/5.1B 激活参数的 MoE 模型），通过 vLLM 引擎以 FP8 量化部署在单张 H100 80GB 上。每个问题启动 \(N=8\) 个并行推理线程，共享系统提示但使用不同随机种子（\(T=1.0\)）。每个线程可通过 <code>tool_call</code> 调用 Python/SymPy 沙箱执行多轮工具辅助推理。预算分配采用均匀策略：\(\text{budget}_i = \text{remaining\_time} / \text{remaining\_problems}\)。
+    </div>
+    <div class="method-step">
+      <strong>② 多样化提示词混合器设计</strong><br>
+      设计了四种互补的推理策略：<strong>Original</strong>（分步探索+验证）、<strong>Small Cases First</strong>（枚举 \(n=1,2,3,\dots\) 发现模式后证明）、<strong>Work Backwards</strong>（从约束倒推缩小搜索空间）、<strong>Classify Then Solve</strong>（识别题型后匹配技术）。测试了从 Conservative（5+1+1+1）到 Equal（2+2+2+2）等多种配比。
+    </div>
+    <div class="method-step">
+      <strong>③ 早停与熵加权投票</strong><br>
+      当 8 个线程中有 4 个达成相同非平凡答案（\(>1\)）时触发早停。最终答案通过熵加权多数决选择：\(w = 1 + 1/(\text{entropy} + 0.1)\)，低熵（高置信度）线程权重更大。
+    </div>
+    <div class="method-step">
+      <strong>④ 误差相关性分析：为什么多样化无效</strong><br>
+      在 \(T=1.0\) 下测量成对错误相关性 \(\rho\)，发现平均值为 \(-0.258\)（接近零甚至略负），表明高温采样已经充分去相关。引入弱策略在降低 \(\rho\) 的同时更大幅度地降低了单次准确率 \(\hat{p}\)，得不偿失。模型能力差距（\(\hat{p}=0.69\) vs \(0.46\)）造成的 17 分差距远远大于所有推理时优化的 ±2 分波动。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：Code-first 策略的虚假信号</strong>
+      <ol>
+        <li><strong>初始结果</strong>：实验 E12（8× Code-first 提示词）首次提交得分 41/50，似乎超越了基准均值 39.7</li>
+        <li><strong>确认实验</strong>：后续两次重复分别得 38 和 34，三次均值仅 37.7</li>
+        <li><strong>教训</strong>：单次高分可能是随机波动。在 \(N=8\), \(\hat{p} \approx 0.69\) 的配置下，每次提交的标准差约 ±2 分，必须多次重复才能区分真实改进与噪声</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>配置</th><th>策略分配</th><th>LB 得分</th><th>Δ vs 基准</th></tr>
+      <tr><td>Baseline (13 runs mean)</td><td>8× Original</td><td class="highlight">39.7</td><td>—</td></tr>
+      <tr><td>Conservative</td><td>5+1+1+1</td><td>40</td><td>+0.3</td></tr>
+      <tr><td>Aggressive</td><td>3+2+2+1</td><td>40</td><td>+0.3</td></tr>
+      <tr><td>Equal</td><td>2+2+2+2</td><td>38</td><td>-1.7</td></tr>
+      <tr><td>8× Small Cases</td><td>0+8+0+0</td><td>37</td><td>-2.7</td></tr>
+      <tr><td>8× Classify</td><td>0+0+0+8</td><td>36</td><td>-3.7</td></tr>
+      <tr><td>gpt-oss-120b vs Qwen3.5-35B</td><td>—</td><td>39.7 vs 23</td><td><strong>-16.7</strong></td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>温度消融显示 \(T=1.0\) 是最优点（\(T=0.5\): 38, \(T=0.8\): 40, \(T=1.2\): 37）。核心发现：<strong>模型能力解释了 91% 的方差</strong>，所有推理时优化的效果量级比模型升级小一个数量级。这对"提示词工程能弥补模型差距"的流行叙事构成了强有力的反驳。局限性在于仅在数学竞赛域验证，是否推广到开放域推理有待探索。</p>
+  </div>
+</div>
+
+<!-- Paper 2: GeoBlock -->
+<div class="paper-card" id="paper-2">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26675" target="_blank">GeoBlock: Inferring Block Granularity from Dependency Geometry in Diffusion Language Models</a></h3>
+    <div class="paper-meta">
+      <span>👤 Lipeng Wan, Junjie Ma, Jianhui Gu, Zeyang Liu, Xuyang Lu, Xuguang Lan</span>
+      <span>📅 2026-03-31 · arXiv:2603.26675</span>
+      <span>🏛 西安交通大学</span>
+      <span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Diffusion LM</span> <span class="tag tag-llm">Efficient Inference</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>块扩散（Block Diffusion）通过并行 refine 一组 token 实现高效文本生成，但块大小的选择至关重要。现有方法依赖固定规则或置信度启发式，忽略了决定哪些 token 可以安全并行更新的<strong>依赖几何结构</strong>。直觉上，具有强因果顺序的区域需要顺序更新，而语义内聚的区域可以并行处理。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 依赖几何视角：三分区分解</strong><br>
+      在解码前沿位置 \(y\)，将索引划分为三个集合：\(H=\{1,\dots,x\}\)（已处理历史）、\(C=\{x+1,\dots,y\}\)（候选块）、\(F=\{y+1,\dots\}\)（未来）。核心思想是分析注意力矩阵 \(A\) 在 \((H,C,F)\) 分区上的子块，特别关注内部耦合 \(A_{C,C}\)、过去锚定 \(A_{C,H}\) 和未来泄漏 \(A_{C,F}\)。
+    </div>
+    <div class="method-step">
+      <strong>② 依赖闭合得分</strong><br>
+      定义依赖强度 \(S_{U \to V} = \sum_{i \in U} \sum_{j \in V} A_{ij}\)，构建闭合得分：
+      $$\text{Score}(x) = \frac{S_{C \to C} + \alpha \cdot S_{C \to H}}{S_{C \to C} + \alpha \cdot S_{C \to H} + S_{C \to F}}$$
+      其中 \(\alpha \in [0,1]\) 为锚定系数。得分越高表示候选块越自包含——内部凝聚力强、依赖可在当前前缀下解决、对未来泄漏最小。
+    </div>
+    <div class="method-step">
+      <strong>③ 多层显著注意力融合</strong><br>
+      对选定的语义成熟层 \(\mathcal{L}\)（如第 16/21/26 层），提取 ROI 注意力，按总注意力质量选择 top-\(k\) 显著头，加权融合：\(A \leftarrow A + w_\ell \cdot \bar{A}^{(\ell)}\)。实验表明中高层（语义成熟层）效果最佳。
+    </div>
+    <div class="method-step">
+      <strong>④ 右移边界选择</strong><br>
+      找到最大得分 \(S_{\max}\)，设阈值 \(\tau = S_{\max} - \delta\)，选择满足 \(\text{Score}(x) \geq \tau\) 的最大边界 \(x^\star\)。右移容忍度 \(\delta\) 控制块扩展的激进程度——较大的 \(\delta\) 产生更大的块但可能降低准确率。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：GSM8K 数学推理上的自适应块推理</strong>
+      <ol>
+        <li><strong>场景</strong>：Dream-7B 在 GSM8K 上进行块扩散解码</li>
+        <li><strong>固定块 B32</strong>：ACC = 73.62%, NFE = 256</li>
+        <li><strong>Dynamic B32</strong>：ACC = 74.37%, NFE = 154.69（动态调整但无几何感知）</li>
+        <li><strong>GeoBlock B32</strong>：ACC = <strong>76.88%</strong>, NFE = 167.96（几何感知自适应）</li>
+        <li><strong>分析</strong>：GeoBlock 在准确率上提升 +2.5% 而仅增加约 8% 额外计算，平均块长约 13.7±5.9 tokens</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>基准</th><th>Fixed B32</th><th>Dynamic B32</th><th>GeoBlock B32</th></tr>
+      <tr><td>Dream-7B</td><td>GSM8K</td><td>73.62</td><td>74.37</td><td class="highlight">76.88</td></tr>
+      <tr><td>Dream-7B</td><td>IFEval</td><td>43.07</td><td>43.17</td><td class="highlight">45.84</td></tr>
+      <tr><td>LLaDA-8B</td><td>GSM8K</td><td>80.21</td><td>80.21</td><td class="highlight">81.88</td></tr>
+      <tr><td>LLaDA-8B</td><td>MBPP</td><td>35.00</td><td>35.42</td><td class="highlight">36.60</td></tr>
+      <tr><td>LLaDA-8B</td><td>IFEval</td><td>63.22</td><td>63.96</td><td class="highlight">64.63</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>锚定系数消融：\(\alpha=0.5\) 最优（Dream: 76.88, LLaDA: 81.88）；右移容忍度 \(\delta=0.1\) 为最佳平衡点（再大则准确率下降）；层选择消融确认中高层（16-21-26）优于浅层（2-6-10），验证了依赖几何在深层语义网络中更清晰的假设。额外 NFE 比率仅 7%-15%，开销可控。局限性：需要访问注意力权重，对黑盒模型不适用。</p>
+  </div>
+</div>
+
+<!-- Paper 3: Adaptive Block-Scaled Data Types -->
+<div class="paper-card" id="paper-3">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28765" target="_blank">Adaptive Block-Scaled Data Types (IF4)</a></h3>
+    <div class="paper-meta">
+      <span>👤 Jack Cook, Hyemin S. Lee, Kathryn Le, Junxian Guo, Giovanni Traverso, Anantha P. Chandrakasan, Song Han</span>
+      <span>📅 2026-03-30 · arXiv:2603.28765</span>
+      <span>🏛 MIT, NVIDIA</span>
+      <span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Quantization</span> <span class="tag tag-llm">4-bit</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>NVFP4 已成为 4-bit LLM 量化的主流格式，但其固有局限——高接近最大值区域的量化误差大、缩放因子符号位未利用——限制了精度。现有改进方案（如 4/6 缩放法）虽能降低误差，但以牺牲 42.9% 动态范围为代价。能否在<strong>保持完整动态范围的同时</strong>进一步降低量化误差？</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① IF4 格式设计：FP4/INT4 自适应选择</strong><br>
+      核心创新：利用 NVFP4 缩放因子（E4M3）的未使用符号位作为<strong>模式指示器</strong>。每组 16 个值可在 FP4（E2M1，最大值 6）和 INT4（最大值 7）两种编码间自适应选择。FP4 适合有异常值的稀疏分布（如原始权重），INT4 适合均匀分布（如 Hadamard 变换后的数据）。
+    </div>
+    <div class="method-step">
+      <strong>② 量化流程</strong><br>
+      全局缩放因子：\(\alpha^{\text{FP32}} = \frac{\max(|\mathbf{X}|)}{M^{\text{FP4}} \times M^{\text{FP8}}}\)。块级缩放因子：\(\Delta_i^{\text{FP8}} = \frac{\max(|\mathbf{X}_{16i \dots 16(i+1)}|)}{\alpha \cdot M^{\text{FP4}}}\)。选择机制：计算两种模式的均方量化误差，取较小者：
+      $$\bar{\mathbf{X}}_i = \begin{cases} \bar{\mathbf{X}}_i^{(\text{INT})}, & \text{if } E^{(\text{INT})} < E^{(\text{FP})} \\ \bar{\mathbf{X}}_i^{(\text{FP})}, & \text{otherwise} \end{cases}$$
+    </div>
+    <div class="method-step">
+      <strong>③ 6/7 缩放法解决动态范围对齐</strong><br>
+      INT4 最大值为 7 而 FP4 为 6，为保持统一动态范围 [0,6]，INT4 路径量化前乘以 \(7/6\)、反量化后乘以 \(6/7\)。这确保了所有组共享相同的动态范围（100%），无需像 4/6 法那样牺牲范围。
+    </div>
+    <div class="method-step">
+      <strong>④ 硬件实现</strong><br>
+      在 28nm CMOS 上设计了 IF4 MAC 单元，延迟仅比纯 NVFP4 MAC 高 4.7%。由于 AI 负载通常显存受限而非计算受限，这种微小的逻辑开销对整体吞吐量影响可忽略。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：Hadamard 变换后的量化选择</strong>
+      <ol>
+        <li><strong>原始数据</strong>：一组 16 个权重值呈稀疏分布（1 个异常值 5.8，其余 <0.5）→ FP4 模式最优</li>
+        <li><strong>Hadamard 变换后</strong>：同组数据变为均匀分布（值集中在 1.2-2.8）→ INT4 模式最优</li>
+        <li><strong>IF4 自适应</strong>：原始组选 FP4（MSE = 0.004），变换组选 INT4（MSE = 0.003），综合 MSE 比固定 NVFP4 降低 31%</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>格式</th><th>组大小</th><th>动态范围</th><th>正态 MSE ×10⁻³</th><th>Qwen3.5-35B Wiki PPL</th></tr>
+      <tr><td>BF16 (基线)</td><td>—</td><td>—</td><td>—</td><td>7.70</td></tr>
+      <tr><td>MXFP4</td><td>32</td><td>∞</td><td>13.2</td><td>8.83</td></tr>
+      <tr><td>NVFP4</td><td>16</td><td>100%</td><td>9.0</td><td>8.14</td></tr>
+      <tr><td>NVFP4 (4/6)</td><td>16</td><td>57.1%</td><td>7.5</td><td>8.11</td></tr>
+      <tr><td class="highlight">IF4 (本文)</td><td>16</td><td class="highlight">100%</td><td class="highlight">6.2</td><td class="highlight">8.07</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>在 5 个下游任务的平均准确率上，IF4（75.3%）优于 NVFP4（75.2%）和 MXFP4（74.2%）。在 340M 预训练实验（W4A4G4）中，IF4 的训练损失最接近 BF16 基线，特别是在 Hadamard 变换场景下优势更大。局限性：当前 GPU 硬件尚无原生 IF4 支持，需要定制 MAC 单元；模式选择带来的分支逻辑在极高吞吐场景下可能成为瓶颈。</p>
+  </div>
+</div>
+
+<!-- Paper 4: TAPS -->
+<div class="paper-card" id="paper-4">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27027" target="_blank">TAPS: Task Aware Proposal Distributions for Speculative Sampling</a></h3>
+    <div class="paper-meta">
+      <span>👤 Mohamad Zbib, Mohamad Bazzi, Ammar Mohanna, Hasan Abed Al Kader Hammoud, Bernard Ghanem</span>
+      <span>📅 2026-03-27 · arXiv:2603.27027</span>
+      <span>🏛 KAUST</span>
+      <span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Speculative Decoding</span> <span class="tag tag-llm">Efficient Inference</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>投机采样（Speculative Sampling）使用小型 draft 模型快速生成候选 token，再由大型 target 模型批量验证，以加速 LLM 推理。然而，标准 draft 模型的提议分布（proposal distribution）是任务无关的——无论是代码生成还是创意写作，都使用同一个 draft 模型。这导致在特定任务上接受率低、加速效果受限。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 任务感知提议分布框架</strong><br>
+      TAPS 的核心思想是让 draft 模型的提议分布适应当前任务的特性。定义投机采样的接受率为 \(\text{AR} = \mathbb{E}_{x \sim q}\left[\min\left(1, \frac{p(x)}{q(x)}\right)\right]\)，其中 \(p\) 为 target 分布，\(q\) 为 proposal 分布。TAPS 通过最小化 \(q\) 与 \(p\) 在目标任务上的 KL 散度来提升接受率。
+    </div>
+    <div class="method-step">
+      <strong>② 轻量级任务适配器</strong><br>
+      在 draft 模型顶部添加可训练的 LoRA 适配器（rank 8-16），在少量任务样本上微调以拟合 target 模型在该任务上的输出分布。微调目标：\(\min_\phi \mathbb{E}_{x \sim \mathcal{D}_{\text{task}}} \left[ D_{\text{KL}}(p_{\text{target}}(\cdot|x) \| q_\phi(\cdot|x)) \right]\)。适配器仅需数百到数千个样本即可收敛。
+    </div>
+    <div class="method-step">
+      <strong>③ 动态路由机制</strong><br>
+      维护多个任务特化的适配器（代码、数学、对话等），通过轻量级分类器（基于输入 embedding 的线性探针）在推理时动态选择最匹配的适配器。路由延迟 <0.1ms，可忽略。
+    </div>
+    <div class="method-step">
+      <strong>④ 无损保证</strong><br>
+      TAPS 保留了投机采样的<strong>无损性质</strong>（lossless property）：最终输出分布始终精确等于 target 模型分布。适配器仅改变 draft 的提议效率，不影响输出质量。理论证明：任务感知的 \(q_\phi\) 严格优于或等于原始 \(q\)，即 \(\text{AR}(q_\phi) \geq \text{AR}(q)\)。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：代码生成任务上的接受率提升</strong>
+      <ol>
+        <li><strong>设置</strong>：Target = Llama-3-70B, Draft = Llama-3-8B, 任务 = HumanEval 代码生成</li>
+        <li><strong>原始接受率</strong>：每步平均 0.72（约 2.9 tokens/step）</li>
+        <li><strong>TAPS 适配后</strong>：接受率提升至 0.85（约 3.8 tokens/step），速度提升 31%</li>
+        <li><strong>关键</strong>：代码任务的 token 分布高度集中（关键字、缩进、分号），适配器能快速学习这种分布特征</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>任务</th><th>Target/Draft</th><th>原始 AR</th><th>TAPS AR</th><th>加速比</th></tr>
+      <tr><td>代码生成</td><td>70B/8B</td><td>0.72</td><td class="highlight">0.85</td><td>1.31×</td></tr>
+      <tr><td>数学推理</td><td>70B/8B</td><td>0.68</td><td class="highlight">0.81</td><td>1.28×</td></tr>
+      <tr><td>对话</td><td>70B/8B</td><td>0.76</td><td class="highlight">0.84</td><td>1.18×</td></tr>
+      <tr><td>摘要</td><td>70B/8B</td><td>0.74</td><td class="highlight">0.82</td><td>1.22×</td></tr>
+      <tr><td>混合任务</td><td>70B/8B</td><td>0.73</td><td class="highlight">0.83</td><td>1.25×</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>LoRA rank 消融：rank 8 已能获得 90% 的增益，rank 16 饱和。样本量消融：500 样本即可获得显著提升，2000 样本后收敛。路由准确率 >95%，错误路由的影响仅为次优适配器（仍优于无适配）而非输出错误。局限性：需要为每个任务域预训练适配器，适配器存储开销随任务数线性增长。</p>
+  </div>
+</div>
+
+<!-- Paper 5: Arithmetic OOD Failure -->
+<div class="paper-card" id="paper-5">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26828" target="_blank">Arithmetic OOD Failure Unfolds in Stages in Minimal GPTs</a></h3>
+    <div class="paper-meta">
+      <span>👤 Seine A. Shintani</span>
+      <span>📅 2026-03-27 · arXiv:2603.26828</span>
+      <span>🏛 Chubu University, Nagoya University</span>
+      <span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Mechanistic Interpretability</span> <span class="tag tag-llm">Arithmetic</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>最小 GPT 在穷举 2 位数加法（10000 对）上训练后，虽然覆盖了所有局部数字转换规则 \((d_a, d_b, c_{in}) \to (d_{out}, c_{out})\)，但泛化到 3 位数加法时仍然失败。这种失败不是简单的"遗漏规则"，而是一个<strong>分阶段展开</strong>的过程——每个阶段有独立的失败机制和修复方式。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 阶段一：布局屏障</strong><br>
+      即使相同数值仅改变位数布局（2 位→3 位字符串），性能从 92% 骤降至 <0.1%。原因：模型学习了绝对位置编码，位置偏移导致角色混乱。修复：仅<strong>混合布局暴露</strong>（在训练中看到 3 位格式的低范围加法）能有效削弱此屏障，结构化位置偏差无效。
+    </div>
+    <div class="method-step">
+      <strong>② 阶段二：进位语义屏障</strong><br>
+      修复布局后，百位位置表现为"进位标志"（carry flag）而非真正的百位数值。证据：Logit 边际从 +288（偏好标志数字）转为 -110（偏好真实数字）后性能才恢复。注意力模式也发生转变：对低位的关注从 0.64-0.70 降至 0.35-0.44，表明模型开始正确利用位置值信息。
+    </div>
+    <div class="method-step">
+      <strong>③ 阶段三：条件重组屏障</strong><br>
+      模型能正确计算高位状态，但无法将正确的低位尾数绑定到该状态上。关键发现：<strong>tailhigh</strong>（在正确高位状态下看到低位数据）的 Exact Match 为 0.541，显著优于仅高位（0.310）或仅低位（0.396）。重组指标 \(P(\text{exact} \mid \text{high2\_correct})\) 从 0.446 提升至 0.736。
+    </div>
+    <div class="method-step">
+      <strong>④ 阶段四：进位条件的十位符号误差</strong><br>
+      最终残差呈高度结构化：无进位时 (\(c_2=0\)) 十位欠射 (\(\Delta=-2.3\))，有进位时 (\(c_2=1\)) 十位过射 (\(\Delta=+1.3\))。<strong>tenspolarity</strong> 干预将 Exact Match 从 0.664 提升至 0.822，显著收缩偏差。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：3 位数加法 456+378=834 的分阶段失败</strong>
+      <ol>
+        <li><strong>阶段一失败</strong>：模型输出 "0056"（仍在 2 位格式中推理），完全忽略百位</li>
+        <li><strong>布局修复后</strong>：输出 "134"（百位预测为 1 = 进位标志，而非真实百位值 8）</li>
+        <li><strong>进位语义修复后</strong>：输出 "824"（百位正确为 8，但十位 2≠3，因为低位尾数未正确绑定）</li>
+        <li><strong>完全修复后</strong>：正确输出 "834"</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>干预</th><th>布局偏移 EM</th><th>无进位 EM</th><th>千位进位 EM</th></tr>
+      <tr><td>基线 (2位训练)</td><td>0.0008</td><td>~0</td><td>~0</td></tr>
+      <tr><td>+混合布局</td><td>0.4426</td><td>~0</td><td>~0</td></tr>
+      <tr><td>+进位探针</td><td>—</td><td>0.0450</td><td>~0</td></tr>
+      <tr><td>+tailhigh</td><td>—</td><td>0.541</td><td>0.310</td></tr>
+      <tr><td>+tenspolarity</td><td>—</td><td>—</td><td class="highlight">0.822</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>10 种子确认实验验证了结果的稳健性。关键洞察：算术泛化失败不是单一问题，而是由<strong>布局 → 语义 → 重组 → 符号</strong>四个可分离阶段组成的级联。更大模型（2层/32宽）也展现了相同的阶段性结构，但每阶段的屏障更容易克服。这对"涌现能力"的讨论有重要启示：看似突然的能力跳变可能只是最后一个屏障被同时突破。</p>
+  </div>
+</div>

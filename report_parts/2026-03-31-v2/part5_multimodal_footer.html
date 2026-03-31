@@ -1,0 +1,149 @@
+<!-- ========== Multimodal Section ========== -->
+<div class="section-header multimodal">
+  <h2>🌐 Multimodal — 多模态</h2>
+</div>
+
+<!-- Paper 12: PRCO -->
+<div class="paper-card tag-multimodal" id="paper-12">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28618" target="_blank">Seeing with You: Perception–Reasoning Coevolution for Multimodal Reasoning</a></h3>
+    <div class="paper-meta">
+      <span>👤 Ziqi Miao, Haonan Jia, Lijun Li, Chen Qian, Yuan Xiong, Wenting Yan, Jing Shao</span>
+      <span>📅 2026-03-30 · arXiv:2603.28618</span>
+      <span>🏛 Shanghai AI Lab, Renmin University, Zhejiang University</span>
+      <span><span class="tag tag-multimodal">Multimodal</span> <span class="tag tag-multimodal">RLVR</span> <span class="tag tag-multimodal">Perception</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>多模态大语言模型（MLLM）通过 RLVR（基于可验证奖励的 RL）训练时，单一结果奖励同时优化视觉感知和文本推理，导致<strong>信用分配模糊</strong>：推理模式改善了，但上游视觉证据提取的感知误差几乎未减少。PRCO 提出<strong>感知-推理协同进化</strong>框架，通过双角色 RLVR 解耦两个能力的梯度更新。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 双角色架构：观察者 + 求解者</strong><br>
+      在共享策略 \(\pi_\theta\) 下定义两个协作角色：<strong>观察者</strong>接收图像 \(I\) 和问题 \(q\)，生成"问题条件的证据标题" \(c\)（总结最相关的视觉证据）；<strong>求解者</strong>基于标题 \(c\)（和可选图像 \(I^S\)）预测最终答案 \(\hat{a}\)。两者通过特定提示分别激活。
+    </div>
+    <div class="method-step">
+      <strong>② 差异化奖励设计</strong><br>
+      <strong>求解者奖励</strong>：\(r^S = \lambda \cdot V(\hat{a}, a) + (1-\lambda) \cdot \text{FormatScore}(\hat{a})\)，\(\lambda=0.9\)。<strong>观察者奖励</strong>（关键创新）：
+      $$r_k^O = (1 - \mathbb{I}_{\text{leak}}(q, c_k)) \cdot \mathbb{E}_{\hat{a} \sim \pi}[V(\hat{a}, a)]$$
+      即观察者的奖励 = 泄漏抑制 × 求解者下游成功率。辅助 LLM 检查器 \(\mathbb{I}_{\text{leak}}\) 防止观察者直接在标题中泄露答案。
+    </div>
+    <div class="method-step">
+      <strong>③ 统一策略优化（基于 GRPO）</strong><br>
+      基于 GRPO 的统一更新目标：
+      $$\mathcal{L}_{\text{dual}}(\theta) = \mathcal{L}_{\text{GRPO}}(\theta; \hat{A}^S) + \mathcal{L}_{\text{GRPO}}(\theta; \hat{A}^O)$$
+      观察者比较 \(G_O\) 个标题，求解者比较特定标题下的 \(G_S\) 个答案。组内优势计算仅减均值（不做标准差归一化），确保梯度由组内相对性能驱动。
+    </div>
+    <div class="method-step">
+      <strong>④ 标题优先热身策略</strong><br>
+      训练前 40 步，求解者图像输入 \(I^S\) 设为空，<strong>强制仅依赖标题推理</strong>。目的：防止求解者忽略标题而直接依赖原始图像，确保观察者能获得有效学习信号。热身结束后恢复图像输入，结合全局结构和局部细节。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：MathVista 几何推理题</strong>
+      <ol>
+        <li><strong>问题</strong>：图中三角形 ABC，AB=5, BC=12, ∠B=90°，求 AC 长度</li>
+        <li><strong>GRPO 基线</strong>：直接输出 "AC=17"（推理正确但感知错误——误读 AB=7）</li>
+        <li><strong>PRCO 观察者</strong>：生成标题 "Right triangle with AB=5 (vertical), BC=12 (horizontal), right angle at B"</li>
+        <li><strong>PRCO 求解者</strong>：基于标题 → \(AC = \sqrt{5^2 + 12^2} = 13\) → 正确</li>
+        <li><strong>分析</strong>：观察者的显式视觉证据提取纠正了感知误差</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>MathVerse</th><th>MathVision</th><th>MathVista</th><th>MMMU-Pro</th><th>平均</th></tr>
+      <tr><td>Qwen2.5-VL-7B (Base)</td><td>37.8</td><td>20.2</td><td>67.5</td><td>34.1</td><td>42.45</td></tr>
+      <tr><td>GRPO</td><td>41.2</td><td>23.1</td><td>70.8</td><td>35.6</td><td>45.46</td></tr>
+      <tr><td>DAPO</td><td>43.5</td><td>24.8</td><td>72.1</td><td>37.2</td><td>47.41</td></tr>
+      <tr><td>VPPO-7B</td><td>44.1</td><td>24.2</td><td>71.5</td><td>37.8</td><td>47.60</td></tr>
+      <tr><td class="highlight">PRCO (本文)</td><td class="highlight">47.3</td><td class="highlight">27.6</td><td class="highlight">74.2</td><td class="highlight">38.5</td><td class="highlight">49.63</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>错误类别分析：GRPO 仅减少 7.6% 感知误差，<strong>PRCO 减少 39.2%</strong>——证明了解耦学习信号的有效性。去除观察者更新导致一致下降（标题退化为固定模板），去除热身导致求解者快速忽略标题。Pass@k 分析显示 PRCO 在 k=32 时优势更大（更强的鲁棒推理）。在 3B 和 8B 规模上均有效，3B 上甚至超越多个 7B 基线。局限性：双角色采样使训练 FLOP 增加约 40%；泄漏检查器的误判可能抑制高质量标题。</p>
+  </div>
+</div>
+
+<!-- Paper 13: MiroEval -->
+<div class="paper-card tag-multimodal" id="paper-13">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28407" target="_blank">MiroEval: Benchmarking Multimodal Deep Research Agents in Process and Outcome</a></h3>
+    <div class="paper-meta">
+      <span>👤 Fangda Ye, Yuxin Hu, Pengxiang Zhu, Yibo Li et al.</span>
+      <span>📅 2026-03-30 · arXiv:2603.28407</span>
+      <span>🏛 MiroMind AI, NUS, NTU</span>
+      <span><span class="tag tag-multimodal">Multimodal</span> <span class="tag tag-multimodal">Benchmark</span> <span class="tag tag-multimodal">Deep Research</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>深度研究系统进展迅速，但评估仍滞后于真实用户需求。现有基准主要用固定 rubric 评估最终报告，忽略了研究<strong>过程</strong>的质量；多模态覆盖有限；合成任务不反映真实查询复杂度。MiroEval 提出了一个涵盖过程与结果的三维评估框架。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 双路径任务构建</strong><br>
+      <strong>用户衍生路径</strong>（65 任务）：基于真实查询模式，经隐私过滤和分层重写（简单/中等/困难）；<strong>自动生成路径</strong>（35 任务）：基于实时网络趋势，经三级过滤（搜索验证、深度研究必要性、逆向质量评估——仅保留模型参数知识无法回答的任务）。共 100 任务（70 纯文本 + 30 多模态），覆盖 12 个领域。
+    </div>
+    <div class="method-step">
+      <strong>② 维度一：自适应合成质量</strong><br>
+      动态生成评估维度和权重（非固定 rubric）。固定维度：覆盖范围、洞察力、指令遵循、清晰度。多模态任务引入"依据 & 专业知识"维度评估附件利用。从附件提取关键事实作为评估锚点，防止凭空捏造。
+    </div>
+    <div class="method-step">
+      <strong>③ 维度二：代理事实性验证</strong><br>
+      将报告分解为原子声明，评估代理通过检索网络和解析附件验证每个声明。四类标签：RIGHT/WRONG/CONFLICT/UNKNOWN。支持原生多模态处理和检索增强处理。
+    </div>
+    <div class="method-step">
+      <strong>④ 维度三：以过程为中心的评估</strong><br>
+      评估搜索广度、分析深度、渐进改进、批判性思维和效率。测量双向一致性：<strong>Process→Report</strong>（过程发现是否被报告利用）和 <strong>Report→Process</strong>（报告结论能否追溯到过程步骤）。后者揭示"痕迹缺口"——无法追踪的幻觉或推断。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：多模态金融分析任务</strong>
+      <ol>
+        <li><strong>任务</strong>：分析附件 PDF 中 Q3 财报数据，与竞品对比，给出投资建议</li>
+        <li><strong>Kimi-K2.5</strong>：合成质量 75.7（精美报告），但事实性仅 65.4——数据未引用 PDF 原文</li>
+        <li><strong>Manus-1.6-Max</strong>：合成质量 55.4（简陋），但事实性 72.6——严格引用但分析浅</li>
+        <li><strong>MiroThinker-H1</strong>：合成质量 74.5 + 事实性 75.2 + 过程 76.8 = <strong>最均衡</strong></li>
+        <li><strong>发现</strong>：合成质量高≠准确——这正是三维评估的价值</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>系统</th><th>Text-Only</th><th>Multimodal</th><th>Δ (MM-Text)</th></tr>
+      <tr><td class="highlight">MiroThinker-H1</td><td class="highlight">77.5</td><td class="highlight">74.5</td><td>-3.0</td></tr>
+      <tr><td>OpenAI Deep Research</td><td>76.7</td><td>70.2</td><td>-6.5</td></tr>
+      <tr><td>MiroThinker-1.7</td><td>75.5</td><td>71.6</td><td>-3.9</td></tr>
+      <tr><td>Gemini-3.1-Pro</td><td>72.8</td><td>69.4</td><td>-3.4</td></tr>
+      <tr><td>Kimi-K2.5</td><td>71.2</td><td>67.8</td><td>-3.4</td></tr>
+      <tr><td>Claude-Opus-4.6</td><td>65.3</td><td>62.1</td><td>-3.2</td></tr>
+      <tr><td>Qwen-3.5-Plus</td><td>66.8</td><td>58.2</td><td>-8.6</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>三个核心发现：(1) 三个评估维度捕获互补的系统能力——合成质量高不等于事实性高；(2) <strong>过程质量是结果的可靠预测指标</strong>（相关系数 0.88），过程得分揭示了输出级指标看不到的缺陷；(3) 多模态任务普遍下降 3-10 分，主要在合成质量（-6）和过程质量（-4）上而非事实性。最大的"痕迹缺口"意味着多数系统的报告包含无法追溯的推断，严重影响可审计性。</p>
+  </div>
+</div>
+
+<!-- ========== Daily Reflection ========== -->
+<div class="reflection-box">
+  <h3>📝 每日反思</h3>
+  <p><strong>今日主题：模型能力 vs. 工程优化的边际效益</strong></p>
+  <p>今天的论文呈现出一个有趣的张力：一方面，Model Capability Dominates 用实证证明了在数学推理中提示词工程的效果微乎其微；另一方面，KAT-Coder-V2 展示了精心设计的数据管线+RL 训练如何让模型在特定任务上逼近最强闭源模型。调和这两个结论的关键在于：<strong>推理时优化的天花板很低，但训练时优化的天花板很高</strong>。</p>
+  <p>另一个主题是<strong>验证作为系统性杠杆</strong>——Marco DeepResearch 在数据、训练、推理三层面引入验证，仅 8B 参数即超越 30B 竞品。MediHive 的去中心化辩论和 MiroEval 的过程评估也都指向同一方向：光有能力不够，还需要<strong>自我纠错和可追溯性</strong>。</p>
+  <p>在基础设施层面，GeoBlock 和 IF4 各自在扩散解码和量化上提供了优雅的解决方案，共同推动了高效推理的前沿。PRCO 在多模态 RLVR 中的感知-推理解耦则为"如何让 RL 真正改善视觉理解"提供了一个清晰的答案。</p>
+</div>
+
+</div><!-- container -->
+
+<div class="report-footer">
+  <p>📊 本报告基于 2026-03-31 arXiv RSS feed（cs.CL, cs.AI, cs.LG）中筛选的 310 篇 Announce Type: new 论文</p>
+  <p>🔗 数据来源：<a href="https://arxiv.org" style="color: var(--accent-blue);">arXiv.org</a> · 自动生成 by arXiv AI 日报</p>
+</div>
+
+</body>
+</html>

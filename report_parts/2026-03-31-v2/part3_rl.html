@@ -1,0 +1,180 @@
+<!-- ========== RL Section ========== -->
+<div class="section-header rl">
+  <h2>🎯 RL — 强化学习与对齐</h2>
+</div>
+
+<!-- Paper 6: Rethinking Easy-to-Hard -->
+<div class="paper-card tag-rl" id="paper-6">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27226" target="_blank">Rethinking Easy-to-Hard: Limits of Curriculum Learning in Post-Training for Deductive Reasoning</a></h3>
+    <div class="paper-meta">
+      <span>👤 Maximilian Mordig, Andreas Opedal, Weiyang Liu, Bernhard Schölkopf</span>
+      <span>📅 2026-03-28 · arXiv:2603.27226</span>
+      <span>🏛 Max Planck Institute, ETH Zürich, CUHK</span>
+      <span><span class="tag tag-rl">RL</span> <span class="tag tag-rl">Curriculum Learning</span> <span class="tag tag-rl">Post-Training</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>课程学习（Curriculum Learning, CL）——从简单到困难逐步训练——在人类教育中直觉上很有效，被广泛应用于 LLM 的后训练。然而，这种直觉是否真的成立？本文通过在合成算术和逻辑推理数据集上的大规模受控实验，系统性地挑战了这一假设。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 难度函数与课程策略设计</strong><br>
+      定义结构化难度函数 \(f: \mathcal{X} \mapsto \mathbb{N}_{>0}\)，将每个样本映射为正整数难度（推理步数/角色数量），而非表面特征（如 token 长度）。对比策略：<strong>Standard</strong>（均匀采样）、<strong>SingleDiffInc</strong>（Easy-to-Hard，第 \(i\) 轮只用难度 \(d=\min(\lceil i/M \rceil, D)\)）、<strong>SingleDiffDec</strong>（Hard-to-Easy）、<strong>UpToDiff</strong>（累积增加）、<strong>DownToDiff</strong>（累积减少）。所有策略共享固定计算预算。
+    </div>
+    <div class="method-step">
+      <strong>② 合成数据集：严格隔离推理结构</strong><br>
+      使用三个合成数据集消除数据污染：<strong>LinearDepth</strong>（线性链式 \(n-1\) 步推理）、<strong>PartWhole</strong>（一次性前提聚合）、<strong>Knights and Knaves</strong>（布尔 SAT 逻辑谜题，指数级搜索空间）。关键优势：难度完全由推理结构定义，可精确控制和量化。
+    </div>
+    <div class="method-step">
+      <strong>③ SFT vs RL 对比</strong><br>
+      SFT 使用带 CoT 标注的解法 + LoRA (rank=32) 微调；RL 使用 <strong>GRPO</strong>（Group Relative Policy Optimization）和 <strong>PPO</strong>，基于可验证的最终答案正确性作为奖励。奖励设计：MathGAP 为 \(R = \text{parsingOK} + \text{isInt} + 4 \cdot \text{isCorrect}\)（达 token 限制则 \(R=-2\)）；KK 为格式+答案两部分。
+    </div>
+    <div class="method-step">
+      <strong>④ 核心发现：课程排序无关紧要</strong><br>
+      在 6 个模型系列（Llama3.2-1B/3B, Qwen3-0.6B/1.7B/4B, Gemma2-9B）上，所有课程策略在 ID 和 OOD 准确率上<strong>均无显著差异</strong>。响应长度分布也几乎一致，表明排序未改变模型的有效推理深度。真正有效的是<strong>反馈机制</strong>：RL（通过可验证奖励）相比 SFT 在 OOD 上有稳定提升，但这种提升独立于课程策略。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：Knights and Knaves 逻辑谜题（5 角色）</strong>
+      <ol>
+        <li><strong>训练</strong>：在 2-4 角色上用 Easy-to-Hard 和 Standard 策略分别训练 Qwen3-4B</li>
+        <li><strong>OOD 评估</strong>（5 角色）：Easy-to-Hard 准确率 = 34.2%, Standard = 35.1%（无显著差异）</li>
+        <li><strong>对比</strong>：SFT (Standard) = 28.7%，RL/GRPO (Standard) = 35.1%（RL 提升 +6.4%，与排序无关）</li>
+        <li><strong>SFT 退化</strong>：SFT 在 OOD 上甚至低于零样本基线（31.5%），表明 SFT 导致过拟合特定推理轨迹</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>任务</th><th>Standard (SFT)</th><th>Easy→Hard (SFT)</th><th>Standard (GRPO)</th><th>Easy→Hard (GRPO)</th></tr>
+      <tr><td>Qwen3-4B</td><td>LinearDepth OOD</td><td>52.1</td><td>51.8</td><td class="highlight">58.3</td><td>57.9</td></tr>
+      <tr><td>Qwen3-4B</td><td>KK OOD</td><td>28.7</td><td>29.1</td><td class="highlight">35.1</td><td>34.2</td></tr>
+      <tr><td>Llama3.2-3B</td><td>LinearDepth OOD</td><td>45.6</td><td>46.0</td><td class="highlight">53.8</td><td>53.2</td></tr>
+      <tr><td>Gemma2-9B</td><td>KK OOD</td><td>41.3</td><td>41.0</td><td class="highlight">48.7</td><td>48.2</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>核心结论：在演绎推理的后训练中，<strong>数据排序的影响 ≈ 0</strong>，反馈机制（RL vs SFT）的影响 >> 排序。这意味着实践者应将精力从设计复杂的课程策略转向设计更好的奖励函数和可验证的反馈环。局限性：仅在合成数据上验证，自然语言推理中的结论可能不同；固定预算假设可能掩盖了某些预算分配策略的优势。</p>
+  </div>
+</div>
+
+<!-- Paper 7: KAT-Coder-V2 -->
+<div class="paper-card tag-rl" id="paper-7">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27703" target="_blank">KAT-Coder-V2 Technical Report</a></h3>
+    <div class="paper-meta">
+      <span>👤 KwaiKAT Team</span>
+      <span>📅 2026-03-29 · arXiv:2603.27703</span>
+      <span>🏛 Kuaishou（快手）</span>
+      <span><span class="tag tag-rl">RL</span> <span class="tag tag-rl">Code Agent</span> <span class="tag tag-rl">SWE-bench</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>构建一个真正通用的代码智能体面临"能力碎片化"挑战：SWE 修复、前端美学、终端操作、网络搜索和通用编码各有独特的数据分布和交互模式。单一模型难以同时在所有领域达到专家水平。KAT-Coder-V2 提出<strong>"先特化后统一"（Specialize-then-Unify）</strong>范式来解决这一问题。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 五大专家领域分解</strong><br>
+      将智能体编码分解为五个正交领域：<strong>SWE</strong>（Issue 解决与代码修复）、<strong>WebCoding</strong>（前端生成与美学）、<strong>Terminal</strong>（交互式命令行推理）、<strong>WebSearch</strong>（搜索与信息综合）、<strong>General</strong>（通用代码智能）。每个领域独立进行数据构建 → SFT → RL，避免跨领域干扰。
+    </div>
+    <div class="method-step">
+      <strong>② 大规模数据管线</strong><br>
+      <strong>Issue-PR Pipeline</strong>：从 GitHub 提取 2M+ 合并 PR 及关联 Issue；<strong>AutoBuilder</strong>：自动构建可验证的 SWE 任务（含 F2P/P2P 双重验证）；<strong>Tri-Perspective Label System</strong>（WebCoding）：建立用户感知→设计原理→技术实现的三层映射；<strong>KG Construction</strong>（WebSearch）：基于搜索轨迹构建知识图谱，使用拒绝采样（Pass@8）过滤。
+    </div>
+    <div class="method-step">
+      <strong>③ 环境反馈 RL 与算法创新</strong><br>
+      <strong>Modified Turn-level Policy Optimization</strong>：结合 GSPO（序列级稳定性）和 GRPO（无价值模型效率），每个交互回合独立计算重要性比率以实现细粒度信用分配。<strong>MCLA</strong>（Monte-Carlo Log-probability Averaging）：对 MoE 模型 RL 训练中的 \(K\) 次前向传播取对数概率平均，显著减少估计方差。<strong>Tree Training</strong>：将树状轨迹 DFS 展平为单一序列，消除共享前缀的重复计算，实现 <strong>6.2×</strong> 端到端训练加速。
+    </div>
+    <div class="method-step">
+      <strong>④ 在线策略蒸馏 (OPD) 统一融合</strong><br>
+      Student 模型主动生成轨迹，同时接收双重监督：<strong>RL Loss</strong>（沙箱环境的稀疏奖励）+ <strong>OPD Loss</strong>（动态选择最佳专家作为 Teacher 提供密集步骤级对数概率监督）。这种方法结合了 RL 的主动探索和蒸馏的密集监督，避免了离线 SFT 的暴露偏差。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：SWE-bench Verified 上的多脚手架适应</strong>
+      <ol>
+        <li><strong>Claude Code 脚手架</strong>：KAT-Coder-V2 = 79.6%, Claude Opus 4.6 = 80.8%（仅差 1.2%）</li>
+        <li><strong>OpenCode 脚手架</strong>：KAT-Coder-V2 = 74.8%, Claude Opus 4.6 = 75.0%（基本持平）</li>
+        <li><strong>脚手架泛化</strong>：通过在黑盒/白盒脚手架上生成训练轨迹，模型能无缝迁移到未见过的脚手架环境</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>基准</th><th>KAT-Coder-V2</th><th>Claude Opus 4.6</th><th>GLM-5</th><th>MiniMax M2.7</th></tr>
+      <tr><td>SWE-bench Verified (CC)</td><td class="highlight">79.6</td><td>80.8</td><td>—</td><td>—</td></tr>
+      <tr><td>SWE-bench Multi. (CC)</td><td class="highlight">75.4</td><td>77.8</td><td>—</td><td>—</td></tr>
+      <tr><td>PinchBench (Best)</td><td class="highlight">88.7</td><td>—</td><td>86.4</td><td>87.1</td></tr>
+      <tr><td>Landing Page</td><td class="highlight">59.8</td><td>—</td><td>57.6</td><td>—</td></tr>
+      <tr><td>Slides</td><td class="highlight">57.6</td><td>—</td><td>42.8</td><td>—</td></tr>
+      <tr><td>Data Visualization</td><td class="highlight">67.6</td><td>—</td><td>42.4</td><td>—</td></tr>
+      <tr><td>Terminal-Bench Hard</td><td class="highlight">46.8</td><td>—</td><td>43.2</td><td>39.4</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>最突出的亮点在前端美学：Slides (+14.8 vs GLM-5) 和 Data Visualization (+25.2 vs GLM-5) 的巨大优势来自 Tri-Perspective Label System 的结构化美学知识。MCLA 使得 MoE 的 RL 训练稳定收敛（无 MCLA 时频繁发散）。Tree Training 的 6.2× 加速使得在 128K+ token 的长轨迹上进行 RL 成为可能。局限性：模型未开源；对专有脚手架的依赖可能限制复现性。</p>
+  </div>
+</div>
+
+<!-- Paper 8: COvolve -->
+<div class="paper-card tag-rl" id="paper-8">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28386" target="_blank">COvolve: Adversarial Co-Evolution of LLM-Generated Policies and Environments via Two-Player Zero-Sum Game</a></h3>
+    <div class="paper-meta">
+      <span>👤 Alkis Sygkounas, Rishi Hazra, Andreas Persson, Pedro Zuidberg Dos Martires, Amy Loutfi</span>
+      <span>📅 2026-03-30 · arXiv:2603.28386</span>
+      <span>🏛 Örebro University, Sweden</span>
+      <span><span class="tag tag-rl">RL</span> <span class="tag tag-rl">Co-Evolution</span> <span class="tag tag-rl">Game Theory</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>构建持续进化的 AI 代理面临一个根本挑战：训练环境通常是静态的或手工构建的，限制了泛化。能否让 LLM 同时生成策略和环境，并通过对抗性竞争使二者共同进化？COvolve 将这一过程形式化为<strong>双人零和博弈</strong>，策略和环境均以可执行 Python 代码表示。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 零和博弈形式化</strong><br>
+      环境玩家和策略玩家构成零和博弈。收益为策略在环境中的成功率 \(U_\theta(\pi)\)。策略玩家最大化回报，环境玩家最小化回报。混合策略纳什均衡（MSNE）通过线性规划求解：
+      $$p^* = \arg\max_{p \in \Delta^r} \min_{j \in \{1,\dots,r\}} \sum_{i=1}^r p_i m_{ij}$$
+    </div>
+    <div class="method-step">
+      <strong>② LLM 驱动的程序变异</strong><br>
+      策略和环境均表示为<strong>可执行 Python 代码</strong>。策略设计：LLM 对当前最佳策略进行结构化程序变异（如改进 A* 规划器、添加钥匙-门处理逻辑），生成 \(K\) 个候选，选择表现最佳者。环境设计：LLM 生成针对 MSNE 策略分布的最佳响应环境（最难环境）。
+    </div>
+    <div class="method-step">
+      <strong>③ 收益矩阵与防遗忘机制</strong><br>
+      维护经验收益矩阵 \(M_{ij} = U_{\theta_j}(\pi_i)\)（所有策略×环境对的性能）。每次迭代后重新计算 MSNE，得到策略种群的混合权重。这确保了元策略不仅能解决最新环境，还保持对所有历史环境的能力——本质上是通过博弈论避免灾难性遗忘。
+    </div>
+    <div class="method-step">
+      <strong>④ 自动课程涌现</strong><br>
+      对抗性共进化自然产生递增难度的课程：早期环境简单（空旷迷宫），策略用基础 BFS；后期环境复杂（多钥匙门+窄通道），策略进化出 A*+状态追踪。消融实验表明直接在"最难"环境上训练会失败，验证了渐进课程的必要性。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>案例：MiniGrid 迷宫导航的共进化轨迹</strong>
+      <ol>
+        <li><strong>Round 1</strong>：环境=简单 6×6 空间，策略=BFS，成功率 100%</li>
+        <li><strong>Round 5</strong>：环境=12×12+单钥匙门，策略进化出 A*+钥匙优先探索，成功率 92%</li>
+        <li><strong>Round 10</strong>：环境=16×16+3把钥匙+窄通道+死胡同，策略进化出带状态追踪的分层规划，MSNE 成功率 85%</li>
+        <li><strong>泛化测试</strong>：在未见过的 DoorKey-16x16 标准环境上，MSNE 策略成功率 <strong>1.00</strong>，UED-Uniform 仅 0.62</li>
+      </ol>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>环境</th><th>COvolve (MSNE)</th><th>UED-Greedy</th><th>UED-Uniform</th><th>PPO/SAC</th></tr>
+      <tr><td>MiniGrid DoorKey-16x16</td><td class="highlight">1.00</td><td>0.86</td><td>0.62</td><td>0.31</td></tr>
+      <tr><td>MiniGrid LockedRoom</td><td class="highlight">1.00</td><td>0.79</td><td>0.71</td><td>0.18</td></tr>
+      <tr><td>CARLA Town02 (未见)</td><td class="highlight">0.71</td><td>0.62</td><td>0.13</td><td>—</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>MSNE 对防遗忘至关重要：UED-Greedy（仅保留最新策略）在早期环境上性能急剧下降，而 MSNE 保持稳定。"代码即策略"的方法在复杂逻辑任务上显著优于传统 RL 算法（PPO/SAC 在多钥匙门场景下近乎失效）。局限性：每轮需要大量 LLM 调用（成本高）；代码策略的表达能力受 LLM 能力上限制约；仅在离散/半连续任务上验证。</p>
+  </div>
+</div>
