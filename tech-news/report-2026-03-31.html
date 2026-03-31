@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-03-31</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a14; --bg2: #12121f; --bg3: #1a1a2e;
+            --text: #e8e8f0; --text2: #a0a0b8; --accent: #38bdf8;
+            --accent2: #818cf8; --border: #2d2d44;
+            --red: #f87171; --green: #4ade80; --yellow: #fbbf24;
+            --purple: #c084fc; --pink: #f472b6; --orange: #fb923c;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; padding: 8px 16px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; transition: all 0.3s; }
+        .back-link:hover { background: var(--accent); color: #fff; }
+        
+        .hero { text-align: center; padding: 40px 30px; background: linear-gradient(135deg, #0f0f2a 0%, #1a1040 50%, #0f0f2a 100%); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(129,140,248,0.08) 0%, transparent 50%); }
+        .hero-icon { font-size: 3rem; margin-bottom: 12px; position: relative; }
+        .hero h1 { font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; position: relative; }
+        .hero .date { color: var(--text2); margin-top: 8px; font-size: 1rem; position: relative; }
+        .hero .stats { display: flex; justify-content: center; gap: 30px; margin-top: 18px; position: relative; }
+        .hero .stat { text-align: center; }
+        .hero .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+        .hero .stat-label { font-size: 0.8rem; color: var(--text2); }
+        
+        .toc { background: var(--bg2); border-radius: 16px; border: 1px solid var(--border); padding: 25px 30px; margin-bottom: 30px; }
+        .toc h2 { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .toc-item { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: var(--bg3); border-radius: 10px; text-decoration: none; color: var(--text); transition: all 0.2s; border: 1px solid transparent; }
+        .toc-item:hover { border-color: var(--accent); background: rgba(56,189,248,0.05); transform: translateX(3px); }
+        .toc-item .icon { font-size: 1.3rem; }
+        .toc-item .info { flex: 1; }
+        .toc-item .name { font-weight: 600; font-size: 0.95rem; }
+        .toc-item .count { font-size: 0.8rem; color: var(--text2); }
+        
+        .section { margin-bottom: 35px; }
+        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--bg2); border-radius: 14px 14px 0 0; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); }
+        .section-header .icon { font-size: 1.5rem; }
+        .section-header h2 { font-size: 1.3rem; flex: 1; }
+        .section-header .badge { background: var(--accent); color: #000; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        
+        .news-card { background: var(--bg2); border: 1px solid var(--border); border-top: none; padding: 24px; transition: all 0.2s; }
+        .news-card:last-child { border-radius: 0 0 14px 14px; }
+        .news-card:hover { background: var(--bg3); }
+        .news-card h3 { font-size: 1.1rem; margin-bottom: 10px; line-height: 1.5; }
+        .news-card h3 a { color: var(--text); text-decoration: none; border-bottom: 1px dashed var(--border); transition: all 0.2s; }
+        .news-card h3 a:hover { color: var(--accent); border-color: var(--accent); }
+        .news-card .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; font-size: 0.82rem; color: var(--text2); }
+        .news-card .meta .source { color: var(--accent); font-weight: 500; }
+        .news-card .content { color: var(--text2); font-size: 0.95rem; line-height: 1.8; }
+        .news-card .content p { margin-bottom: 8px; }
+        .news-card .highlight { background: rgba(56,189,248,0.08); border-left: 3px solid var(--accent); padding: 10px 15px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 0.9rem; }
+        .news-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .news-card .tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+        .tag-ai { background: rgba(56,189,248,0.15); color: var(--accent); }
+        .tag-robot { background: rgba(192,132,252,0.15); color: var(--purple); }
+        .tag-auto { background: rgba(74,222,128,0.15); color: var(--green); }
+        .tag-vc { background: rgba(251,191,36,0.15); color: var(--yellow); }
+        .tag-giant { background: rgba(248,113,113,0.15); color: var(--red); }
+        .tag-bio { background: rgba(244,114,182,0.15); color: var(--pink); }
+        .tag-policy { background: rgba(251,146,60,0.15); color: var(--orange); }
+        
+        .separator { height: 1px; background: var(--border); margin: 0; }
+        
+        footer { text-align: center; padding: 30px 20px; color: var(--text2); font-size: 0.85rem; margin-top: 20px; }
+        footer a { color: var(--accent); text-decoration: none; }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.5rem; }
+            .hero .stats { gap: 15px; }
+            .toc-grid { grid-template-columns: 1fr; }
+            .news-card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="./" class="back-link">← 返回报告列表</a>
+        
+        <div class="hero">
+            <div class="hero-icon">🤖</div>
+            <h1>科技与财经每日动态</h1>
+            <p class="date">2026年3月31日 · 周二 · 17:30</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num">22</div>
+                    <div class="stat-label">深度追踪</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">7</div>
+                    <div class="stat-label">垂直赛道</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">24h</div>
+                    <div class="stat-label">时效保障</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TOC -->
+        <div class="toc">
+            <h2>📑 今日导航</h2>
+            <div class="toc-grid">
+                <a href="#sec-llm" class="toc-item"><span class="icon">🧠</span><div class="info"><div class="name">大模型与基础AI</div><div class="count">5 篇报道</div></div></a>
+                <a href="#sec-bio" class="toc-item"><span class="icon">🧬</span><div class="info"><div class="name">脑机接口与生物科技</div><div class="count">2 篇报道</div></div></a>
+                <a href="#sec-robot" class="toc-item"><span class="icon">🤖</span><div class="info"><div class="name">具身智能与机器人</div><div class="count">4 篇报道</div></div></a>
+                <a href="#sec-video" class="toc-item"><span class="icon">🎬</span><div class="info"><div class="name">视频与多模态生成</div><div class="count">2 篇报道</div></div></a>
+                <a href="#sec-auto" class="toc-item"><span class="icon">🚗</span><div class="info"><div class="name">自动驾驶与出行</div><div class="count">3 篇报道</div></div></a>
+                <a href="#sec-giant" class="toc-item"><span class="icon">🏢</span><div class="info"><div class="name">科技巨头与宏观</div><div class="count">4 篇报道</div></div></a>
+                <a href="#sec-vc" class="toc-item"><span class="icon">💰</span><div class="info"><div class="name">创投与融资</div><div class="count">2 篇报道</div></div></a>
+            </div>
+        </div>
+
+        <!-- ============ 大模型与基础AI ============ -->
+        <div class="section" id="sec-llm">
+            <div class="section-header" style="border-bottom-color: var(--accent);">
+                <span class="icon">🧠</span>
+                <h2>大模型与基础AI</h2>
+                <span class="badge">5 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260331A0426T00" target="_blank">🔥 苹果 Apple Intelligence 凌晨"偷跑"推送中国用户，3小时后紧急撤回</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>3月31日凌晨，苹果向部分更新 iOS 26.4 的中国行货 iPhone 用户推送了 Apple Intelligence 功能，设置中的 Siri 入口更名为"Apple 智能与 Siri"。据用户反馈，国行版 Apple Intelligence 接入了百度文心一言和阿里千问作为文本/语言模型，并调用了谷歌图形探测技术。</p>
+                    <div class="highlight">
+                        <strong>关键数据：</strong>功能上线仅约 3 小时即被撤回。科技记者 Mark Gurman 证实为"意外上线"。但已完成激活的用户仍可继续使用。自 2024 年 6 月发布以来，中国用户已等待 21 个月未获批。
+                    </div>
+                    <p><strong>合规风险：</strong>涉及三大问题——① 苹果自研模型未经算法备案（《生成式AI管理暂行办法》要求）；② 谷歌在华无合规AI服务资质，嵌入风险最高；③ 若用户数据传输至境外服务器，将触犯数据出境安全评估义务。分析认为此次可能不仅是技术事故，更是一种隐性的监管博弈压力测试。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">Apple Intelligence</span>
+                    <span class="tag tag-policy">监管合规</span>
+                    <span class="tag tag-ai">大模型</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.gov.cn/zhengce/jiedu/tujie/202603/content_7063671.htm" target="_blank">中国日均 Token 调用量突破 140 万亿，两年增长超千倍</a></h3>
+                <div class="meta">
+                    <span class="source">中国政府网 / 国家数据局</span>
+                    <span>2026-03-24（持续热议）</span>
+                </div>
+                <div class="content">
+                    <p>国家数据局局长刘烈宏在中国发展高层论坛 2026 年年会上披露：截至 2026 年 3 月，我国日均词元（Token）调用量已突破 140 万亿，较 2024 年初的 1000 亿增长超千倍，较 2025 年底的 100 万亿仅 3 个月又增长 40%。</p>
+                    <div class="highlight">
+                        <strong>里程碑：</strong>OpenRouter 数据显示，3月16-22日当周中国 AI 大模型周调用量达 7.359 万亿 Token，连续三周超越美国（3.536万亿），全球 TOP10 中国占据 6 席。Token 中文名也正式定为"词元"，成为智能时代的价值锚点和结算单位。
+                    </div>
+                    <p><strong>产业意义：</strong>中国 AI 已从模型竞赛全面进入规模化应用时代，DeepSeek、豆包等国产模型的低成本策略（约为 GPT-4 的 1/20 至 1/50）是关键驱动力。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">Token经济</span>
+                    <span class="tag tag-policy">国家数据局</span>
+                    <span class="tag tag-ai">中美竞争</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.ciste.org.cn/gjjsmy/dwjl/art/2026/art_6e2266b764a9456aa2f3414c255b1a4a.html" target="_blank">《AI for Science 创新图谱 2026》在中关村论坛重磅发布</a></h3>
+                <div class="meta">
+                    <span class="source">中国科学技术信息研究所</span>
+                    <span>2026-03-27（中关村论坛）</span>
+                </div>
+                <div class="content">
+                    <p>3月27日，在 2026 中关村论坛年会"AI for Science 青年论坛"上，由中国科学技术信息研究所联合多家机构编制的《AI for Science 创新图谱 2026》正式发布。报告多维度展现了人工智能赋能科学研究的特征和趋势。</p>
+                    <p><strong>技术前沿：</strong>同期，美国阿贡国家实验室通过 AI 多尺度建模在核聚变材料与微电子缺陷预测上取得颠覆性进展，标志着 AI for Science 正从科研阶段迈向"读-算-做"智能科研闭环的实际应用。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">AI for Science</span>
+                    <span class="tag tag-policy">中关村论坛</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://cloud.tencent.cn/developer/article/2648260" target="_blank">中国 AI 智能体时代来临，国产大模型实现集群式崛起</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯云开发者社区</span>
+                    <span>2026-03-30</span>
+                </div>
+                <div class="content">
+                    <p>3月回顾分析指出，智能体 AI 已从执行工具升级为"数字伙伴"，能自主拆解任务、调用工具并持续优化。百度 OpenClaw 智能体平台在 GTC 期间引发爆发式流行，推动 AI 从基准测试走向企业级落地。</p>
+                    <p><strong>格局变化：</strong>国产 AI 实现集群式崛起——深度求索（DeepSeek）、字节豆包、阿里千问、百度文心等构成"中国 AI 大四"格局。全球 Top 10 模型中，中国模型从 2024 年的 0 席增至 6 席，改写了 OpenAI/Anthropic 双寡头叙事。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">AI Agent</span>
+                    <span class="tag tag-ai">国产大模型</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://chinatechhub.com/one-week-nine-sectors-chinas-tech-engine-shifts-from-strategy-to-full-scale-deployment/" target="_blank">"十五五"规划全面执行：AI 被提及 50+ 次，算力获专门章节</a></h3>
+                <div class="meta">
+                    <span class="source">ChinaTechHub</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>ChinaTechHub 深度分析指出，"十五五"规划（2026-2030）从政策文本全面转向执行部署。规划中"人工智能"被提及超过 50 次，"算力"获专门章节。值得注意的是，规划悄悄删除了"中国制造2025"中的 70% 半导体自给率目标，取而代之的是部署指标——到 2030 年数字经济增加值占 GDP 12.5%。</p>
+                    <div class="highlight">
+                        <strong>战略重构：</strong>分析师描述了"模型-芯片-云-应用"四层战略架构。华为计划 2026 年出货 160 万颗昇腾芯片，以规模部署弥补单芯片性能差距。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-policy">十五五规划</span>
+                    <span class="tag tag-ai">算力基建</span>
+                    <span class="tag tag-ai">华为昇腾</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 脑机接口与生物科技 ============ -->
+        <div class="section" id="sec-bio">
+            <div class="section-header" style="border-bottom-color: var(--pink);">
+                <span class="icon">🧬</span>
+                <h2>脑机接口与生物科技</h2>
+                <span class="badge" style="background: var(--pink);">2 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.statnews.com/2026/03/31/jimini-health-raises-funding-ai-chatbot-sage-mental-health/" target="_blank">Jimini Health 获 $1700 万种子轮融资，AI 心理健康平台 Sage 瞄准复杂心理疾病</a></h3>
+                <div class="meta">
+                    <span class="source">STAT News</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>斯坦福系初创公司 Jimini Health 宣布完成 1700 万美元种子轮融资，用于推出其 AI 心理健康平台 Sage。该平台采用临床医师主导的治疗模型，以负责任的 AI 技术增强心理治疗效果，重点面向大型行为健康机构推广。</p>
+                    <p><strong>技术路线：</strong>Sage 并非替代治疗师的聊天机器人，而是作为"治疗增强器"——在治疗师会话间隙提供基于循证的 CBT（认知行为治疗）干预，并将对话数据脱敏后反馈给治疗师辅助诊疗决策。此前 2024 年 Jimini Health 已获得 $800 万种子前轮。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">AI+医疗</span>
+                    <span class="tag tag-vc">种子轮</span>
+                    <span class="tag tag-bio">心理健康</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="http://english.scio.gov.cn/chinavoices/2026-03/30/content_118408825.html" target="_blank">中国脑机接口（BCI）产业在中关村论坛集中亮相，产品化进程加速</a></h3>
+                <div class="meta">
+                    <span class="source">中国国新办英文网</span>
+                    <span>2026-03-30</span>
+                </div>
+                <div class="content">
+                    <p>2026 中关村论坛期间，一系列脑机接口产品集中展出——从专用芯片到康复系统，包括"脑脑-1/2"系统等产品。此前 NMPA（国家药监局）已批准全球首个商业化侵入性脑机接口植入物，标志着中国 BCI 从实验室走向商业化的关键里程碑。</p>
+                    <p><strong>产业格局：</strong>中国 BCI 产业正从研究阶段快速过渡到商业化阶段。北京脑科学中心、浙大脑机智能实验室等机构在侵入性和非侵入性两条技术路线上齐头并进，首例前瞻性侵入性 BCI 临床试验也已启动。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">脑机接口</span>
+                    <span class="tag tag-policy">中关村论坛</span>
+                    <span class="tag tag-bio">医疗器械</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 具身智能与机器人 ============ -->
+        <div class="section" id="sec-robot">
+            <div class="section-header" style="border-bottom-color: var(--purple);">
+                <span class="icon">🤖</span>
+                <h2>具身智能与机器人</h2>
+                <span class="badge" style="background: var(--purple);">4 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.chinadaily.com.cn/a/202603/31/WS69cb3a26a310d6866eb40e68.html" target="_blank">🔥 上海发布具身智能全产业链计划，打造全球"具身大脑"生态</a></h3>
+                <div class="meta">
+                    <span class="source">China Daily</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>3月31日，上海人工智能研究院牵头发布具身智能全产业链计划，响应"十五五"规划关于"智能经济"的指导方针。核心目标是解决当前具身智能因缺乏"大脑"而产生的瓶颈问题，建立包含国产芯片、算法、系统和应用场景的完整产业链生态。</p>
+                    <div class="highlight">
+                        <strong>量化目标：</strong>建立 50 家核心生态合作伙伴、完成超 5 项国家级/行业标准、创建 5 个可复制可扩展的应用场景。同时启动人形机器人软硬件标准化工作和全球具身智能大脑生态系统计划。
+                    </div>
+                    <p><strong>战略升级：</strong>据院长宋海涛介绍，具身智能区别于传统 AI 的关键在于将软件与具有物理实体、环境感知能力的硬件进行系统集成。这标志着中国该领域从技术研发向产业化实施、再到全生态创建的系统性升级。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">具身智能</span>
+                    <span class="tag tag-policy">上海</span>
+                    <span class="tag tag-robot">产业链</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://cn.chinadaily.com.cn/a/202603/31/WS69cb3cc2a310942cc49a5b7c.html" target="_blank">🔥 智元机器人第 10,000 台"远征A3"下线，15个月实现规模十倍增长</a></h3>
+                <div class="meta">
+                    <span class="source">中国日报 / IT之家</span>
+                    <span>2026-03-31（3月28日下线）</span>
+                </div>
+                <div class="content">
+                    <p>智元机器人（AgiBot）联合创始人、CTO 彭志辉（稚晖君）宣布，第 10,000 台通用具身机器人"远征A3"于 3 月 28 日正式下线。从 2025 年 1 月首台量产到万台下线仅用 15 个月，实现规模十倍增长。</p>
+                    <div class="highlight">
+                        <strong>生产能力：</strong>智元已建立标准化供应链体系，订单驱动型柔性生产和交付能力达年 10 万台以上。2025 年 1-12 月完成 1,000→5,000 台，2025.12-2026.3 月仅三个多月即完成 5,000→10,000 台。
+                    </div>
+                    <p><strong>稚晖君表态：</strong>"规模化并非看能否做一些动作，而是看能否在工厂里连续 24 小时稳定运行。" 2026 年通用具身机器人将加速进入规模化落地阶段。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">智元AgiBot</span>
+                    <span class="tag tag-robot">量产里程碑</span>
+                    <span class="tag tag-robot">人形机器人</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://news.cgtn.com/news/2026-03-27/China-releases-first-industry-standard-for-embodied-intelligence-1LQAZmMXmtW/p.html" target="_blank">中国发布首个具身智能行业统一标准，6 月 1 日生效</a></h3>
+                <div class="meta">
+                    <span class="source">CGTN</span>
+                    <span>2026-03-27</span>
+                </div>
+                <div class="content">
+                    <p>3月26日，中国发布首个具身人工智能行业统一标准，由中国信通院及 40 多家研究机构和企业共同起草，将于 2026 年 6 月 1 日正式生效。此前 2 月，工信部已发布涵盖基础共性、类脑计算、肢体与组件等六大生命周期类别的人形机器人和具身智能标准体系框架。</p>
+                    <p><strong>产业影响：</strong>标准将统一接口规范，大幅降低产业链协调成本，加速中国从"人形机器人原型展示"向"工业规模部署"的转型。结合"十五五"规划将具身智能列为十大战略未来产业之一，中国已形成从标准→量产→生态的完整闭环。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">行业标准</span>
+                    <span class="tag tag-policy">工信部</span>
+                    <span class="tag tag-robot">具身智能</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://gd.people.com.cn/n2/2026/0318/c123932-41526646.html" target="_blank">车企扎堆入局人形机器人：长安2027发布、广汽第三代、比亚迪招兵买马</a></h3>
+                <div class="meta">
+                    <span class="source">人民网 / 新浪</span>
+                    <span>2026-03-31（持续热议）</span>
+                </div>
+                <div class="content">
+                    <p>多家车企加速押注人形机器人赛道。长安汽车计划 2027 年前发布人形机器人产品；广汽集团具身智能机器人研发已进入第三代；比亚迪面向 2025 届全球高校博硕招聘具身智能人才。工信部数据显示 2025 年国内人形机器人订单同比增长超 500%。</p>
+                    <p><strong>深度分析：</strong>车企入局并非盲目追风——它们在供应链管理、电机驱动、传感器融合和 OTA 软件迭代方面的积累可直接迁移。但核心挑战在于找到"工厂之外"的可持续刚需场景，并在成本、性能与替代效率间取得平衡。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">车企跨界</span>
+                    <span class="tag tag-robot">人形机器人</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 视频与多模态生成 ============ -->
+        <div class="section" id="sec-video">
+            <div class="section-header" style="border-bottom-color: var(--yellow);">
+                <span class="icon">🎬</span>
+                <h2>视频与多模态生成</h2>
+                <span class="badge" style="background: var(--yellow); color: #000;">2 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.sohu.com/a/997519998_121119000" target="_blank">NVIDIA GTC 2026 发布 DLSS 5 神经渲染技术，GPU 游戏与 AI 推理双轮驱动</a></h3>
+                <div class="meta">
+                    <span class="source">搜狐 / FrontierX</span>
+                    <span>2026-03-31（GTC持续发酵）</span>
+                </div>
+                <div class="content">
+                    <p>NVIDIA 在 GTC 2026 上发布的 DLSS 5 标志着游戏渲染从光栅化/光追向"神经渲染"范式的根本转变。DLSS 5 利用深度神经网络实时生成高质量画面，结合 Vera Rubin 架构的算力底座，有望将游戏帧率提升 4-8 倍同时减少 GPU 负载。</p>
+                    <p><strong>产业连锁效应：</strong>DLSS 5 的多模态生成能力不仅限于游戏——同一推理引擎可用于影视后期实时渲染、数字人驱动和工业仿真，模糊了"游戏GPU"与"AI推理卡"的边界，进一步巩固 NVIDIA 生态壁垒。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">DLSS 5</span>
+                    <span class="tag tag-ai">神经渲染</span>
+                    <span class="tag tag-giant">NVIDIA</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://arxiv.org/pdf/2603.24458" target="_blank">OmniWeaving：统一视频生成框架论文引发学术热议</a></h3>
+                <div class="meta">
+                    <span class="source">arXiv</span>
+                    <span>2026-03-26</span>
+                </div>
+                <div class="content">
+                    <p>学术界最新发表的 OmniWeaving 论文提出了一种面向统一视频生成的自由条件框架，试图在单一架构内无缝整合文本到视频、图像到视频、视频编辑等多种任务。这解决了当前大多数学术模型高度碎片化的痛点。</p>
+                    <p><strong>技术意义：</strong>相比 Sora 关停后行业的"从头来过"困境，OmniWeaving 提供了一种更模块化、更可扩展的技术路线，有望成为下一代开源视频生成基础设施的参考架构。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">视频生成</span>
+                    <span class="tag tag-ai">统一框架</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 自动驾驶与出行 ============ -->
+        <div class="section" id="sec-auto">
+            <div class="section-header" style="border-bottom-color: var(--green);">
+                <span class="icon">🚗</span>
+                <h2>自动驾驶与出行</h2>
+                <span class="badge" style="background: var(--green); color: #000;">3 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://en.antaranews.com/news/410526/robosense-secures-exclusive-design-win-for-baidus-next-gen-apollo-go-robotaxi" target="_blank">🔥 速腾聚创独家拿下百度 Apollo Go 下一代 Robotaxi 激光雷达定点</a></h3>
+                <div class="meta">
+                    <span class="source">ANTARA News / PRNewswire</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>速腾聚创（RoboSense, HKEX: 2498）宣布独家拿下百度 Apollo Go 下一代 Robotaxi 工厂预装数字激光雷达方案。采用 "EM4 + E1" 组合——EM4 作为主雷达（号称"全球唯一量产千束级数字 LiDAR"），E1 作为全固态补盲雷达，实现 360° 零盲区 L4 级感知覆盖。</p>
+                    <div class="highlight">
+                        <strong>市场验证：</strong>继本周与 WeRide GXR Robotaxi 成功部署后，Apollo Go 的独家定点进一步巩固了 RoboSense 在 L4 自动驾驶感知层的技术主导地位。"EM4+E1"套件已成为全球自动驾驶行业最先进的 LiDAR 解决方案标杆。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">速腾聚创</span>
+                    <span class="tag tag-auto">百度Apollo</span>
+                    <span class="tag tag-auto">LiDAR</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://finance.sina.com.cn/stock/t/2026-03-27/doc-inhsiusk0057863.shtml" target="_blank">小马智行年营收 6 亿，2026 目标 3000+ 辆 / 20 城 / 收入翻三倍</a></h3>
+                <div class="meta">
+                    <span class="source">新浪财经 / 10jqka</span>
+                    <span>2026-03-27（持续热议）</span>
+                </div>
+                <div class="content">
+                    <p>小马智行（PONY, NASDAQ/HKEX: 02026）发布 2025 年财报：年营收突破 6 亿元，深圳和广州两城实现单车盈利转正。展望 2026，公司计划 Robotaxi 车队规模突破 3000 辆、海内外部署超 20 个城市、Robotaxi 收入翻超三倍。</p>
+                    <div class="highlight">
+                        <strong>亮点数据：</strong>第七代 Gen-7 Robotaxi 深圳单日单车营收创历史新高达 394 元（约 25 单/天）。CFO 王皓俊透露 2026 年新增车辆近半数将通过"运营商合作"模式落地，叠加自营乘客车费收入，驱动收入翻三倍。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">小马智行</span>
+                    <span class="tag tag-auto">Robotaxi</span>
+                    <span class="tag tag-auto">商业化</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.prnewswire.com/apac/news-releases/ponyai-targets-3-000-robotaxis-in-over-20-cities-in-2026-expects-dual-engines-to-drive-full-fledged-growth-302725958.html" target="_blank">全球 Robotaxi 竞赛白热化：Pony.ai 进军克罗地亚、Tesla/Waymo/Zoox 争夺美国市场</a></h3>
+                <div class="meta">
+                    <span class="source">PRNewswire / USA TODAY</span>
+                    <span>2026-03-27</span>
+                </div>
+                <div class="content">
+                    <p>全球自动驾驶竞赛持续升温。小马智行 3 月在杭州、长沙、克罗地亚三地同步开城，成为首个进入欧洲的中国 Robotaxi 运营商。同期在美国，Waymo 周均订单量突破 50 万单、Zoox 扩展至奥斯汀和迈阿密、Tesla Robotaxi 仍在筹备中。</p>
+                    <p><strong>格局判断：</strong>中美两线并进——中国以"规模+成本"优势快速铺开城市网络，美国以"技术+监管先发"优势深耕高价值市场。2026 年有望成为 Robotaxi 商业化的真正拐点年。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">全球竞赛</span>
+                    <span class="tag tag-auto">Waymo</span>
+                    <span class="tag tag-auto">Tesla</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 科技巨头与宏观 ============ -->
+        <div class="section" id="sec-giant">
+            <div class="section-header" style="border-bottom-color: var(--red);">
+                <span class="icon">🏢</span>
+                <h2>科技巨头与宏观</h2>
+                <span class="badge" style="background: var(--red);">4 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://frontierx.news/zh/news/nvidia-gtc-2026-vera-rubin-platform-trillion-dollar-projection" target="_blank">NVIDIA GTC 2026：Vera Rubin 平台发布，黄仁勋预测万亿美元营收</a></h3>
+                <div class="meta">
+                    <span class="source">FrontierX / 知乎</span>
+                    <span>2026-03-31（GTC持续发酵）</span>
+                </div>
+                <div class="content">
+                    <p>NVIDIA 在 GTC 2026 上重磅发布全新 Vera Rubin 芯片平台（含 7 款芯片），CEO 黄仁勋预测该平台生命周期内将带来万亿美元级别营收。同时发布 Groq 3 LPU 推理加速器和 OpenClaw 企业版智能体平台。OpenAI、Meta 等巨头已确认首批支持。</p>
+                    <div class="highlight">
+                        <strong>核心指标：</strong>Vera Rubin 平台推理效率较上一代提升 10 倍，结合 DLSS 5 神经渲染、OpenClaw 智能体框架、以及即将到来的 Groq 3 推理芯片，NVIDIA 正在构建从训练到推理到应用的全栈闭环。四大超级计算厂商 2026 年 AI 基础设施 CapEx 合计逼近 7000 亿美元。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">NVIDIA</span>
+                    <span class="tag tag-ai">Vera Rubin</span>
+                    <span class="tag tag-ai">万亿营收</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://news.cctv.com/2026/03/31/ARTIA9iceJQ8RMhQrdz7djml260331.shtml" target="_blank">中国 3 月制造业 PMI 50.4%，上升 1.4 个百分点重回扩张区间</a></h3>
+                <div class="meta">
+                    <span class="source">央视网 / 国家统计局</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>国家统计局 3 月 31 日发布数据：3 月中国制造业 PMI 为 50.4%，比上月上升 1.4 个百分点，高于 50% 临界点，制造业景气水平回升。这是自年初以来首次重回扩张区间。</p>
+                    <p><strong>产业信号：</strong>PMI 回暖与科技制造业密切相关——新能源汽车、AI 算力基础设施、机器人产业链的订单增长是拉动制造业复苏的重要引擎。特别是高技术制造业 PMI 持续处于较高扩张区间，反映"新质生产力"政策的实效。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-policy">PMI</span>
+                    <span class="tag tag-policy">宏观经济</span>
+                    <span class="tag tag-giant">制造业</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260331A0497E00" target="_blank">九部门联合发文：2028 年物联网核心产业规模突破 3.5 万亿元</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻 / 中新社</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>工信部等九部门 3 月 31 日联合印发《推动物联网产业创新发展行动方案（2026—2028年）》，明确到 2028 年物联网终端连接数力争达到百亿级规模，核心产业规模突破 3.5 万亿元。</p>
+                    <p><strong>产业联动：</strong>物联网是具身智能和自动驾驶的底层基础设施。百亿级终端连接将为 AI 大模型提供海量真实世界数据源，形成"物联网采集→AI训练→智能体部署→物联网执行"的闭环，与十五五规划的数字经济战略高度协同。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-policy">物联网</span>
+                    <span class="tag tag-policy">九部门</span>
+                    <span class="tag tag-giant">3.5万亿</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.chinanews.com.cn/cj/2026/03-28/10594429.shtml" target="_blank">中国银行举办 AI 产业链生态合作推广：累计授信超 5500 亿元</a></h3>
+                <div class="meta">
+                    <span class="source">中新网 / 中国银行官网</span>
+                    <span>2026-03-27</span>
+                </div>
+                <div class="content">
+                    <p>3 月 27 日，中国银行在京举办人工智能产业链生态合作推广活动。行长张辉致辞称，中国银行始终将科技金融摆在集团发展全局突出地位，累计对 AI 产业链相关企业授信超 5500 亿元。福瑞泰克等智能驾驶企业签署综合金融支持合作备忘录。</p>
+                    <p><strong>金融赋能：</strong>大型国有银行全面介入 AI 产业链融资，标志着中国 AI 投资从纯 VC 模式向"VC + 银行信贷 + 政府引导基金"多层次体系演进。5500 亿授信覆盖芯片、算力、大模型、应用场景全链条。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">中国银行</span>
+                    <span class="tag tag-vc">科技金融</span>
+                    <span class="tag tag-policy">产业链</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============ 创投与融资 ============ -->
+        <div class="section" id="sec-vc">
+            <div class="section-header" style="border-bottom-color: var(--yellow);">
+                <span class="icon">💰</span>
+                <h2>创投与融资</h2>
+                <span class="badge" style="background: var(--yellow); color: #000;">2 篇</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.businesstoday.in/technology/story/gnaniai-raises-10-million-in-funding-from-aavishkaar-capital-to-scale-global-voice-ai-push-523218-2026-03-31" target="_blank">语音 AI 初创 Gnani.ai 获 $1000 万 B 轮融资，Aavishkaar Capital 领投</a></h3>
+                <div class="meta">
+                    <span class="source">Business Today / YourStory</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>印度班加罗尔语音优先 AI 公司 Gnani.ai 宣布获得 1000 万美元 B 轮融资，由影响力投资基金 Aavishkaar Capital 领投，老股东 Info Edge Ventures 跟投。资金将用于扩大全球语音 AI 推广和 Agentic AI 能力建设。</p>
+                    <p><strong>赛道观察：</strong>语音 AI 是 Agent 落地最自然的场景之一。Gnani.ai 聚焦客服、合规和金融服务领域的语音自动化，在印度市场已服务超百家企业客户。此轮融资反映了 AI Agent 从文本向语音/多模态交互的投资风向转移。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">B轮</span>
+                    <span class="tag tag-ai">语音AI</span>
+                    <span class="tag tag-vc">$1000万</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://techfundingnews.com/riplo-raises-2-3m-to-build-ai-os-for-consulting-firms/" target="_blank">Riplo 获 £230 万种子前轮，打造咨询行业 AI 操作系统替代 PPT</a></h3>
+                <div class="meta">
+                    <span class="source">TechFundingNews</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>伦敦初创公司 Riplo 完成 230 万英镑（约 260 万欧元）种子前融资，Cherry Ventures 领投。团队由 QuantumBlack（麦肯锡旗下 AI 部门）和 Hg Capital 前员工创立，目标是构建面向咨询公司的 Agentic AI 操作系统，替代传统 PowerPoint 工作流。</p>
+                    <p><strong>市场洞察：</strong>全球管理咨询市场规模超 3000 亿美元，但核心工作流（数据分析→PPT呈现）数十年未变。Riplo 瞄准的是"AI 原生咨询工作流"——从数据接入、分析建模到报告生成的端到端自动化，是典型的 AI Agent 垂直应用场景。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">种子前</span>
+                    <span class="tag tag-ai">AI Agent</span>
+                    <span class="tag tag-vc">Cherry Ventures</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>📊 本报告共追踪 <strong>22 条</strong>深度新闻，覆盖全部 <strong>7 大垂直赛道</strong></p>
+            <p>数据来源：China Daily · 腾讯新闻 · 央视网 · 中新社 · ANTARA News · STAT News · PRNewswire · CGTN · 人民网 · IT之家 · 新浪财经 · YourStory · TechFundingNews 等</p>
+            <p style="margin-top: 10px;">由 <a href="https://codebuddy.ai" target="_blank">WorkBuddy</a> 自动生成 · 仅供参考 · 不构成投资建议</p>
+        </footer>
+    </div>
+</body>
+</html>
