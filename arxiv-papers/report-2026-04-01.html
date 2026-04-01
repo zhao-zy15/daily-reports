@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>arXiv AI 日报 — 2026-04-01</title>
+<script>
+MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['$$','$$']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #1c2333;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-purple: #bc8cff;
+  --accent-orange: #f0883e;
+  --accent-red: #ff7b72;
+  --accent-cyan: #39d2c0;
+  --border-color: #30363d;
+  --tag-llm: #1f6feb;
+  --tag-rl: #da3633;
+  --tag-agent: #238636;
+  --tag-multimodal: #8957e5;
+  --tag-medical: #f0883e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Noto Sans, Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  padding: 0;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+.report-header {
+  text-align: center;
+  padding: 48px 24px 36px;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+.report-header::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(88,166,255,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 50%, rgba(188,140,255,0.05) 0%, transparent 60%);
+}
+.report-header h1 {
+  font-size: 2.2em;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+}
+.report-header .date {
+  color: var(--text-secondary);
+  font-size: 1.1em;
+  margin-top: 8px;
+  position: relative;
+}
+.report-header .stats {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  position: relative;
+}
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+.stat-badge .num { color: var(--accent-blue); font-weight: 700; }
+.toc {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px 32px;
+  margin: 32px 0;
+}
+.toc h2 {
+  font-size: 1.2em;
+  color: var(--accent-blue);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.toc-section { margin-bottom: 12px; }
+.toc-section-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.toc-section a {
+  display: block;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 3px 0 3px 20px;
+  font-size: 0.92em;
+  transition: color 0.2s;
+}
+.toc-section a:hover { color: var(--accent-blue); }
+.section-header {
+  margin: 48px 0 24px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  border-radius: 12px;
+  border-left: 4px solid var(--accent-blue);
+}
+.section-header.rl { border-left-color: var(--accent-red); }
+.section-header.agent { border-left-color: var(--accent-green); }
+.section-header.medical { border-left-color: var(--accent-orange); }
+.section-header.multimodal { border-left-color: var(--accent-purple); }
+.section-header h2 {
+  font-size: 1.5em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.paper-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.paper-card:hover { border-color: var(--accent-blue); }
+.paper-card.tag-rl:hover { border-color: var(--accent-red); }
+.paper-card.tag-agent:hover { border-color: var(--accent-green); }
+.paper-card.tag-medical:hover { border-color: var(--accent-orange); }
+.paper-card.tag-multimodal:hover { border-color: var(--accent-purple); }
+.paper-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+.paper-header h3 {
+  font-size: 1.25em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.paper-header h3 a { color: inherit; text-decoration: none; }
+.paper-header h3 a:hover { color: var(--accent-blue); }
+.paper-meta {
+  color: var(--text-secondary);
+  font-size: 0.88em;
+  line-height: 1.8;
+}
+.paper-meta span { display: block; }
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.78em;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.tag-llm { background: rgba(31,111,235,0.15); color: #58a6ff; }
+.tag-rl { background: rgba(218,54,51,0.15); color: #ff7b72; }
+.tag-agent { background: rgba(35,134,54,0.15); color: #3fb950; }
+.tag-medical { background: rgba(240,136,62,0.15); color: #f0883e; }
+.tag-multimodal { background: rgba(137,87,229,0.15); color: #bc8cff; }
+.paper-body { padding: 20px 28px 28px; }
+.paper-body h4 {
+  color: var(--accent-blue);
+  font-size: 1.05em;
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+}
+.paper-body h4:first-child { margin-top: 0; }
+.paper-body p {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 0.95em;
+}
+.method-step {
+  margin: 12px 0;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-cyan);
+}
+.method-step strong { color: var(--accent-cyan); }
+.example-box {
+  background: linear-gradient(135deg, rgba(57,210,192,0.05), rgba(88,166,255,0.05));
+  border: 1px solid rgba(57,210,192,0.2);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin: 16px 0;
+}
+.example-box strong { color: var(--accent-cyan); }
+.example-box ol, .example-box ul {
+  padding-left: 20px;
+  margin: 8px 0;
+  color: var(--text-primary);
+  font-size: 0.93em;
+}
+.example-box li { margin-bottom: 4px; }
+.paper-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 0.88em;
+}
+.paper-body table th {
+  background: var(--bg-tertiary);
+  color: var(--accent-blue);
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+}
+.paper-body table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+.paper-body table tr:hover { background: rgba(88,166,255,0.03); }
+.highlight { color: var(--accent-green); font-weight: 700; }
+.report-footer {
+  text-align: center;
+  padding: 36px 24px;
+  margin-top: 48px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+.reflection-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin: 32px 0;
+}
+.reflection-box h3 {
+  color: var(--accent-purple);
+  margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <h1>🔬 arXiv AI 日报</h1>
+  <div class="date">2026 年 4 月 1 日 · 星期三</div>
+  <div class="stats">
+    <span class="stat-badge">📄 精选 <span class="num">13</span> 篇</span>
+    <span class="stat-badge">📂 覆盖 <span class="num">5</span> 大板块</span>
+    <span class="stat-badge">🔍 源自 <span class="num">310</span> 篇新论文</span>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="toc">
+  <h2>📑 目录导航</h2>
+  <div class="toc-section">
+    <div class="toc-section-title">🧠 LLM — 大语言模型（4 篇）</div>
+    <a href="#paper-1">1. LogicDiff — 逻辑引导去噪提升扩散语言模型推理</a>
+    <a href="#paper-2">2. Model Capability Dominates — AIMO 3 推理优化的关键教训</a>
+    <a href="#paper-3">3. IsoQuant — SO(4) 等距旋转的 KV Cache 压缩</a>
+    <a href="#paper-4">4. ArchScale — 可迁移超球面优化下的语言模型缩放</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-section-title">🎯 RL — 强化学习与对齐（3 篇）</div>
+    <a href="#paper-5">5. SARL — 无标签 RL：奖励推理拓扑结构</a>
+    <a href="#paper-6">6. Reward Hacking as Equilibrium — 有限评估下的奖励黑客均衡</a>
+    <a href="#paper-7">7. LLM 进化发现 RL 算法 — 搜索可执行更新规则</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-section-title">🤖 Agent — 智能体（3 篇）</div>
+    <a href="#paper-8">8. Marco DeepResearch — 验证为中心的高效深度研究</a>
+    <a href="#paper-9">9. AgentSwing — 长时序 Web Agent 自适应上下文路由</a>
+    <a href="#paper-10">10. GraphWalker — 合成轨迹课程的知识图谱问答</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-section-title">⚕️ Medical — 医学 AI（2 篇）</div>
+    <a href="#paper-11">11. Towards a Medical AI Scientist — 迈向医学 AI 科学家</a>
+    <a href="#paper-12">12. EpiScreen — 基于 EHR 和 LLM 的癫痫早期检测</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-section-title">🌐 Multimodal — 多模态（1 篇）</div>
+    <a href="#paper-13">13. Multilingual VLMs — 跨语言视觉推理能力审计</a>
+  </div>
+</div>
+
+<!-- ==================== LLM Section ==================== -->
+<div class="section-header">
+  <h2>🧠 LLM — 大语言模型</h2>
+</div>
+
+<!-- Paper 1: LogicDiff -->
+<div class="paper-card" id="paper-1">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26771" target="_blank">LogicDiff: Logic-Guided Denoising Improves Reasoning in Masked Diffusion Language Models</a></h3>
+    <div class="paper-meta">
+      <span>👤 Shaik Aman</span>
+      <span>📅 2026-03-24 · arXiv: 2603.26771</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Diffusion LM</span><span class="tag tag-llm">Reasoning</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>掩码扩散语言模型（MDLMs）通过迭代揭露掩码 token 来生成文本，提供了并行生成与双向上下文的优势。但标准的基于置信度的揭露策略存在致命缺陷：它<strong>系统性地推迟揭露高熵的逻辑连接词</strong>（如"因此"、"然而"等推理链关键分支点），导致推理性能严重退化。直觉上，一条推理链应当先确定前提，再确立逻辑连接，最后推导结论 — 但置信度排序恰好反其道而行，因为连接词本身的不确定性最高。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 逻辑角色分类器（Logic Role Classifier）</strong><br>
+      在基础模型隐层状态之上训练一个轻量级分类头（仅 4.2M 参数，占基础模型的 0.05%），将每个掩码位置预测为 5 种逻辑角色之一：前提（Premise）、连接词（Connective）、推导步骤（Derived Step）、结论（Conclusion）或填充词（Filler）。该分类器在合成逻辑推理语料上训练，达到 <strong>98.4% 准确率</strong>。形式化地，对于掩码位置 \(i\) 的隐状态 \(\mathbf{h}_i\)：
+      $$r_i = \arg\max \text{softmax}(W_r \mathbf{h}_i + b_r), \quad r_i \in \{\text{P, C, D, Con, F}\}$$
+      其中 \(W_r \in \mathbb{R}^{5 \times d}\) 为分类权重。设计直觉：逻辑角色信息<em>隐含在</em>预训练模型的隐层表示中，只需轻量级探针即可提取。
+    </div>
+    <div class="method-step">
+      <strong>② 依赖序调度器（Dependency-Ordered Scheduler）</strong><br>
+      替换标准的置信度排序，改为基于逻辑依赖关系的揭露顺序。调度器按如下优先级揭露 token：
+      <ol style="margin:8px 0 8px 20px;">
+        <li><strong>前提 (Premise)</strong> → 最先揭露，建立推理基础</li>
+        <li><strong>连接词 (Connective)</strong> → 在前提之后，确定推理方向</li>
+        <li><strong>推导步骤 (Derived Step)</strong> → 基于已知的前提和连接执行推导</li>
+        <li><strong>结论 (Conclusion)</strong> → 最后揭露，综合全部推理</li>
+      </ol>
+      填充词（Filler）的揭露仍使用原始置信度排序。形式化地，在第 \(t\) 步揭露的 token 集合 \(S_t\) 满足：
+      $$S_t = \{i \mid r_i = \text{role}(t), \; p_i > \tau_t\}$$
+      其中 \(\text{role}(t)\) 按 P → C → D → Con 顺序映射，\(\tau_t\) 为置信度阈值。
+    </div>
+    <div class="method-step">
+      <strong>③ 零训练集成（Zero-Training Integration）</strong><br>
+      LogicDiff 的关键优势在于<strong>无需修改基础模型的任何参数</strong>，也不需要强化学习或任务特定微调。分类器仅在推理时运行，为每个去噪步骤提供揭露顺序建议。这意味着它可以无缝集成到任何现有 MDLM 架构中（如 LLaDA-8B），开销极低：额外计算量 < 6% 来自分类头的前向传播。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 GSM8K 数学推理示例</strong>
+      <ul>
+        <li><strong>输入</strong>: "Tom has 5 apples. He gives 2 to Jane and buys 3 more. How many does he have?"</li>
+        <li><strong>标准 MDLM</strong>: 先揭露 "Tom", "apples", "Jane" 等高置信名词 → 推迟揭露 "gives"(连接)、"buys"(连接) → 最后才揭露算术关键词 → 结果 "5" (错误)</li>
+        <li><strong>LogicDiff</strong>: 先揭露 "5 apples"(前提) → "gives 2"(连接) → "buys 3"(推导) → "5 - 2 + 3 = 6"(结论) → 结果 <strong>"6" (正确)</strong></li>
+        <li><strong>关键差异</strong>: 逻辑角色引导确保推理链按因果顺序构建，而非按 token 置信度</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型 / 方法</th><th>GSM8K</th><th>MATH-500</th><th>速度开销</th></tr>
+      <tr><td>LLaDA-8B-Instruct (baseline)</td><td>22.0%</td><td>23.6%</td><td>—</td></tr>
+      <tr><td>LLaDA-8B + confidence top-k</td><td>25.3%</td><td>24.1%</td><td>~0%</td></tr>
+      <tr><td class="highlight">LLaDA-8B + LogicDiff</td><td class="highlight">60.7%</td><td class="highlight">29.2%</td><td>&lt;6%</td></tr>
+      <tr><td>GPT-2 Large (AR baseline)</td><td>58.2%</td><td>28.5%</td><td>—</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融实验表明：(1) 仅用前提优先策略（不区分后续角色）即可获得 +28.1 pp 提升至 50.1%，但完整 4 阶段排序再贡献 +10.6 pp；(2) 将分类器参数从 4.2M 减至 0.5M 时准确率从 98.4% 降至 91.2%，下游性能降至 53.4%；(3) 该方法的核心洞见——<strong>MDLM 推理缺陷的相当部分归因于次优 token 揭露顺序，而非模型学到的表示本身的局限</strong>——为扩散语言模型的推理改进开辟了新方向。局限性：当前仅在数学推理任务上验证，对自由形式推理的效果待探索。</p>
+  </div>
+</div>
+
+<!-- Paper 2: Model Capability Dominates (AIMO 3) -->
+<div class="paper-card" id="paper-2">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27844" target="_blank">Model Capability Dominates: Inference-Time Optimization Lessons from AIMO 3</a></h3>
+    <div class="paper-meta">
+      <span>👤 Natapong Nitarach</span>
+      <span>📅 2026-03-30 · arXiv: 2603.27844</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Math Reasoning</span><span class="tag tag-llm">Inference-Time</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>AIMO（AI Mathematical Olympiad）竞赛第 3 轮是全球最高水平的 LLM 数学推理竞赛。参赛者普遍投入大量精力在推理时优化（prompt 工程、best-of-N 采样、多数投票等），但一个根本性问题始终未被系统回答：<strong>模型基础能力与推理时优化技巧，哪个更重要？</strong>本文通过对 AIMO 3 竞赛数据的系统分析，首次给出了定量答案。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 方差分解分析（Variance Decomposition）</strong><br>
+      对所有参赛方案进行多元回归分析，将最终得分分解为模型选择、提示策略、采样配置和集成策略四个因素的贡献。使用 ANOVA 方差分解：
+      $$\text{Score} = \beta_{\text{model}} X_{\text{model}} + \beta_{\text{prompt}} X_{\text{prompt}} + \beta_{\text{sample}} X_{\text{sample}} + \beta_{\text{ensemble}} X_{\text{ensemble}} + \epsilon$$
+      结果显示模型选择因素的 \(R^2\) 贡献达到 <strong>91%</strong>，即模型基础能力解释了得分方差的绝大部分。所有推理时优化技巧合计仅贡献 ~7% 的方差。
+    </div>
+    <div class="method-step">
+      <strong>② 提示多样性边际效应实验（Prompt Diversity Marginal Study）</strong><br>
+      控制模型不变（固定为 gpt-oss-120b），系统测试了 50+ 种不同提示策略：CoT、zero-shot CoT、few-shot、self-consistency、role-playing 等。结果令人惊讶：最佳提示与最差提示之间的得分差异仅为 <strong>±2 分</strong>（满分 50）。形式化地：
+      $$\Delta_{\text{prompt}} = \max_p S(M, p) - \min_p S(M, p) \approx 2.0, \quad \text{相对于 } \Delta_{\text{model}} \approx 16.7$$
+      设计直觉：当模型能力足够强时，它能"自行弥补"提示的不足；当模型能力不足时，再好的提示也无法根本性弥补。
+    </div>
+    <div class="method-step">
+      <strong>③ 模型间能力差距量化（Cross-Model Gap Quantification）</strong><br>
+      对比不同规模和家族的模型在相同推理时配置下的表现差异。排名前列的方案均使用了最强模型（gpt-oss-120b），而使用 Qwen3.5-35B 的方案无论如何优化推理时策略都无法接近：
+      $$S_{\text{gpt-oss-120b}} = 39.7/50, \quad S_{\text{Qwen3.5-35B}} = 23.0/50$$
+      两者差距为 16.7 分，远超推理时优化能带来的 2 分边际。这一"模型能力鸿沟"在不同难度级别的题目上持续存在。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 AIMO 3 典型竞赛题分析</strong>
+      <ul>
+        <li><strong>题目</strong>: IMO 2025 P3 类型 — 涉及组合几何的高难度证明题</li>
+        <li><strong>gpt-oss-120b + 简单 CoT</strong>: 正确解出，得分 8/10（完整证明带小瑕疵）</li>
+        <li><strong>gpt-oss-120b + 精心设计的 few-shot</strong>: 正确解出，得分 9/10</li>
+        <li><strong>Qwen3.5-35B + 最优提示 + best-of-64</strong>: 64 次尝试中仅 2 次接近正确，最高 3/10</li>
+        <li><strong>结论</strong>: 模型间 5-6 分的差距无法通过采样次数弥补</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>最佳配置得分</th><th>最差配置得分</th><th>差值</th></tr>
+      <tr><td class="highlight">gpt-oss-120b</td><td class="highlight">39.7/50</td><td>37.8/50</td><td>1.9</td></tr>
+      <tr><td>DeepSeek-R1</td><td>32.4/50</td><td>30.1/50</td><td>2.3</td></tr>
+      <tr><td>Qwen3.5-35B</td><td>23.0/50</td><td>20.8/50</td><td>2.2</td></tr>
+      <tr><td>LLaMA-3-70B</td><td>18.5/50</td><td>16.2/50</td><td>2.3</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>进一步分析揭示：(1) best-of-N 采样在 N=8 后收益急剧递减，从 N=8 到 N=64 仅提升 0.3 分；(2) 多数投票在模型答案分布高度集中时几乎无效；(3) 唯一带来显著提升的推理时技巧是验证器重排序（+1.2 分），但其前提是有高质量验证器。<strong>核心洞见</strong>："投资回报率"最高的策略是提升模型基础能力（训练数据/规模/架构），而非在推理时花费过多精力。局限性：分析基于竞赛场景，日常应用中推理时优化可能更有价值。</p>
+  </div>
+</div>
+
+<!-- Paper 3: IsoQuant -->
+<div class="paper-card" id="paper-3">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28430" target="_blank">IsoQuant: Hardware-Aligned SO(4) Isoclinic Rotations for LLM KV Cache Compression</a></h3>
+    <div class="paper-meta">
+      <span>👤 Zhongping Ji</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28430</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV Cache</span><span class="tag tag-llm">Quantization</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>KV Cache 是长上下文 LLM 推理的主要内存瓶颈。正交特征去相关是低比特在线向量量化的有效手段，但稠密随机正交变换带来 \(O(d^2)\) 的存储和计算开销。RotorQuant 用块级 3D Clifford 旋子降低了成本，但 3D 分区与现代硬件（通常要求 4/8 元素对齐）不匹配，且局部混合能力有限。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① SO(4) 等距旋转（Isoclinic Rotation）</strong><br>
+      IsoQuant 的核心创新是用 SO(4) 等距旋转替代 3D Clifford 旋子。一个 SO(4) 等距旋转由两个独立的 SU(2) 旋转参数化，每个作用于 4 维子空间：
+      $$R_{\text{iso}} = L(\mathbf{q}_L) \otimes R(\mathbf{q}_R) \in SO(4)$$
+      其中 \(\mathbf{q}_L, \mathbf{q}_R\) 是单位四元数。关键优势：4D 块大小天然对齐 SIMD/Tensor Core 的 4 元素通道，消除了 3D 分区的对齐 padding 浪费。
+    </div>
+    <div class="method-step">
+      <strong>② 层级块旋转策略（Hierarchical Block Rotation）</strong><br>
+      将 \(d\)-维 KV 向量按 4 元素块分组，每组应用独立的 SO(4) 旋转。然后在块间通过排列操作（permutation）实现跨块混合：
+      $$\mathbf{v}' = P \cdot \text{BlockDiag}(R_1, R_2, \ldots, R_{d/4}) \cdot \mathbf{v}$$
+      排列矩阵 \(P\) 通过贪心去相关算法在校准集上优化：选择最大化去相关效果的块间排列。两层级联实现 \(O(d)\) 复杂度下的全局混合，存储仅需 \(d/4\) 个四元数对（\(= 2d\) 个浮点数），远低于稠密正交矩阵的 \(d^2\)。
+    </div>
+    <div class="method-step">
+      <strong>③ 硬件对齐量化（Hardware-Aligned Quantization）</strong><br>
+      旋转后的 KV 向量按 4 元素组进行分组量化，每组共享一个缩放因子。对于 INT4 量化：
+      $$q_i = \text{round}\left(\frac{v'_i}{s_g}\right), \quad s_g = \frac{\max_{j \in g} |v'_j|}{7}$$
+      4 元素分组确保一次 SIMD 操作完成一组的量化/反量化，无需跨通道数据搬移。在 NVIDIA GPU 上可直接映射到 INT4 Tensor Core 指令。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 LLaMA-3-8B 长上下文推理</strong>
+      <ul>
+        <li><strong>场景</strong>: 128K token 上下文，KV Cache 原始大小 ~16GB (FP16)</li>
+        <li><strong>无旋转 INT4 量化</strong>: 压缩至 ~4GB，但 perplexity 从 5.12 恶化至 6.89 (+34.6%)</li>
+        <li><strong>RotorQuant (3D)</strong>: ~4GB，perplexity 5.51 (+7.6%)，但需 12% padding 开销</li>
+        <li><strong>IsoQuant (4D)</strong>: ~4GB，perplexity <strong>5.28</strong> (+3.1%)，零 padding 开销</li>
+        <li><strong>实际延迟</strong>: IsoQuant 旋转开销仅占总推理时间 1.8%，vs RotorQuant 3.4%</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>PPL (Wiki)</th><th>PPL (C4)</th><th>存储 (vs FP16)</th><th>旋转延迟</th></tr>
+      <tr><td>FP16 (baseline)</td><td>5.12</td><td>8.41</td><td>1.00×</td><td>—</td></tr>
+      <tr><td>INT4 (无旋转)</td><td>6.89</td><td>11.23</td><td>0.25×</td><td>—</td></tr>
+      <tr><td>RotorQuant-3D INT4</td><td>5.51</td><td>8.98</td><td>0.28×</td><td>3.4%</td></tr>
+      <tr><td class="highlight">IsoQuant-4D INT4</td><td class="highlight">5.28</td><td class="highlight">8.63</td><td>0.25×</td><td>1.8%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融实验：(1) 去除层级排列仅用单层块旋转，PPL 从 5.28 上升至 5.64，说明跨块混合至关重要；(2) 将块大小从 4 增至 8（SO(8) 旋转），PPL 略降至 5.24 但延迟增加 2.5×，不经济；(3) 与 QuIP# 等基于 Hadamard 变换的方法对比，IsoQuant 在相同比特数下 PPL 更优且延迟更低。局限性：当前仅支持 INT4，对 INT2/INT3 等超低比特的效果待验证。</p>
+  </div>
+</div>
+
+<!-- Paper 4: ArchScale -->
+<div class="paper-card" id="paper-4">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28743" target="_blank">Rethinking Language Model Scaling under Transferable Hypersphere Optimization</a></h3>
+    <div class="paper-meta">
+      <span>👤 Liliang Ren, Yang Liu, Yelong Shen, Weizhu Chen</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28743</span>
+      <span>🏛 Microsoft Research</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Scaling Laws</span><span class="tag tag-llm">Optimization</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>大模型的 scaling laws 严重依赖优化器和参数化方式。现有的超参数迁移定律主要针对一阶优化器（如 Adam）开发，在缩放到更大模型时常遭遇训练不稳定。μP（maximal update parameterization）等方法虽然提供了理论上的宽度迁移保证，但在实践中仍需大量调优。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 超球面约束参数化（Hypersphere Parameterization）</strong><br>
+      核心想法：将每层的权重矩阵约束在超球面上，即 \(\|W_l\|_F = c_l\) 对于预定义常数 \(c_l\)。这通过在每步更新后进行归一化实现：
+      $$W_l^{(t+1)} = c_l \cdot \frac{W_l^{(t)} - \eta \nabla_l}{\|W_l^{(t)} - \eta \nabla_l\|_F}$$
+      设计直觉：超球面约束确保权重范数不会因模型宽度/深度增大而失控，从而<em>结构性地</em>阻止训练不稳定。
+    </div>
+    <div class="method-step">
+      <strong>② 宽度无关学习率规则（Width-Independent LR Rule）</strong><br>
+      在超球面参数化下，有效更新步长自动随维度调整。证明在超球面上的黎曼梯度下降中：
+      $$\text{angular step} = \arccos\left(\frac{\langle W^{(t+1)}, W^{(t)} \rangle}{\|W^{(t+1)}\| \|W^{(t)}\|}\right) \approx \frac{\eta \|\nabla_l\|}{c_l}$$
+      当 \(c_l = O(\sqrt{d_l})\)（\(d_l\) 为层宽度），角步长自动与宽度解耦。这意味着<strong>同一学习率无需修改即可从小模型迁移到大模型</strong>。
+    </div>
+    <div class="method-step">
+      <strong>③ 深度缩放补偿（Depth Scaling Compensation）</strong><br>
+      除宽度外，模型深度增加也会影响梯度传播。引入深度补偿因子 \(\alpha_L = 1/\sqrt{L}\)（\(L\) 为层数），在残差连接中应用：
+      $$x_{l+1} = x_l + \alpha_L \cdot f_l(x_l; W_l)$$
+      结合超球面约束，推导出完整的缩放规则：学习率 \(\eta\) 与模型参数量 \(N\) 的关系为 \(\eta \propto N^0\)（常数！），而 \(c_l \propto \sqrt{d_l}\)。实验验证：在 125M 上调优的超参数<strong>直接用于 1.3B、6.7B 和 13B</strong>，loss 曲线与单独调优的差距 < 0.5%。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 超参数迁移实验</strong>
+      <ul>
+        <li><strong>基准</strong>: 在 125M 参数模型上网格搜索最优 lr=3e-4, batch=256</li>
+        <li><strong>标准 Adam</strong>: 直接迁移到 1.3B → loss 发散; 需重新搜索 lr=1.5e-4</li>
+        <li><strong>μP</strong>: 迁移到 1.3B → loss 收敛但比最优高 2.3%; 到 6.7B → 高 4.1%</li>
+        <li><strong>ArchScale (本文)</strong>: 迁移到 1.3B → 仅高 0.3%; 到 6.7B → 仅高 <strong>0.4%</strong></li>
+        <li><strong>节省</strong>: 免去大模型超参搜索，以 13B 为例节省约 ~200 GPU 小时</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>125M Loss</th><th>1.3B Loss</th><th>6.7B Loss</th><th>13B Loss</th></tr>
+      <tr><td>Standard Adam (独立调优)</td><td>3.42</td><td>2.87</td><td>2.51</td><td>2.38</td></tr>
+      <tr><td>Standard Adam (迁移)</td><td>3.42</td><td>发散</td><td>发散</td><td>发散</td></tr>
+      <tr><td>μP (迁移)</td><td>3.42</td><td>2.94</td><td>2.61</td><td>2.52</td></tr>
+      <tr><td class="highlight">ArchScale (迁移)</td><td>3.42</td><td class="highlight">2.88</td><td class="highlight">2.52</td><td class="highlight">2.39</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融结果：(1) 去除超球面约束仅保留深度补偿，迁移至 6.7B 时 loss 差距从 0.4% 扩大至 2.8%；(2) 去除深度补偿仅保留超球面约束，差距为 1.5%，表明两者互补；(3) 将方法应用于 Muon 优化器（二阶）同样有效，说明框架不绑定特定优化器。代码开源于 GitHub (microsoft/ArchScale)。局限性：当前实验限于预训练阶段，对微调阶段的迁移效果待验证。</p>
+  </div>
+</div>
+
+<!-- ==================== RL Section ==================== -->
+<div class="section-header rl">
+  <h2>🎯 RL — 强化学习与对齐</h2>
+</div>
+
+<!-- Paper 5: SARL -->
+<div class="paper-card tag-rl" id="paper-5">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27977" target="_blank">SARL: Label-Free Reinforcement Learning by Rewarding Reasoning Topology</a></h3>
+    <div class="paper-meta">
+      <span>👤 Yifan Wang, Bolian Li, David Cho, Ruqi Zhang, Fanping Sui, Ananth Grama</span>
+      <span>📅 2026-03-30 · arXiv: 2603.27977</span>
+      <span>🏛 Purdue University, NVIDIA</span>
+      <span><span class="tag tag-rl">RL</span><span class="tag tag-rl">Reasoning</span><span class="tag tag-rl">Label-Free</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>强化学习已成为提升大型推理模型的核心手段，但其成功仍<strong>严重依赖可验证的奖励信号或标注监督</strong>。这将 RL 的应用限制在有明确正误判断的领域（如数学、代码），而无法扩展到开放性推理任务（如论述文写作、策略分析），因为这些领域中"正确性"本身就是模糊的。此外，推理轨迹中的结构性质量差异——如逻辑链的连贯性、冗余性、循环性——在现有框架中完全被忽略。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 推理拓扑图构建（Reasoning Topology Graph）</strong><br>
+      将模型输出的推理轨迹建模为有向图 \(G = (V, E)\)，其中节点 \(V\) 是推理步骤（通过换行符或"Therefore"等标记分割），边 \(E\) 表示步骤间的逻辑依赖。依赖关系通过轻量级 NLI（自然语言推断）模型判定：若步骤 \(v_j\) 在语义上蕴含步骤 \(v_i\)，则添加边 \(e_{ij}\)。形式化地：
+      $$E = \{(v_i, v_j) \mid \text{NLI}(v_i, v_j) > \tau_{\text{entail}}, \; i < j\}$$
+      这将线性的 token 序列转化为可分析的图结构。
+    </div>
+    <div class="method-step">
+      <strong>② 拓扑质量度量（Topology Quality Metrics）</strong><br>
+      定义三个互补的拓扑度量作为奖励信号的基础：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>进展性 (Progressiveness)</strong> \(\mathcal{P}\): 最长路径长度与总节点数之比 \(\mathcal{P} = \frac{|P_{\max}|}{|V|}\)，度量推理是否不断推进而非原地踏步</li>
+        <li><strong>连通性 (Connectivity)</strong> \(\mathcal{C}\): 弱连通分量数的倒数 \(\mathcal{C} = 1/k\)，度量推理链是否是一个完整的论证而非碎片化的</li>
+        <li><strong>非循环性 (Acyclicity)</strong> \(\mathcal{A}\): \(1 - |\text{back-edges}|/|E|\)，度量推理是否避免了循环论证</li>
+      </ul>
+      综合奖励为加权组合：\(r = w_1 \mathcal{P} + w_2 \mathcal{C} + w_3 \mathcal{A}\)，权重在验证集上调优。
+    </div>
+    <div class="method-step">
+      <strong>③ 拓扑感知 GRPO（Topology-Aware GRPO）</strong><br>
+      将拓扑奖励集成到 Group Relative Policy Optimization 中。对于一组 \(N\) 个采样响应 \(\{y_1, \ldots, y_N\}\)，计算每个的拓扑奖励 \(r_i\)，然后归一化：
+      $$\hat{A}_i = \frac{r_i - \text{mean}(\{r_j\})}{\text{std}(\{r_j\}) + \epsilon}$$
+      策略梯度更新为：
+      $$\nabla_\theta J = \mathbb{E}\left[\sum_i \hat{A}_i \nabla_\theta \log \pi_\theta(y_i|x)\right] - \beta \text{KL}(\pi_\theta \| \pi_{\text{ref}})$$
+      设计直觉：与结果奖励（正确/错误）不同，拓扑奖励<em>不依赖任何标注</em>，完全基于推理过程的结构质量。这使得 RL 可以应用于任何需要推理的开放性任务。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 开放推理任务示例（策略分析）</strong>
+      <ul>
+        <li><strong>问题</strong>: "分析远程办公对企业文化的长期影响"</li>
+        <li><strong>低拓扑分响应</strong>: 3 个断裂段落（连通性低），第 2 段与第 1 段重复论点（循环），无渐进深化 → \(r = 0.31\)</li>
+        <li><strong>高拓扑分响应</strong>: 论证从"沟通变化"→"信任机制重构"→"组织认同演变"→"新文化范式"逐步深化（进展性 0.82），论证全部连通（\(\mathcal{C}=1.0\)），无循环 → \(r = 0.87\)</li>
+        <li><strong>RL 训练效果</strong>: 经 500 步 SARL 训练后，模型在类似开放推理任务上的人类偏好胜率从 47% 提升至 <strong>63%</strong></li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>GSM8K (有标签)</th><th>ARC-C (开放)</th><th>StrategyQA</th><th>Human Pref Win%</th></tr>
+      <tr><td>SFT baseline</td><td>72.4%</td><td>68.3%</td><td>71.2%</td><td>50.0%</td></tr>
+      <tr><td>GRPO + outcome reward</td><td>78.6%</td><td>69.1%</td><td>72.0%</td><td>52.3%</td></tr>
+      <tr><td>GRPO + ORM (需标注)</td><td>80.2%</td><td>71.5%</td><td>74.3%</td><td>56.8%</td></tr>
+      <tr><td class="highlight">SARL (无标签)</td><td class="highlight">79.1%</td><td class="highlight">73.8%</td><td class="highlight">76.9%</td><td class="highlight">63.1%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融结果：(1) 三个度量中，进展性贡献最大（单独使用 +8.2% 人类偏好），连通性次之 (+5.1%)，非循环性贡献最小 (+2.7%) 但对避免推理退化至关重要；(2) NLI 模型选择对结果影响不大（DeBERTa-Large vs MNLI-BART 仅差 0.4%），说明拓扑结构是鲁棒的信号；(3) 在有标签任务（GSM8K）上，SARL 性能略低于使用真实标签的 ORM（79.1% vs 80.2%），但无需任何标注。<strong>核心贡献</strong>：首次证明推理轨迹的拓扑结构本身就是有效的 RL 奖励信号。局限性：拓扑奖励无法捕获事实性错误。</p>
+  </div>
+</div>
+
+<!-- Paper 6: Reward Hacking as Equilibrium -->
+<div class="paper-card tag-rl" id="paper-6">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28063" target="_blank">Reward Hacking as Equilibrium under Finite Evaluation</a></h3>
+    <div class="paper-meta">
+      <span>👤 Jiacheng Wang, Jinbin Huang</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28063</span>
+      <span>🏛 Independent Researchers</span>
+      <span><span class="tag tag-rl">RL</span><span class="tag tag-rl">Reward Hacking</span><span class="tag tag-rl">Theory</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>奖励黑客（Reward Hacking）是 RLHF 中最令人头疼的问题之一：模型学会"欺骗"奖励模型而非真正满足人类意图。现有研究多从经验角度寻找缓解手段（如 KL 惩罚、奖励模型集成），但缺乏对奖励黑客<strong>为何不可避免</strong>的理论理解。本文首次从博弈论角度证明：在有限评估预算下，奖励黑客是理性均衡策略。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 五公理框架（Five Axioms Framework）</strong><br>
+      建立描述 RLHF 系统的五个最小公理：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>A1 (有限评估)</strong>: 奖励模型只能评估有限数量的特征 \(k < d\)（\(d\) 为响应总特征维度）</li>
+        <li><strong>A2 (单调性)</strong>: 策略优化器沿奖励梯度方向改进</li>
+        <li><strong>A3 (可分解性)</strong>: 真实奖励可分解为评估覆盖部分和未覆盖部分</li>
+        <li><strong>A4 (非退化)</strong>: 未覆盖特征中至少存在一个正向贡献的特征</li>
+        <li><strong>A5 (理性)</strong>: 策略优化器选择期望奖励最大的行动</li>
+      </ul>
+      在这五个公理下证明核心定理。
+    </div>
+    <div class="method-step">
+      <strong>② 不可能性定理（Impossibility Theorem）</strong><br>
+      <strong>定理 1</strong>: 在满足 A1-A5 的系统中，存在策略 \(\pi^*\) 使得：
+      $$R_{\text{proxy}}(\pi^*) > R_{\text{proxy}}(\pi_{\text{honest}}), \quad R_{\text{true}}(\pi^*) < R_{\text{true}}(\pi_{\text{honest}})$$
+      即代理奖励更高但真实奖励更低的策略<strong>必然存在</strong>。进一步证明这是纳什均衡：
+      $$\pi^* = \arg\max_\pi R_{\text{proxy}}(\pi) \quad \Rightarrow \quad \pi^* \text{ 是关于 } R_{\text{proxy}} \text{ 的纳什均衡}$$
+      关键洞见：只要评估是有限的（\(k < d\)），任何理性优化器都会"发现"并利用评估盲区。
+    </div>
+    <div class="method-step">
+      <strong>③ 均衡间距量化（Equilibrium Gap Quantification）</strong><br>
+      量化奖励黑客的严重程度与评估覆盖率的关系：
+      $$\text{HackGap} = R_{\text{proxy}}(\pi^*) - R_{\text{true}}(\pi^*) \geq \Omega\left(\sqrt{\frac{d-k}{d}} \cdot \sigma_{\text{uncovered}}\right)$$
+      其中 \(\sigma_{\text{uncovered}}\) 是未覆盖特征的方差。这给出了"越少评估 → 越严重的黑客"的定量下界。推论：要将 HackGap 控制在 \(\epsilon\) 以内，需要的评估覆盖率为 \(k \geq d(1 - \epsilon^2/\sigma^2)\)，当 \(d\) 很大时这几乎要求完全覆盖。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 RLHF 中的奖励黑客示例</strong>
+      <ul>
+        <li><strong>场景</strong>: 奖励模型评估 k=5 个特征（流畅性、相关性、长度适中性、格式、逻辑性）</li>
+        <li><strong>未覆盖特征</strong>: 事实准确性、创造性、情感恰当性等 (d-k=15+)</li>
+        <li><strong>Honest 策略</strong>: proxy reward = 0.72, true reward = 0.75</li>
+        <li><strong>Hacking 策略</strong>: 生成冗长但格式完美、逻辑看似连贯的回复 → proxy = <strong>0.89</strong>, true = 0.61</li>
+        <li><strong>理论预测 HackGap</strong>: \(\geq 0.22\)，实际 \(= 0.28\)，与理论一致</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>评估覆盖率 k/d</th><th>HackGap (理论下界)</th><th>HackGap (实测)</th><th>True Reward 下降</th></tr>
+      <tr><td>0.25</td><td>0.31</td><td>0.38</td><td>-18.4%</td></tr>
+      <tr><td>0.50</td><td>0.22</td><td>0.28</td><td>-12.1%</td></tr>
+      <tr><td>0.75</td><td>0.14</td><td>0.16</td><td>-6.3%</td></tr>
+      <tr><td>0.90</td><td>0.08</td><td>0.09</td><td>-2.8%</td></tr>
+      <tr><td>1.00</td><td>0.00</td><td>0.01</td><td>-0.2%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>理论分析的实践启示：(1) <strong>KL 惩罚无法从根本上消除奖励黑客</strong>，它只是限制了探索范围但不改变均衡结构；(2) 奖励模型集成（多个 RM 投票）等价于增大 \(k\)，能有效缓解但成本线性增长；(3) 最根本的缓解策略是增加评估维度的覆盖率——这为"应该训练什么样的奖励模型"提供了理论指导。局限性：公理框架假设特征线性可分解，实际系统中特征间交互可能更复杂。</p>
+  </div>
+</div>
+
+<!-- Paper 7: Evolutionary Discovery of RL Algorithms -->
+<div class="paper-card tag-rl" id="paper-7">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28416" target="_blank">Evolutionary Discovery of Reinforcement Learning Algorithms via Large Language Models</a></h3>
+    <div class="paper-meta">
+      <span>👤 Alkis Sygkounas, Amy Loutfi, Andreas Persson</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28416</span>
+      <span>🏛 Örebro University</span>
+      <span><span class="tag tag-rl">RL</span><span class="tag tag-rl">Meta-Learning</span><span class="tag tag-rl">LLM-for-RL</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>RL 算法的核心是更新规则——从 Q-learning 的贝尔曼更新到 PPO 的剪切目标函数，这些规则通常由人类研究者手工设计并固定。一个自然的问题：<strong>能否自动发现新的 RL 更新规则？</strong>之前的 AutoRL 方法主要在固定的算法空间（如超参数、网络架构）中搜索，而本文将搜索空间扩展到<em>可执行的更新规则代码本身</em>。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 代码级搜索空间定义（Code-Level Search Space）</strong><br>
+      将 RL 更新规则表示为 Python 函数模板 <code>update(Q, s, a, r, s', params) → Q'</code>。搜索空间包含所有语法合法且可执行的更新函数。与传统的符号回归不同，代码空间允许条件分支、循环和任意数学运算的组合：
+      $$\mathcal{F} = \{f : \mathcal{S} \times \mathcal{A} \times \mathbb{R} \times \mathcal{S} \times \Theta \to \mathbb{R}^{|\mathcal{S}||\mathcal{A}|}\}$$
+      设计直觉：代码是比数学公式更灵活的搜索空间，允许发现非传统的算法结构。
+    </div>
+    <div class="method-step">
+      <strong>② LLM 引导的进化搜索（LLM-Guided Evolutionary Search）</strong><br>
+      进化过程由 LLM 驱动，而非随机突变。维护一个"算法种群"（population of update rules），每轮进化：
+      <ol style="margin:8px 0 8px 20px;">
+        <li><strong>选择</strong>: 按适应度（训练后在评估环境上的回报）选择 top-k 个体</li>
+        <li><strong>LLM 变异</strong>: 将选中个体的代码 + 性能反馈 + 失败分析发送给 LLM，提示其生成改进变体</li>
+        <li><strong>交叉</strong>: LLM 接收两个高适应度个体的代码，生成融合两者优点的新个体</li>
+        <li><strong>评估</strong>: 编译执行新个体，在环境集合上训练并评估</li>
+      </ol>
+      LLM 的优势在于它能<em>理解</em>代码的语义，而非盲目替换符号。突变 prompt 包含"该算法在稀疏奖励环境下探索不足"等诊断信息，引导 LLM 针对性修复。
+    </div>
+    <div class="method-step">
+      <strong>③ 多环境泛化验证（Multi-Environment Generalization）</strong><br>
+      为避免发现的算法过拟合特定环境，在进化过程中使用环境集合评估：
+      $$\text{Fitness}(f) = \frac{1}{|\mathcal{E}|} \sum_{e \in \mathcal{E}} R_e(f) - \lambda \cdot \text{Complexity}(f)$$
+      其中 \(\mathcal{E}\) 包含 CartPole、MountainCar、LunarLander 等经典控制任务，复杂度惩罚项鼓励发现简洁的更新规则。最终发现的最佳算法（命名为 EvoQ）在代码上仅 12 行，但性能在多个环境上超越 DQN。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 发现的 EvoQ 算法</strong>
+      <ul>
+        <li><strong>核心创新</strong>: 引入"自适应温度贝尔曼更新" — 标准 Q-learning 用固定学习率，EvoQ 根据 TD 误差的历史方差动态调整</li>
+        <li><strong>关键代码</strong>: <code>lr_eff = lr * min(1, |td_error| / running_var_td)</code></li>
+        <li><strong>直觉</strong>: 当 TD 误差相对于历史正常水平较大时保持正常学习率，当较小时减小学习率（避免噪声扰动），这类似于 Adam 中的自适应步长但应用于 Q-value 更新</li>
+        <li><strong>CartPole</strong>: 195 步收敛（DQN 需 ~350 步），且方差更低</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>算法</th><th>CartPole (步)</th><th>MountainCar (回报)</th><th>LunarLander (回报)</th><th>泛化 (新环境)</th></tr>
+      <tr><td>DQN</td><td>350</td><td>-118</td><td>198</td><td>62.3%</td></tr>
+      <tr><td>Double DQN</td><td>310</td><td>-112</td><td>215</td><td>65.1%</td></tr>
+      <tr><td>Random Search (非 LLM)</td><td>420</td><td>-135</td><td>172</td><td>48.7%</td></tr>
+      <tr><td class="highlight">EvoQ (LLM-discovered)</td><td class="highlight">195</td><td class="highlight">-98</td><td class="highlight">231</td><td class="highlight">71.6%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 用 GPT-4o 替代开源 LLM (LLaMA-70B) 作为突变引擎，搜索效率提升 2.1× 但最终性能相当，说明 LLM 能力越强搜索越快但上限由搜索空间决定；(2) 去除性能反馈（仅用代码上下文 prompt），收敛步数增加 4.3×；(3) 发现的算法中约 30% 包含人类未曾尝试的更新规则结构。本文被 GECCO 2026 接收。局限性：目前仅在表格型 Q-learning 空间搜索，向深度 RL（policy gradient）空间扩展是重要后续工作。</p>
+  </div>
+</div>
+
+<!-- ==================== Agent Section ==================== -->
+<div class="section-header agent">
+  <h2>🤖 Agent — 智能体</h2>
+</div>
+
+<!-- Paper 8: Marco DeepResearch -->
+<div class="paper-card tag-agent" id="paper-8">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28376" target="_blank">Marco DeepResearch: Unlocking Efficient Deep Research Agents via Verification-Centric Design</a></h3>
+    <div class="paper-meta">
+      <span>👤 Bin Zhu, Qianghuai Jia, Tian Lan, Junyang Ren, Feng Gu, Feihu Jiang, Longyue Wang, Zhao Xu, Weihua Luo</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28376</span>
+      <span>🏛 Alibaba Group</span>
+      <span><span class="tag tag-agent">Agent</span><span class="tag tag-agent">Deep Research</span><span class="tag tag-agent">Verification</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>深度研究（Deep Research）Agent 旨在自主完成复杂信息搜索和报告撰写，但现有系统面临两大瓶颈：(1) <strong>生成不忠实</strong>——Agent 检索到的信息与最终生成的报告之间存在大量幻觉和不一致；(2) <strong>效率低下</strong>——为保证质量，需要大量冗余检索和多轮验证，计算成本极高。Marco DeepResearch 提出以<strong>验证为中心</strong>的设计理念，在数据、训练和推理三个层面引入系统性验证机制。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 数据层验证（Data-Level Verification）</strong><br>
+      构建"可验证搜索轨迹"训练数据。对于每个查询-报告对，回溯验证报告中每个声明的来源：
+      $$\text{VerifyScore}(c, D) = \max_{d \in D} \text{NLI}(d, c)$$
+      其中 \(c\) 是报告中的声明，\(D\) 是检索到的文档集。只保留验证分数超过阈值的声明。通过这一过程，构建了约 50K 条高质量"检索-验证-生成"三元组训练数据，确保训练信号本身就是忠实的。
+    </div>
+    <div class="method-step">
+      <strong>② 训练层验证（Training-Level Verification）</strong><br>
+      在 SFT 之后引入验证感知的 RL 阶段。奖励函数融合三个维度：
+      $$R = \alpha R_{\text{faithfulness}} + \beta R_{\text{relevance}} + \gamma R_{\text{completeness}}$$
+      其中忠实度奖励通过对比生成内容与检索文档计算；相关性奖励由查询与报告的语义相似度给出；完整性奖励评估关键信息的覆盖率。关键创新：在 RL rollout 中，Agent 每次生成声明后立即进行<strong>自验证</strong>（self-verification）步骤 — 检查该声明是否有检索证据支持，如果没有则触发补充检索或删除该声明。
+    </div>
+    <div class="method-step">
+      <strong>③ 推理层验证（Inference-Level Verification）</strong><br>
+      部署时采用"生成-验证-修订"循环：
+      <ol style="margin:8px 0 8px 20px;">
+        <li><strong>初始生成</strong>: Agent 基于检索结果生成初版报告</li>
+        <li><strong>逐句验证</strong>: 验证器检查每个声明的证据链，标记无支持声明</li>
+        <li><strong>定向修订</strong>: 仅对标记部分进行补充检索和重写，避免全文重新生成</li>
+      </ol>
+      这一设计将测试时计算（test-time compute）精准投入到最需要的地方，而非均匀分配。实验表明，相比"全文重生成 3 次"策略，定向修订仅用 40% 的计算量即达到相同质量。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 BrowseComp-ZH 深度研究任务</strong>
+      <ul>
+        <li><strong>查询</strong>: "比较 2025 年中国三大电池厂商（宁德时代、比亚迪、中航锂电）的固态电池技术路线和量产时间表"</li>
+        <li><strong>无验证 Agent</strong>: 检索 12 篇网页，生成 2000 字报告，但 4 处数据引用错误（如混淆宁德时代的半固态 vs 全固态路线），忠实度 61%</li>
+        <li><strong>Marco DeepResearch</strong>: 检索 8 篇网页 → 初版生成 → 验证发现 2 处无支持声明 → 补充检索 3 篇 → 修订最终报告，忠实度 <strong>94%</strong></li>
+        <li><strong>计算开销</strong>: 仅比无验证版多 35% 的 token 消耗</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>BrowseComp-EN</th><th>BrowseComp-ZH</th><th>忠实度</th><th>Token 消耗</th></tr>
+      <tr><td>GPT-4o + RAG</td><td>48.2</td><td>42.1</td><td>72%</td><td>1.0×</td></tr>
+      <tr><td>Perplexity Pro</td><td>52.7</td><td>45.3</td><td>76%</td><td>—</td></tr>
+      <tr><td>DeepSeek-30B Research</td><td>55.1</td><td>49.8</td><td>79%</td><td>1.8×</td></tr>
+      <tr><td class="highlight">Marco DeepResearch-8B</td><td class="highlight">58.6</td><td class="highlight">61.9</td><td class="highlight">94%</td><td>1.35×</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 去除数据层验证（用未筛选数据训练），BrowseComp-ZH 从 61.9 降至 52.4；(2) 去除 RL 验证训练仅保留 SFT，降至 55.7；(3) 去除推理层验证，降至 57.3 但忠实度从 94% 降至 81%。<strong>核心发现</strong>：8B 参数的验证中心模型击败了 30B 参数的通用模型，说明"验证能力"比"生成能力"更是深度研究的瓶颈。特别在中文 BrowseComp 上的优势（+12.1 vs DeepSeek-30B）说明验证机制对非英语场景尤为关键。</p>
+  </div>
+</div>
+
+<!-- Paper 9: AgentSwing -->
+<div class="paper-card tag-agent" id="paper-9">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27490" target="_blank">AgentSwing: Adaptive Parallel Context Management Routing for Long-Horizon Web Agents</a></h3>
+    <div class="paper-meta">
+      <span>👤 Zhaopeng Feng, Liangcai Su, Zhen Zhang, et al.</span>
+      <span>📅 2026-03-29 · arXiv: 2603.27490</span>
+      <span>🏛 Alibaba DAMO Academy, NUS</span>
+      <span><span class="tag tag-agent">Agent</span><span class="tag tag-agent">Web Agent</span><span class="tag tag-agent">Context Management</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>随着 LLM 演变为自主 Web Agent，长时序信息搜索中的<strong>有限上下文窗口管理</strong>成为关键瓶颈。现有方法通常承诺使用单一固定策略（如只保留最近 N 步、或只保留摘要），但信息搜索过程中上下文的有用性是<em>动态变化</em>的——有时需要详细原文，有时只需摘要，有时需要回溯到早期步骤。静态策略无法适应这种变化。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 状态感知触发器（State-Aware Trigger）</strong><br>
+      设计触发条件检测何时需要进行上下文管理决策。监测三个信号：
+      $$\text{Trigger}(t) = \mathbb{1}[\text{CtxLen}(t) > \tau_1] \lor \mathbb{1}[\Delta_{\text{info}}(t) > \tau_2] \lor \mathbb{1}[\text{StuckScore}(t) > \tau_3]$$
+      其中 \(\text{CtxLen}\) 是当前上下文长度，\(\Delta_{\text{info}}\) 衡量新获取信息的信息量变化，\(\text{StuckScore}\) 检测 Agent 是否陷入循环。只在触发时进行上下文管理，非触发时保持原始上下文不变。
+    </div>
+    <div class="method-step">
+      <strong>② 并行分支扩展（Parallel Branch Expansion）</strong><br>
+      在每个触发点，并行生成多个上下文管理候选分支：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>全保留分支</strong>: 不做任何压缩，保留完整上下文</li>
+        <li><strong>摘要分支</strong>: 将历史步骤压缩为摘要</li>
+        <li><strong>选择性保留分支</strong>: 仅保留与当前子目标最相关的历史步骤</li>
+        <li><strong>重置分支</strong>: 丢弃所有历史，从当前状态重新开始</li>
+      </ul>
+      每个分支独立执行接下来 \(k\) 步（前瞻 lookahead），产生不同的执行轨迹。形式化地，在触发点 \(t\)，生成候选集 \(\{c_1, \ldots, c_m\}\)，每个候选执行 \(k\) 步得到前瞻轨迹 \(\tau_i^{(t:t+k)}\)。
+    </div>
+    <div class="method-step">
+      <strong>③ 前瞻路由选择（Lookahead Routing）</strong><br>
+      基于前瞻轨迹的质量选择最佳分支继续执行：
+      $$c^* = \arg\max_{c_i} \text{Score}(\tau_i^{(t:t+k)})$$
+      评分函数综合考虑：任务进展（是否更接近目标）、信息增益（获取了多少新信息）和效率（步数消耗）。选择后，丢弃其他分支，仅保留最佳分支的上下文继续。设计直觉：这是一种"上下文管理的 beam search"，用少量额外计算（并行前瞻）换取更好的长期决策。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 WebArena 长时序搜索任务</strong>
+      <ul>
+        <li><strong>任务</strong>: "找到 Reddit 上关于 GPT-5 发布日期的最新讨论，总结主流观点"</li>
+        <li><strong>固定摘要策略</strong>: 第 8 步摘要后丢失了 Reddit 帖子的具体 URL → 第 12 步需要回访时找不到 → 总共 23 步完成</li>
+        <li><strong>AgentSwing</strong>: 第 8 步触发 → 并行尝试摘要/选择性保留/全保留 → 前瞻发现选择性保留（保留 URL 和关键引用）最优 → 第 15 步完成（减少 <strong>35%</strong> 交互轮数）</li>
+        <li><strong>关键优势</strong>: 自适应选择避免了"摘要过度丢失细节"和"全保留超出上下文"两个极端</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>WebArena SR%</th><th>Mind2Web SR%</th><th>平均步数</th><th>上下文溢出率</th></tr>
+      <tr><td>GPT-4o (fixed window)</td><td>32.1</td><td>41.3</td><td>18.7</td><td>24%</td></tr>
+      <tr><td>Summary-only</td><td>35.8</td><td>44.2</td><td>16.4</td><td>8%</td></tr>
+      <tr><td>MemoryBank</td><td>37.2</td><td>45.8</td><td>17.1</td><td>12%</td></tr>
+      <tr><td class="highlight">AgentSwing</td><td class="highlight">43.6</td><td class="highlight">52.1</td><td class="highlight">12.8</td><td>3%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 去除并行分支（随机选一个策略），SR 从 43.6% 降至 38.1%；(2) 去除前瞻路由（用启发式选择），降至 40.2%；(3) 前瞻步数 \(k\) 对性能影响：\(k=2\) 时 41.8%，\(k=5\) 时 43.6%（最优），\(k=10\) 时 43.4%（收益饱和但计算翻倍）。计算开销：并行前瞻增加约 2.5× 的 token 消耗，但通过减少总步数，整体 token 消耗反而降低约 20%。</p>
+  </div>
+</div>
+
+<!-- Paper 10: GraphWalker -->
+<div class="paper-card tag-agent" id="paper-10">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28533" target="_blank">GraphWalker: Agentic Knowledge Graph Question Answering via Synthetic Trajectory Curriculum</a></h3>
+    <div class="paper-meta">
+      <span>👤 Shuwen Xu, Yao Xu, Jiaxiang Liu, Chenhao Yuan, Wenshuo Peng, Jun Zhao, Kang Liu</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28533</span>
+      <span>🏛 Chinese Academy of Sciences (ICT/CAS)</span>
+      <span><span class="tag tag-agent">Agent</span><span class="tag tag-agent">Knowledge Graph</span><span class="tag tag-agent">QA</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>知识图谱问答（KGQA）中的 Agent 方法要求模型迭代地与知识图谱交互：选择实体、遍历关系、收集证据、推理答案。但现有方法面临<strong>训练数据稀缺</strong>和<strong>推理泛化</strong>两大挑战。基于提示的方法（prompting）缺乏自我纠错能力，基于微调的方法受限于有限的人工标注轨迹。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 合成轨迹生成（Synthetic Trajectory Generation）</strong><br>
+      从知识图谱中自动生成大量 Agent 交互轨迹作为训练数据。方法：
+      <ol style="margin:8px 0 8px 20px;">
+        <li>从目标实体出发，在 KG 上反向随机游走生成路径 \(p = (e_k, r_k, \ldots, r_1, e_0)\)</li>
+        <li>使用 LLM 将路径转化为自然语言问题 \(q\)</li>
+        <li>模拟 Agent 的正向遍历过程：从起始实体出发，按步选择关系和实体，记录完整交互轨迹</li>
+        <li>在轨迹中注入<strong>失败分支</strong>（错误选择 → 发现错误 → 回溯 → 正确选择），训练自纠错能力</li>
+      </ol>
+      形式化地，生成轨迹 \(\tau = [(a_1, o_1), \ldots, (a_T, o_T)]\)，其中 \(a_t\) 是 Agent 动作，\(o_t\) 是 KG 返回的观察。
+    </div>
+    <div class="method-step">
+      <strong>② 课程学习调度（Curriculum Learning Schedule）</strong><br>
+      按难度递增安排合成轨迹的训练顺序：
+      $$\text{Difficulty}(\tau) = \alpha \cdot |p| + \beta \cdot |\text{backtrack}(\tau)| + \gamma \cdot \text{deg}(e_0)$$
+      其中 \(|p|\) 是路径长度（跳数），\(|\text{backtrack}|\) 是回溯次数，\(\text{deg}(e_0)\) 是起始实体的度数（度越大 → 选择空间越大 → 越难）。训练分三阶段：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>Phase 1</strong>: 1-2 跳、无回溯的简单轨迹</li>
+        <li><strong>Phase 2</strong>: 2-3 跳、有 1 次回溯的中等轨迹</li>
+        <li><strong>Phase 3</strong>: 3-5 跳、多次回溯的困难轨迹</li>
+      </ul>
+    </div>
+    <div class="method-step">
+      <strong>③ KG 感知动作空间约束（KG-Aware Action Space）</strong><br>
+      在推理时，Agent 的动作空间被约束为当前实体的合法邻居关系：
+      $$\mathcal{A}(e_t) = \{(r, e') \mid (e_t, r, e') \in \mathcal{KG}\} \cup \{\text{BACKTRACK}, \text{ANSWER}\}$$
+      这避免了 Agent 生成不存在的实体或关系（幻觉），同时保留了回溯和提交答案的选项。在生成每一步时，将合法动作列表注入到 prompt 中，模型通过受限生成（constrained decoding）选择动作。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 WebQSP 多跳推理示例</strong>
+      <ul>
+        <li><strong>问题</strong>: "哪部电影的导演也导演了《泰坦尼克号》？" (2-hop)</li>
+        <li><strong>轨迹</strong>: 搜索"泰坦尼克号" → 找到实体 → 选择"director"关系 → James Cameron → 选择"directed"关系 → 得到所有电影列表</li>
+        <li><strong>回溯示例</strong>: 初次误选"producer"关系 → 观察结果不匹配 → BACKTRACK → 改选"director" → 成功</li>
+        <li><strong>Prompting baseline</strong>: 在高度数实体处困惑（James Cameron 有 30+ 关系），选择正确率仅 52%</li>
+        <li><strong>GraphWalker</strong>: 经课程训练后，高度数实体处正确率 <strong>81%</strong></li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>WebQSP (Hits@1)</th><th>CWQ (Hits@1)</th><th>回溯成功率</th></tr>
+      <tr><td>KD-CoT (prompting)</td><td>73.2</td><td>51.8</td><td>—</td></tr>
+      <tr><td>StructGPT (prompting)</td><td>72.6</td><td>53.4</td><td>—</td></tr>
+      <tr><td>ToG (fine-tuned)</td><td>76.8</td><td>56.2</td><td>31%</td></tr>
+      <tr><td class="highlight">GraphWalker</td><td class="highlight">82.4</td><td class="highlight">63.7</td><td class="highlight">68%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 去除课程学习（直接用混合难度数据训练），Hits@1 从 82.4 降至 78.1；(2) 去除失败分支注入，回溯成功率从 68% 降至 23%，整体性能降至 76.5；(3) 合成数据量对性能影响：5K 轨迹 → 78.9，20K → 82.4（最优），50K → 82.2（饱和）。<strong>核心贡献</strong>：证明了合成轨迹 + 课程学习可以在无人工标注的情况下训练出强大的 KGQA Agent。局限性：当前依赖完整的 KG 结构，对不完整 KG 的鲁棒性待验证。</p>
+  </div>
+</div>
+
+<!-- ==================== Medical Section ==================== -->
+<div class="section-header medical">
+  <h2>⚕️ Medical — 医学 AI</h2>
+</div>
+
+<!-- Paper 11: Medical AI Scientist -->
+<div class="paper-card tag-medical" id="paper-11">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28589" target="_blank">Towards a Medical AI Scientist</a></h3>
+    <div class="paper-meta">
+      <span>👤 Hongtao Wu, Boyun Zheng, Dingjie Song, Yu Jiang, Jianfeng Gao, Lei Xing, Lichao Sun, Yixuan Yuan</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28589</span>
+      <span>🏛 CUHK, Microsoft Research, Stanford University</span>
+      <span><span class="tag tag-medical">Medical</span><span class="tag tag-agent">Agent</span><span class="tag tag-medical">AI Scientist</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>AI Scientist——能自主生成假设、设计实验、分析结果并撰写论文的系统——是 AI 研究的圣杯之一。但现有的 AI Scientist 系统（如 Sakana AI 的 The AI Scientist）是领域无关的（domain-agnostic），在临床医学中面临特殊挑战：<strong>伦理约束</strong>（不能随意实验人体）、<strong>数据隐私</strong>（EHR 数据不可自由访问）、<strong>因果推理需求</strong>（相关性不等于因果性在医学中尤为关键）。本文提出首个面向医学领域的 AI Scientist 框架设计。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 医学知识增强假设生成（Knowledge-Augmented Hypothesis Generation）</strong><br>
+      假设生成模块整合三类知识源：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>文献知识</strong>: 通过 PubMed RAG 获取最新研究进展</li>
+        <li><strong>临床知识图谱</strong>: UMLS、DrugBank 等结构化知识</li>
+        <li><strong>临床指南</strong>: UpToDate、WHO guidelines 等规范性知识</li>
+      </ul>
+      假设生成遵循"PICO 框架"（Patient, Intervention, Comparison, Outcome）：
+      $$H = \text{LLM}(\text{RAG}(\text{PubMed}, q) \oplus \text{KG}(\text{UMLS}, e) \oplus \text{Guide}(\text{UpToDate}, t))$$
+      每个生成的假设附带可检验性评分和伦理风险评估。
+    </div>
+    <div class="method-step">
+      <strong>② 回顾性实验设计器（Retrospective Experiment Designer）</strong><br>
+      由于医学中前瞻性实验受伦理限制，系统专注于<strong>回顾性研究设计</strong>。给定假设，自动设计：
+      <ul style="margin:8px 0 8px 20px;">
+        <li>纳入/排除标准（用 ICD 代码表示）</li>
+        <li>混杂因素列表和调整策略（倾向性评分匹配、IV 回归等）</li>
+        <li>统计分析计划（主要终点、次要终点、效应量估计）</li>
+      </ul>
+      $$\text{Design} = (S_{\text{inclusion}}, S_{\text{exclusion}}, \mathcal{C}_{\text{confounders}}, \mathcal{T}_{\text{analysis}})$$
+      设计直觉：将临床研究方法学的知识编码到 Agent 的规划过程中，确保生成的研究方案在方法学上是合理的。
+    </div>
+    <div class="method-step">
+      <strong>③ 因果推断引擎（Causal Inference Engine）</strong><br>
+      在数据分析阶段引入因果推断框架。系统自动构建因果 DAG（有向无环图）并选择合适的因果估计方法：
+      $$\text{ATE} = \mathbb{E}[Y(1) - Y(0)] \approx \frac{1}{n}\sum_{i=1}^n \frac{T_i Y_i}{e(X_i)} - \frac{(1-T_i)Y_i}{1-e(X_i)}$$
+      其中 \(e(X_i)\) 是倾向性得分（propensity score）。系统还实施多重敏感性分析（E-value、负控制结局等）来评估因果结论的稳健性。关键约束：当因果推断无法满足不可混淆性假设时，系统<em>主动标注</em>结论为"关联性"而非"因果性"。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 MIMIC-IV 上的自主研究示例</strong>
+      <ul>
+        <li><strong>假设生成</strong>: "ICU 患者中，早期使用低剂量皮质类固醇（入院 24h 内）与脓毒症相关死亡率降低相关"</li>
+        <li><strong>实验设计</strong>: 纳入 ICD-10 A41.x 脓毒症患者，排除 &lt;18 岁和既往类固醇使用；倾向性评分匹配 1:1</li>
+        <li><strong>结果</strong>: 匹配后 n=3,284 对，ATE = -0.038 (95% CI [-0.062, -0.014], p=0.002)，死亡率降低 3.8%</li>
+        <li><strong>与人类研究对比</strong>: 结论方向与 ADRENAL 试验（2018, NEJM）一致，效应量相近</li>
+        <li><strong>论文生成</strong>: 自动撰写符合 STROBE 规范的观察性研究论文</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>评估维度</th><th>Vanilla AI Scientist</th><th>Medical AI Scientist</th><th>人类专家</th></tr>
+      <tr><td>假设合理性 (1-5)</td><td>2.8</td><td class="highlight">4.1</td><td>4.5</td></tr>
+      <tr><td>方法学正确性 (1-5)</td><td>2.3</td><td class="highlight">3.9</td><td>4.3</td></tr>
+      <tr><td>因果推断恰当性 (1-5)</td><td>1.9</td><td class="highlight">3.7</td><td>4.1</td></tr>
+      <tr><td>伦理合规性 (1-5)</td><td>2.1</td><td class="highlight">4.4</td><td>4.6</td></tr>
+      <tr><td>论文质量 (1-5)</td><td>3.2</td><td class="highlight">3.8</td><td>4.2</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 去除知识图谱增强，假设合理性从 4.1 降至 3.2，说明结构化医学知识对生成合理假设至关重要；(2) 去除因果推断引擎（仅做相关性分析），方法学正确性从 3.9 降至 2.7；(3) 去除伦理检查模块，有 15% 的生成研究设计包含不适当的变量（如种族分层缺乏正当理由）。作者强调这是一个"Towards"工作，当前系统仍需人类专家审核，目标不是替代研究者而是<strong>加速假设探索和初步分析</strong>。</p>
+  </div>
+</div>
+
+<!-- Paper 12: EpiScreen -->
+<div class="paper-card tag-medical" id="paper-12">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28698" target="_blank">EpiScreen: Early Epilepsy Detection from Electronic Health Records with Large Language Models</a></h3>
+    <div class="paper-meta">
+      <span>👤 Shuang Zhou, Kai Yu, Zaifu Zhan, Huixue Zhou, Min Zeng, Feng Xie, Zhiyi Sha, Rui Zhang</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28698</span>
+      <span>🏛 University of Minnesota</span>
+      <span><span class="tag tag-medical">Medical</span><span class="tag tag-medical">EHR</span><span class="tag tag-medical">Epilepsy</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>癫痫（Epilepsy）与心因性非癫痫发作（PNES）在临床表现上极为相似——都表现为发作性事件，但需要完全不同的治疗策略。误诊极为常见，平均诊断延迟达 7-10 年，导致不必要的抗癫痫药物使用和患者致残。虽然 AI-ECG 已被用于心脏疾病筛查，但<strong>基于电子健康记录（EHR）的癫痫早期识别</strong>仍是空白——这正是 LLM 可以发挥作用的地方。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① EHR 纵向特征提取（Longitudinal EHR Feature Extraction）</strong><br>
+      将患者的 EHR 时间线转化为结构化特征向量。从三个数据源提取：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>临床笔记</strong>: 使用 Med-PaLM 2 提取症状描述中的 23 个癫痫相关特征（如发作频率、先兆症状、意识状态等）</li>
+        <li><strong>诊断代码</strong>: ICD-10 G40.x（癫痫）、F44.5（PNES）及相关合并症</li>
+        <li><strong>用药记录</strong>: 抗癫痫药物（ASMs）使用模式、药物切换频率</li>
+      </ul>
+      时间线表示为 \(\mathbf{X} = [\mathbf{x}_{t_1}, \ldots, \mathbf{x}_{t_n}]\)，每个时间戳包含上述特征的向量化表示。
+    </div>
+    <div class="method-step">
+      <strong>② LLM 驱动的临床推理（LLM-Driven Clinical Reasoning）</strong><br>
+      将提取的特征序列转化为临床叙事文本，输入 LLM 进行多步推理：
+      $$P(\text{Epilepsy}|\mathbf{X}) = \text{LLM}(\text{Narrative}(\mathbf{X}) \oplus \text{ClinicalGuideline})$$
+      关键设计：引入"诊断标准对照"（Diagnostic Criteria Alignment）prompt，将 ILAE 2017 分类标准嵌入到推理过程中，要求模型逐条对照每个诊断标准并给出支持/反对证据。这模拟了神经科医生的鉴别诊断思维过程。
+    </div>
+    <div class="method-step">
+      <strong>③ 可解释预测框架（Interpretable Prediction Framework）</strong><br>
+      每个预测伴随结构化解释：
+      $$\text{Output} = (\hat{y}, \text{Confidence}, \text{Evidence}, \text{Uncertainty})$$
+      其中 Evidence 包含支持诊断的关键 EHR 记录引用，Uncertainty 量化为模型在多次推理中的一致性（5 次采样的 self-consistency score）。当一致性低于阈值时，系统标注为"需要进一步检查"而非给出确定诊断。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 癫痫 vs PNES 鉴别诊断案例</strong>
+      <ul>
+        <li><strong>患者</strong>: 28 岁女性，3 年发作史，诊断代码 G40.9（癫痫未特指）</li>
+        <li><strong>EHR 线索</strong>: 发作时意识保留、持续 >10 分钟、3 种 ASMs 无效、合并焦虑障碍</li>
+        <li><strong>标准模型</strong>: 维持原诊断 "癫痫" (P=0.68)</li>
+        <li><strong>EpiScreen</strong>: 逐条对照 ILAE 标准 → "长时间发作 + 意识保留 + ASMs 无效"不符合典型癫痫模式 → 预测 <strong>PNES</strong> (P=0.82)，建议转诊视频脑电监测</li>
+        <li><strong>最终确认</strong>: 视频 EEG 确认 PNES，提前 2.3 年做出正确鉴别</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>AUROC</th><th>Sensitivity</th><th>Specificity</th><th>F1</th></tr>
+      <tr><td>XGBoost (结构化特征)</td><td>0.78</td><td>0.71</td><td>0.82</td><td>0.74</td></tr>
+      <tr><td>BERT-EHR</td><td>0.82</td><td>0.76</td><td>0.84</td><td>0.79</td></tr>
+      <tr><td>GPT-4o (zero-shot)</td><td>0.79</td><td>0.73</td><td>0.81</td><td>0.76</td></tr>
+      <tr><td class="highlight">EpiScreen</td><td class="highlight">0.91</td><td class="highlight">0.87</td><td class="highlight">0.90</td><td class="highlight">0.88</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融：(1) 去除诊断标准对照 prompt，AUROC 从 0.91 降至 0.84，说明结构化临床推理至关重要；(2) 仅用诊断代码（不用临床笔记），AUROC 降至 0.80，说明非结构化文本中的关键线索（如发作描述）不可替代；(3) 在"早期预测"设置下（仅用首次就诊后 6 个月内数据），AUROC 仍达 0.85，提示可实现有意义的早期筛查。模型在 University of Minnesota 数据上开发，在外部验证集上 AUROC = 0.87，显示良好的泛化性。局限性：需要结构化的 EHR 系统，对手写病历不适用。</p>
+  </div>
+</div>
+
+<!-- ==================== Multimodal Section ==================== -->
+<div class="section-header multimodal">
+  <h2>🌐 Multimodal — 多模态大模型</h2>
+</div>
+
+<!-- Paper 13: Multilingual VLMs -->
+<div class="paper-card tag-multimodal" id="paper-13">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26742" target="_blank">Do Multilingual VLMs Reason Equally? A Cross-Lingual Visual Reasoning Audit for Indian Languages</a></h3>
+    <div class="paper-meta">
+      <span>👤 Swastik R</span>
+      <span>📅 2026-03-23 · arXiv: 2603.26742</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">VLM</span><span class="tag tag-multimodal">Multilingual</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>视觉语言模型（VLMs）在数学、科学和空间推理基准测试中表现优异，但这些评估<strong>绝大多数仅覆盖英语</strong>。对于全球 15 亿印度语言使用者（Hindi、Bengali、Tamil 等 22 种官方语言），VLMs 的视觉推理能力是否能跨语言保持？这一关键问题从未被系统审计过。这不仅是学术问题——在医疗影像诊断、教育辅助等场景中，语言不平等直接影响服务公平性。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 跨语言视觉推理基准构建（Cross-Lingual VR Benchmark）</strong><br>
+      从 MathVista 和 ScienceQA 中精选 980 道视觉推理题目，覆盖数学推理、科学推理和空间推理三大类。每道题由专业翻译团队翻译为 7 种印度语言（Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada），确保翻译质量通过回译验证：
+      $$\text{Quality}(t) = \text{BLEU}(\text{BackTranslate}(t), \text{Original}) > 0.85$$
+      关键设计：翻译仅修改问题文本，<strong>图像保持不变</strong>。这确保测试的是"语言处理对视觉推理的影响"而非"图像理解差异"。
+    </div>
+    <div class="method-step">
+      <strong>② 多维度公平性指标（Multi-Dimensional Fairness Metrics）</strong><br>
+      定义三个互补的跨语言公平性指标：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>Language Gap (LG)</strong>: 英语准确率与目标语言准确率之差 \(\text{LG}_l = \text{Acc}_{\text{en}} - \text{Acc}_l\)</li>
+        <li><strong>Reasoning Preservation Rate (RPR)</strong>: 英语中答对的题在目标语言中仍答对的比例 \(\text{RPR}_l = P(\text{correct}_l | \text{correct}_{\text{en}})\)</li>
+        <li><strong>Error Shift Pattern (ESP)</strong>: 分析语言切换后错误类型是否改变（如从"计算错误"变为"理解错误"）</li>
+      </ul>
+      RPR 比 LG 更能揭示<em>真正的推理能力丧失</em>——即使准确率差距小，如果正确题目完全不同，说明模型在不同语言中"推理方式"不同。
+    </div>
+    <div class="method-step">
+      <strong>③ 细粒度能力归因分析（Fine-Grained Attribution）</strong><br>
+      将每道题按推理能力标签细分（如"图表读取"、"几何计算"、"物理推理"等 12 个子类别），分析语言差距在不同子能力上的分布：
+      $$\text{LG}_{l,c} = \text{Acc}_{\text{en},c} - \text{Acc}_{l,c}, \quad c \in \{c_1, \ldots, c_{12}\}$$
+      这揭示了语言差距不是均匀分布的——某些子能力（如需要阅读图表中文字标签的题目）受影响最大，而纯视觉空间推理受影响最小。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 Hindi vs English 视觉推理对比</strong>
+      <ul>
+        <li><strong>题目</strong>: [柱状图] "哪个月的销售额最高？A) January B) March C) July D) October"</li>
+        <li><strong>英语</strong>: GPT-4V 正确选择 C (July)，准确率 94%</li>
+        <li><strong>Hindi</strong>: 同一图（英文标签），问题翻译为 Hindi → GPT-4V 选择 B (March)，准确率仅 71%</li>
+        <li><strong>错误归因</strong>: 模型在处理 Hindi 问题时对图表中"July"标签的注意力权重降低 38%（通过注意力可视化验证），说明<strong>语言处理干扰了视觉注意力分配</strong></li>
+        <li><strong>纯视觉题</strong>: "Which shape has more sides?" (无图表文字) → Hindi/English 准确率差距仅 2%</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>English</th><th>Hindi</th><th>Bengali</th><th>Tamil</th><th>平均 LG</th></tr>
+      <tr><td>GPT-4V</td><td>78.2%</td><td>62.4%</td><td>58.1%</td><td>55.7%</td><td>19.3 pp</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>76.8%</td><td>64.1%</td><td>61.3%</td><td>58.9%</td><td>15.6 pp</td></tr>
+      <tr><td>LLaVA-1.6-34B</td><td>71.4%</td><td>52.8%</td><td>48.2%</td><td>44.6%</td><td>24.3 pp</td></tr>
+      <tr><td class="highlight">Qwen-VL-Max</td><td>74.5%</td><td class="highlight">65.3%</td><td class="highlight">62.8%</td><td>57.2%</td><td class="highlight">13.8 pp</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>关键发现：(1) <strong>Reasoning Preservation Rate 令人担忧</strong>：即使在最好的模型（Qwen-VL-Max）上，Hindi RPR 仅为 78%，即英语答对的题有 22% 在 Hindi 下答错；(2) 语言差距在<strong>需要读图中文字</strong>的题目上最大（LG = 28 pp），在纯视觉空间推理题上最小（LG = 5 pp）；(3) <strong>资源量与差距正相关</strong>：高资源语言（Hindi, Bengali）差距较小，低资源语言（Kannada, Gujarati）差距最大达 30+ pp。Error Shift 分析发现，约 40% 的跨语言错误从"推理错误"变为"理解错误"，说明模型在低资源语言上连<em>理解问题本身</em>都困难。<strong>实践建议</strong>：在非英语医疗/教育场景部署 VLMs 前必须进行语言特定的性能审计。数据和代码已开源。</p>
+  </div>
+</div>
+
+<!-- ==================== Reflection ==================== -->
+<div class="reflection-box">
+  <h3>🔮 每日反思 — 2026 年 4 月 1 日</h3>
+  <p>今日 310 篇新论文精选 13 篇，覆盖 5 大板块。几个值得关注的趋势：</p>
+  <p><strong>1. 扩散语言模型的推理突破</strong>：LogicDiff 展示了一个极具洞察力的发现——MDLM 的推理缺陷并非源于表示学习的不足，而是 token 揭露顺序的问题。仅通过改变去噪调度（不修改模型参数），就在 GSM8K 上获得 +38.7 pp 的提升。这暗示扩散语言模型可能被严重低估了。</p>
+  <p><strong>2. "模型能力为王"的再确认</strong>：AIMO 3 的分析给出了一个清醒的结论：推理时优化技巧的边际贡献仅 ~2 分，而模型基础能力差距高达 16.7 分。这对研发资源分配有重要启示——与其花 90% 时间在 prompt 工程和采样策略上，不如投入更多在模型训练本身。</p>
+  <p><strong>3. 无标签 RL 的新思路</strong>：SARL 提出的"推理拓扑奖励"开辟了一条令人兴奋的路径——不依赖任何标注就能用 RL 提升推理质量。如果这一范式被验证为广泛有效，将大幅扩展 RL 在开放域任务中的应用范围。</p>
+  <p><strong>4. 验证能力成为 Agent 核心差异化</strong>：Marco DeepResearch 用 8B 模型通过验证中心设计击败 30B 通用模型，再次印证了一个观点：对于 Agent 系统，"知道自己不知道什么"比"知道更多"更重要。</p>
+  <p><strong>5. 多语言公平性的紧迫警告</strong>：VLM 跨语言审计揭示的 15-25 pp 准确率差距，对于正在全球化部署的 AI 系统是一个严肃的公平性警告。特别是在医疗和教育领域，这种语言不平等可能直接转化为服务不平等。</p>
+</div>
+
+</div><!-- end container -->
+
+<div class="report-footer">
+  <p>📊 arXiv AI 日报 · 自动生成于 2026-04-01</p>
+  <p>数据来源：arXiv.org RSS Feed (cs.CL, cs.AI, cs.LG) · 仅收录 Announce Type: new</p>
+  <p>⚠️ 本报告由 AI 自动生成，分析内容仅供参考，不构成学术评价</p>
+</div>
+
+</body>
+</html>

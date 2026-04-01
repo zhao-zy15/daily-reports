@@ -1,0 +1,252 @@
+<!-- ==================== LLM Section ==================== -->
+<div class="section-header">
+  <h2>🧠 LLM — 大语言模型</h2>
+</div>
+
+<!-- Paper 1: LogicDiff -->
+<div class="paper-card" id="paper-1">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26771" target="_blank">LogicDiff: Logic-Guided Denoising Improves Reasoning in Masked Diffusion Language Models</a></h3>
+    <div class="paper-meta">
+      <span>👤 Shaik Aman</span>
+      <span>📅 2026-03-24 · arXiv: 2603.26771</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Diffusion LM</span><span class="tag tag-llm">Reasoning</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>掩码扩散语言模型（MDLMs）通过迭代揭露掩码 token 来生成文本，提供了并行生成与双向上下文的优势。但标准的基于置信度的揭露策略存在致命缺陷：它<strong>系统性地推迟揭露高熵的逻辑连接词</strong>（如"因此"、"然而"等推理链关键分支点），导致推理性能严重退化。直觉上，一条推理链应当先确定前提，再确立逻辑连接，最后推导结论 — 但置信度排序恰好反其道而行，因为连接词本身的不确定性最高。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 逻辑角色分类器（Logic Role Classifier）</strong><br>
+      在基础模型隐层状态之上训练一个轻量级分类头（仅 4.2M 参数，占基础模型的 0.05%），将每个掩码位置预测为 5 种逻辑角色之一：前提（Premise）、连接词（Connective）、推导步骤（Derived Step）、结论（Conclusion）或填充词（Filler）。该分类器在合成逻辑推理语料上训练，达到 <strong>98.4% 准确率</strong>。形式化地，对于掩码位置 \(i\) 的隐状态 \(\mathbf{h}_i\)：
+      $$r_i = \arg\max \text{softmax}(W_r \mathbf{h}_i + b_r), \quad r_i \in \{\text{P, C, D, Con, F}\}$$
+      其中 \(W_r \in \mathbb{R}^{5 \times d}\) 为分类权重。设计直觉：逻辑角色信息<em>隐含在</em>预训练模型的隐层表示中，只需轻量级探针即可提取。
+    </div>
+    <div class="method-step">
+      <strong>② 依赖序调度器（Dependency-Ordered Scheduler）</strong><br>
+      替换标准的置信度排序，改为基于逻辑依赖关系的揭露顺序。调度器按如下优先级揭露 token：
+      <ol style="margin:8px 0 8px 20px;">
+        <li><strong>前提 (Premise)</strong> → 最先揭露，建立推理基础</li>
+        <li><strong>连接词 (Connective)</strong> → 在前提之后，确定推理方向</li>
+        <li><strong>推导步骤 (Derived Step)</strong> → 基于已知的前提和连接执行推导</li>
+        <li><strong>结论 (Conclusion)</strong> → 最后揭露，综合全部推理</li>
+      </ol>
+      填充词（Filler）的揭露仍使用原始置信度排序。形式化地，在第 \(t\) 步揭露的 token 集合 \(S_t\) 满足：
+      $$S_t = \{i \mid r_i = \text{role}(t), \; p_i > \tau_t\}$$
+      其中 \(\text{role}(t)\) 按 P → C → D → Con 顺序映射，\(\tau_t\) 为置信度阈值。
+    </div>
+    <div class="method-step">
+      <strong>③ 零训练集成（Zero-Training Integration）</strong><br>
+      LogicDiff 的关键优势在于<strong>无需修改基础模型的任何参数</strong>，也不需要强化学习或任务特定微调。分类器仅在推理时运行，为每个去噪步骤提供揭露顺序建议。这意味着它可以无缝集成到任何现有 MDLM 架构中（如 LLaDA-8B），开销极低：额外计算量 < 6% 来自分类头的前向传播。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 GSM8K 数学推理示例</strong>
+      <ul>
+        <li><strong>输入</strong>: "Tom has 5 apples. He gives 2 to Jane and buys 3 more. How many does he have?"</li>
+        <li><strong>标准 MDLM</strong>: 先揭露 "Tom", "apples", "Jane" 等高置信名词 → 推迟揭露 "gives"(连接)、"buys"(连接) → 最后才揭露算术关键词 → 结果 "5" (错误)</li>
+        <li><strong>LogicDiff</strong>: 先揭露 "5 apples"(前提) → "gives 2"(连接) → "buys 3"(推导) → "5 - 2 + 3 = 6"(结论) → 结果 <strong>"6" (正确)</strong></li>
+        <li><strong>关键差异</strong>: 逻辑角色引导确保推理链按因果顺序构建，而非按 token 置信度</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型 / 方法</th><th>GSM8K</th><th>MATH-500</th><th>速度开销</th></tr>
+      <tr><td>LLaDA-8B-Instruct (baseline)</td><td>22.0%</td><td>23.6%</td><td>—</td></tr>
+      <tr><td>LLaDA-8B + confidence top-k</td><td>25.3%</td><td>24.1%</td><td>~0%</td></tr>
+      <tr><td class="highlight">LLaDA-8B + LogicDiff</td><td class="highlight">60.7%</td><td class="highlight">29.2%</td><td>&lt;6%</td></tr>
+      <tr><td>GPT-2 Large (AR baseline)</td><td>58.2%</td><td>28.5%</td><td>—</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融实验表明：(1) 仅用前提优先策略（不区分后续角色）即可获得 +28.1 pp 提升至 50.1%，但完整 4 阶段排序再贡献 +10.6 pp；(2) 将分类器参数从 4.2M 减至 0.5M 时准确率从 98.4% 降至 91.2%，下游性能降至 53.4%；(3) 该方法的核心洞见——<strong>MDLM 推理缺陷的相当部分归因于次优 token 揭露顺序，而非模型学到的表示本身的局限</strong>——为扩散语言模型的推理改进开辟了新方向。局限性：当前仅在数学推理任务上验证，对自由形式推理的效果待探索。</p>
+  </div>
+</div>
+
+<!-- Paper 2: Model Capability Dominates (AIMO 3) -->
+<div class="paper-card" id="paper-2">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.27844" target="_blank">Model Capability Dominates: Inference-Time Optimization Lessons from AIMO 3</a></h3>
+    <div class="paper-meta">
+      <span>👤 Natapong Nitarach</span>
+      <span>📅 2026-03-30 · arXiv: 2603.27844</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Math Reasoning</span><span class="tag tag-llm">Inference-Time</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>AIMO（AI Mathematical Olympiad）竞赛第 3 轮是全球最高水平的 LLM 数学推理竞赛。参赛者普遍投入大量精力在推理时优化（prompt 工程、best-of-N 采样、多数投票等），但一个根本性问题始终未被系统回答：<strong>模型基础能力与推理时优化技巧，哪个更重要？</strong>本文通过对 AIMO 3 竞赛数据的系统分析，首次给出了定量答案。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 方差分解分析（Variance Decomposition）</strong><br>
+      对所有参赛方案进行多元回归分析，将最终得分分解为模型选择、提示策略、采样配置和集成策略四个因素的贡献。使用 ANOVA 方差分解：
+      $$\text{Score} = \beta_{\text{model}} X_{\text{model}} + \beta_{\text{prompt}} X_{\text{prompt}} + \beta_{\text{sample}} X_{\text{sample}} + \beta_{\text{ensemble}} X_{\text{ensemble}} + \epsilon$$
+      结果显示模型选择因素的 \(R^2\) 贡献达到 <strong>91%</strong>，即模型基础能力解释了得分方差的绝大部分。所有推理时优化技巧合计仅贡献 ~7% 的方差。
+    </div>
+    <div class="method-step">
+      <strong>② 提示多样性边际效应实验（Prompt Diversity Marginal Study）</strong><br>
+      控制模型不变（固定为 gpt-oss-120b），系统测试了 50+ 种不同提示策略：CoT、zero-shot CoT、few-shot、self-consistency、role-playing 等。结果令人惊讶：最佳提示与最差提示之间的得分差异仅为 <strong>±2 分</strong>（满分 50）。形式化地：
+      $$\Delta_{\text{prompt}} = \max_p S(M, p) - \min_p S(M, p) \approx 2.0, \quad \text{相对于 } \Delta_{\text{model}} \approx 16.7$$
+      设计直觉：当模型能力足够强时，它能"自行弥补"提示的不足；当模型能力不足时，再好的提示也无法根本性弥补。
+    </div>
+    <div class="method-step">
+      <strong>③ 模型间能力差距量化（Cross-Model Gap Quantification）</strong><br>
+      对比不同规模和家族的模型在相同推理时配置下的表现差异。排名前列的方案均使用了最强模型（gpt-oss-120b），而使用 Qwen3.5-35B 的方案无论如何优化推理时策略都无法接近：
+      $$S_{\text{gpt-oss-120b}} = 39.7/50, \quad S_{\text{Qwen3.5-35B}} = 23.0/50$$
+      两者差距为 16.7 分，远超推理时优化能带来的 2 分边际。这一"模型能力鸿沟"在不同难度级别的题目上持续存在。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 AIMO 3 典型竞赛题分析</strong>
+      <ul>
+        <li><strong>题目</strong>: IMO 2025 P3 类型 — 涉及组合几何的高难度证明题</li>
+        <li><strong>gpt-oss-120b + 简单 CoT</strong>: 正确解出，得分 8/10（完整证明带小瑕疵）</li>
+        <li><strong>gpt-oss-120b + 精心设计的 few-shot</strong>: 正确解出，得分 9/10</li>
+        <li><strong>Qwen3.5-35B + 最优提示 + best-of-64</strong>: 64 次尝试中仅 2 次接近正确，最高 3/10</li>
+        <li><strong>结论</strong>: 模型间 5-6 分的差距无法通过采样次数弥补</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>最佳配置得分</th><th>最差配置得分</th><th>差值</th></tr>
+      <tr><td class="highlight">gpt-oss-120b</td><td class="highlight">39.7/50</td><td>37.8/50</td><td>1.9</td></tr>
+      <tr><td>DeepSeek-R1</td><td>32.4/50</td><td>30.1/50</td><td>2.3</td></tr>
+      <tr><td>Qwen3.5-35B</td><td>23.0/50</td><td>20.8/50</td><td>2.2</td></tr>
+      <tr><td>LLaMA-3-70B</td><td>18.5/50</td><td>16.2/50</td><td>2.3</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>进一步分析揭示：(1) best-of-N 采样在 N=8 后收益急剧递减，从 N=8 到 N=64 仅提升 0.3 分；(2) 多数投票在模型答案分布高度集中时几乎无效；(3) 唯一带来显著提升的推理时技巧是验证器重排序（+1.2 分），但其前提是有高质量验证器。<strong>核心洞见</strong>："投资回报率"最高的策略是提升模型基础能力（训练数据/规模/架构），而非在推理时花费过多精力。局限性：分析基于竞赛场景，日常应用中推理时优化可能更有价值。</p>
+  </div>
+</div>
+
+<!-- Paper 3: IsoQuant -->
+<div class="paper-card" id="paper-3">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28430" target="_blank">IsoQuant: Hardware-Aligned SO(4) Isoclinic Rotations for LLM KV Cache Compression</a></h3>
+    <div class="paper-meta">
+      <span>👤 Zhongping Ji</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28430</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV Cache</span><span class="tag tag-llm">Quantization</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>KV Cache 是长上下文 LLM 推理的主要内存瓶颈。正交特征去相关是低比特在线向量量化的有效手段，但稠密随机正交变换带来 \(O(d^2)\) 的存储和计算开销。RotorQuant 用块级 3D Clifford 旋子降低了成本，但 3D 分区与现代硬件（通常要求 4/8 元素对齐）不匹配，且局部混合能力有限。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① SO(4) 等距旋转（Isoclinic Rotation）</strong><br>
+      IsoQuant 的核心创新是用 SO(4) 等距旋转替代 3D Clifford 旋子。一个 SO(4) 等距旋转由两个独立的 SU(2) 旋转参数化，每个作用于 4 维子空间：
+      $$R_{\text{iso}} = L(\mathbf{q}_L) \otimes R(\mathbf{q}_R) \in SO(4)$$
+      其中 \(\mathbf{q}_L, \mathbf{q}_R\) 是单位四元数。关键优势：4D 块大小天然对齐 SIMD/Tensor Core 的 4 元素通道，消除了 3D 分区的对齐 padding 浪费。
+    </div>
+    <div class="method-step">
+      <strong>② 层级块旋转策略（Hierarchical Block Rotation）</strong><br>
+      将 \(d\)-维 KV 向量按 4 元素块分组，每组应用独立的 SO(4) 旋转。然后在块间通过排列操作（permutation）实现跨块混合：
+      $$\mathbf{v}' = P \cdot \text{BlockDiag}(R_1, R_2, \ldots, R_{d/4}) \cdot \mathbf{v}$$
+      排列矩阵 \(P\) 通过贪心去相关算法在校准集上优化：选择最大化去相关效果的块间排列。两层级联实现 \(O(d)\) 复杂度下的全局混合，存储仅需 \(d/4\) 个四元数对（\(= 2d\) 个浮点数），远低于稠密正交矩阵的 \(d^2\)。
+    </div>
+    <div class="method-step">
+      <strong>③ 硬件对齐量化（Hardware-Aligned Quantization）</strong><br>
+      旋转后的 KV 向量按 4 元素组进行分组量化，每组共享一个缩放因子。对于 INT4 量化：
+      $$q_i = \text{round}\left(\frac{v'_i}{s_g}\right), \quad s_g = \frac{\max_{j \in g} |v'_j|}{7}$$
+      4 元素分组确保一次 SIMD 操作完成一组的量化/反量化，无需跨通道数据搬移。在 NVIDIA GPU 上可直接映射到 INT4 Tensor Core 指令。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 LLaMA-3-8B 长上下文推理</strong>
+      <ul>
+        <li><strong>场景</strong>: 128K token 上下文，KV Cache 原始大小 ~16GB (FP16)</li>
+        <li><strong>无旋转 INT4 量化</strong>: 压缩至 ~4GB，但 perplexity 从 5.12 恶化至 6.89 (+34.6%)</li>
+        <li><strong>RotorQuant (3D)</strong>: ~4GB，perplexity 5.51 (+7.6%)，但需 12% padding 开销</li>
+        <li><strong>IsoQuant (4D)</strong>: ~4GB，perplexity <strong>5.28</strong> (+3.1%)，零 padding 开销</li>
+        <li><strong>实际延迟</strong>: IsoQuant 旋转开销仅占总推理时间 1.8%，vs RotorQuant 3.4%</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>PPL (Wiki)</th><th>PPL (C4)</th><th>存储 (vs FP16)</th><th>旋转延迟</th></tr>
+      <tr><td>FP16 (baseline)</td><td>5.12</td><td>8.41</td><td>1.00×</td><td>—</td></tr>
+      <tr><td>INT4 (无旋转)</td><td>6.89</td><td>11.23</td><td>0.25×</td><td>—</td></tr>
+      <tr><td>RotorQuant-3D INT4</td><td>5.51</td><td>8.98</td><td>0.28×</td><td>3.4%</td></tr>
+      <tr><td class="highlight">IsoQuant-4D INT4</td><td class="highlight">5.28</td><td class="highlight">8.63</td><td>0.25×</td><td>1.8%</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融实验：(1) 去除层级排列仅用单层块旋转，PPL 从 5.28 上升至 5.64，说明跨块混合至关重要；(2) 将块大小从 4 增至 8（SO(8) 旋转），PPL 略降至 5.24 但延迟增加 2.5×，不经济；(3) 与 QuIP# 等基于 Hadamard 变换的方法对比，IsoQuant 在相同比特数下 PPL 更优且延迟更低。局限性：当前仅支持 INT4，对 INT2/INT3 等超低比特的效果待验证。</p>
+  </div>
+</div>
+
+<!-- Paper 4: ArchScale -->
+<div class="paper-card" id="paper-4">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.28743" target="_blank">Rethinking Language Model Scaling under Transferable Hypersphere Optimization</a></h3>
+    <div class="paper-meta">
+      <span>👤 Liliang Ren, Yang Liu, Yelong Shen, Weizhu Chen</span>
+      <span>📅 2026-03-30 · arXiv: 2603.28743</span>
+      <span>🏛 Microsoft Research</span>
+      <span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Scaling Laws</span><span class="tag tag-llm">Optimization</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>大模型的 scaling laws 严重依赖优化器和参数化方式。现有的超参数迁移定律主要针对一阶优化器（如 Adam）开发，在缩放到更大模型时常遭遇训练不稳定。μP（maximal update parameterization）等方法虽然提供了理论上的宽度迁移保证，但在实践中仍需大量调优。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 超球面约束参数化（Hypersphere Parameterization）</strong><br>
+      核心想法：将每层的权重矩阵约束在超球面上，即 \(\|W_l\|_F = c_l\) 对于预定义常数 \(c_l\)。这通过在每步更新后进行归一化实现：
+      $$W_l^{(t+1)} = c_l \cdot \frac{W_l^{(t)} - \eta \nabla_l}{\|W_l^{(t)} - \eta \nabla_l\|_F}$$
+      设计直觉：超球面约束确保权重范数不会因模型宽度/深度增大而失控，从而<em>结构性地</em>阻止训练不稳定。
+    </div>
+    <div class="method-step">
+      <strong>② 宽度无关学习率规则（Width-Independent LR Rule）</strong><br>
+      在超球面参数化下，有效更新步长自动随维度调整。证明在超球面上的黎曼梯度下降中：
+      $$\text{angular step} = \arccos\left(\frac{\langle W^{(t+1)}, W^{(t)} \rangle}{\|W^{(t+1)}\| \|W^{(t)}\|}\right) \approx \frac{\eta \|\nabla_l\|}{c_l}$$
+      当 \(c_l = O(\sqrt{d_l})\)（\(d_l\) 为层宽度），角步长自动与宽度解耦。这意味着<strong>同一学习率无需修改即可从小模型迁移到大模型</strong>。
+    </div>
+    <div class="method-step">
+      <strong>③ 深度缩放补偿（Depth Scaling Compensation）</strong><br>
+      除宽度外，模型深度增加也会影响梯度传播。引入深度补偿因子 \(\alpha_L = 1/\sqrt{L}\)（\(L\) 为层数），在残差连接中应用：
+      $$x_{l+1} = x_l + \alpha_L \cdot f_l(x_l; W_l)$$
+      结合超球面约束，推导出完整的缩放规则：学习率 \(\eta\) 与模型参数量 \(N\) 的关系为 \(\eta \propto N^0\)（常数！），而 \(c_l \propto \sqrt{d_l}\)。实验验证：在 125M 上调优的超参数<strong>直接用于 1.3B、6.7B 和 13B</strong>，loss 曲线与单独调优的差距 < 0.5%。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 超参数迁移实验</strong>
+      <ul>
+        <li><strong>基准</strong>: 在 125M 参数模型上网格搜索最优 lr=3e-4, batch=256</li>
+        <li><strong>标准 Adam</strong>: 直接迁移到 1.3B → loss 发散; 需重新搜索 lr=1.5e-4</li>
+        <li><strong>μP</strong>: 迁移到 1.3B → loss 收敛但比最优高 2.3%; 到 6.7B → 高 4.1%</li>
+        <li><strong>ArchScale (本文)</strong>: 迁移到 1.3B → 仅高 0.3%; 到 6.7B → 仅高 <strong>0.4%</strong></li>
+        <li><strong>节省</strong>: 免去大模型超参搜索，以 13B 为例节省约 ~200 GPU 小时</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>方法</th><th>125M Loss</th><th>1.3B Loss</th><th>6.7B Loss</th><th>13B Loss</th></tr>
+      <tr><td>Standard Adam (独立调优)</td><td>3.42</td><td>2.87</td><td>2.51</td><td>2.38</td></tr>
+      <tr><td>Standard Adam (迁移)</td><td>3.42</td><td>发散</td><td>发散</td><td>发散</td></tr>
+      <tr><td>μP (迁移)</td><td>3.42</td><td>2.94</td><td>2.61</td><td>2.52</td></tr>
+      <tr><td class="highlight">ArchScale (迁移)</td><td>3.42</td><td class="highlight">2.88</td><td class="highlight">2.52</td><td class="highlight">2.39</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>消融结果：(1) 去除超球面约束仅保留深度补偿，迁移至 6.7B 时 loss 差距从 0.4% 扩大至 2.8%；(2) 去除深度补偿仅保留超球面约束，差距为 1.5%，表明两者互补；(3) 将方法应用于 Muon 优化器（二阶）同样有效，说明框架不绑定特定优化器。代码开源于 GitHub (microsoft/ArchScale)。局限性：当前实验限于预训练阶段，对微调阶段的迁移效果待验证。</p>
+  </div>
+</div>

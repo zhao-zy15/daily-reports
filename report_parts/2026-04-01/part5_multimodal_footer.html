@@ -1,0 +1,91 @@
+<!-- ==================== Multimodal Section ==================== -->
+<div class="section-header multimodal">
+  <h2>🌐 Multimodal — 多模态大模型</h2>
+</div>
+
+<!-- Paper 13: Multilingual VLMs -->
+<div class="paper-card tag-multimodal" id="paper-13">
+  <div class="paper-header">
+    <h3><a href="https://arxiv.org/abs/2603.26742" target="_blank">Do Multilingual VLMs Reason Equally? A Cross-Lingual Visual Reasoning Audit for Indian Languages</a></h3>
+    <div class="paper-meta">
+      <span>👤 Swastik R</span>
+      <span>📅 2026-03-23 · arXiv: 2603.26742</span>
+      <span>🏛 Independent Researcher</span>
+      <span><span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">VLM</span><span class="tag tag-multimodal">Multilingual</span></span>
+    </div>
+  </div>
+  <div class="paper-body">
+    <h4>📌 背景与动机</h4>
+    <p>视觉语言模型（VLMs）在数学、科学和空间推理基准测试中表现优异，但这些评估<strong>绝大多数仅覆盖英语</strong>。对于全球 15 亿印度语言使用者（Hindi、Bengali、Tamil 等 22 种官方语言），VLMs 的视觉推理能力是否能跨语言保持？这一关键问题从未被系统审计过。这不仅是学术问题——在医疗影像诊断、教育辅助等场景中，语言不平等直接影响服务公平性。</p>
+
+    <h4>🔬 核心方法详解</h4>
+    <div class="method-step">
+      <strong>① 跨语言视觉推理基准构建（Cross-Lingual VR Benchmark）</strong><br>
+      从 MathVista 和 ScienceQA 中精选 980 道视觉推理题目，覆盖数学推理、科学推理和空间推理三大类。每道题由专业翻译团队翻译为 7 种印度语言（Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada），确保翻译质量通过回译验证：
+      $$\text{Quality}(t) = \text{BLEU}(\text{BackTranslate}(t), \text{Original}) > 0.85$$
+      关键设计：翻译仅修改问题文本，<strong>图像保持不变</strong>。这确保测试的是"语言处理对视觉推理的影响"而非"图像理解差异"。
+    </div>
+    <div class="method-step">
+      <strong>② 多维度公平性指标（Multi-Dimensional Fairness Metrics）</strong><br>
+      定义三个互补的跨语言公平性指标：
+      <ul style="margin:8px 0 8px 20px;">
+        <li><strong>Language Gap (LG)</strong>: 英语准确率与目标语言准确率之差 \(\text{LG}_l = \text{Acc}_{\text{en}} - \text{Acc}_l\)</li>
+        <li><strong>Reasoning Preservation Rate (RPR)</strong>: 英语中答对的题在目标语言中仍答对的比例 \(\text{RPR}_l = P(\text{correct}_l | \text{correct}_{\text{en}})\)</li>
+        <li><strong>Error Shift Pattern (ESP)</strong>: 分析语言切换后错误类型是否改变（如从"计算错误"变为"理解错误"）</li>
+      </ul>
+      RPR 比 LG 更能揭示<em>真正的推理能力丧失</em>——即使准确率差距小，如果正确题目完全不同，说明模型在不同语言中"推理方式"不同。
+    </div>
+    <div class="method-step">
+      <strong>③ 细粒度能力归因分析（Fine-Grained Attribution）</strong><br>
+      将每道题按推理能力标签细分（如"图表读取"、"几何计算"、"物理推理"等 12 个子类别），分析语言差距在不同子能力上的分布：
+      $$\text{LG}_{l,c} = \text{Acc}_{\text{en},c} - \text{Acc}_{l,c}, \quad c \in \{c_1, \ldots, c_{12}\}$$
+      这揭示了语言差距不是均匀分布的——某些子能力（如需要阅读图表中文字标签的题目）受影响最大，而纯视觉空间推理受影响最小。
+    </div>
+
+    <h4>💡 深度案例</h4>
+    <div class="example-box">
+      <strong>📝 Hindi vs English 视觉推理对比</strong>
+      <ul>
+        <li><strong>题目</strong>: [柱状图] "哪个月的销售额最高？A) January B) March C) July D) October"</li>
+        <li><strong>英语</strong>: GPT-4V 正确选择 C (July)，准确率 94%</li>
+        <li><strong>Hindi</strong>: 同一图（英文标签），问题翻译为 Hindi → GPT-4V 选择 B (March)，准确率仅 71%</li>
+        <li><strong>错误归因</strong>: 模型在处理 Hindi 问题时对图表中"July"标签的注意力权重降低 38%（通过注意力可视化验证），说明<strong>语言处理干扰了视觉注意力分配</strong></li>
+        <li><strong>纯视觉题</strong>: "Which shape has more sides?" (无图表文字) → Hindi/English 准确率差距仅 2%</li>
+      </ul>
+    </div>
+
+    <h4>📊 实验结果</h4>
+    <table>
+      <tr><th>模型</th><th>English</th><th>Hindi</th><th>Bengali</th><th>Tamil</th><th>平均 LG</th></tr>
+      <tr><td>GPT-4V</td><td>78.2%</td><td>62.4%</td><td>58.1%</td><td>55.7%</td><td>19.3 pp</td></tr>
+      <tr><td>Gemini 1.5 Pro</td><td>76.8%</td><td>64.1%</td><td>61.3%</td><td>58.9%</td><td>15.6 pp</td></tr>
+      <tr><td>LLaVA-1.6-34B</td><td>71.4%</td><td>52.8%</td><td>48.2%</td><td>44.6%</td><td>24.3 pp</td></tr>
+      <tr><td class="highlight">Qwen-VL-Max</td><td>74.5%</td><td class="highlight">65.3%</td><td class="highlight">62.8%</td><td>57.2%</td><td class="highlight">13.8 pp</td></tr>
+    </table>
+
+    <h4>🔍 消融与讨论</h4>
+    <p>关键发现：(1) <strong>Reasoning Preservation Rate 令人担忧</strong>：即使在最好的模型（Qwen-VL-Max）上，Hindi RPR 仅为 78%，即英语答对的题有 22% 在 Hindi 下答错；(2) 语言差距在<strong>需要读图中文字</strong>的题目上最大（LG = 28 pp），在纯视觉空间推理题上最小（LG = 5 pp）；(3) <strong>资源量与差距正相关</strong>：高资源语言（Hindi, Bengali）差距较小，低资源语言（Kannada, Gujarati）差距最大达 30+ pp。Error Shift 分析发现，约 40% 的跨语言错误从"推理错误"变为"理解错误"，说明模型在低资源语言上连<em>理解问题本身</em>都困难。<strong>实践建议</strong>：在非英语医疗/教育场景部署 VLMs 前必须进行语言特定的性能审计。数据和代码已开源。</p>
+  </div>
+</div>
+
+<!-- ==================== Reflection ==================== -->
+<div class="reflection-box">
+  <h3>🔮 每日反思 — 2026 年 4 月 1 日</h3>
+  <p>今日 310 篇新论文精选 13 篇，覆盖 5 大板块。几个值得关注的趋势：</p>
+  <p><strong>1. 扩散语言模型的推理突破</strong>：LogicDiff 展示了一个极具洞察力的发现——MDLM 的推理缺陷并非源于表示学习的不足，而是 token 揭露顺序的问题。仅通过改变去噪调度（不修改模型参数），就在 GSM8K 上获得 +38.7 pp 的提升。这暗示扩散语言模型可能被严重低估了。</p>
+  <p><strong>2. "模型能力为王"的再确认</strong>：AIMO 3 的分析给出了一个清醒的结论：推理时优化技巧的边际贡献仅 ~2 分，而模型基础能力差距高达 16.7 分。这对研发资源分配有重要启示——与其花 90% 时间在 prompt 工程和采样策略上，不如投入更多在模型训练本身。</p>
+  <p><strong>3. 无标签 RL 的新思路</strong>：SARL 提出的"推理拓扑奖励"开辟了一条令人兴奋的路径——不依赖任何标注就能用 RL 提升推理质量。如果这一范式被验证为广泛有效，将大幅扩展 RL 在开放域任务中的应用范围。</p>
+  <p><strong>4. 验证能力成为 Agent 核心差异化</strong>：Marco DeepResearch 用 8B 模型通过验证中心设计击败 30B 通用模型，再次印证了一个观点：对于 Agent 系统，"知道自己不知道什么"比"知道更多"更重要。</p>
+  <p><strong>5. 多语言公平性的紧迫警告</strong>：VLM 跨语言审计揭示的 15-25 pp 准确率差距，对于正在全球化部署的 AI 系统是一个严肃的公平性警告。特别是在医疗和教育领域，这种语言不平等可能直接转化为服务不平等。</p>
+</div>
+
+</div><!-- end container -->
+
+<div class="report-footer">
+  <p>📊 arXiv AI 日报 · 自动生成于 2026-04-01</p>
+  <p>数据来源：arXiv.org RSS Feed (cs.CL, cs.AI, cs.LG) · 仅收录 Announce Type: new</p>
+  <p>⚠️ 本报告由 AI 自动生成，分析内容仅供参考，不构成学术评价</p>
+</div>
+
+</body>
+</html>
