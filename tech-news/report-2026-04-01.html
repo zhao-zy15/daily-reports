@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-04-01</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a14; --bg2: #12121f; --bg3: #1a1a2e;
+            --text: #e8e8f0; --text2: #a0a0b8; --accent: #38bdf8;
+            --accent2: #818cf8; --border: #2d2d44;
+            --red: #f87171; --green: #4ade80; --yellow: #fbbf24;
+            --purple: #c084fc; --pink: #f472b6; --orange: #fb923c;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; padding: 8px 16px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; transition: all 0.3s; }
+        .back-link:hover { background: var(--accent); color: #fff; }
+        
+        .hero { text-align: center; padding: 40px 30px; background: linear-gradient(135deg, #0f0f2a 0%, #1a1040 50%, #0f0f2a 100%); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(129,140,248,0.08) 0%, transparent 50%); }
+        .hero-icon { font-size: 3rem; margin-bottom: 12px; position: relative; }
+        .hero h1 { font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; position: relative; }
+        .hero .date { color: var(--text2); margin-top: 8px; font-size: 1rem; position: relative; }
+        .hero .stats { display: flex; justify-content: center; gap: 30px; margin-top: 18px; position: relative; }
+        .hero .stat { text-align: center; }
+        .hero .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+        .hero .stat-label { font-size: 0.8rem; color: var(--text2); }
+        
+        .toc { background: var(--bg2); border-radius: 16px; border: 1px solid var(--border); padding: 25px 30px; margin-bottom: 30px; }
+        .toc h2 { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .toc-item { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: var(--bg3); border-radius: 10px; text-decoration: none; color: var(--text); transition: all 0.2s; border: 1px solid transparent; }
+        .toc-item:hover { border-color: var(--accent); background: rgba(56,189,248,0.05); transform: translateX(3px); }
+        .toc-item .icon { font-size: 1.3rem; }
+        .toc-item .info { flex: 1; }
+        .toc-item .name { font-weight: 600; font-size: 0.95rem; }
+        .toc-item .count { font-size: 0.8rem; color: var(--text2); }
+        
+        .section { margin-bottom: 35px; }
+        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--bg2); border-radius: 14px 14px 0 0; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); }
+        .section-header .icon { font-size: 1.5rem; }
+        .section-header h2 { font-size: 1.3rem; flex: 1; }
+        .section-header .badge { background: var(--accent); color: #000; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        
+        .news-card { background: var(--bg2); border: 1px solid var(--border); border-top: none; padding: 24px; transition: all 0.2s; }
+        .news-card:last-child { border-radius: 0 0 14px 14px; }
+        .news-card:hover { background: var(--bg3); }
+        .news-card h3 { font-size: 1.1rem; margin-bottom: 10px; line-height: 1.5; }
+        .news-card h3 a { color: var(--text); text-decoration: none; border-bottom: 1px dashed var(--border); transition: all 0.2s; }
+        .news-card h3 a:hover { color: var(--accent); border-color: var(--accent); }
+        .news-card .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; font-size: 0.82rem; color: var(--text2); }
+        .news-card .meta .source { color: var(--accent); font-weight: 500; }
+        .news-card .content { color: var(--text2); font-size: 0.95rem; line-height: 1.8; }
+        .news-card .content p { margin-bottom: 8px; }
+        .news-card .highlight { background: rgba(56,189,248,0.08); border-left: 3px solid var(--accent); padding: 10px 15px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 0.9rem; }
+        .news-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .news-card .tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+        .tag-ai { background: rgba(56,189,248,0.15); color: var(--accent); }
+        .tag-robot { background: rgba(192,132,252,0.15); color: var(--purple); }
+        .tag-auto { background: rgba(74,222,128,0.15); color: var(--green); }
+        .tag-vc { background: rgba(251,191,36,0.15); color: var(--yellow); }
+        .tag-giant { background: rgba(248,113,113,0.15); color: var(--red); }
+        .tag-bio { background: rgba(244,114,182,0.15); color: var(--pink); }
+        .tag-policy { background: rgba(251,146,60,0.15); color: var(--orange); }
+        .tag-video { background: rgba(168,85,247,0.15); color: #a855f7; }
+        
+        .separator { height: 1px; background: var(--border); margin: 0; }
+        
+        footer { text-align: center; padding: 30px 20px; color: var(--text2); font-size: 0.85rem; margin-top: 20px; }
+        footer a { color: var(--accent); text-decoration: none; }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.5rem; }
+            .hero .stats { gap: 15px; }
+            .toc-grid { grid-template-columns: 1fr; }
+            .news-card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="./" class="back-link">← 返回报告列表</a>
+        
+        <div class="hero">
+            <div class="hero-icon">🤖</div>
+            <h1>科技与财经每日动态</h1>
+            <p class="date">2026年4月1日 · 周三 · 17:30</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num">22</div>
+                    <div class="stat-label">深度追踪</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">7</div>
+                    <div class="stat-label">垂直赛道</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">24h</div>
+                    <div class="stat-label">时效保障</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 目录 -->
+        <div class="toc">
+            <h2>📑 今日速览</h2>
+            <div class="toc-grid">
+                <a href="#sec-ai" class="toc-item">
+                    <span class="icon">🧠</span>
+                    <div class="info">
+                        <div class="name">大模型与基础AI</div>
+                        <div class="count">6 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-auto" class="toc-item">
+                    <span class="icon">🚗</span>
+                    <div class="info">
+                        <div class="name">自动驾驶与出行</div>
+                        <div class="count">3 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-giant" class="toc-item">
+                    <span class="icon">🏢</span>
+                    <div class="info">
+                        <div class="name">科技巨头与财报</div>
+                        <div class="count">4 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-vc" class="toc-item">
+                    <span class="icon">💰</span>
+                    <div class="info">
+                        <div class="name">创投与融资</div>
+                        <div class="count">3 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-bio" class="toc-item">
+                    <span class="icon">🧬</span>
+                    <div class="info">
+                        <div class="name">脑机接口与生物科技</div>
+                        <div class="count">2 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-robot" class="toc-item">
+                    <span class="icon">🤖</span>
+                    <div class="info">
+                        <div class="name">具身智能与机器人</div>
+                        <div class="count">2 条追踪</div>
+                    </div>
+                </a>
+                <a href="#sec-video" class="toc-item">
+                    <span class="icon">🎬</span>
+                    <div class="info">
+                        <div class="name">视频与多模态生成</div>
+                        <div class="count">2 条追踪</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <!-- ===== 大模型与基础AI ===== -->
+        <div class="section" id="sec-ai">
+            <div class="section-header">
+                <span class="icon">🧠</span>
+                <h2>大模型与基础AI</h2>
+                <span class="badge">6 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3>🔥 <a href="https://www.cnbc.com/2026/03/31/openai-funding-round-ipo.html" target="_blank">OpenAI 完成 $1220亿 史诗级融资，估值飙至 $8520亿</a></h3>
+                <div class="meta">
+                    <span class="source">CNBC / TechCrunch</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>OpenAI 于3月31日正式宣布完成有史以来最大规模的融资轮次，总额达 <strong>$1220亿</strong>，投后估值 <strong>$8520亿</strong>。此轮融资由 Amazon、NVIDIA、SoftBank 领投，首次面向散户投资者开放，筹集了约 $30亿零售资金。</p>
+                    <div class="highlight">
+                        <strong>💡 核心看点：</strong>OpenAI 正从 AI 实验室转型为"超级应用"平台公司。其 ChatGPT 月活已超过 8 亿，同时宣布将把 ChatGPT 打造为集购物、旅行、任务管理于一体的"Super App"。IPO 预计在数月内启动，这标志着 AI 行业进入了前所未有的资本密集期。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-vc">融资</span>
+                    <span class="tag tag-giant">巨头</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3>🔥 <a href="https://prismml.com/news/bonsai-8b" target="_blank">PrismML 发布全球首个商用 1-Bit 大模型 Bonsai 8B</a></h3>
+                <div class="meta">
+                    <span class="source">PrismML / Morningstar</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>从隐身模式走出的 PrismML 推出了世界首款商用级别 1-bit 大语言模型 <strong>Bonsai 8B</strong>。相较传统 FP16 模型，Bonsai 体积缩小 <strong>14倍</strong>、推理速度提升 <strong>8倍</strong>、能耗降低 <strong>5倍</strong>，同时在 8B 参数级别的标准评测中保持了竞争力。</p>
+                    <div class="highlight">
+                        <strong>💡 产业影响：</strong>这是 1-bit 量化从学术论文走向商业落地的里程碑。Bonsai 可以在手机、机器人等边缘设备上本地运行高质量 LLM，彻底改变了"大模型必须依赖云端"的假设。PrismML 同时开放了企业级 API 和芯片合作伙伴计划。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-robot">边缘AI</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3>🔥 <a href="https://www.marktechpost.com/2026/04/01/hugging-face-releases-trl-v1-0-a-unified-post-training-stack-for-sft-reward-modeling-dpo-and-grpo-workflows/" target="_blank">Hugging Face 正式发布 TRL v1.0：统一后训练框架</a></h3>
+                <div class="meta">
+                    <span class="source">MarkTechPost / Hugging Face Blog</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Hugging Face 正式发布 <strong>TRL (Transformer Reinforcement Learning) v1.0</strong>，将 SFT、Reward Modeling、DPO、GRPO 等后训练流程整合为统一的生产级框架。新版本引入标准化 CLI 工具、配置系统，以及 Unsloth 集成（训练速度 2 倍提升，内存使用降低 70%）。</p>
+                    <div class="highlight">
+                        <strong>💡 技术价值：</strong>TRL v1.0 将 LLM 后训练从"各团队自建轮子"推向"标准化工具链"时代。支持 PPO/DPO/GRPO/KTO/ORPO 多种对齐算法，配合异步 GRPO 解耦生成与训练，显著降低了强化学习训练 LLM 的门槛。对 RL 研究者和工程团队都是重大利好。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-ai">开源工具</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://opentools.ai/news" target="_blank">OpenAI 推出 GPT-5.4 mini 与 nano：极致性价比小模型</a></h3>
+                <div class="meta">
+                    <span class="source">OpenTools.ai</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>OpenAI 发布 GPT-5.4 系列的精简版本 <strong>mini</strong> 和 <strong>nano</strong>，专为低延迟、高吞吐的 API 场景设计。mini 版本在 MMLU 等标准评测上接近 GPT-5 全量模型，但推理成本降低约 80%；nano 版本更进一步，目标是移动端和嵌入式部署。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-giant">OpenAI</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://aitoolly.com/ai-news/article/2026-04-01-prismml-unveils-1-bit-bonsai-the-first-commercially-viable-1-bit-large-language-models-for-edge-comp" target="_blank">Anthropic Claude Code 源码意外泄露引发安全讨论</a></h3>
+                <div class="meta">
+                    <span class="source">AIToolly / 社区讨论</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Anthropic 的 AI 编程助手 Claude Code 的部分源码在 GitHub 上被发现泄露，引发开发者社区广泛讨论。泄露的代码揭示了 Claude Code 的 Agent 循环架构、工具调用策略和上下文管理机制。Anthropic 已迅速回应并撤下相关内容，但社区对 AI 编程工具的安全性和透明度展开了激烈辩论。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-policy">安全</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://money.usnews.com/investing/news/articles/2026-04-01/chinese-chipmakers-claim-nearly-half-of-of-local-market-as-nvidias-lead-shrinks-idc-says" target="_blank">IDC：中国芯片厂商占据本土 AI 加速器市场 41% 份额</a></h3>
+                <div class="meta">
+                    <span class="source">Reuters / U.S. News</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>根据 IDC 最新报告，中国 GPU 和 AI 芯片厂商在 2025 年已占据中国 AI 加速器服务器市场近 <strong>41%</strong> 份额，NVIDIA 曾经的主导地位正在被侵蚀。华为昇腾、寒武纪等国产芯片成为替代主力，美国出口管制客观上加速了国产化进程。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">AI芯片</span>
+                    <span class="tag tag-policy">产业政策</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 自动驾驶与出行 ===== -->
+        <div class="section" id="sec-auto">
+            <div class="section-header">
+                <span class="icon">🚗</span>
+                <h2>自动驾驶与出行</h2>
+                <span class="badge">3 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3>🔥 <a href="https://news.qq.com/rain/a/20260401A030SK00" target="_blank">文远知行 × Grab 启动新加坡首个 Robotaxi 公开运营</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻 / 凤凰网科技</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>4月1日，文远知行 WeRide 与东南亚超级应用 Grab 宣布在新加坡榜鹅（Punggol）地区正式启动 <strong>Ai.R 自动驾驶出行服务</strong>的公开运营。公众可通过 Grab App 直接呼叫 Robotaxi，这是新加坡首个面向公众的无人驾驶出租车服务。</p>
+                    <div class="highlight">
+                        <strong>💡 产业影响：</strong>文远知行由此成为唯一同时在中国、美国、阿联酋、新加坡四国运营 Robotaxi 的公司。与 Grab 的合作意味着自动驾驶直接接入东南亚最大的出行平台生态，有望加速 Robotaxi 在 6 亿人口市场的渗透。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">自动驾驶</span>
+                    <span class="tag tag-giant">WeRide</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.sohu.com/a/1002009050_121123887" target="_blank">文远知行双重上市后首份全年财报：收入同比大增</a></h3>
+                <div class="meta">
+                    <span class="source">搜狐财经</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>文远知行在完成美股+港股双重主要上市后交出首份全年成绩单，2025年总收入实现显著增长，储备超 23 亿港元资本弹药。公司正从技术验证阶段跨入大规模商业化部署期，无人驾驶车队规模超 600 辆。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">自动驾驶</span>
+                    <span class="tag tag-vc">财报</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://tech.ifeng.com/c/8rxvhnewzAn" target="_blank">百度 Apollo Go 武汉运营经历系统故障后迅速恢复</a></h3>
+                <div class="meta">
+                    <span class="source">凤凰科技</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>百度旗下萝卜快跑（Apollo Go）武汉区域近日出现系统性故障导致部分订单中断。百度迅速修复并恢复运营，同时升级了后端调度系统冗余。这一事件引发了对大规模 Robotaxi 运营可靠性的行业讨论。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">自动驾驶</span>
+                    <span class="tag tag-giant">百度</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 科技巨头与财报 ===== -->
+        <div class="section" id="sec-giant">
+            <div class="section-header">
+                <span class="icon">🏢</span>
+                <h2>科技巨头与财报</h2>
+                <span class="badge">4 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3>🔥 <a href="https://computing.net/news/stocks/nvidia-vs-amd-breaking-down-the-2026-ai-chip-battle-by-the-numbers/" target="_blank">Sergey Brin 回归 Google 主导 AI Agent 战略转型</a></h3>
+                <div class="meta">
+                    <span class="source">Computing.net / 多源</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Google 联合创始人 <strong>Sergey Brin</strong> 被报道已深度回归公司日常运营，主导推动 Google 从搜索引擎向 <strong>AI Agent 平台</strong>的战略转型。据知情人士透露，Brin 正亲自参与 Gemini Agent 系统的架构设计，要求团队将 AI Agent 能力嵌入 Google 全线产品。</p>
+                    <div class="highlight">
+                        <strong>💡 产业影响：</strong>Brin 的回归信号意义重大。Google 内部同时曝光了名为 <strong>"Agent Smith"</strong> 的 AI 编程工具，面向员工内测，旨在用 AI Agent 提升全公司工程效率。结合 Gemini 2.0 系列的强势表现，Google 正全面转向 Agent 战略。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">Google</span>
+                    <span class="tag tag-ai">AI Agent</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://k.sina.cn/article_7857201856_1d45362c001903c5no.html" target="_blank">腾讯混元 3.0 将于4月发布，AI投入持续加码</a></h3>
+                <div class="meta">
+                    <span class="source">新浪 / 环球网</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>腾讯在2025年全年业绩报告中披露，2025年成为"AI节点年"，AI 资本开支大幅增长。旗舰大模型 <strong>混元 3.0</strong> 预计于4月正式发布，将在推理能力、多模态交互等方面实现显著提升。腾讯还透露已在内部广泛部署 AI 代码助手，研发效率提升超 30%。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">腾讯</span>
+                    <span class="tag tag-ai">大模型</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://computing.net/news/stocks/nvidia-vs-amd-breaking-down-the-2026-ai-chip-battle-by-the-numbers/" target="_blank">NVIDIA FY2026 营收 $2159亿 vs AMD $346亿：AI 芯片双雄对决持续</a></h3>
+                <div class="meta">
+                    <span class="source">Computing.net</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>最新财务数据对比显示，NVIDIA FY2026 全年营收达 <strong>$2159亿</strong>，AMD 则达到 <strong>$346亿</strong>。NVIDIA 数据中心业务仍占绝对优势，但 AMD 在 AI PC 芯片和性价比 GPU 市场加速追赶。分析师认为，AI 硬件市场足够大，短期内不是零和博弈。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">NVIDIA</span>
+                    <span class="tag tag-giant">AMD</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://tech-insider.org/nvidia-h200-chip-sales-china-2026/" target="_blank">Musk 计划投资 $250亿 建设 AI 超级芯片工厂"Terafab"</a></h3>
+                <div class="meta">
+                    <span class="source">Tech Insider / 多源</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Elon Musk 旗下 xAI 披露了名为 <strong>"Terafab"</strong> 的 AI 超级芯片工厂计划，总投资约 $250亿，目标是打造全球最大的 AI 训练基础设施。该工厂将整合定制 AI 芯片设计与制造能力，计划选址于美国得克萨斯州，旨在降低 xAI 对 NVIDIA GPU 的依赖。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">xAI</span>
+                    <span class="tag tag-ai">AI芯片</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 创投与融资 ===== -->
+        <div class="section" id="sec-vc">
+            <div class="section-header">
+                <span class="icon">💰</span>
+                <h2>创投与融资</h2>
+                <span class="badge">3 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://techcrunch.com/2026/03/31/openai-not-yet-public-raises-3b-from-retail-investors-in-monster-122b-fund-raise/" target="_blank">OpenAI $1220亿融资首次纳入散户投资者，筹集 $30亿零售资金</a></h3>
+                <div class="meta">
+                    <span class="source">TechCrunch</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>在 OpenAI 的 $1220 亿巨额融资中，首次面向零售投资者开放认购渠道，最终筹集约 <strong>$30 亿</strong>。这一举措在 AI 领域前所未见，被视为 OpenAI 为 IPO 造势的重要信号。Amazon、NVIDIA、SoftBank 为本轮领投方，多家主权基金参与跟投。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">融资</span>
+                    <span class="tag tag-giant">OpenAI</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://qubit.capital/blog/ai-startup-fundraising-trends" target="_blank">2026 Q1 AI 创投趋势：Series B 中位估值达 $1.43亿</a></h3>
+                <div class="meta">
+                    <span class="source">Qubit Capital</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>最新数据显示 2026 年 AI 创投市场持续火热，Series B 轮中位估值已达 <strong>$1.43 亿</strong>。Agentic AI、AI 基础设施和垂直 SaaS 是最受资本追捧的三大赛道。经历 2023-2024 年的低谷后，风险投资正强势回归 AI 领域。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">创投</span>
+                    <span class="tag tag-ai">AI Agent</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://blog.herond.org/ai-startup-funding/" target="_blank">智谱 AI 营收同比增长 131%，AI 2.0 创业公司集体步入商业化</a></h3>
+                <div class="meta">
+                    <span class="source">Herond Blog / 多源</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>中国头部 AI 创业公司智谱 AI（Zhipu AI）最新财报显示营收同比增长 <strong>131%</strong>，成为国内首批实现大规模商业化收入的大模型公司之一。从全球看，AI 2.0 创业公司正集体从"烧钱换用户"走向"营收可持续"阶段，但盈利仍是普遍挑战。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">营收</span>
+                    <span class="tag tag-ai">大模型</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 脑机接口与生物科技 ===== -->
+        <div class="section" id="sec-bio">
+            <div class="section-header">
+                <span class="icon">🧬</span>
+                <h2>脑机接口与生物科技</h2>
+                <span class="badge">2 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.nature.com/articles/d41586-026-00849-6" target="_blank">中国批准全球首个脑机接口商用设备，用于治疗重度瘫痪</a></h3>
+                <div class="meta">
+                    <span class="source">Nature</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>据 Nature 报道，中国已批准 <strong>Neuracle Medical Technology（博睿康医疗）</strong> 研发的脑机接口（BCI）设备上市，成为全球首款获批的商用 BCI 产品。该硬币大小的神经植入物可帮助重度瘫痪患者恢复手部运动，标志着中国在 BCI 领域取得了监管层面的全球领先地位。</p>
+                    <div class="highlight">
+                        <strong>💡 行业意义：</strong>这是 BCI 从实验室走向临床的标志性事件。相比 Neuralink 仍处于临床试验阶段，中国的监管审批速度更快。不过，该设备的适应症目前限于重度瘫痪，距离 Musk 畅想的"增强人类"还有很长的路。
+                    </div>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">脑机接口</span>
+                    <span class="tag tag-policy">监管审批</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://sambasci.com/blog/biotech-trends/" target="_blank">Neuralink 宣布2026年启动高量产脑机接口设备，自动化手术机器人就绪</a></h3>
+                <div class="meta">
+                    <span class="source">SambaSci / Reuters</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Elon Musk 旗下 Neuralink 宣布将在 2026 年内启动脑机接口植入设备的 <strong>高量产</strong>（high-volume production），并引入完全自动化的手术机器人进行植入。目标是大幅降低手术成本和时间，使 BCI 从"少数临床试验"走向"大规模可及"。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">脑机接口</span>
+                    <span class="tag tag-giant">Neuralink</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 具身智能与机器人 ===== -->
+        <div class="section" id="sec-robot">
+            <div class="section-header">
+                <span class="icon">🤖</span>
+                <h2>具身智能与机器人</h2>
+                <span class="badge">2 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260330A05EMC00" target="_blank">极佳视界 GigaWorld-1 再获全球第一，GigaBrain-0.1 具身基础大模型强势发布</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻 / 机器之心</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>极佳视界（GigaAI）连续交出多份世界级答卷：全栈自研的具身基础大模型 <strong>GigaBrain-0.1</strong> 发布，世界模型 <strong>GigaWorld-1</strong> 在公开评测中再获全球第一。GigaBrain 整合了视觉感知、语言理解和物理操控三大能力，可直接部署于多种机器人平台。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">具身智能</span>
+                    <span class="tag tag-ai">世界模型</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://www.techinasia.com/news/chinas-unitree-aims-to-ship-20000-humanoid-robots-in-2026" target="_blank">宇树科技目标2026年出货 2万台人形机器人</a></h3>
+                <div class="meta">
+                    <span class="source">Tech in Asia</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>中国机器人明星企业 <strong>宇树科技（Unitree Robotics）</strong> CEO 透露，2026年的出货目标为 <strong>20,000 台</strong>人形机器人，较2025年的约 5,500 台增长近 4 倍。宇树的 G1/H1 系列已在工业、物流场景中形成初步商业化闭环，正从"示范展示"迈向"规模部署"。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">人形机器人</span>
+                    <span class="tag tag-vc">商业化</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== 视频与多模态生成 ===== -->
+        <div class="section" id="sec-video">
+            <div class="section-header">
+                <span class="icon">🎬</span>
+                <h2>视频与多模态生成</h2>
+                <span class="badge">2 条</span>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://opentools.ai/news" target="_blank">Google 发布 Veo 3.1 Lite：轻量级视频生成模型开放 Gemini API</a></h3>
+                <div class="meta">
+                    <span class="source">OpenTools.ai / Google Blog</span>
+                    <span>2026-04-01</span>
+                </div>
+                <div class="content">
+                    <p>Google 正式发布视频生成模型 <strong>Veo 3.1 Lite</strong>，一个专为开发者设计的轻量级版本，可通过 Gemini API 直接调用。Veo 3.1 Lite 支持最长 30 秒的高质量视频生成，延迟大幅降低，适合实时交互场景。这是 Google 在视频生成赛道对 OpenAI Sora 和 Runway 的直接回应。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-video">视频生成</span>
+                    <span class="tag tag-giant">Google</span>
+                </div>
+            </div>
+            
+            <div class="news-card">
+                <h3><a href="https://zhuanlan.zhihu.com/p/2022324254427940644" target="_blank">2026年大模型全景：多模态交互进入深水区</a></h3>
+                <div class="meta">
+                    <span class="source">知乎专栏</span>
+                    <span>2026-03-31</span>
+                </div>
+                <div class="content">
+                    <p>知乎万字长文梳理了 2026 年大模型的最新格局：文本生成已近天花板，视觉、视频、音频等多模态能力成为主战场。Gemini 2.0、GPT-5 Vision、Claude 4 Vision 等在多模态理解上形成三足鼎立。中国厂商（DeepSeek、Qwen、混元）在中文多模态领域保持显著优势。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-video">多模态</span>
+                    <span class="tag tag-ai">大模型</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>📊 本报告共追踪 <strong>22</strong> 条科技与财经动态 · 覆盖 <strong>7</strong> 个垂直赛道</p>
+            <p style="margin-top: 8px;">数据采集时间：2026-04-01 17:30 · 由 <a href="../">WorkBuddy</a> 自动生成</p>
+            <p style="margin-top: 8px; font-size: 0.8rem;">⚠️ 所有信息均来自公开渠道，仅供参考，不构成投资建议</p>
+        </footer>
+    </div>
+</body>
+</html>
