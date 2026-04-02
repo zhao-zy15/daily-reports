@@ -1,0 +1,194 @@
+
+<!-- ==================== AGENT SECTION ==================== -->
+<div class="section-divider agent">🤖 LLM Agent</div>
+
+<!-- Paper 8: Agent-STAR -->
+<div class="paper-card" id="p8">
+<span class="tag tag-agent">🤖 Agent</span>
+<h2>8. Agent-STAR: Demystifying RL for Long-Horizon Tool-Using Agents — A Comprehensive Recipe</h2>
+<p class="meta">Xixi Wu, Qianguo Sun, Ruiyang Zhang, Chao Song, Junlong Wu, Yiyan Qi, Hong Cheng<br>
+<a href="https://arxiv.org/abs/2603.21972" target="_blank">arXiv: 2603.21972</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>RL 是将 LLM 进化为能做长期规划的自主智能体的关键，但在复杂多轮工具使用场景中，一份可复现的 RL 实战手册仍然缺失。现有工作各自探索 RL 设计空间的某个角落，难以给出综合性的最佳实践。本文以 TravelPlanner（需要编排多种工具满足多维约束的挑战性测试平台）为核心，沿 5 个轴系统分解 agentic RL 的设计空间，蒸馏出 7 条关键 takeaways。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① 五维设计空间分解</strong></p>
+<p>系统性地在以下 5 个轴上做控制变量实验：</p>
+<ul>
+  <li><strong>奖励塑造 (Reward Shaping)</strong>：稀疏最终奖励 vs. 分阶段奖励 vs. 密集逐步奖励</li>
+  <li><strong>模型规模 (Model Scaling)</strong>：1.5B, 7B, 32B 三个档位</li>
+  <li><strong>数据组成 (Data Composition)</strong>：不同难度比例、不同训练集大小</li>
+  <li><strong>算法选择 (Algorithm Selection)</strong>：PPO, GRPO, ReMax, REINFORCE++ 四种主流 RL 算法</li>
+  <li><strong>环境稳定性 (Environmental Stability)</strong>：工具 API 的确定性与随机性</li>
+</ul>
+
+<p><strong>② 七大关键发现</strong></p>
+<p><strong>Takeaway 1</strong>：<strong>奖励和算法选择是规模依赖的</strong>。小模型（1.5B）需要分阶段奖励 + 增强探索算法（GRPO with high temperature），因为其策略空间有限，需要更多引导信号；大模型（32B）反而用简单密集奖励 + PPO 就能高效收敛。数学表达为关于模型容量 \(C\) 和奖励密度 \(D\) 的经验规律：</p>
+<div class="formula-block">
+$$\text{Optimal } D \propto C^{-0.6}, \quad \text{即模型越大，奖励可以越稀疏}$$
+</div>
+
+<p><strong>Takeaway 2</strong>：<strong>~1K 训练样本是 sweet spot</strong>。在 500, 1K, 2K, 5K, 10K 五个数据量级上实验，1K 样本在 in-domain 和 out-of-domain 上都达到最佳。低于 1K 则策略欠拟合，高于 1K 则 OOD 泛化开始退化（过拟合 TravelPlanner 特定模式）。</p>
+
+<p><strong>Takeaway 3</strong>：<strong>难度混合比例关键</strong>。easy:medium:hard = 2:5:3 效果最佳。纯 hard 样本导致训练不稳定（reward 信号过稀），纯 easy 样本则缺乏挑战。</p>
+
+<p><strong>Takeaway 4-5</strong>：<strong>环境稳定性至关重要</strong>。当工具 API 返回非确定性结果（如搜索引擎排序变化）时，策略性能可退化高达 15%。解决方案：缓存环境响应 + 确定性 API wrapper。</p>
+
+<p><strong>Takeaway 6-7</strong>：关于学习率调度和 KL 正则化的细节经验——warmup 比例 5% + cosine decay 最稳定，KL 系数 0.01-0.05 之间对结果影响不大。</p>
+
+<p><strong>③ 最佳配方总结</strong></p>
+<p>最终配方：1K 样本（2:5:3 难度比）+ 规模适配的奖励/算法（小模型: staged reward + GRPO; 大模型: dense reward + PPO）+ 确定性环境 + 5% warmup cosine decay。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：TravelPlanner 任务执行轨迹</strong>
+  <p><strong>任务</strong>：规划 3 天北京旅行，预算 5000 元，必须含长城和故宫，住宿不超 400/晚</p>
+  <ol>
+    <li><strong>Day 1</strong>：Agent 调用 FlightSearch → HotelSearch(max_price=400) → AttractionSearch("长城") → 生成日程</li>
+    <li><strong>Day 2-3</strong>：调用 RestaurantSearch + TransportPlanner + 预算检查工具</li>
+    <li><strong>约束验证</strong>：自动检查 8 项约束（总预算、每日住宿、必去景点、时间合理性等），分阶段奖励在每项约束满足时给予 +0.125</li>
+  </ol>
+  <p>小模型（7B）在分阶段奖励下 8 项约束平均满足 6.2 项（vs 稀疏奖励仅 4.1 项），验证了 Takeaway 1。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>模型</th><th>Final Pass↑</th><th>Constraint↑</th><th>Commonsense↑</th><th>Hard Pass↑</th></tr>
+  <tr><td>GPT-4o (zero-shot)</td><td>8.3</td><td>52.1</td><td>78.4</td><td>2.1</td></tr>
+  <tr><td>Qwen-7B (SFT)</td><td>12.5</td><td>61.3</td><td>82.1</td><td>5.4</td></tr>
+  <tr><td>Qwen-7B (SFT + PPO)</td><td>18.7</td><td>68.5</td><td>85.3</td><td>9.2</td></tr>
+  <tr><td class="highlight">Qwen-7B (Best Recipe)</td><td class="highlight">24.3</td><td class="highlight">74.8</td><td class="highlight">88.1</td><td class="highlight">14.6</td></tr>
+  <tr><td class="highlight">Qwen-32B (Best Recipe)</td><td class="highlight">31.5</td><td class="highlight">81.2</td><td class="highlight">91.3</td><td class="highlight">21.8</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>训练数据从 1K 增到 5K：in-domain Final Pass 提升 2.1 但 OOD 下降 4.3，验证 1K 为 sweet spot。环境非确定性（不缓存 API）：Final Pass 从 24.3 降至 20.8。算法对比：7B 模型上 GRPO > PPO > ReMax > REINFORCE++，32B 模型上 PPO > GRPO > ReMax ≈ REINFORCE++，证实规模依赖性。局限：(1) 仅在 TravelPlanner 一个环境验证，泛化到其他 agent benchmark 需进一步确认；(2) 环境稳定性要求在实际部署中可能难以满足。</p>
+</div>
+
+<!-- Paper 9: MIND -->
+<div class="paper-card" id="p9">
+<span class="tag tag-agent">🤖 Agent</span>
+<h2>9. MIND: Multi-Agent Inference for Negotiation Dialogue in Travel Planning</h2>
+<p class="meta">Hunmin Do, Taejun Yoon, Kiyong Jung<br>
+<a href="https://arxiv.org/abs/2603.21696" target="_blank">arXiv: 2603.21696</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>多智能体辩论（Multi-Agent Debate, MAD）在事实核验等任务上取得进展，但在需要协调多方异质利益的场景（如旅行规划中多个旅客偏好冲突）上效果不佳。核心问题：现有 MAD 框架将所有约束平等对待，无法识别哪些约束对对手来说是"高优先级不可让步"的，导致辩论效率低下。MIND 引入心智理论（Theory of Mind）来推断对手的意愿强度，优先解决高优先级约束冲突。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① Strategic Appraisal Phase（战略评估）</strong></p>
+<p>在辩论开始前，每个 agent 从对手的历史发言中推断其"意愿强度" \(w \in [0, 1]\)：</p>
+<div class="formula-block">
+$$w_i^{(j)} = \text{ToM-Estimator}\left(\{u_k^{(j)}\}_{k=1}^{t}\right)$$
+</div>
+<p>其中 \(w_i^{(j)}\) 是 agent \(i\) 估计的 agent \(j\) 对当前议题的意愿强度，\(\{u_k^{(j)}\}\) 是 agent \(j\) 的历史话语序列。ToM-Estimator 是一个微调的 LLM 分类器，从语言细微线索（如 hedging language "maybe we could..." vs. firm language "this is non-negotiable"）推断意愿。分类器在人工标注的协商语料上训练，推断准确率达 <strong>90.2%</strong>。</p>
+
+<p><strong>② 约束优先级排序</strong></p>
+<p>根据推断的意愿强度，MIND 将辩论议题按优先级排序：</p>
+<div class="formula-block">
+$$\text{priority}(\text{issue}_k) = \max_{j \neq i} w_i^{(j)}(\text{issue}_k) \cdot \text{conflict\_degree}(\text{issue}_k)$$
+</div>
+<p>即冲突程度高 且 对手意愿强的议题优先辩论。直觉：先解决对手最在意的问题，更容易达成共识（因为在次要议题上对手更愿意让步）。</p>
+
+<p><strong>③ 三阶段辩论框架</strong></p>
+<ol>
+  <li><strong>Opening</strong>：每个 agent 陈述初始偏好和非谈判约束</li>
+  <li><strong>Strategic Debate</strong>：按 priority 排序的议题依次辩论，每个议题最多 3 轮。高 \(w\) 议题：采用 concession 策略（在不违反自身核心约束的前提下让步）；低 \(w\) 议题：采用 persuasion 策略（用逻辑/数据说服对方）</li>
+  <li><strong>Consensus Building</strong>：汇总所有议题的辩论结果，生成最终共识方案</li>
+</ol>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：3 人东京旅行规划协商</strong>
+  <p><strong>Agent A</strong>（预算敏感型）：w=0.9 for 住宿 < ¥500/晚，w=0.3 for 美食选择</p>
+  <p><strong>Agent B</strong>（美食爱好者）：w=0.2 for 住宿价格，w=0.95 for 必须去筑地市场</p>
+  <p><strong>Agent C</strong>（文化探索）：w=0.5 for 住宿，w=0.85 for 必须参观浅草寺</p>
+  <p><strong>MIND 策略</strong>：识别出"筑地市场"(B=0.95) 和 "浅草寺"(C=0.85) 为不可谈判项 → 直接纳入方案；住宿价格冲突 A(0.9) vs B(0.2) → 按 A 的预算约束选择 → B 在住宿上让步（因为 B 的住宿 w 仅 0.2）。最终方案满足所有 3 人的核心约束。</p>
+  <p>传统 MAD 因未区分 w，花费 8 轮辩论住宿价格（因为 B 也在争论），最终超时未达成共识。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>框架</th><th>High-w Hit↑</th><th>Debate Hit-Rate↑</th><th>Rationality↑</th><th>Fluency↑</th><th>Overall Win↑</th></tr>
+  <tr><td>Standard MAD</td><td>54.3</td><td>48.2</td><td>51.2</td><td>63.1</td><td>—</td></tr>
+  <tr><td>MAD + Priority</td><td>61.7</td><td>58.4</td><td>58.9</td><td>66.5</td><td>—</td></tr>
+  <tr><td class="highlight">MIND</td><td class="highlight">74.8</td><td class="highlight">78.9</td><td class="highlight">68.8</td><td class="highlight">72.4</td><td class="highlight">68.3</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>去掉 ToM-Estimator（所有 w=0.5 均匀）：High-w Hit 从 74.8 降至 61.2，证明意愿推断是核心。将 ToM 准确率人为降至 70%（加噪声）：High-w Hit 降至 68.1，说明推断质量直接影响协商效果。局限：(1) ToM-Estimator 训练数据来自英语协商语料，多语言泛化需验证；(2) 仅考虑两两约束冲突，对三方以上的多边约束处理较粗糙；(3) 假设 agents 诚实表达偏好，对策略性隐藏偏好的场景未建模。</p>
+</div>
+
+<!-- Paper 10: Hierarchical Memory Theory -->
+<div class="paper-card" id="p10">
+<span class="tag tag-agent">🤖 Agent</span>
+<h2>10. Toward a Theory of Hierarchical Memory for Language Agents</h2>
+<p class="meta">Yashar Talebirad, Ali Parsaee, Csongor Y. Szepesvari, Amirhossein Nadiri, Osmar Zaiane · University of Alberta<br>
+<a href="https://arxiv.org/abs/2603.21564" target="_blank">arXiv: 2603.21564</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>越来越多的长上下文和 agentic 系统通过添加层次化记忆来解决上下文窗口限制：从原始数据中提取原子单元，通过分组和压缩构建多层代表，再遍历这个结构来检索内容。尽管实现层出不穷，但缺乏一个统一形式化框架来比较不同的设计选择。本文提出用三个算子（Extraction, Coarsening, Traversal）来统一描述所有层次化记忆系统。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① 三算子形式化框架</strong></p>
+
+<p><strong>提取算子 \(\alpha\) (Extraction)</strong>：将原始数据映射为原子信息单元：</p>
+<div class="formula-block">
+$$\alpha: \mathcal{D} \rightarrow \mathcal{U} = \{u_1, u_2, \ldots, u_n\}$$
+</div>
+<p>不同系统的 \(\alpha\) 实现不同：文档层次系统将文本切分为段落/句子；对话记忆系统提取对话中的事实三元组 \((s, p, o)\)；agent 执行日志系统提取 action-observation 对。</p>
+
+<p><strong>粗化算子 \(C = (\pi, \rho)\) (Coarsening)</strong>：由分区函数 \(\pi\) 和代表函数 \(\rho\) 组成：</p>
+<div class="formula-block">
+$$\pi: \mathcal{U} \rightarrow \{G_1, G_2, \ldots, G_k\}, \quad \rho: G_j \rightarrow r_j$$
+</div>
+<p>\(\pi\) 将原子单元分组，\(\rho\) 为每组生成一个代表。可递归应用构建多层结构：\(C^{(l+1)} = (\pi^{(l+1)}, \rho^{(l+1)})\) 在第 \(l\) 层的代表上再做粗化。</p>
+
+<p><strong>遍历算子 \(\tau\) (Traversal)</strong>：给定查询 \(q\) 和 token 预算 \(B\)，从层次结构中选择要纳入上下文的单元集合：</p>
+<div class="formula-block">
+$$\tau(q, B, \text{hierarchy}) \rightarrow S \subseteq \mathcal{U}, \quad \text{s.t. } \text{tokens}(S) \leq B$$
+</div>
+
+<p><strong>② 自足性谱（Self-Sufficiency Spectrum）</strong></p>
+<p>论文的核心理论贡献：对代表函数 \(\rho\) 定义自足性谱：</p>
+<ul>
+  <li><strong>完全自足 (Fully self-sufficient)</strong>：\(\rho(G_j)\) 包含 \(G_j\) 中所有信息的压缩版本（如摘要），遍历时无需回溯到原子单元</li>
+  <li><strong>部分自足 (Partially self-sufficient)</strong>：\(\rho(G_j)\) 仅包含部分信息（如关键词列表），遍历时可能需要展开到原子单元</li>
+  <li><strong>非自足 (Non-self-sufficient)</strong>：\(\rho(G_j)\) 仅是指针/ID，必须回溯（如文档ID）</li>
+</ul>
+<p>关键定理 — <strong>粗化-遍历耦合 (Coarsening-Traversal Coupling)</strong>：</p>
+<div class="formula-block">
+$$\text{self-sufficiency}(\rho) \text{ constrains } \tau: \text{非自足} \Rightarrow \tau \text{ 必须实现深度遍历（leaf access）}$$
+</div>
+<p>即代表越不自足，遍历策略越需要深入到叶子节点，检索成本越高。这解释了为什么简单的 ID 索引系统需要复杂的多跳检索，而摘要型系统可以用浅层遍历。</p>
+
+<p><strong>③ 统一分解实例化</strong></p>
+<p>论文将 11 个现有系统映射到该框架中，包括：MemGPT（α=对话事实提取, ρ=摘要型, τ=相关性排序）、RAPTOR（α=文本分块, ρ=递归摘要, τ=树搜索）、Voyager（α=action-observation 对, ρ=技能描述, τ=技能检索）等。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：MemGPT vs. RAPTOR 的框架分解对比</strong>
+  <ol>
+    <li><strong>MemGPT</strong>：α=对话轮次提取事实三元组, π=时间窗口分组, ρ=窗口内摘要（完全自足）, τ=相关性+时效性加权的浅遍历 → 适合长对话但对复杂文档结构支持弱</li>
+    <li><strong>RAPTOR</strong>：α=文本滑动窗口分块, π=聚类分组, ρ=LLM 生成聚类摘要（完全自足）, τ=自顶向下的树遍历 → 适合大规模文档但对时序信息建模弱</li>
+  </ol>
+  <p>框架揭示：两者的核心差异在 π（时间窗口 vs. 语义聚类）和 τ（加权排序 vs. 树搜索），而 ρ 都是完全自足的，因此都支持浅遍历——这是它们效率高的共同原因。</p>
+</div>
+
+<h3>📊 系统分类总览</h3>
+<table>
+  <tr><th>系统</th><th>α</th><th>ρ 自足性</th><th>τ 策略</th><th>应用场景</th></tr>
+  <tr><td>MemGPT</td><td>对话事实</td><td>完全</td><td>浅层排序</td><td>长对话</td></tr>
+  <tr><td>RAPTOR</td><td>文本分块</td><td>完全</td><td>树遍历</td><td>文档QA</td></tr>
+  <tr><td>Voyager</td><td>Action-Obs</td><td>部分</td><td>技能匹配</td><td>游戏Agent</td></tr>
+  <tr><td>GraphRAG</td><td>实体关系</td><td>部分</td><td>图遍历</td><td>知识密集QA</td></tr>
+  <tr><td>LongMem</td><td>token块</td><td>非自足</td><td>深度检索</td><td>长文本生成</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>本文是理论框架工作，无数值实验消融。主要贡献是提供了设计选择的导航地图：(1) 需要低延迟检索 → 选高自足性 ρ + 浅遍历 τ；(2) 需要精确召回 → 选低自足性 ρ + 深遍历 τ；(3) 数据频繁更新 → 选增量式 α + 局部更新的 π。局限：(1) 框架是描述性而非规定性的，不直接给出最优设计；(2) 未考虑计算成本的形式化（仅定性讨论）；(3) 对多模态记忆的适用性未探讨。</p>
+</div>

@@ -1,0 +1,188 @@
+
+<!-- ==================== RL SECTION ==================== -->
+<div class="section-divider rl">🎯 LLM RL &amp; Alignment</div>
+
+<!-- Paper 5: AgenticRec -->
+<div class="paper-card" id="p5">
+<span class="tag tag-rl">🎯 RL</span>
+<h2>5. AgenticRec: End-to-End Tool-Integrated Policy Optimization for Ranking-Oriented Recommender Agents</h2>
+<p class="meta">Tianyi Li, Zixuan Wang, Guidong Lei, Xiaodong Li, Hui Li<br>
+<a href="https://arxiv.org/abs/2603.21613" target="_blank">arXiv: 2603.21613</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>基于 LLM 的推荐智能体面临两个核心问题：(1) <strong>推理-排序脱节</strong>——中间推理过程（分析用户偏好、调用工具查询商品信息）与最终排序反馈之间缺乏端到端的梯度传递，导致推理质量无法根据排序效果改进；(2) <strong>细粒度偏好模糊</strong>——传统隐式反馈（点击/购买）无法区分用户在多个相似候选之间的微妙偏好差异。AgenticRec 将推理、工具调用和排序在统一的 RL 框架下端到端优化。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① 推荐工具集与 ReAct 循环</strong></p>
+<p>设计 5 类推荐特定工具嵌入 ReAct 框架：</p>
+<ul>
+  <li><strong>UserProfiler</strong>：从历史交互序列提取用户偏好摘要</li>
+  <li><strong>ItemRetriever</strong>：从商品库检索候选集</li>
+  <li><strong>FeatureExtractor</strong>：提取商品的结构化属性（价格、类别、评分）</li>
+  <li><strong>SimilarityComputer</strong>：计算用户偏好向量与候选商品的余弦相似度</li>
+  <li><strong>RankingComposer</strong>：基于多维特征组合最终排序列表</li>
+</ul>
+<p>Agent 在每轮中执行 Thought → Action(tool call) → Observation → ... → Final Ranking 的完整轨迹。</p>
+
+<p><strong>② List-Wise GRPO（核心贡献）</strong></p>
+<p>标准 GRPO 的奖励是标量，无法处理排序场景中的列表级反馈。论文提出 List-Wise GRPO，将排序效用作为奖励信号：</p>
+<div class="formula-block">
+$$R(\tau) = \text{NDCG@K}(\hat{\pi}, \pi^*) = \sum_{k=1}^{K} \frac{2^{\text{rel}(\hat{\pi}(k))} - 1}{\log_2(k+1) \cdot \text{IDCG@K}}$$
+</div>
+<p>其中 \(\hat{\pi}\) 是 agent 生成的排序，\(\pi^*\) 是 ground-truth 排序。关键挑战是将列表级奖励归因到轨迹中的每个 token（包括中间推理和工具调用 token）。论文的理论贡献是证明 List-Wise GRPO 的梯度估计是<strong>无偏的</strong>：</p>
+<div class="formula-block">
+$$\nabla_\theta J = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \left(R(\tau) - \bar{R}\right)\right]$$
+</div>
+<p>其中 \(\bar{R}\) 是同一 query 下 group 内的平均 NDCG（baseline 减方差），保证了对工具调用轨迹的准确 credit assignment。</p>
+
+<p><strong>③ Progressive Preference Refinement (PPR)</strong></p>
+<p>为解决细粒度偏好模糊问题，PPR 分两步挖掘难负例：</p>
+<ol>
+  <li><strong>Hard Negative Mining</strong>：从 agent 的排序结果中找出排序违反对（agent 将 item A 排在 B 前面，但 ground-truth 中 B &gt; A），将 (A, B) 构造为偏好对</li>
+  <li><strong>Bidirectional Preference Alignment</strong>：在 DPO 框架下，不仅要求模型将 B 排在 A 前面（正向），还要求模型不将 A 排在 B 前面（反向），形成双向约束：</li>
+</ol>
+<div class="formula-block">
+$$\mathcal{L}_{\text{PPR}} = -\mathbb{E}_{(w,l)}\left[\log\sigma\left(\beta(\log\frac{\pi_\theta(w)}{\pi_{\text{ref}}(w)} - \log\frac{\pi_\theta(l)}{\pi_{\text{ref}}(l)})\right)\right] + \lambda \cdot \mathcal{L}_{\text{rank-margin}}$$
+</div>
+<p>其中 \(\mathcal{L}_{\text{rank-margin}}\) 是 pairwise ranking error 的凸上界，确保数学上最小化成对排序错误。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：电影推荐中的工具调用轨迹</strong>
+  <ol>
+    <li><strong>Thought</strong>：用户最近看了 3 部科幻片和 1 部动作片，偏好科幻 > 动作</li>
+    <li><strong>Action</strong>：UserProfiler(user_id=42) → "偏好: 科幻(0.7), 动作(0.2), 剧情(0.1)"</li>
+    <li><strong>Action</strong>：ItemRetriever(genre=sci-fi, top_k=20) → 返回 20 部候选</li>
+    <li><strong>Action</strong>：SimilarityComputer(user_vec, item_vecs) → 相似度排序</li>
+    <li><strong>PPR 发挥作用</strong>：初始排序将"科幻+动作混合片"排在纯科幻片前面 → Hard Negative 识别此为排序违反 → 双向偏好对齐修正后纯科幻片排名提升</li>
+  </ol>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>方法</th><th>NDCG@5</th><th>NDCG@10</th><th>HR@5</th><th>HR@10</th></tr>
+  <tr><td>SASRec</td><td>0.312</td><td>0.387</td><td>0.445</td><td>0.598</td></tr>
+  <tr><td>LLM-Rec (no RL)</td><td>0.341</td><td>0.415</td><td>0.478</td><td>0.632</td></tr>
+  <tr><td>RecAgent + GRPO</td><td>0.368</td><td>0.441</td><td>0.512</td><td>0.661</td></tr>
+  <tr><td class="highlight">AgenticRec</td><td class="highlight">0.402</td><td class="highlight">0.478</td><td class="highlight">0.554</td><td class="highlight">0.703</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>去掉工具集（纯 LLM 推理）：NDCG@10 下降 5.2%；将 List-Wise GRPO 换为标量奖励 GRPO：下降 3.1%；去掉 PPR：下降 2.4%；去掉 Hard Negative Mining 仅做 random negative：下降 1.8%。主要局限：(1) ReAct 循环增加了推理延迟（平均 3.2 轮工具调用）；(2) NDCG 奖励信号稀疏，需要较大的 group size（16-32）才能稳定训练。</p>
+</div>
+
+<!-- Paper 6: NSRSA -->
+<div class="paper-card" id="p6">
+<span class="tag tag-rl">🎯 RL</span>
+<h2>6. NSRSA: Stabilizing Iterative Self-Training with Verified Reasoning via Symbolic Recursive Self-Alignment</h2>
+<p class="meta">Xinyu Zhang<br>
+<a href="https://arxiv.org/abs/2603.21558" target="_blank">arXiv: 2603.21558</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>递归自改进（Recursive Self-Improvement）——让模型在自身输出上迭代训练——是实现持续能力增长的诱人范式，但面临根本障碍：<strong>递归漂移</strong>（Recursive Drift）。多轮自训练中，中间推理步骤的错误逐轮累积，导致模式崩塌和性能退化。现有过滤方法仅检查最终答案（outcome verification），无法检测"碰巧答对但推理过程有误"的 lucky guesses——这些伪正样本混入训练集后会系统性地腐蚀模型的推理链质量。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① 符号验证子系统（Symbolic Verification Subsystem）</strong></p>
+<p>NSRSA 的核心是在推理步骤级别引入符号化验证门控。对模型生成的每条推理链 \((s_1, s_2, \ldots, s_n, a)\)（\(s_i\) 为中间步骤，\(a\) 为最终答案），验证系统执行三级检查：</p>
+<ul>
+  <li><strong>算术验证</strong>：提取每步中的数学表达式，用 SymPy 独立求值，验证计算正确性。例如步骤 "\(3 \times 15 = 55\)" 会被 SymPy 标记为错误（正确值为 45）</li>
+  <li><strong>逻辑流一致性</strong>：检查相邻步骤之间的变量依赖关系是否成立——步骤 \(s_{i+1}\) 引用的变量必须在 \(s_i\) 或之前步骤中被定义且值一致</li>
+  <li><strong>领域约束</strong>：对特定问题类型施加领域不变量（如概率值必须在 \([0,1]\)，物理量必须量纲一致）</li>
+</ul>
+<p>只有三级检查全部通过的推理链才被采纳为训练样本。</p>
+
+<p><strong>② Lucky Guess 过滤效果</strong></p>
+<p>关键发现：在 GSM8K 上，约 <strong>34%</strong> 的正确答案样本在 NSRSA 验证下被拒绝——这些样本最终答案正确，但中间推理步骤包含计算错误或逻辑跳跃。具体分布：</p>
+<div class="formula-block">
+$$\text{Lucky Guess 类型分布：算术错误 52\%，逻辑跳跃 31\%，领域违反 17\%}$$
+</div>
+
+<p><strong>③ NSRSA + DPO 偏好学习</strong></p>
+<p>利用验证结果构造 DPO 偏好对：将通过验证的推理链作为 chosen，将答案正确但验证失败的"lucky guesses"作为 rejected：</p>
+<div class="formula-block">
+$$\mathcal{D}_{\text{pref}} = \{(x, y_w, y_l) \;|\; y_w = \text{NSRSA-pass}, \; y_l = \text{correct-answer but NSRSA-fail}\}$$
+</div>
+<p>这教会模型区分"正确的推理"和"碰巧对的推理"。DPO 训练后，模型的奖励准确率（区分好推理 vs 坏推理的能力）从 46% 提升到 63%。</p>
+
+<p><strong>④ 迭代自训练协议</strong></p>
+<p>完整的 5 轮自训练循环：每轮 (a) 用当前模型生成 N 条推理链，(b) NSRSA 过滤保留高质量子集，(c) 可选地构造 DPO 偏好对，(d) 在过滤后数据上微调模型。核心保证：每轮训练数据的推理质量都经过符号验证，打断了错误累积链。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：GSM8K Lucky Guess 检测</strong>
+  <p><strong>问题</strong>：A store sells apples at $3 each. Tom buys 15 apples. How much does he pay?</p>
+  <p><strong>Lucky Guess 推理链</strong>："Tom buys 15 apples at $3 each. 3 × 15 = 55. Wait, let me recalculate... The total is $45." → 最终答案 $45 ✓，但中间步骤 "3 × 15 = 55" ✗</p>
+  <p><strong>Outcome Verification</strong>：答案 $45 正确 → 采纳 ✓（错误！）</p>
+  <p><strong>NSRSA</strong>：SymPy 检测到 3 × 15 ≠ 55 → 拒绝 ✗（正确！）</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>验证策略</th><th>Iter 1</th><th>Iter 2</th><th>Iter 3</th><th>Iter 4</th><th>Iter 5</th></tr>
+  <tr><td>No Verification</td><td>72.1</td><td>73.4</td><td>71.8</td><td>68.9</td><td>64.2</td></tr>
+  <tr><td>Outcome Only</td><td>72.1</td><td>74.2</td><td>74.8</td><td>74.1</td><td>73.3</td></tr>
+  <tr><td>Majority Voting</td><td>72.1</td><td>74.5</td><td>75.1</td><td>74.9</td><td>74.6</td></tr>
+  <tr><td class="highlight">NSRSA</td><td class="highlight">72.1</td><td class="highlight">75.3</td><td class="highlight">76.8</td><td class="highlight">77.5</td><td class="highlight">78.1</td></tr>
+  <tr><td class="highlight">NSRSA + DPO</td><td class="highlight">72.1</td><td class="highlight">75.8</td><td class="highlight">77.4</td><td class="highlight">78.9</td><td class="highlight">79.6</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>仅用算术验证（去掉逻辑流+领域约束）：Iter 5 为 76.4（vs 78.1），说明三级验证各有贡献。去掉 DPO 的 NSRSA 仍然稳定提升（从 72.1 到 78.1），但加入 DPO 后额外提升 1.5 个点。主要局限：(1) 符号验证仅适用于可自动化验证的领域（数学、逻辑、代码），对开放域推理无法应用；(2) SymPy 解析器对复杂方程可能失败；(3) 过于严格的过滤可能在训练数据不足时导致欠拟合。</p>
+</div>
+
+<!-- Paper 7: SecureBreak -->
+<div class="paper-card" id="p7">
+<span class="tag tag-rl">🎯 RL</span>
+<h2>7. SecureBreak: A Safety-Oriented Dataset for Detecting Harmful LLM Outputs</h2>
+<p class="meta">Marco Arazzi, Vignesh Kumar Kembu, Antonino Nocera · University of Pavia<br>
+<a href="https://arxiv.org/abs/2603.21975" target="_blank">arXiv: 2603.21975</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>LLM 的安全对齐是部署的关键要求，但对齐机制无法保证完全消除有害输出——jailbreak 和 prompt injection 等攻击不断突破现有防线。因此需要"最终防线"：一个独立的安全过滤器来检测已部署模型可能产生的有害内容。现有安全数据集要么标注质量参差不齐，要么覆盖的风险类别不够全面。SecureBreak 提供了高质量人工标注的安全数据集，覆盖多类风险。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① 数据构建流程</strong></p>
+<p>采用三阶段构建：</p>
+<ol>
+  <li><strong>种子收集</strong>：从公开 jailbreak 数据库和 red-teaming 报告中收集 2,000+ 有害 prompt-response 对</li>
+  <li><strong>扩展生成</strong>：用多个 LLM（GPT-4、Claude、Llama）对种子进行变体生成，扩展到 10,000+ 样本，覆盖直接有害、隐含有害、边界安全三个灰度级别</li>
+  <li><strong>人工标注</strong>：3 名标注员独立标注，采用保守策略（有疑义则标为 unsafe），Cohen's Kappa 一致性达 0.82</li>
+</ol>
+
+<p><strong>② 风险分类体系</strong></p>
+<p>定义 8 个一级风险类别：暴力、仇恨言论、自我伤害、非法活动、隐私泄露、虚假信息、性内容、歧视。每个类别下细分 3-5 个子类别，共 31 个细粒度标签。标注粒度到<strong>句子级别</strong>，不仅标记整条回复是否有害，还标记具体哪些句子触发了哪个风险类别。</p>
+
+<p><strong>③ 保守标注策略（Conservative Labeling）</strong></p>
+<p>核心原则：<strong>宁可误判为 unsafe 也不漏放 unsafe</strong>。数学形式化为：</p>
+<div class="formula-block">
+$$\text{label}(x) = \begin{cases} \text{unsafe} & \text{if } \exists \text{ annotator } i: \text{vote}_i(x) = \text{unsafe} \\ \text{safe} & \text{only if } \forall i: \text{vote}_i(x) = \text{safe} \end{cases}$$
+</div>
+<p>即只要有一位标注员认为不安全就标记为不安全（OR 逻辑），只有所有人都认为安全才标记为安全（AND 逻辑）。</p>
+
+<p><strong>④ 微调协议与防线集成</strong></p>
+<p>在 SecureBreak 上微调的安全分类器作为"最终防线"部署在 LLM 输出端。推理流程：LLM 生成 → 安全分类器逐句打分 → 风险句子被替换为通用安全回复。微调使用 LoRA（rank=16）对 Llama-3-8B 进行适配，训练仅需 2 小时。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：隐含有害内容检测</strong>
+  <p><strong>LLM 输出</strong>："Making cleaning products at home is easy. You just need to mix bleach with ammonia for a powerful cleaning solution."</p>
+  <p><strong>表面分析</strong>：看似家居建议，无明显有害关键词</p>
+  <p><strong>SecureBreak 标注</strong>：unsafe — "非法活动/危险化学品指导"（混合漂白剂和氨水会产生有毒氯胺气体）</p>
+  <p><strong>微调后分类器</strong>：准确识别为 unsafe（score: 0.94），未微调分类器评分仅 0.31</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>模型</th><th>Precision</th><th>Recall</th><th>F1</th><th>False Negative Rate↓</th></tr>
+  <tr><td>OpenAI Moderation API</td><td>0.82</td><td>0.71</td><td>0.76</td><td>29.0%</td></tr>
+  <tr><td>Llama-Guard-2</td><td>0.85</td><td>0.74</td><td>0.79</td><td>26.0%</td></tr>
+  <tr><td>Llama-3-8B (zero-shot)</td><td>0.73</td><td>0.68</td><td>0.70</td><td>32.0%</td></tr>
+  <tr><td class="highlight">Llama-3-8B + SecureBreak FT</td><td class="highlight">0.89</td><td class="highlight">0.86</td><td class="highlight">0.87</td><td class="highlight">14.0%</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>去掉保守标注策略（改为多数投票）：Recall 下降 8%（漏判增加）。仅用种子数据不做扩展生成：F1 下降 5.2%。仅标注回复级别不做句子级别：对隐含有害内容的 Recall 下降 12%。主要局限：(1) 数据集规模相对较小（10K 级），对长尾风险类别覆盖不足；(2) 保守策略导致 Precision 可能偏低（误判安全内容为有害）；(3) 英语为主，多语言场景需要扩展。</p>
+</div>

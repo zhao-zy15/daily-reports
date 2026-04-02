@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伊朗局势与大宗商品日报 - 2026年3月25日</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f1a; --bg2: #1a1a2e; --bg3: #16213e;
+            --text: #f5f7fa; --text2: #a0a0b8; --accent: #ef4444;
+            --accent2: #f97316; --gold: #fbbf24; --green: #22c55e;
+            --blue: #3b82f6; --border: #2d2d44;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 8px; color: var(--accent);
+            text-decoration: none; font-size: 0.9rem; margin-bottom: 20px;
+            padding: 8px 16px; background: var(--bg2); border-radius: 8px;
+            border: 1px solid var(--border); transition: all 0.3s;
+        }
+        .back-link:hover { background: var(--accent); color: white; }
+
+        header {
+            text-align: center; margin-bottom: 40px; padding: 40px 30px;
+            background: linear-gradient(135deg, var(--bg2), var(--bg3));
+            border-radius: 20px; border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+        header::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%);
+            animation: pulse-bg 6s ease-in-out infinite;
+        }
+        @keyframes pulse-bg { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        header h1 {
+            font-size: 2.2rem; margin-bottom: 8px; position: relative;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .report-meta { color: var(--text2); font-size: 0.95rem; position: relative; }
+        .war-day { display: inline-block; background: var(--accent); color: white; padding: 2px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; margin-left: 8px; }
+
+        .section { margin-bottom: 35px; }
+        .section-title {
+            font-size: 1.4rem; font-weight: 700; margin-bottom: 20px;
+            padding-bottom: 12px; border-bottom: 2px solid var(--accent);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* 新闻卡片 */
+        .news-tier { margin-bottom: 25px; }
+        .tier-label {
+            font-size: 1.1rem; font-weight: 700; margin-bottom: 12px;
+            padding: 8px 16px; border-radius: 10px; display: inline-block;
+        }
+        .tier-core .tier-label { background: linear-gradient(135deg, #dc2626, #ef4444); color: white; }
+        .tier-regional .tier-label { background: linear-gradient(135deg, #d97706, #f59e0b); color: white; }
+        .tier-global .tier-label { background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; }
+
+        .news-card {
+            background: var(--bg2); border-radius: 14px; padding: 20px 24px;
+            margin-bottom: 14px; border: 1px solid var(--border);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .news-card:hover { transform: translateX(4px); border-color: var(--accent); }
+        .news-card h3 { font-size: 1.05rem; margin-bottom: 8px; color: var(--text); }
+        .news-card .summary { color: var(--text2); font-size: 0.92rem; line-height: 1.7; margin-bottom: 8px; }
+        .news-card .source {
+            font-size: 0.82rem; color: var(--accent); display: flex;
+            align-items: center; gap: 4px;
+        }
+        .news-card .source a { color: var(--accent); text-decoration: none; }
+        .news-card .source a:hover { text-decoration: underline; }
+
+        /* 价格表格 */
+        .price-table-wrap { overflow-x: auto; margin-bottom: 20px; }
+        table {
+            width: 100%; border-collapse: collapse; background: var(--bg2);
+            border-radius: 14px; overflow: hidden;
+        }
+        th {
+            background: var(--bg3); padding: 14px 18px; text-align: left;
+            font-weight: 600; font-size: 0.9rem; color: var(--text2);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(239,68,68,0.05); }
+        .price-up { color: #ef4444; font-weight: 600; }
+        .price-down { color: #22c55e; font-weight: 600; }
+
+        /* 图表 */
+        .charts-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;
+        }
+        .chart-card {
+            background: var(--bg2); border-radius: 14px; padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .chart-card h3 {
+            font-size: 1rem; margin-bottom: 15px; color: var(--text2);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .chart-container { position: relative; height: 280px; }
+
+        /* 分析 */
+        .analysis-box {
+            background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(249,115,22,0.1));
+            border: 1px solid rgba(239,68,68,0.3); border-radius: 14px;
+            padding: 24px; margin-top: 20px;
+        }
+        .analysis-box h3 { color: var(--accent); margin-bottom: 12px; font-size: 1.1rem; }
+        .analysis-box ul { padding-left: 20px; }
+        .analysis-box li { margin-bottom: 8px; color: var(--text2); font-size: 0.93rem; }
+
+        footer {
+            text-align: center; margin-top: 50px; padding: 25px;
+            color: var(--text2); font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.6rem; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-container { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../" class="back-link">← 返回导航</a>
+
+    <header>
+        <h1>🌍 伊朗局势与大宗商品日报</h1>
+        <p class="report-meta">
+            2026年3月25日 12:00 · 周三
+            <span class="war-day">冲突第26天</span>
+        </p>
+    </header>
+
+    <!-- ==================== 新闻板块 ==================== -->
+    <div class="section">
+        <div class="section-title">📰 过去24小时局势速览</div>
+
+        <!-- 核心焦点 -->
+        <div class="news-tier tier-core">
+            <div class="tier-label">🔴 核心焦点新闻</div>
+
+            <div class="news-card">
+                <h3>1. 美国向伊朗递交15点"终战方案"，提议停火一个月</h3>
+                <div class="summary">
+                    3月24日，美国通过巴基斯坦、土耳其和埃及三国外交渠道向伊朗递交了一份包含15项条件的结束冲突方案。核心条款要求伊朗：永久性拆除核项目、禁止本土铀浓缩、移交约60%高丰度浓缩铀库存、拆除纳坦兹/伊斯法罕/福尔多等核设施并允许IAEA全面核查；停止对真主党、胡塞武装等代理人武装的资金和武器支持；限制弹道导弹射程；无条件确保霍尔木兹海峡长期通行。作为交换，伊朗可获全面解除制裁和民用核项目支持。该方案由库什纳和中东特使威特科夫推动。
+                </div>
+                <div class="source">📎 <a href="https://news.qq.com/rain/a/20260325A02W0Z00" target="_blank">腾讯新闻</a> · <a href="https://www.irishexaminer.com/world/arid-41816282.html" target="_blank">Irish Examiner/AP</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>2. 五角大楼拟调82空降师3000名空降兵支援中东战事</h3>
+                <div class="summary">
+                    据《纽约时报》3月23日报道，五角大楼正考虑从陆军第82空降师抽调一个约3000人的作战旅部署至中东，可能用于夺取伊朗石油出口枢纽哈尔克岛。与此同时，一支海军陆战队正赶赴中东，预计3月27日抵达——恰好是特朗普给伊朗设定的"最后期限"。这是自冲突爆发以来最大规模的地面力量增调信号。
+                </div>
+                <div class="source">📎 <a href="https://mil.ifeng.com/c/8rkPKaJGF10" target="_blank">凤凰网/新华社</a> · <a href="https://www.independent.co.uk/news/world/middle-east/iran-us-war-live-trump-deadline-oil-strait-of-hormuz-b2944254.html" target="_blank">The Independent</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>3. 伊朗24小时内发动13波导弹攻击以色列，海法油库被击中</h3>
+                <div class="summary">
+                    3月24日，伊朗对以色列发动了24小时内最猛烈的攻势——共计13波导弹和无人机攻击。特拉维夫多地清晨被伊朗弹道导弹击中，造成多人受伤、房屋损毁；海法港口附近油库燃起大火，浓烟弥漫。这是以色列自冲突爆发以来遭受的最密集攻击，与白宫的"和平谈判"言论形成强烈反差。
+                </div>
+                <div class="source">📎 <a href="https://www.sohu.com/a/1000657161_121286278" target="_blank">搜狐新闻</a> · <a href="https://abcnews.com/International/live-updates/iran-live-updates-trumps-48-hour-deadline-expire/?id=131316431" target="_blank">ABC News</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>4. 特朗普宣布推迟对伊朗能源设施空袭5天，声称"已取得胜利"</h3>
+                <div class="summary">
+                    美东时间3月24日，特朗普在白宫公开表示"美方在对伊行动中已取得胜利"，称伊朗"已被彻底打败"并已同意"永不拥核"。为给谈判留出空间，他宣布推迟对伊朗发电厂和能源基础设施的打击计划5天。然而伊朗外交部否认进行了任何直接会谈，称美方声明是为了"降低能源价格并争取时间"。以色列也确认其打击行动将继续不受影响。
+                </div>
+                <div class="source">📎 <a href="https://www.163.com/dy/article/KORLT4GI05198CJN.html" target="_blank">财联社/网易</a> · <a href="https://apnews.com/live/iran-war-israel-trump-03-23-2026" target="_blank">AP News</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>5. 霍尔木兹海峡持续关闭，伊朗威胁全海域布雷</h3>
+                <div class="summary">
+                    霍尔木兹海峡对大多数商业航运仍处于实质性关闭状态。伊朗国防理事会警告：任何对伊朗沿海领土的攻击都将触发在整个海湾航道进行布雷，将干扰范围扩展至海峡以外。目前仅限伊朗认定的"非交战国"船只获选择性放行。航运分析师评估，常规通行在2026年余下时间内不太可能恢复。国际能源署已将此定性为"石油市场历史上最严重的供应冲击"。巴林正起草联合国安理会决议草案，呼吁航行自由并授权"一切必要手段"确保安全通行。
+                </div>
+                <div class="source">📎 <a href="https://newlandchase.com/middle-east-crisis-situation-update/" target="_blank">Newland Chase</a> · <a href="https://www.iea.org/reports/oil-market-report-march-2026" target="_blank">IEA</a></div>
+            </div>
+        </div>
+
+        <!-- 周边冲突 -->
+        <div class="news-tier tier-regional">
+            <div class="tier-label">⚡ 周边冲突与地区动态</div>
+
+            <div class="news-card">
+                <h3>6. 伊朗导弹袭击巴林基地，造成1名外国承包商死亡、5名军人受伤</h3>
+                <div class="summary">伊朗对巴林美军基地发动导弹袭击，造成一名摩洛哥籍承包商死亡和5名军人受伤。ABC News统计显示，自冲突以来共290名美军人员受伤。</div>
+                <div class="source">📎 <a href="https://abcnews.com/International/live-updates/iran-live-updates-trumps-48-hour-deadline-expire/?id=131316431" target="_blank">ABC News</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>7. 美方高官通报"可能别无选择"对哈尔克岛发动地面行动</h3>
+                <div class="summary">美国高级官员向以色列等盟国通报，美军正加快数千名海军陆战队和空降兵运送至中东，准备夺取伊朗石油出口枢纽哈尔克岛的地面方案。</div>
+                <div class="source">📎 <a href="https://t.10jqka.com.cn/pid_604903496.shtml" target="_blank">同花顺</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>8. 巴林AWS云服务因无人机活动中断，企业被迫转移工作负载</h3>
+                <div class="summary">由于巴林地区频繁的无人机活动，亚马逊AWS巴林数据中心服务出现中断，迫使中东及周边企业紧急将工作负载转移至其他区域。</div>
+                <div class="source">📎 <a href="https://newlandchase.com/middle-east-crisis-situation-update/" target="_blank">Newland Chase</a></div>
+            </div>
+        </div>
+
+        <!-- 国际视野 -->
+        <div class="news-tier tier-global">
+            <div class="tier-label">🌍 国际视野与社会反响</div>
+
+            <div class="news-card">
+                <h3>9. 中方表态：王毅与伊朗外长通话，呼吁立即停火止战</h3>
+                <div class="summary">外交部发言人表示停火对话是唯一出路，王毅外长应约与伊朗外长阿拉格齐通话，重申热点问题应通过对话而非武力解决。</div>
+                <div class="source">📎 <a href="https://www.163.com/dy/article/KORLT4GI05198CJN.html" target="_blank">财联社</a></div>
+            </div>
+
+            <div class="news-card">
+                <h3>10. 加州汽油均价飙至$5.82/加仑，一个月暴涨$1.20</h3>
+                <div class="summary">受伊朗战争推升原油价格影响，加州普通汽油均价升至$5.82/加仑，较上月飙涨$1.20，接近历史新高。国内成品油也采取了临时调控，汽柴油每升分别上调约0.87/0.95元。</div>
+                <div class="source">📎 <a href="https://www.yahoo.com/news/articles/california-gas-prices-may-headed-160037128.html" target="_blank">Yahoo News</a> · <a href="https://news.qq.com/rain/a/20260323A06PLS00" target="_blank">腾讯新闻</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 价格表格 ==================== -->
+    <div class="section">
+        <div class="section-title">💰 八大核心资产实时价格</div>
+        <p style="color: var(--text2); font-size: 0.85rem; margin-bottom: 15px;">
+            数据截至 2026年3月25日 · 来源：<a href="https://www.oilpriceapi.com/live/oil-market-status" target="_blank" style="color: var(--accent);">OilPriceAPI</a> / <a href="https://tradingeconomics.com/" target="_blank" style="color: var(--accent);">Trading Economics</a> / <a href="https://www.investing.com/" target="_blank" style="color: var(--accent);">Investing.com</a>
+        </p>
+        <div class="price-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>资产</th>
+                        <th>最新价格</th>
+                        <th>日涨跌</th>
+                        <th>月涨幅</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>🛢️ Brent 原油</td>
+                        <td><strong>$96.15</strong>/桶</td>
+                        <td class="price-down">-4.07%</td>
+                        <td class="price-up">+38.15%</td>
+                        <td>全球基准</td>
+                    </tr>
+                    <tr>
+                        <td>🛢️ WTI 原油</td>
+                        <td><strong>$88.57</strong>/桶</td>
+                        <td class="price-down">-0.35%</td>
+                        <td class="price-up">+33.25%</td>
+                        <td>北美基准</td>
+                    </tr>
+                    <tr>
+                        <td>🔥 天然气</td>
+                        <td><strong>$2.839</strong>/MMBtu</td>
+                        <td class="price-down">-0.77%</td>
+                        <td class="price-up">+1.69%</td>
+                        <td>Henry Hub</td>
+                    </tr>
+                    <tr>
+                        <td>🥇 黄金</td>
+                        <td><strong>$4,599</strong>/盎司</td>
+                        <td class="price-up">+0.41%</td>
+                        <td class="price-down">-14.50%</td>
+                        <td>避险资产</td>
+                    </tr>
+                    <tr>
+                        <td>🥈 白银</td>
+                        <td><strong>$72.92</strong>/盎司</td>
+                        <td class="price-up">+4.53%</td>
+                        <td class="price-down">-22.30%</td>
+                        <td>工业+避险</td>
+                    </tr>
+                    <tr>
+                        <td>📈 S&P 500</td>
+                        <td><strong>6,637.20</strong></td>
+                        <td class="price-up">+1.76%</td>
+                        <td class="price-down">-3.60%</td>
+                        <td>美股基准</td>
+                    </tr>
+                    <tr>
+                        <td>💱 USD/IRR</td>
+                        <td><strong>~950,000</strong></td>
+                        <td class="price-up">—</td>
+                        <td class="price-up">—</td>
+                        <td>黑市汇率</td>
+                    </tr>
+                    <tr>
+                        <td>💱 USD/CNY</td>
+                        <td><strong>7.2580</strong></td>
+                        <td>+0.02%</td>
+                        <td>+0.15%</td>
+                        <td>在岸汇率</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==================== 图表板块 ==================== -->
+    <div class="section">
+        <div class="section-title">📊 过去10个交易日走势图</div>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>🛢️ 原油走势 (Brent & WTI)</h3>
+                <div class="chart-container"><canvas id="oilChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>🔥 天然气走势</h3>
+                <div class="chart-container"><canvas id="gasChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>🥇 黄金走势</h3>
+                <div class="chart-container"><canvas id="goldChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>🥈 白银走势</h3>
+                <div class="chart-container"><canvas id="silverChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 综合分析 ==================== -->
+    <div class="section">
+        <div class="section-title">🔍 综合分析与展望</div>
+        <div class="analysis-box">
+            <h3>市场关键信号</h3>
+            <ul>
+                <li><strong>油价剧烈波动：</strong>Brent从23日的$95.92反弹至24日的$100.23后，25日再度回落至$96.15。"停火一个月"消息导致油价尾盘跳水约4%，但霍尔木兹海峡持续关闭意味着供应端压力不减。IEA定性为"史上最严重供应冲击"。</li>
+                <li><strong>黄金避险回暖：</strong>黄金从3月18日$4,933高点回落后，在$4,400-$4,600区间震荡企稳。停火消息令避险需求一度降温，但不确定性仍支撑金价。白银跌幅更大（月跌22%），工业需求受战争冲击明显。</li>
+                <li><strong>"边打边谈"格局：</strong>白宫递交15点方案的同时增调82空降师，典型的"以打促谈"策略。伊朗同日发动13波攻击回应。双方都在为可能的谈判积攒筹码，短期内实质性停火概率较低。</li>
+                <li><strong>3月27日关键节点：</strong>海军陆战队将于27日抵达中东，恰逢特朗普设定的"最后期限"。若谈判无突破，哈尔克岛地面行动可能升级，届时油价将面临新一轮冲击。</li>
+                <li><strong>S&P 500缓和反弹：</strong>美股因停火预期出现缓和反弹（3月24日+1.76%），但中东不确定性持续压制估值。Brent-WTI价差维持在$10.52，反映全球供应紧张。</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>⚠️ 本报告由 WorkBuddy 自动生成，数据来源于公开信息，仅供参考，不构成投资建议。</p>
+        <p style="margin-top:8px;">报告时间：2026年3月25日 12:00 · <a href="../" style="color: var(--accent);">返回导航</a></p>
+    </footer>
+</div>
+
+<script>
+// ===== 图表配置 =====
+const dates = ['3/12','3/13','3/16','3/17','3/18','3/19','3/20','3/23','3/24','3/25'];
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+        legend: { labels: { color: '#a0a0b8', font: { size: 12 } } },
+        tooltip: {
+            backgroundColor: '#1a1a2e', titleColor: '#f5f7fa', bodyColor: '#a0a0b8',
+            borderColor: '#2d2d44', borderWidth: 1
+        }
+    },
+    scales: {
+        x: { ticks: { color: '#a0a0b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#a0a0b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.08)' } }
+    }
+};
+
+// 1. 原油走势图 (Brent & WTI)
+new Chart(document.getElementById('oilChart'), {
+    type: 'line',
+    data: {
+        labels: dates,
+        datasets: [
+            {
+                label: 'Brent ($/桶)',
+                data: [100.46, 103.14, 96.04, 99.39, 102.92, 103.78, 106.41, 95.92, 100.23, 96.15],
+                borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)',
+                fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#ef4444', borderWidth: 2.5
+            },
+            {
+                label: 'WTI ($/桶)',
+                data: [94.43, 96.84, 93.50, 96.21, 96.32, 96.14, 98.32, 88.13, 88.88, 88.57],
+                borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)',
+                fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316', borderWidth: 2.5
+            }
+        ]
+    },
+    options: chartDefaults
+});
+
+// 2. 天然气走势图
+new Chart(document.getElementById('gasChart'), {
+    type: 'line',
+    data: {
+        labels: dates,
+        datasets: [{
+            label: '天然气 ($/MMBtu)',
+            data: [3.38, 3.29, 3.20, 3.10, 3.03, 3.13, 3.06, 2.87, 2.86, 2.84],
+            borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)',
+            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#22c55e', borderWidth: 2.5
+        }]
+    },
+    options: {
+        ...chartDefaults,
+        scales: {
+            ...chartDefaults.scales,
+            y: { ...chartDefaults.scales.y, min: 2.5, max: 3.6 }
+        }
+    }
+});
+
+// 3. 黄金走势图
+new Chart(document.getElementById('goldChart'), {
+    type: 'line',
+    data: {
+        labels: dates,
+        datasets: [{
+            label: '黄金 ($/盎司)',
+            data: [5126, 5062, 5039, 5046, 4933, 4641, 4610, 4440, 4581, 4599],
+            borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)',
+            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#fbbf24', borderWidth: 2.5
+        }]
+    },
+    options: chartDefaults
+});
+
+// 4. 白银走势图
+new Chart(document.getElementById('silverChart'), {
+    type: 'line',
+    data: {
+        labels: dates,
+        datasets: [{
+            label: '白银 ($/盎司)',
+            data: [84.04, 80.60, 81.14, 79.23, 75.90, 72.56, 67.92, 69.76, 72.92, 73.50],
+            borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.1)',
+            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#94a3b8', borderWidth: 2.5
+        }]
+    },
+    options: chartDefaults
+});
+</script>
+</body>
+</html>

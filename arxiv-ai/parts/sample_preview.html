@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>样例预览 — MemAPO 论文深度分析</title>
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]}}</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --tag-llm: #da3633; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Segoe UI', sans-serif; line-height:1.75; padding: 2rem; }
+  .paper-card { background: var(--card); border:1px solid var(--border); border-radius:12px; padding:2rem; max-width:960px; margin:0 auto; }
+  .paper-card h2 { color: var(--accent); font-size:1.4rem; margin-bottom:0.5rem; }
+  .meta { color: var(--dim); font-size:0.85rem; margin-bottom:1.2rem; }
+  .meta a { color: var(--accent); text-decoration:none; }
+  .tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.75rem; font-weight:600; margin-right:6px; }
+  .tag-llm { background:rgba(218,54,51,0.15); color:#ff7b72; }
+  h3 { color: #79c0ff; font-size:1.05rem; margin:1.4rem 0 0.6rem; border-left:3px solid var(--accent); padding-left:10px; }
+  p, li { font-size:0.95rem; color: var(--text); margin-bottom:0.5rem; }
+  .formula-block { background:#1c2128; border:1px solid var(--border); border-radius:8px; padding:1.2rem 1.5rem; margin:1rem 0; overflow-x:auto; }
+  .example-box { background:rgba(56,139,253,0.06); border:1px solid rgba(56,139,253,0.2); border-radius:8px; padding:1.2rem 1.5rem; margin:1rem 0; }
+  .example-box strong { color: #79c0ff; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.88rem; }
+  th { background:#1c2128; color:var(--accent); padding:8px 12px; text-align:left; border:1px solid var(--border); }
+  td { padding:8px 12px; border:1px solid var(--border); }
+  tr:nth-child(even) { background:rgba(255,255,255,0.02); }
+  .highlight { color:#ffa657; font-weight:600; }
+  ul, ol { padding-left:1.4rem; }
+</style>
+</head>
+<body>
+<div class="paper-card">
+
+<span class="tag tag-llm">🧠 Pure Text LLMs</span>
+<h2>MemAPO: A Memory-Enhanced Automatic Prompt Optimizer</h2>
+<p class="meta">
+Yiran Zhao, Yifan Yang, Jiale Liu, Peng Li, Yang Liu · Tsinghua University, Beijing<br>
+<a href="https://arxiv.org/abs/2503.18438" target="_blank">arXiv: 2503.18438</a>
+</p>
+
+<h3>📌 背景与动机</h3>
+<p>自动化 Prompt 优化（APO）的核心目标是让 LLM 自身迭代改进 prompt，替代人类手工调优。现有方法（如 OPRO、APE）主要依赖当前轮次的错误样本反馈来修改 prompt，但存在两个关键问题：(1) <strong>历史遗忘</strong>——修正 prompt A 时引入的改动可能破坏之前已修好的 prompt B 能力，形成"打地鼠"式的循环退化；(2) <strong>错误归因模糊</strong>——当一个 prompt 同时在多种任务上失败时，难以区分是措辞问题还是结构问题。MemAPO 提出通过引入外部"优化记忆"来解决这两个痛点。</p>
+
+<h3>🔬 核心方法详解</h3>
+<p>MemAPO 在标准的 APO 循环中插入了一个 <strong>Memory Module</strong>，由三个关键组件协同工作：</p>
+
+<p><strong>① 记忆收集（Memory Collection）</strong></p>
+<p>每一轮优化结束后，系统将本轮产生的"修改决策"（包括修改了哪些 prompt 片段、为什么修改、修改前后效果对比）编码为一条结构化记忆条目 \(m_t = (\Delta p_t, \; e_t^{-}, \; e_t^{+}, \; r_t)\)，其中 \(\Delta p_t\) 是 prompt diff，\(e_t^{-}\) 和 \(e_t^{+}\) 分别是修改前后的典型错误/正确样本对，\(r_t\) 是本轮的 score 变化率。这些条目追加到记忆库 \(\mathcal{M}\) 中。</p>
+
+<p><strong>② 记忆检索与排序（Retrieval & Ranking）</strong></p>
+<p>当新一轮优化开始时，系统根据当前失败样本集 \(E_{\text{fail}}\)，从 \(\mathcal{M}\) 中检索语义最相关的历史记忆。检索采用双路机制：</p>
+<ul>
+  <li><strong>错误模式匹配</strong>：用当前失败样本的 embedding 与历史 \(e_t^{-}\) 做余弦相似度排序</li>
+  <li><strong>修改模式匹配</strong>：用当前 prompt 与历史 \(\Delta p_t\) 的文本相似度排序</li>
+</ul>
+<p>两路结果取 top-K 后做 Reciprocal Rank Fusion：</p>
+<div class="formula-block">
+$$\text{score}(m) = \sum_{s \in \{err, edit\}} \frac{1}{k_s + \text{rank}_s(m)}$$
+</div>
+<p>其中 \(k_s\) 是平滑系数（默认 60）。最终选取得分最高的 \(N\) 条记忆（论文中 \(N=5\)）注入优化器 prompt。</p>
+
+<p><strong>③ 记忆引导的 Prompt 修改（Memory-Guided Rewrite）</strong></p>
+<p>优化器 LLM 接收三类输入：(a) 当前 prompt \(p_t\)，(b) 当前失败样本 \(E_{\text{fail}}\)，(c) 检索到的 \(N\) 条历史记忆。系统 prompt 中加入显式指令："参考历史记忆中的成功修改模式，避免重复已知的失败修改方向"。修改后的候选 prompt \(\hat{p}_{t+1}\) 经过 mini-batch 验证后决定是否采纳，采纳阈值为：</p>
+<div class="formula-block">
+$$\hat{p}_{t+1} = \begin{cases} \hat{p}_{t+1} & \text{if } \text{Acc}(\hat{p}_{t+1}) - \text{Acc}(p_t) > \epsilon \\ p_t & \text{otherwise} \end{cases}$$
+</div>
+<p>其中 \(\epsilon = 0.01\) 为最低提升阈值，防止噪声波动导致的伪提升。</p>
+
+<p><strong>④ 记忆蒸馏（Memory Distillation）</strong></p>
+<p>当 \(|\mathcal{M}|\) 超过容量上限 \(C\)（默认 100），系统触发蒸馏：按 \(r_t\) 降序排列，保留 top-70% 高收益记忆，对剩余 30% 中语义重复的条目做聚合压缩（将相似修改模式合并为一条总结性记忆），最终将 \(|\mathcal{M}|\) 压缩至 \(0.8C\)。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：GSM8K 数学推理 Prompt 优化</strong>
+  <p>初始 prompt："Please solve the math problem step by step."</p>
+  <ol>
+    <li><strong>第 3 轮</strong>：大量"单位换算"类错误 → 优化器添加 "pay attention to unit conversion"，准确率 +4.2%</li>
+    <li><strong>第 7 轮</strong>：出现"多步推理丢步"问题 → 优化器拉长 prompt 加入 chain 结构，但导致单位换算回退 −2.1%</li>
+    <li><strong>第 8 轮 (MemAPO)</strong>：记忆系统检索到第 3 轮记忆，提示"保留 unit conversion 子句"→ 优化器在 chain 结构中嵌入 unit 提醒，最终 +5.8%（无回退）</li>
+  </ol>
+  <p>对比无记忆的 baseline 在第 8 轮仅达到 +3.1%，且单位换算类准确率持续低于第 3 轮峰值。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>方法</th><th>GSM8K</th><th>SVAMP</th><th>ARC-C</th><th>BBH-Bool</th><th>平均</th></tr>
+  <tr><td>人工 Prompt</td><td>78.2</td><td>79.1</td><td>85.3</td><td>72.4</td><td>78.8</td></tr>
+  <tr><td>OPRO</td><td>82.6</td><td>82.4</td><td>87.1</td><td>76.8</td><td>82.2</td></tr>
+  <tr><td>APE</td><td>81.9</td><td>81.7</td><td>86.5</td><td>75.3</td><td>81.4</td></tr>
+  <tr><td>EvoPrompt</td><td>83.1</td><td>83.0</td><td>87.8</td><td>77.5</td><td>82.9</td></tr>
+  <tr><td class="highlight">MemAPO</td><td class="highlight">85.7</td><td class="highlight">85.2</td><td class="highlight">89.4</td><td class="highlight">80.1</td><td class="highlight">85.1</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>消融实验表明：去掉记忆检索（仅保留最近 5 条）性能下降 2.3%；去掉记忆蒸馏，在 50 轮后性能反而比 baseline 低 0.8%（噪声记忆污染）；仅用错误模式匹配（单路检索）比双路融合低 1.1%。论文的主要局限在于：(1) 记忆条目的质量强依赖优化器 LLM 的自我描述能力；(2) 在任务分布发生漂移时，历史记忆可能产生负迁移；(3) 记忆蒸馏的聚合策略较粗糙，未来可引入层次化记忆结构。</p>
+
+</div>
+</body>
+</html>

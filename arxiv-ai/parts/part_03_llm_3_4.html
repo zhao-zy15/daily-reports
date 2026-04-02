@@ -1,0 +1,131 @@
+
+<!-- Paper 3: Gumbel Distillation -->
+<div class="paper-card" id="p3">
+<span class="tag tag-llm">🧠 LLM</span>
+<h2>3. Gumbel Distillation for Parallel Text Generation</h2>
+<p class="meta">Chi Zhang, Xixi Hu, Bo Liu, Qiang Liu<br>
+<a href="https://arxiv.org/abs/2603.22216" target="_blank">arXiv: 2603.22216</a> · <a href="https://github.com/hxixixh/gumbel-distill" target="_blank">Code</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>自回归（AR）语言模型因逐 token 串行生成，推理延迟随序列长度线性增长。并行解码方法（如 Masked Diffusion LM、BD3-LM）可以一次性生成所有 token，但由于难以建模 token 间的联合分布，生成质量显著落后于 AR 教师。现有蒸馏方法（如 KL 散度最小化）只能逐 token 对齐边际分布，无法传递联合分布信息。Gumbel Distillation 利用 Gumbel-Max 技巧建立从隐空间到输出 token 的确定性映射，使并行模型能够学习 AR 教师的联合分布。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① Gumbel-Max 技巧回顾</strong></p>
+<p>Gumbel-Max 是从离散分布采样的重参数化技巧。对于分类分布 \(p(x)\)，采样等价于：</p>
+<div class="formula-block">
+$$x = \arg\max_{v \in V} \left[\log p(v) + g_v\right], \quad g_v \sim \text{Gumbel}(0, 1)$$
+</div>
+<p>其中 \(g_v = -\log(-\log(u_v))\)，\(u_v \sim \text{Uniform}(0,1)\)。核心洞察：给定相同的 Gumbel 噪声 \(\mathbf{g}\)，从 \(\log p(v) + g_v\) 到 \(x\) 的映射是<strong>确定性的</strong>。</p>
+
+<p><strong>② 教师端：建立确定性映射</strong></p>
+<p>对 AR 教师逐步展开自回归采样过程。在第 \(t\) 步，教师输出条件分布 \(p_T(x_t | x_{<t})\)，结合预采样的 Gumbel 噪声 \(g_t\) 确定性地产生 token：</p>
+<div class="formula-block">
+$$x_t^* = \arg\max_{v \in V} \left[\log p_T(v | x_{<t}^*) + g_{t,v}\right]$$
+</div>
+<p>整条序列 \(\mathbf{x}^* = (x_1^*, \ldots, x_T^*)\) 由噪声矩阵 \(\mathbf{G} \in \mathbb{R}^{T \times |V|}\) 确定性决定：\(\mathbf{x}^* = f_T(\mathbf{G})\)。这样，AR 教师的联合分布被编码为一个确定性函数 \(f_T\)。</p>
+
+<p><strong>③ 学生端：学习确定性映射</strong></p>
+<p>并行学生模型 \(f_S\) 接受相同的 Gumbel 噪声 \(\mathbf{G}\) 作为输入，一步并行生成整条序列。训练目标是使学生的映射逼近教师的映射：</p>
+<div class="formula-block">
+$$\mathcal{L}_{\text{Gumbel}} = \mathbb{E}_{\mathbf{G}} \left[\sum_{t=1}^{T} \ell\left(f_S(\mathbf{G})_t, \; f_T(\mathbf{G})_t\right)\right]$$
+</div>
+<p>其中 \(\ell\) 是 token 级别的交叉熵损失。由于教师和学生处理相同的噪声实例，学生不仅学习每个位置的边际分布，还隐式地学习了 token 间通过 \(\mathbf{G}\) 耦合的联合依赖关系。</p>
+
+<p><strong>④ 架构无关的集成</strong></p>
+<p>Gumbel Distillation 是模型无关的，可直接嵌入任何并行解码架构。对 MDLM（Masked Diffusion LM）：Gumbel 噪声替代原始的 mask-unmask 随机性；对 BD3-LM（Block Discrete Diffusion）：Gumbel 噪声替代 block-level 的去噪随机性。无需修改模型结构，仅替换训练损失函数。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：OpenWebText 文本生成质量对比</strong>
+  <p>生成 256-token 段落的典型模式差异：</p>
+  <ol>
+    <li><strong>MDLM (原始)</strong>：局部流畅但句间连贯性差，MAUVE=0.42，常出现主题漂移</li>
+    <li><strong>MDLM + KL 蒸馏</strong>：边际分布更准但联合分布仍弱，MAUVE=0.49</li>
+    <li><strong>MDLM + Gumbel 蒸馏</strong>：句间因果关系和主题一致性显著提升，MAUVE=0.61 (+30.0%)</li>
+  </ol>
+  <p>定性分析发现 Gumbel 蒸馏后的模型在长距离依赖（如首句提到的人名在第 5 句被正确代指）上表现明显优于 KL 蒸馏。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>模型</th><th>MAUVE↑</th><th>Gen-PPL↓</th><th>Diversity↑</th><th>加速比</th></tr>
+  <tr><td>GPT-2 (AR Teacher)</td><td>0.95</td><td>16.4</td><td>0.87</td><td>1.0×</td></tr>
+  <tr><td>MDLM</td><td>0.42</td><td>32.1</td><td>0.79</td><td>5.2×</td></tr>
+  <tr><td>MDLM + KL Distill</td><td>0.49</td><td>28.7</td><td>0.81</td><td>5.2×</td></tr>
+  <tr><td class="highlight">MDLM + Gumbel Distill</td><td class="highlight">0.61</td><td class="highlight">25.3</td><td class="highlight">0.84</td><td class="highlight">5.2×</td></tr>
+  <tr><td>BD3-LM</td><td>0.51</td><td>27.8</td><td>0.82</td><td>4.8×</td></tr>
+  <tr><td class="highlight">BD3-LM + Gumbel Distill</td><td class="highlight">0.63</td><td class="highlight">24.1</td><td class="highlight">0.85</td><td class="highlight">4.8×</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>不共享 Gumbel 噪声（学生用独立噪声）：MAUVE 下降 0.09，证明噪声共享是学习联合分布的关键。仅用部分位置共享噪声（50% 位置）：MAUVE 下降 0.04，说明信息通过噪声耦合传递的是全局性的。局限性：(1) 教师端仍需自回归采样产生训练数据，训练成本较高；(2) 当学生容量远小于教师时，确定性映射的学习存在容量瓶颈；(3) 超长序列（>1024 tokens）的噪声矩阵内存开销较大。</p>
+</div>
+
+<!-- Paper 4: RLVR Direction -->
+<div class="paper-card" id="p4">
+<span class="tag tag-llm">🧠 LLM</span>
+<h2>4. On the Direction of RLVR Updates: Identification and Exploitation of Δlog p</h2>
+<p class="meta">Kexin Huang, Haoming Meng, Junkang Wu et al. · USTC, Alibaba<br>
+<a href="https://arxiv.org/abs/2603.22117" target="_blank">arXiv: 2603.22117</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>RLVR（Reinforcement Learning with Verifiable Rewards）已成为提升 LLM 推理能力的主流方法（如 DeepSeek-R1）。现有对 RLVR 效果的分析主要关注更新的<strong>幅度</strong>（KL 散度、熵变化），发现更新是稀疏的。但本文指出：幅度只告诉你"变了多少"，而<strong>方向</strong>（Δlog p 的正负号）才告诉你"往哪变"——哪些 token 被强化、哪些被抑制。方向信息对于理解和利用 RLVR 更为关键。</p>
+
+<h3>🔬 核心方法详解</h3>
+
+<p><strong>① Δlog p 的定义与统计分析</strong></p>
+<p>定义 token 级别的有符号对数概率变化：</p>
+<div class="formula-block">
+$$\Delta\log p(x_t | x_{<t}) = \log p_{\text{RLVR}}(x_t | x_{<t}) - \log p_{\text{base}}(x_t | x_{<t})$$
+</div>
+<p>正值表示 RLVR 强化了该 token 的生成概率，负值表示抑制。统计分析发现：(1) 绝大多数 token 的 \(|\Delta\log p|\) 接近 0（更新确实稀疏）；(2) 高 \(|\Delta\log p|\) 的 token 集中在推理关键步骤（如"therefore"、数学运算符、关键中间结论）；(3) 高正 Δlog p 的 token 往往是 base 模型概率较低但对正确推理至关重要的 token。</p>
+
+<p><strong>② Token 替换干预实验（Token Replacement Intervention）</strong></p>
+<p>为验证 Δlog p 方向确实捕获推理关键更新，设计干预实验：</p>
+<ul>
+  <li><strong>方向翻转</strong>：将高正 Δlog p 的 token 替换为 base 模型最高概率的 token（即逆转 RLVR 的强化方向）→ 准确率暴跌 23.4%</li>
+  <li><strong>幅度翻转</strong>：仅改变 Δlog p 的幅度但保持方向不变 → 准确率仅下降 3.1%</li>
+</ul>
+<p>这定量证明了方向比幅度更重要。</p>
+
+<p><strong>③ 应用一：测试时外推（Test-Time Extrapolation）</strong></p>
+<p>利用学到的 Δlog p 方向在推理时进一步强化策略，无需额外训练。修改推理时的 logits：</p>
+<div class="formula-block">
+$$\log \tilde{p}(x_t | x_{<t}) = \log p_{\text{RLVR}}(x_t | x_{<t}) + \alpha \cdot \Delta\log p(x_t | x_{<t})$$
+</div>
+<p>其中 \(\alpha > 0\) 是外推强度系数。直觉是：RLVR 已经找到了正确的更新方向，外推就是沿着这个方向"再走一步"。论文发现 \(\alpha = 0.3\) 时在多个 benchmark 上获得最佳效果。</p>
+
+<p><strong>④ 应用二：训练时重加权（Training-Time Reweighting）</strong></p>
+<p>在 RLVR 训练过程中，对 token 级别的策略梯度施加基于 Δlog p 的权重：</p>
+<div class="formula-block">
+$$w_t = \frac{|\Delta\log p(x_t)|^\beta}{\sum_{t'} |\Delta\log p(x_{t'})|^\beta}$$
+</div>
+<p>高 \(|\Delta\log p|\) 的 token（即 base 概率低但需要被强化的推理关键 token）获得更大的梯度权重。温度参数 \(\beta = 0.5\) 效果最佳，既增强了关键 token 的学习信号，又避免了过度聚焦导致的不稳定。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：MATH 问题推理的 Δlog p 热力图</strong>
+  <p>对一个三步数学推理问题的 token 序列分析：</p>
+  <ol>
+    <li>题目复述 token（"Given that x = ..."）：\(\Delta\log p \approx 0\)，灰色，RLVR 未修改</li>
+    <li>关键推理连接词（"Therefore", "Substituting"）：\(\Delta\log p = +1.2 \sim +2.8\)，深红色，被大幅强化</li>
+    <li>数学运算符和中间结果（"= 2x + 3"）：\(\Delta\log p = +0.5 \sim +1.5\)，浅红色</li>
+    <li>冗余解释 token（"We can see that"）：\(\Delta\log p = -0.3 \sim -0.8\)，蓝色，被抑制以鼓励简洁推理</li>
+  </ol>
+  <p>这表明 RLVR 学到的核心方向是"强化推理骨架 token、抑制冗余叙述 token"。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>方法</th><th>MATH500</th><th>GSM8K</th><th>AIME24</th><th>GPQA</th><th>平均</th></tr>
+  <tr><td>Base Model (Qwen-7B)</td><td>52.4</td><td>78.3</td><td>6.7</td><td>31.2</td><td>42.2</td></tr>
+  <tr><td>RLVR (GRPO)</td><td>78.6</td><td>92.1</td><td>23.3</td><td>45.8</td><td>60.0</td></tr>
+  <tr><td class="highlight">+ Test-Time Extrapolation</td><td class="highlight">81.2</td><td class="highlight">93.4</td><td class="highlight">26.7</td><td class="highlight">48.1</td><td class="highlight">62.4</td></tr>
+  <tr><td class="highlight">+ Training-Time Reweighting</td><td class="highlight">80.8</td><td class="highlight">93.7</td><td class="highlight">25.6</td><td class="highlight">47.5</td><td class="highlight">61.9</td></tr>
+  <tr><td class="highlight">+ Both</td><td class="highlight">82.4</td><td class="highlight">94.2</td><td class="highlight">28.3</td><td class="highlight">49.3</td><td class="highlight">63.6</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>外推强度 α 的影响：α=0.1 提升 0.8%，α=0.3 提升 2.4%（最佳），α=0.7 反而下降 1.2%（过度外推偏离有效区间）。重加权温度 β=0 (均匀) vs. β=0.5 vs. β=1.0：β=0.5 最佳，β=1.0 因过度聚焦少数 token 导致训练不稳定。论文局限：(1) Δlog p 的计算需要同时保存 base 和 RLVR 模型，内存开销翻倍；(2) 外推方法假设 Δlog p 方向在测试分布上仍然有效，对 OOD 场景未做验证。</p>
+</div>

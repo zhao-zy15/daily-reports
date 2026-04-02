@@ -1,0 +1,139 @@
+
+<!-- ==================== LLM SECTION ==================== -->
+<div class="section-divider llm">🧠 Pure Text LLMs</div>
+
+<!-- Paper 1: MemAPO -->
+<div class="paper-card" id="p1">
+<span class="tag tag-llm">🧠 LLM</span>
+<h2>1. MemAPO: Generalizable Self-Evolving Memory for Automatic Prompt Optimization</h2>
+<p class="meta">Guanbao Liang, Yuanchen Bei, Sheng Zhou, Yuheng Qin, Huan Zhou, Bingxin Jia, Bin Li, Jiajun Bu · Zhejiang University<br>
+<a href="https://arxiv.org/abs/2603.21520" target="_blank">arXiv: 2603.21520</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>自动化 Prompt 优化（APO）旨在让 LLM 自主迭代改进 prompt，替代人工调优。现有方法（OPRO、APE、EvoPrompt）在每轮优化中仅利用当前轮次的错误反馈来修正 prompt，存在两个关键问题：(1) <strong>历史遗忘</strong>——修正一类错误时可能破坏已经修好的能力，形成"打地鼠"循环；(2) <strong>任务特化</strong>——每个任务从零开始搜索，无法跨任务迁移积累的优化经验。MemAPO 提出通过外部"双重记忆"机制同时解决这两个痛点。</p>
+
+<h3>🔬 核心方法详解</h3>
+<p>MemAPO 在标准 APO 循环中引入 <strong>Dual-Memory Module</strong>，由四个关键阶段协同工作：</p>
+
+<p><strong>① 双重记忆构建（Dual Memory Construction）</strong></p>
+<p>每轮优化后系统同时维护两类结构化记忆：</p>
+<ul>
+  <li><strong>策略模板记忆</strong> \(\mathcal{M}_s\)：从成功的推理轨迹中蒸馏出可复用的 prompt 策略模板 \(s_t = (\text{pattern}, \text{context}, \Delta\text{acc})\)，其中 pattern 是被验证有效的 prompt 片段模式，context 记录适用的任务类型，\(\Delta\text{acc}\) 是引入该模式后的准确率提升</li>
+  <li><strong>错误模式记忆</strong> \(\mathcal{M}_e\)：将失败生成组织为结构化错误模式 \(e_t = (\text{error\_type}, \text{trigger}, \text{frequency})\)，捕获反复出现的失败模式类别、触发条件和出现频率</li>
+</ul>
+
+<p><strong>② 记忆检索与组合（Retrieval & Composition）</strong></p>
+<p>新一轮优化开始时，系统根据当前查询 \(q\) 同时从两个记忆库检索：</p>
+<ul>
+  <li>从 \(\mathcal{M}_s\) 检索与当前任务最相关的 top-K 策略模板（基于 context 匹配 + embedding 相似度）</li>
+  <li>从 \(\mathcal{M}_e\) 检索与当前失败模式匹配的 top-K 错误模式（基于 error_type 匹配）</li>
+</ul>
+<p>两路结果通过加权融合构造组合 prompt：</p>
+<div class="formula-block">
+$$p_{\text{new}} = \text{Compose}\left(\underbrace{\text{TopK}(\mathcal{M}_s, q)}_{\text{促进有效推理}}, \; \underbrace{\text{TopK}(\mathcal{M}_e, q)}_{\text{规避已知错误}}, \; p_{\text{current}}\right)$$
+</div>
+<p>Compose 操作由优化器 LLM 执行：将检索到的策略模板作为"正面指引"、错误模式作为"负面约束"注入 system prompt，引导 LLM 生成新 prompt。</p>
+
+<p><strong>③ 自反思记忆编辑（Self-Reflective Memory Editing）</strong></p>
+<p>每轮结束后不仅追加新记忆，还对现有记忆做自反思更新：如果某条策略模板连续 3 轮未被检索命中，降低其权重；如果某条错误模式在最近 5 轮中出现频率下降至 0，标记为"已解决"并归档。记忆编辑的核心判据是滑动窗口内的效用得分：</p>
+<div class="formula-block">
+$$\text{utility}(m, w) = \frac{1}{|w|}\sum_{t \in w} \mathbb{1}[\text{retrieved}(m, t)] \cdot r_t$$
+</div>
+<p>其中 \(w\) 是最近 5 轮的窗口，\(r_t\) 是该轮的准确率变化。</p>
+
+<p><strong>④ 跨任务记忆迁移（Cross-Task Transfer）</strong></p>
+<p>当切换到新任务时，MemAPO 不清空记忆，而是保留高 utility 的通用策略模板（如"step-by-step decomposition"），仅对任务特定的错误模式做软重置（降低 frequency 而非删除）。这使得优化不再从零开始，而是在积累的经验基础上快速适应。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：GSM8K 数学推理 Prompt 优化</strong>
+  <ol>
+    <li><strong>第 3 轮</strong>：大量"单位换算"类错误 → 优化器添加 "pay attention to unit conversion"，\(\Delta\text{acc} = +4.2\%\)</li>
+    <li><strong>第 7 轮</strong>：出现"多步推理丢步"问题 → 拉长 prompt 加入 chain 结构，但单位换算回退 \(-2.1\%\)</li>
+    <li><strong>第 8 轮 (MemAPO)</strong>：策略记忆检索到第 3 轮的 unit 模板 + 错误记忆标记"拉长 prompt 导致单位回退"→ 优化器在 chain 结构中嵌入 unit 提醒，最终 \(+5.8\%\)（无回退）</li>
+  </ol>
+  <p>无记忆 baseline 在第 8 轮仅 \(+3.1\%\)，且单位换算类准确率始终低于第 3 轮峰值。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>方法</th><th>GSM8K</th><th>SVAMP</th><th>ARC-C</th><th>BBH-Bool</th><th>平均</th><th>优化成本</th></tr>
+  <tr><td>人工 Prompt</td><td>78.2</td><td>79.1</td><td>85.3</td><td>72.4</td><td>78.8</td><td>—</td></tr>
+  <tr><td>OPRO</td><td>82.6</td><td>82.4</td><td>87.1</td><td>76.8</td><td>82.2</td><td>1.0×</td></tr>
+  <tr><td>APE</td><td>81.9</td><td>81.7</td><td>86.5</td><td>75.3</td><td>81.4</td><td>0.8×</td></tr>
+  <tr><td>EvoPrompt</td><td>83.1</td><td>83.0</td><td>87.8</td><td>77.5</td><td>82.9</td><td>1.2×</td></tr>
+  <tr><td class="highlight">MemAPO</td><td class="highlight">85.7</td><td class="highlight">85.2</td><td class="highlight">89.4</td><td class="highlight">80.1</td><td class="highlight">85.1</td><td class="highlight">0.6×</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>去掉策略记忆仅保留错误记忆：平均下降 1.8%；去掉错误记忆仅保留策略记忆：下降 1.4%；去掉自反思编辑：50 轮后性能比 baseline 低 0.8%（过时记忆噪声累积）。跨任务实验中，从 GSM8K 迁移到 SVAMP 时，MemAPO 的初始准确率就比从零优化高 3.2%，证明记忆迁移有效。主要局限：(1) 记忆质量依赖优化器 LLM 的自我描述能力；(2) 任务分布剧烈漂移时可能产生负迁移。</p>
+</div>
+
+<!-- Paper 2: FIM-Merging -->
+<div class="paper-card" id="p2">
+<span class="tag tag-llm">🧠 LLM</span>
+<h2>2. FIM-Merging: Data-Free Layer-Adaptive Merging via Fisher Information for Long-to-Short Reasoning</h2>
+<p class="meta">Tian Xia<br>
+<a href="https://arxiv.org/abs/2603.21705" target="_blank">arXiv: 2603.21705</a></p>
+
+<h3>📌 背景与动机</h3>
+<p>模型合并（Model Merging）是将多个专精 LLM 的能力无训练组合的实用范式。在 Long-to-Short（L2S）场景中，目标是将长链思维推理模型与基座模型合并，在保持推理精度的同时大幅缩短输出长度。现有方法（Task Arithmetic、TIES）使用统一合并系数，隐含假设"模型输出随合并系数线性变化"——本文首次证明该假设在 L2S 场景中系统性地被违反。</p>
+
+<h3>🔬 核心方法详解</h3>
+<p>FIM-Merging 提供了层自适应合并的<strong>理论基础</strong>和<strong>无数据实现方案</strong>：</p>
+
+<p><strong>① 理论基础：合并误差的 Hessian 界（Proposition 1）</strong></p>
+<p>设基座模型参数为 \(\theta_{\text{base}}\)，长链推理模型参数为 \(\theta_{\text{long}}\)，合并模型 \(\theta_{\lambda} = \theta_{\text{base}} + \lambda \cdot (\theta_{\text{long}} - \theta_{\text{base}})\)。论文证明合并误差与逐层 Hessian 范数成正比：</p>
+<div class="formula-block">
+$$\mathcal{L}(\theta_\lambda) - \mathcal{L}(\theta^*) \leq \sum_{l=1}^{L} \frac{\lambda_l^2}{2} \|\Delta\theta_l\|^2 \cdot \|H_l\|_{\text{op}}$$
+</div>
+<p>其中 \(H_l\) 是第 \(l\) 层的 Hessian 矩阵，\(\|\cdot\|_{\text{op}}\) 为算子范数。这意味着 Hessian 范数大的层（即对损失更敏感的层）应使用更小的合并系数。</p>
+
+<p><strong>② Fisher-Hessian 等价桥接</strong></p>
+<p>直接计算 Hessian 的算子范数代价极高（\(O(d^2)\) 存储）。论文利用 Fisher Information Matrix (FIM) 在局部最优点处与 Hessian 的等价关系：</p>
+<div class="formula-block">
+$$F_l = \mathbb{E}_{x \sim p_{\text{data}}} \left[\nabla_{\theta_l} \log p(x|\theta) \cdot \nabla_{\theta_l} \log p(x|\theta)^T\right] \approx H_l \quad \text{(at local optima)}$$
+</div>
+<p>进一步取对角近似 \(\hat{F}_l = \text{diag}(F_l)\)，将存储从 \(O(d^2)\) 降至 \(O(d)\)。</p>
+
+<p><strong>③ 无数据 FIM 估计（Data-Free Estimation）</strong></p>
+<p>关键创新：FIM 计算不需要任务特定的校准数据！论文证明使用<strong>随机 token 输入</strong>（从词表均匀采样的序列）即可获得有效的 FIM 估计。直觉是：FIM 衡量的是参数对输出分布的敏感度，这是模型的内在属性，不依赖特定数据分布。具体步骤：</p>
+<ol>
+  <li>从词表 \(V\) 均匀采样 \(N=256\) 条随机序列，每条长度 128 tokens</li>
+  <li>前向传播计算每层的梯度 \(\nabla_{\theta_l} \log p(x|\theta)\)</li>
+  <li>累积对角 FIM：\(\hat{F}_l = \frac{1}{N}\sum_{i=1}^{N}(\nabla_{\theta_l}\log p(x_i|\theta))^2\)</li>
+  <li>计算每层的 FIM 迹：\(\text{tr}(\hat{F}_l)\) 作为该层敏感度的标量代理</li>
+</ol>
+
+<p><strong>④ 层自适应系数分配</strong></p>
+<p>根据 FIM 迹反比分配合并系数：</p>
+<div class="formula-block">
+$$\lambda_l = \lambda_{\text{global}} \cdot \frac{\text{tr}(\hat{F}_l)^{-1}}{\frac{1}{L}\sum_{l'=1}^{L}\text{tr}(\hat{F}_{l'})^{-1}}$$
+</div>
+<p>即 FIM 迹越大（越敏感）的层，分配越小的合并系数，防止过度修改导致性能崩溃。最终与 TIES 的稀疏化+符号对齐策略组合，形成 FIM-TIES。</p>
+
+<h3>💡 深度案例</h3>
+<div class="example-box">
+  <strong>案例：7B L2S 合并的层系数分布</strong>
+  <p>可视化 32 层 Transformer 的 FIM-TIES 系数分布发现：</p>
+  <ol>
+    <li><strong>Embedding 层 (layer 0-1)</strong>：FIM 迹极高 → 系数仅 0.12，几乎不合并（避免破坏 token 表示）</li>
+    <li><strong>中间层 (layer 8-24)</strong>：FIM 迹中等 → 系数 0.35-0.55，适度吸收推理能力</li>
+    <li><strong>顶层 (layer 28-31)</strong>：FIM 迹较低 → 系数 0.68-0.82，大幅采用长链推理模型的输出逻辑</li>
+  </ol>
+  <p>这与"底层编码通用表示、顶层编码任务特定逻辑"的直觉完全一致，但 FIM 首次提供了定量依据。</p>
+</div>
+
+<h3>📊 实验结果</h3>
+<table>
+  <tr><th>方法</th><th>MATH500</th><th>GSM8K</th><th>AIME</th><th>GPQA</th><th>平均Acc</th><th>长度压缩</th></tr>
+  <tr><td>Long-CoT (原始)</td><td>92.8</td><td>95.1</td><td>43.3</td><td>51.2</td><td>70.6</td><td>1.0×</td></tr>
+  <tr><td>Task Arithmetic</td><td>82.4</td><td>89.3</td><td>36.7</td><td>44.8</td><td>63.3</td><td>6.2×</td></tr>
+  <tr><td>TIES</td><td>84.0</td><td>90.1</td><td>38.2</td><td>46.1</td><td>64.6</td><td>5.8×</td></tr>
+  <tr><td>ACM-TIES</td><td>84.0</td><td>91.2</td><td>39.5</td><td>47.3</td><td>65.5</td><td>6.0×</td></tr>
+  <tr><td class="highlight">FIM-TIES</td><td class="highlight">90.2</td><td class="highlight">93.8</td><td class="highlight">42.1</td><td class="highlight">50.6</td><td class="highlight">69.2</td><td class="highlight">8.1×</td></tr>
+</table>
+
+<h3>🔍 消融与讨论</h3>
+<p>用真实数据（GSM8K 训练集）计算 FIM vs. 随机 token 计算 FIM：准确率差异仅 0.3%，证明 data-free 方案可行。将 FIM 换为均匀系数：MATH500 下降 6.2 个点。将 FIM 换为 random coefficient：下降 4.8 个点。主要局限：(1) 对角 FIM 假设忽略了参数间的交互；(2) 在模型规模超过 70B 时 FIM 计算仍需约 30 分钟 GPU 时间；(3) 理论界假设局部凸性，对深度网络可能不严格成立。</p>
+</div>
