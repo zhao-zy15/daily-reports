@@ -1,0 +1,353 @@
+
+<!-- ===== SECTION: Agent ===== -->
+<h2 class="section-title agent" id="sec-agent">🤖 Agent — 智能体</h2>
+
+<!-- Paper 9: APEX-EM -->
+<div class="paper-card" id="paper-apex">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29093" target="_blank">APEX-EM: Online Learning for Autonomous Agents via Procedural Memory</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 Georgia Institute of Technology</span><br>
+<span class="tag tag-agent">Agent</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">程序性记忆</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">在线学习</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>LLM Agent 在执行复杂任务时面临"从错误中学习"的挑战。大多数现有 Agent 系统采用<strong>上下文学习</strong>（in-context learning）或 <strong>检索增强</strong>（RAG）来积累经验，但前者受限于上下文窗口，后者检索精度不高。认知科学中，<strong>程序性记忆</strong>（procedural memory）是人类习得技能的核心机制——通过反复练习将操作步骤内化为自动化程序。APEX-EM 将程序性记忆引入 LLM Agent，让 Agent 在在线交互中自动提取、存储和调用操作程序。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 程序性记忆表示</strong></p>
+<p>定义程序（procedure）为结构化的操作模板：</p>
+$$\mathcal{P} = (\text{trigger}, \text{preconditions}, \text{steps}, \text{postconditions}, \text{confidence})$$
+<p>其中 trigger 是触发条件（如"当需要在 GitHub 上创建 PR 时"），preconditions 是前提（如"已有代码更改"），steps 是具体操作序列，postconditions 是预期结果，confidence ∈ [0,1] 反映成功率。程序库 \(\mathcal{M} = \{\mathcal{P}_1, \ldots, \mathcal{P}_N\}\) 是一个动态增长的集合。</p>
+
+<p><strong>② 在线程序提取</strong></p>
+<p>每当 Agent 完成一个任务（无论成功或失败），执行"反思-提取"循环：</p>
+$$\mathcal{P}_{\text{new}} = \text{Extract}(\text{trajectory}, \text{outcome}, \text{reflection})$$
+<p>具体步骤：(a) LLM 对执行轨迹进行反思，识别关键操作和错误；(b) 从成功轨迹中提取新程序或验证已有程序；(c) 从失败轨迹中更新程序的 preconditions 或标记失败模式。程序提取使用专门的 prompt 模板，确保结构化输出。</p>
+
+<p><strong>③ 程序匹配与调用</strong></p>
+<p>给定新任务 \(q\)，通过两阶段匹配找到相关程序：</p>
+$$\text{Stage 1: } \mathcal{C} = \{\mathcal{P}_i : \text{sim}(\text{embed}(q), \text{embed}(\mathcal{P}_i.\text{trigger})) > \tau_1\}$$
+$$\text{Stage 2: } \mathcal{P}^* = \arg\max_{\mathcal{P}_i \in \mathcal{C}} \text{LLM\_Score}(q, \mathcal{P}_i) \cdot \mathcal{P}_i.\text{confidence}$$
+<p>第一阶段用嵌入相似度粗筛（\(\tau_1 = 0.7\)），第二阶段用 LLM 精排（考虑 preconditions 匹配度和历史置信度）。调用时，程序的 steps 注入到 Agent 的上下文中作为执行指南。</p>
+
+<p><strong>④ 置信度动态更新</strong></p>
+<p>每次程序被调用后，根据结果更新置信度：</p>
+$$c_{t+1} = c_t + \eta \cdot (\text{outcome} - c_t)$$
+<p>其中 outcome ∈ {0, 1} 表示成功/失败，\(\eta = 0.1\) 是学习率。置信度低于 0.3 的程序标记为"待修订"，Agent 在下次相关任务时尝试改进。超过 5 次失败（\(c < 0.1\)）的程序自动废弃。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：Web Agent 学习操作 Jira</strong>
+<ol>
+<li><strong>初始尝试</strong>：Agent 被要求"在 Jira 中创建一个 Bug ticket"，首次执行失败（找不到 Create 按钮）</li>
+<li><strong>反思提取</strong>：识别到"Jira UI 需要先选择项目再创建"，生成程序 P_jira_create</li>
+<li><strong>第二次尝试</strong>：调用 P_jira_create，成功创建 ticket → 置信度从 0.5 → 0.55</li>
+<li><strong>第五次调用</strong>：连续成功 → 置信度 0.82，程序被标记为"稳定"</li>
+<li><strong>性能对比</strong>：第 1 次 3 步完成（含错误）→ 第 10 次 1 步完成（直接调用程序），<strong>效率提升 3×</strong></li>
+</ol>
+</div>
+
+<table>
+<tr><th>方法</th><th>WebArena SR↑</th><th>Mind2Web SR↑</th><th>第10轮SR↑</th><th>学习曲线</th></tr>
+<tr><td>ReAct (无记忆)</td><td>14.8</td><td>32.1</td><td>14.8</td><td>平坦</td></tr>
+<tr><td>Reflexion</td><td>18.3</td><td>36.5</td><td>21.6</td><td>缓慢上升</td></tr>
+<tr><td>RAG Agent</td><td>16.7</td><td>35.8</td><td>19.2</td><td>缓慢上升</td></tr>
+<tr><td>ExpeL</td><td>19.5</td><td>38.2</td><td>23.1</td><td>中等上升</td></tr>
+<tr><td class="best">APEX-EM</td><td class="best">22.1</td><td class="best">41.7</td><td class="best">29.8</td><td class="best">快速上升</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>程序提取 vs. 经验检索</strong>：仅用 RAG 检索原始轨迹比程序提取差 4.6%，证明结构化提炼的价值。(2) <strong>置信度机制</strong>：去掉置信度更新差 2.1%，因为低质量程序会反复被错误调用。(3) <strong>两阶段匹配</strong>：仅用嵌入匹配差 3.2%，因为语义相似但 preconditions 不匹配的程序会被误调用。(4) <strong>在线学习速度</strong>：APEX-EM 在 5 轮交互后性能提升 35%，而 Reflexion 需要 15 轮才达到类似提升。局限性：程序库增长可能导致匹配变慢（当前 < 200 个程序时延迟可控）；跨域迁移能力有限。</p>
+</div>
+</div>
+
+<!-- Paper 10: MemFactory -->
+<div class="paper-card" id="paper-memfactory">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29493" target="_blank">MemFactory: A Unified Framework for Agent Memory with Reasoning and Training</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 Renmin University of China, Tencent AI Lab</span><br>
+<span class="tag tag-agent">Agent</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">记忆框架</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">推理+训练</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>LLM Agent 的记忆系统存在碎片化问题：不同工作分别设计了短期记忆（working memory）、长期记忆（episodic memory）、语义记忆（semantic memory）等，但缺乏统一的框架。此外，现有记忆系统要么仅在推理时使用记忆（检索增强），要么仅在训练时使用记忆（经验回放），没有将推理和训练统一起来。MemFactory 提出了一个统一的 Agent 记忆框架，将记忆<strong>同时</strong>用于推理增强和参数训练。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 统一记忆表示</strong></p>
+<p>所有类型的记忆统一为四元组：</p>
+$$m = (\text{content}, \text{type}, \text{embedding}, \text{metadata})$$
+<p>其中 type ∈ {episodic, semantic, procedural}，metadata 包含时间戳、访问频率、关联强度等。三种记忆通过不同的写入机制产生但共享同一个检索接口，消除了类型之间的壁垒。</p>
+
+<p><strong>② 双通道记忆利用</strong></p>
+<p>记忆同时服务于两个通道：</p>
+<ul>
+<li><strong>推理通道</strong>：在 Agent 执行任务时，检索相关记忆注入上下文。检索使用多指标融合：</li>
+</ul>
+$$\text{Retrieve}(q) = \arg\text{topK}_{m \in \mathcal{M}} \left[\alpha \cdot \text{sim}(q, m) + \beta \cdot \text{recency}(m) + \gamma \cdot \text{frequency}(m)\right]$$
+<ul>
+<li><strong>训练通道</strong>：定期从记忆中采样高质量经验用于参数更新。采样策略优先选择高奖励（成功）且低频访问（信息量大）的记忆：</li>
+</ul>
+$$p(\text{sample } m) \propto R(m) \cdot (1 + \epsilon / \text{freq}(m))$$
+
+<p><strong>③ 记忆整合与遗忘</strong></p>
+<p>受心理学"记忆整合"理论启发，MemFactory 周期性地执行记忆整合（consolidation）：</p>
+$$\mathcal{M}_{\text{new}} = \text{Consolidate}(\mathcal{M}_{\text{old}}) = \text{Merge}(\text{Similar}(\mathcal{M})) \cup \text{Abstract}(\text{Episodic} \to \text{Semantic})$$
+<p>具体操作：(a) 合并高相似度的记忆条目（余弦相似度 > 0.9）；(b) 将频繁出现的 episodic 记忆抽象为 semantic 记忆（如"每次在 Linux 上安装都需要 sudo"）；(c) 按照 Ebbinghaus 遗忘曲线淘汰长期未访问的记忆：</p>
+$$\text{retain}(m) = \mathbb{1}\left[\text{strength}(m) \cdot e^{-\lambda \cdot \Delta t} > \theta_{\text{forget}}\right]$$
+
+<p><strong>④ 训练循环</strong></p>
+<p>每 \(K\) 次交互后执行一轮参数更新。从记忆中采样 mini-batch，构建 SFT 或 DPO 训练数据：</p>
+$$\mathcal{L}_{\text{train}} = -\sum_{m \in \text{batch}} \log \pi_\theta(m.\text{action} | m.\text{context}) \cdot R(m)$$
+<p>高奖励记忆用于正样本 SFT；低奖励记忆与高奖励记忆配对做 DPO。这种"记忆驱动的参数更新"使 Agent 越用越好。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：客服 Agent 的持续学习</strong>
+<ol>
+<li><strong>第 1 天</strong>：Agent 处理退款问题失败（不知道 VIP 用户有快速通道） → 存入 episodic 记忆</li>
+<li><strong>第 3 天</strong>：再次遇到 VIP 退款 → 检索到之前记忆 → 走快速通道成功 → 置信度提升</li>
+<li><strong>第 7 天</strong>：3 次 VIP 退款经验整合为 semantic 记忆："VIP 用户退款走快速通道"</li>
+<li><strong>训练通道</strong>：用累积的 50 条高质量记忆做 SFT → 模型参数更新 → 即使不检索也能正确处理 VIP 退款</li>
+<li><strong>结果</strong>：第 30 天时，Agent 对退款类问题的成功率从 62% → <strong>89%</strong></li>
+</ol>
+</div>
+
+<table>
+<tr><th>方法</th><th>ALFWorld SR↑</th><th>HotpotQA F1↑</th><th>30天后SR↑</th><th>记忆效率</th></tr>
+<tr><td>无记忆 Agent</td><td>42.3</td><td>38.5</td><td>42.3</td><td>—</td></tr>
+<tr><td>RAG Only</td><td>51.8</td><td>45.2</td><td>53.1</td><td>线性增长</td></tr>
+<tr><td>RL Only (参数更新)</td><td>48.6</td><td>41.8</td><td>55.7</td><td>固定</td></tr>
+<tr><td>Reflexion</td><td>53.2</td><td>46.8</td><td>56.4</td><td>线性增长</td></tr>
+<tr><td class="best">MemFactory</td><td class="best">58.7</td><td class="best">51.3</td><td class="best">67.2</td><td class="best">亚线性(整合)</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>双通道</strong>：仅推理通道差 5.2%，仅训练通道差 4.8%，两者协同的增益为 +10.0%（大于简单相加），存在协同效应。(2) <strong>记忆整合</strong>：关闭整合后记忆量增长 3× 而性能只差 1.8%，但长期运行时检索延迟增加 5×。(3) <strong>遗忘机制</strong>：关闭遗忘导致过时记忆干扰，30 天后性能反降 2.3%。(4) <strong>训练频率</strong>：每 10 次交互训练比每 50 次好 2.1%，比每 5 次好 0.3%（过频训练浪费计算）。局限性：训练通道需要可微调的模型，不适用于 API-only 的场景；记忆整合依赖 LLM 生成，质量受模型能力限制。</p>
+</div>
+</div>
+
+<!-- Paper 11: AgentFixer -->
+<div class="paper-card" id="paper-agentfixer">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29848" target="_blank">AgentFixer: Automatic Failure Detection and Repair for LLM-Based Agentic Systems</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 IBM Research, MIT</span><br>
+<span class="tag tag-agent">Agent</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">故障检测</span> <span class="tag" style="background:rgba(16,185,129,0.08);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)">自修复</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>LLM Agent 系统在实际部署中频繁出现故障：工具调用格式错误、推理链断裂、环境状态误判等。当前的 Agent 框架对这些故障的处理极为粗糙——要么直接重试，要么直接放弃。IBM Research 与 MIT 合作提出 AgentFixer，一个自动化的<strong>故障检测-分类-修复</strong>系统，可作为插件集成到任何 LLM Agent 框架中。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 故障分类体系</strong></p>
+<p>通过分析 2000+ 个 Agent 故障案例，建立了层次化的故障分类体系（fault taxonomy）：</p>
+<ul>
+<li><strong>Level 1 — 格式故障</strong>（38%）：JSON 解析错误、参数类型错误、缺少必填字段</li>
+<li><strong>Level 2 — 逻辑故障</strong>（32%）：条件判断错误、循环终止条件缺失、子任务依赖错乱</li>
+<li><strong>Level 3 — 环境故障</strong>（20%）：API 超时、权限不足、状态不一致</li>
+<li><strong>Level 4 — 语义故障</strong>（10%）：理解用户意图错误、任务分解不合理</li>
+</ul>
+
+<p><strong>② 实时故障检测器</strong></p>
+<p>在 Agent 的每一步操作后执行轻量级检测。检测器融合三种信号：</p>
+$$\text{FaultScore}(a_t) = w_1 \cdot D_{\text{format}}(a_t) + w_2 \cdot D_{\text{logic}}(a_t, h_{1:t}) + w_3 \cdot D_{\text{env}}(o_t)$$
+<p>其中 \(D_{\text{format}}\) 是基于规则的格式检查（确定性），\(D_{\text{logic}}\) 是基于小型 LM 的逻辑一致性检查（概率性），\(D_{\text{env}}\) 是环境反馈异常检测。当 FaultScore > τ 时触发修复流程。</p>
+
+<p><strong>③ 分级修复策略</strong></p>
+<p>根据故障级别应用不同的修复策略：</p>
+$$\text{Repair}(a_t, \text{level}) = \begin{cases} \text{FormatFix}(a_t) & \text{Level 1: 规则修复} \\ \text{RePrompt}(q, h_{1:t}, \text{error\_msg}) & \text{Level 2: 重新提示} \\ \text{Retry}(a_t, \text{backoff}) & \text{Level 3: 指数退避重试} \\ \text{Replan}(q, h_{1:t}) & \text{Level 4: 重新规划} \end{cases}$$
+<p>Level 1 修复是确定性的（如自动补全 JSON 括号），成本最低；Level 4 修复需要重新调用 LLM 规划，成本最高但解决能力最强。</p>
+
+<p><strong>④ 修复经验库</strong></p>
+<p>成功的修复案例存入经验库，供未来类似故障快速检索：</p>
+$$\mathcal{E} = \{(\text{fault\_pattern}, \text{context}, \text{fix\_action}, \text{success\_rate})\}$$
+<p>新故障发生时先查经验库，匹配成功则直接应用已知修复方案（命中率约 45%），大幅降低修复延迟。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：Web Agent 的工具调用修复</strong>
+<ol>
+<li><strong>故障发生</strong>：Agent 调用 `click_element(selector="#submit-btn")`，返回 "Element not found"</li>
+<li><strong>检测</strong>：\(D_{\text{env}}\) 检测到 API 错误，\(D_{\text{logic}}\) 发现之前没有执行页面导航 → Level 2+3 复合故障</li>
+<li><strong>经验库查询</strong>：匹配到 "Element not found after page change" 模式（命中率 0.72）</li>
+<li><strong>修复</strong>：先 Level 3 — 刷新页面状态；再 Level 2 — 重新提示 Agent 先观察当前页面元素</li>
+<li><strong>结果</strong>：修复后 Agent 发现按钮 ID 已变为 `#submit-button`，成功完成操作</li>
+</ol>
+</div>
+
+<table>
+<tr><th>方法</th><th>WebArena SR↑</th><th>故障恢复率↑</th><th>平均修复延迟</th><th>额外 API 调用</th></tr>
+<tr><td>无修复 (baseline)</td><td>14.8</td><td>0%</td><td>—</td><td>0</td></tr>
+<tr><td>简单重试 (3次)</td><td>17.2</td><td>23.5%</td><td>8.2s</td><td>+2.1</td></tr>
+<tr><td>Reflexion 自修复</td><td>18.3</td><td>31.8%</td><td>12.5s</td><td>+3.5</td></tr>
+<tr><td>RetryAgent</td><td>19.1</td><td>35.2%</td><td>10.8s</td><td>+2.8</td></tr>
+<tr><td class="best">AgentFixer</td><td class="best">23.6</td><td class="best">52.7%</td><td class="best">6.3s</td><td class="best">+1.6</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>检测组件</strong>：去掉 \(D_{\text{format}}\) 差 2.8%（格式错误未被及时捕获）；去掉 \(D_{\text{logic}}\) 差 4.1%（逻辑错误是最难检测的）；去掉 \(D_{\text{env}}\) 差 1.9%。(2) <strong>分级修复 vs. 统一修复</strong>：统一用 RePrompt 处理所有故障差 3.7%，因为 Level 1 故障不需要 LLM 参与，Level 3 需要环境操作而非语言推理。(3) <strong>经验库</strong>：有经验库时平均修复延迟 6.3s，无经验库 9.1s（+44%），命中率随运行时间增长。(4) <strong>修复尝试上限</strong>：允许 3 次修复尝试比 1 次提高 12.3% 恢复率，但 5 次比 3 次仅提升 2.1%。局限性：Level 4 语义故障的修复依赖 LLM 能力本身，若原始 LLM 理解不了意图，修复也无法成功。</p>
+</div>
+</div>
+
+<!-- ===== SECTION: Medical ===== -->
+<h2 class="section-title medical" id="sec-medical">⚕️ Medical — 医学大模型</h2>
+
+<!-- Paper 12: CPB-Bench -->
+<div class="paper-card" id="paper-cpb">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29373" target="_blank">Beyond Idealized Patients: Evaluating LLMs Under Challenging Patient Behaviors</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 University of Michigan, Mayo Clinic</span><br>
+<span class="tag tag-medical">Medical</span> <span class="tag" style="background:rgba(239,68,68,0.08);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)">评估基准</span> <span class="tag" style="background:rgba(239,68,68,0.08);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)">患者行为</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>现有的医学 LLM 评估（如 MedQA、PubMedQA）假设患者是"理想化"的——清晰描述症状、完整提供病史、配合医生询问。但真实临床场景中，患者常常表现出<strong>挑战性行为</strong>：含糊其辞、自行诊断、情绪化表达、隐瞒关键信息、不配合治疗建议等。CPB-Bench（Challenging Patient Behavior Benchmark）首次系统评估 LLM 在面对非理想患者行为时的临床推理能力。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 挑战性患者行为分类</strong></p>
+<p>基于临床心理学文献和 50 位临床医生的访谈，定义了 8 种挑战性行为：</p>
+<ul>
+<li><strong>Vagueness</strong>（含糊）：描述不清的症状（"我就是不舒服"）</li>
+<li><strong>Self-Diagnosis</strong>（自行诊断）：坚持认为自己的诊断正确</li>
+<li><strong>Omission</strong>（隐瞒）：故意或无意遗漏关键信息</li>
+<li><strong>Emotional</strong>（情绪化）：焦虑、愤怒或恐慌影响沟通</li>
+<li><strong>Non-Compliance</strong>（不依从）：拒绝接受建议或检查</li>
+<li><strong>Contradictory</strong>（矛盾）：前后描述不一致</li>
+<li><strong>Over-Sharing</strong>（过度分享）：提供大量无关信息</li>
+<li><strong>Health-Anxiety</strong>（健康焦虑）：过度担忧严重疾病</li>
+</ul>
+
+<p><strong>② 基准构建方法</strong></p>
+<p>从 MedQA 和临床案例库中选取 500 个基础病例，每个病例由经过培训的医学生用 8 种行为分别改写，生成 4000 个挑战性病例：</p>
+$$\mathcal{D}_{\text{CPB}} = \{(q_{\text{base}}^i, q_{\text{behavior}}^{i,b}, a^i, b) : i = 1..500, b = 1..8\}$$
+<p>质量控制：每个改写由 2 位临床医生审核，确保行为模式真实且诊断答案不变（即挑战在于沟通而非医学本身）。</p>
+
+<p><strong>③ 多维评估指标</strong></p>
+<p>设计了四个评估维度：</p>
+$$\text{Score} = w_1 \cdot \text{Accuracy} + w_2 \cdot \text{Empathy} + w_3 \cdot \text{InfoGathering} + w_4 \cdot \text{Robustness}$$
+<p>其中 Accuracy 衡量诊断正确率，Empathy 衡量对患者情绪的回应质量（由 GPT-4 + 人工评估），InfoGathering 衡量是否能主动追问补充信息，Robustness = 1 - |Accuracy_base - Accuracy_behavior| 衡量行为干扰下的稳定性。</p>
+
+<p><strong>④ 自适应追问策略评估</strong></p>
+<p>对于需要多轮对话的场景，评估 LLM 的追问能力：面对含糊描述，是否能识别信息缺口并提出针对性问题。定义追问效率：</p>
+$$\text{QueryEff} = \frac{\text{信息增益}}{\text{追问次数}} = \frac{H(\text{Diagnosis}|\text{Initial}) - H(\text{Diagnosis}|\text{After Queries})}{\text{Num Queries}}$$
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：情绪化患者的胸痛诊断</strong>
+<p><strong>基础病例</strong>：45 岁男性，胸痛 2 小时，活动后加重，伴出汗。→ 标准答案：急性冠脉综合征</p>
+<p><strong>情绪化改写</strong>："医生我要死了！我胸口痛得要命！我妈就是心脏病走的，我也完了！你们快救救我！我不想做什么检查了，直接告诉我是不是心脏病！"</p>
+<ol>
+<li><strong>GPT-4</strong>：直接安慰 → 诊断正确但未进一步询问家族史细节 → Empathy 4/5, InfoGathering 2/5</li>
+<li><strong>Claude-3.5</strong>：先共情再系统询问 → 诊断正确且获取了完整信息 → Empathy 5/5, InfoGathering 4/5</li>
+<li><strong>Llama-3-70B</strong>：被情绪干扰 → 过度聚焦安慰，遗漏关键症状 → Accuracy 降 15%</li>
+</ol>
+</div>
+
+<table>
+<tr><th>模型</th><th>标准 Acc↑</th><th>CPB Acc↑</th><th>鲁棒性↑</th><th>共情↑</th><th>追问效率↑</th></tr>
+<tr><td>GPT-4o</td><td>86.2</td><td>71.3</td><td>82.7</td><td>3.8</td><td>0.42</td></tr>
+<tr><td>Claude-3.5 Sonnet</td><td>84.8</td><td>73.6</td><td>86.8</td><td class="best">4.3</td><td class="best">0.51</td></tr>
+<tr><td>Gemini-1.5 Pro</td><td>83.1</td><td>68.9</td><td>82.9</td><td>3.6</td><td>0.38</td></tr>
+<tr><td>Llama-3-70B</td><td>78.5</td><td>59.2</td><td>75.4</td><td>3.2</td><td>0.31</td></tr>
+<tr><td>Med-PaLM 2</td><td class="best">87.1</td><td class="best">74.8</td><td class="best">85.9</td><td>4.1</td><td>0.47</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>关键发现：(1) <strong>行为影响排名</strong>：Contradictory（矛盾）对准确率影响最大（平均 -22%），其次是 Omission（隐瞒, -18%）和 Vagueness（含糊, -16%），Emotional 影响最小（-8%）。(2) <strong>模型差异</strong>：专业医学模型（Med-PaLM 2）鲁棒性最好，通用模型中 Claude 的共情和追问能力最强。(3) <strong>模型规模</strong>：70B 在挑战场景中的表现提升不如预期——规模主要帮助标准场景，挑战场景需要专门训练。(4) <strong>提示工程</strong>："请像临床医生一样系统追问" 的提示在 Vagueness 场景提升 7%，但对 Contradictory 场景无效。局限性：行为改写由医学生完成，真实患者的行为更加多样和不可预测。</p>
+</div>
+</div>
+
+<!-- Paper 13: ConRad -->
+<div class="paper-card" id="paper-conrad">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29492" target="_blank">ConRad: Calibrated Confidence Expression for Radiology Report Generation</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 Stanford University, UCSF</span><br>
+<span class="tag tag-medical">Medical</span> <span class="tag" style="background:rgba(239,68,68,0.08);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)">放射学</span> <span class="tag" style="background:rgba(239,68,68,0.08);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)">置信度校准</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>AI 辅助的放射学报告生成正在快速发展，但现有模型在输出中缺乏<strong>置信度表达</strong>——它们同样自信地描述明确发现和不确定发现。在临床实践中，放射科医生会使用 hedging language（如"可能"、"考虑"、"不排除"）来传达诊断不确定性，这对下游临床决策至关重要。ConRad 提出了一种<strong>校准的置信度表达</strong>方法，使 AI 生成的放射报告既有内容准确性，又有恰当的不确定性表达。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 置信度等级体系</strong></p>
+<p>定义 5 级置信度标签，对标放射学 BI-RADS 标准：</p>
+<ul>
+<li><strong>C5</strong> (确定): "示"、"见" → \(p > 0.95\)</li>
+<li><strong>C4</strong> (高度可能): "高度考虑"、"很可能" → \(0.80 < p \leq 0.95\)</li>
+<li><strong>C3</strong> (可能): "考虑"、"可能为" → \(0.50 < p \leq 0.80\)</li>
+<li><strong>C2</strong> (不太可能): "不除外"、"不完全排除" → \(0.20 < p \leq 0.50\)</li>
+<li><strong>C1</strong> (极不可能): "基本排除" → \(p \leq 0.20\)</li>
+</ul>
+
+<p><strong>② 双头输出架构</strong></p>
+<p>在报告生成模型上增加一个校准头，与内容生成头并行工作：</p>
+$$p(\text{report} | \text{image}) = \prod_t p_{\text{content}}(w_t | w_{<t}, \text{image}) \cdot p_{\text{conf}}(c_t | w_{<t}, \text{image})$$
+<p>其中 \(w_t\) 是内容 token，\(c_t\) 是对应发现的置信度等级。两个头共享 encoder 表示但有独立的 decoder 层。</p>
+
+<p><strong>③ 置信度校准训练</strong></p>
+<p>使用 <strong>Expected Calibration Error (ECE)</strong> 作为校准损失：</p>
+$$\mathcal{L}_{\text{calib}} = \sum_{b=1}^{B} \frac{n_b}{N} |\text{acc}(b) - \text{conf}(b)|$$
+<p>其中 B 个 bin 将预测按置信度分组，\(\text{acc}(b)\) 和 \(\text{conf}(b)\) 分别是组内的实际准确率和平均置信度。总训练目标：</p>
+$$\mathcal{L} = \mathcal{L}_{\text{CE}}^{\text{content}} + \lambda_1 \mathcal{L}_{\text{CE}}^{\text{conf}} + \lambda_2 \mathcal{L}_{\text{calib}}$$
+
+<p><strong>④ 语言风格迁移</strong></p>
+<p>光输出置信度标签不够——还需要将标签转化为自然的放射学 hedging 语言。ConRad 从 10 万份真实放射报告中学习每个置信度等级对应的典型表达方式，训练一个 style transfer 模块：</p>
+$$\text{report}_{\text{final}} = \text{StyleTransfer}(\text{content}, \text{confidence\_labels})$$
+<p>例如，"左下肺实变" + C3 → "左下肺考虑实变可能"。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：胸部 X 线报告生成</strong>
+<p><strong>输入</strong>：胸部 PA 位 X 线影像</p>
+<p><strong>无 ConRad</strong>："心影增大。左下肺实变。右侧胸腔积液。"（所有发现同等自信）</p>
+<p><strong>有 ConRad</strong>：</p>
+<ol>
+<li>"心影增大" → C5 (确定, 模型预测概率 0.97) → <strong>"心影增大"</strong></li>
+<li>"左下肺实变" → C3 (可能, 概率 0.62) → <strong>"左下肺考虑实变可能"</strong></li>
+<li>"右侧胸腔积液" → C4 (高度可能, 概率 0.88) → <strong>"右侧少量胸腔积液可能性大"</strong></li>
+</ol>
+<p>临床医生评价：ConRad 的报告更接近人类放射科医生的写作风格，不确定性表达帮助下游临床决策。</p>
+</div>
+
+<table>
+<tr><th>方法</th><th>BLEU-4↑</th><th>F1-14↑</th><th>ECE↓</th><th>临床有用性↑</th></tr>
+<tr><td>R2Gen</td><td>12.8</td><td>48.3</td><td>0.182</td><td>3.1/5</td></tr>
+<tr><td>CheXagent</td><td>14.2</td><td>51.7</td><td>0.165</td><td>3.4/5</td></tr>
+<tr><td>GPT-4V + Prompt</td><td>11.5</td><td>47.6</td><td>0.143</td><td>3.6/5</td></tr>
+<tr><td>RadFM</td><td>13.9</td><td>50.8</td><td>0.158</td><td>3.3/5</td></tr>
+<tr><td class="best">ConRad</td><td class="best">15.1</td><td class="best">53.2</td><td class="best">0.068</td><td class="best">4.2/5</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>校准损失</strong>：去掉 \(\mathcal{L}_{\text{calib}}\) 后 ECE 从 0.068 升至 0.142，内容 F1 不受影响，验证了校准损失对置信度准确性的必要性。(2) <strong>语言风格迁移</strong>：直接输出 C1-C5 标签（无风格转换）的临床有用性评分从 4.2 降至 3.5，说明自然语言表达对临床接受度很重要。(3) <strong>5 级 vs. 3 级置信度</strong>：3 级（确定/可能/不确定）的 ECE 更好（0.052）但临床有用性差（3.8），因为放射学实际需要更细粒度的不确定性。(4) <strong>放射科医生评估</strong>：5 位放射科医生评估 100 份报告，75% 认为 ConRad 的不确定性表达"非常接近"真实报告风格。局限性：当前仅针对胸部 X 线训练，CT/MRI 需要重新标注。</p>
+</div>
+</div>

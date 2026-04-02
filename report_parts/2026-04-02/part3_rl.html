@@ -1,0 +1,210 @@
+
+<!-- ===== SECTION: RL ===== -->
+<h2 class="section-title rl" id="sec-rl">🎯 RL — 强化学习与对齐</h2>
+
+<!-- Paper 6: ShapE-GRPO -->
+<div class="paper-card" id="paper-shapegrpo">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29871" target="_blank">ShapE-GRPO: Shapley Value-Based Reward Allocation for Multi-Candidate LLM Generation</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 Peking University, Shanghai AI Laboratory</span><br>
+<span class="tag tag-rl">RL</span> <span class="tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)">GRPO</span> <span class="tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)">Shapley Value</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>Group Relative Policy Optimization (GRPO) 是当前热门的 LLM 对齐方法，它对每个 prompt 生成一组候选回答，以组内相对奖励作为优势函数。但 GRPO 的标准做法存在一个根本问题：<strong>奖励分配的公平性</strong>。在一组候选中，每个候选的"贡献"不仅取决于其自身质量，还取决于同组其他候选的质量——一个中等质量的回答在低质量组中被高估，在高质量组中被低估。ShapE-GRPO 引入博弈论中的 <strong>Shapley 值</strong>来实现公平的奖励分配。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① GRPO 的奖励分配偏差分析</strong></p>
+<p>标准 GRPO 对第 \(i\) 个候选的优势为：</p>
+$$\hat{A}_i^{\text{GRPO}} = \frac{r_i - \text{mean}(\{r_j\}_{j=1}^G)}{\text{std}(\{r_j\}_{j=1}^G)}$$
+<p>其中 \(G\) 是组大小。问题在于 mean 和 std 都依赖于同组的随机采样结果。若某个 prompt 碰巧采样到多个高质量候选，所有候选的优势都被压低；反之则被抬高。这导致了<strong>奖励分配的高方差</strong>，影响训练稳定性。</p>
+
+<p><strong>② Shapley 值公平分配</strong></p>
+<p>将 \(G\) 个候选视为博弈中的 \(G\) 个玩家，定义联盟价值函数 \(v(S)\) 为子集 \(S\) 中候选的最优性：</p>
+$$v(S) = \max_{i \in S} r_i - r_{\text{baseline}}$$
+<p>其中 \(r_{\text{baseline}}\) 是该 prompt 的基线奖励（可用 EMA 估计）。第 \(i\) 个候选的 Shapley 值为：</p>
+$$\phi_i = \sum_{S \subseteq G \setminus \{i\}} \frac{|S|!(G-|S|-1)!}{G!} [v(S \cup \{i\}) - v(S)]$$
+<p>Shapley 值衡量了每个候选对组整体价值的<strong>边际贡献</strong>，满足公平性公理（对称性、零贡献者零分配、可加性）。</p>
+
+<p><strong>③ 高效 Shapley 近似</strong></p>
+<p>精确计算 Shapley 值的复杂度为 \(O(2^G)\)，不可行。ShapE-GRPO 利用奖励的特殊结构（max 联盟值）推导出封闭解：</p>
+$$\phi_i = \sum_{k=1}^{G} \frac{\mathbb{1}[\text{rank}(r_i) = k]}{k} \cdot (r_i - r_{\text{baseline}})$$
+<p>其中 \(\text{rank}(r_i)\) 是 \(r_i\) 在组内从高到低的排名。直觉上：排名第 1 的候选获得全额边际贡献的 \(1/1\)；排名第 2 的获得 \(1/2\)；排名第 \(k\) 的获得 \(1/k\)。这个封闭解的复杂度仅为 \(O(G \log G)\)（排序）。</p>
+
+<p><strong>④ Shapley 优势替代</strong></p>
+<p>最终，用 Shapley 值替代 GRPO 的标准化优势：</p>
+$$\hat{A}_i^{\text{ShapE}} = \phi_i / Z$$
+<p>其中 \(Z = \sum_j |\phi_j|\) 是归一化因子。策略梯度更新为：</p>
+$$\nabla_\theta J = \mathbb{E}_{q, \{a_i\}} \left[\sum_i \hat{A}_i^{\text{ShapE}} \cdot \nabla_\theta \log \pi_\theta(a_i | q) \right]$$
+<p>相比 GRPO，ShapE-GRPO 的梯度方差降低约 35%，因为 Shapley 值消除了组采样随机性带来的偏差。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：数学推理训练</strong>
+<p>对 Qwen2.5-7B 用 MATH 数据集训练，G=8 候选：</p>
+<ol>
+<li><strong>采样</strong>：prompt "Prove that √2 is irrational" → 8 个候选，奖励为 [0.9, 0.8, 0.7, 0.6, 0.3, 0.2, 0.1, 0.0]</li>
+<li><strong>GRPO 优势</strong>：[1.32, 0.94, 0.56, 0.19, -0.94, -1.32, -1.70, -2.08]（线性排列）</li>
+<li><strong>ShapE 优势</strong>：[0.90, 0.40, 0.23, 0.15, 0.06, 0.03, 0.01, 0.00]（对数衰减，高排名获得更多信用）</li>
+<li>ShapE 将更多梯度信号集中在最优候选上，避免次优候选稀释信号</li>
+<li>训练 4K 步后 MATH 准确率：GRPO = 53.2%, <strong>ShapE-GRPO = 56.8%</strong></li>
+</ol>
+</div>
+
+<table>
+<tr><th>方法</th><th>MATH</th><th>GSM8K</th><th>ARC-C</th><th>训练稳定性 (梯度方差↓)</th></tr>
+<tr><td>SFT Baseline</td><td>42.1</td><td>72.3</td><td>82.6</td><td>—</td></tr>
+<tr><td>REINFORCE</td><td>48.5</td><td>76.8</td><td>84.1</td><td>1.00×</td></tr>
+<tr><td>GRPO</td><td>53.2</td><td>80.1</td><td>85.8</td><td>0.72×</td></tr>
+<tr><td>Dr. GRPO</td><td>54.1</td><td>80.8</td><td>86.0</td><td>0.65×</td></tr>
+<tr><td class="best">ShapE-GRPO</td><td class="best">56.8</td><td class="best">82.3</td><td class="best">86.7</td><td class="best">0.47×</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>组大小 G</strong>：G=4 时 ShapE 优势较小（+1.2%），G=8 时显著（+3.6%），G=16 时进一步扩大（+4.8%），表明组越大 GRPO 的偏差问题越严重，ShapE 的修正越重要。(2) <strong>联盟值函数</strong>：max-based 比 sum-based 好 1.1%，比 mean-based 好 0.8%，max 最适合"选优"场景。(3) <strong>基线估计</strong>：EMA 基线（\(\beta=0.99\)）比固定基线好 0.6%，比无基线好 1.8%。(4) <strong>梯度方差</strong>：ShapE 的梯度方差比 GRPO 低 35%，与 Dr.GRPO 相比也低 28%，实际训练中收敛更快（约少 20% 的步数）。局限性在于需要对候选排序，对 reward hacking 仍然敏感。</p>
+</div>
+</div>
+
+<!-- Paper 7: CoT Safety -->
+<div class="paper-card" id="paper-cot" style="border:1px solid rgba(250,204,21,0.3)">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.30036" target="_blank">Aligned, Orthogonal, or In-Conflict: Optimizing Safety in Chain-of-Thought via Monitoring</a> <span class="tag tag-whitelist">🏢 Google DeepMind</span></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 Google DeepMind</span><br>
+<span class="tag tag-rl">RL</span> <span class="tag" style="background:rgba(250,204,21,0.08);color:#facc15;border:1px solid rgba(250,204,21,0.2)">安全对齐</span> <span class="tag" style="background:rgba(250,204,21,0.08);color:#facc15;border:1px solid rgba(250,204,21,0.2)">CoT 监控</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>Chain-of-Thought (CoT) 推理大幅提升了 LLM 的能力，但也引入了新的安全风险：模型可能在推理过程中产生不安全内容，即使最终回答是安全的（"思考中有害"）；或者推理过程看似安全但导出不安全结论（"隐蔽有害"）。Google DeepMind 的这项工作系统研究了 CoT 安全与有用性之间的三种关系——<strong>对齐</strong>（aligned）、<strong>正交</strong>（orthogonal）和<strong>冲突</strong>（in-conflict），并提出了基于监控的优化方法。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① CoT 安全分类学</strong></p>
+<p>作者建立了 CoT 安全的三维分类框架：</p>
+<ul>
+<li><strong>对齐</strong>（Aligned）：安全和有用性方向一致。安全约束不影响推理质量，甚至帮助推理（如避免错误假设）</li>
+<li><strong>正交</strong>（Orthogonal）：安全和有用性互不影响。安全约束仅过滤掉不相关的有害内容，不改变推理路径</li>
+<li><strong>冲突</strong>（In-Conflict）：安全约束会降低推理质量。典型场景：回答敏感但合法的问题时，过度安全限制了有效推理</li>
+</ul>
+<p>通过在 1000 个安全评估样本上的人工标注，发现约 62% 为正交、23% 为对齐、15% 为冲突。</p>
+
+<p><strong>② CoT 监控器设计</strong></p>
+<p>设计了一个轻量级的 CoT 监控器 \(M_\psi\)，在推理过程中实时评估每一步的安全状态：</p>
+$$s_t = M_\psi(q, r_{1:t}), \quad s_t \in \{\text{safe}, \text{borderline}, \text{unsafe}\}$$
+<p>监控器基于小型 LM（如 Gemma-2-2B）微调得到，在每个推理步骤后执行一次分类。当检测到 unsafe 状态时，触发干预：</p>
+$$r_{t+1} = \begin{cases} \pi_\theta(\cdot | q, r_{1:t}) & \text{if } s_t = \text{safe} \\ \pi_\theta^{\text{safe}}(\cdot | q, r_{1:t}, \text{[REDIRECT]}) & \text{if } s_t \in \{\text{borderline, unsafe}\} \end{cases}$$
+
+<p><strong>③ 分层奖励塑形（Tiered Reward Shaping）</strong></p>
+<p>为三种关系设计差异化的训练奖励：</p>
+$$R(q, r, a) = R_{\text{helpful}}(a) + \lambda(c) \cdot R_{\text{safe}}(r, a)$$
+<p>其中 \(c \in \{\text{aligned}, \text{orthogonal}, \text{conflict}\}\) 是关系类型，\(\lambda(c)\) 是安全权重：</p>
+$$\lambda(\text{aligned}) = 1.0, \quad \lambda(\text{orthogonal}) = 0.5, \quad \lambda(\text{conflict}) = 0.2$$
+<p>对齐场景下安全与有用性完全一致，给满权重；冲突场景下适度放松安全约束以保留有用性。关系类型由监控器自动判断。</p>
+
+<p><strong>④ 安全 CoT 蒸馏</strong></p>
+<p>从安全增强的教师模型中蒸馏安全推理能力：先用教师模型在安全约束下生成高质量推理链，再对学生模型做 SFT + DPO。DPO 的偏好对来自监控器标记的安全/不安全推理链：</p>
+$$\mathcal{L}_{\text{DPO}} = -\log \sigma\left(\beta \log\frac{\pi_\theta(r^+|q)}{\pi_{\text{ref}}(r^+|q)} - \beta \log\frac{\pi_\theta(r^-|q)}{\pi_{\text{ref}}(r^-|q)}\right)$$
+<p>其中 \(r^+\) 是安全的推理链，\(r^-\) 是被监控器标记为不安全的推理链。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：处理敏感但合法的化学问题</strong>
+<p>Prompt: "Explain the synthesis pathway of aspirin (acetylsalicylic acid)"</p>
+<ol>
+<li><strong>无监控</strong>：模型自由推理，可能泛化到其他药物合成（borderline unsafe）</li>
+<li><strong>过度安全</strong>：直接拒绝回答（有用性 = 0）</li>
+<li><strong>监控器识别</strong>：分类为 "conflict"（合法问题但涉及化学合成）</li>
+<li><strong>分层奖励</strong>：\(\lambda = 0.2\)，允许详细解释阿司匹林合成但限制泛化</li>
+<li><strong>结果</strong>：准确回答阿司匹林合成（有用性 4.5/5），未泛化到危险物质（安全性 4.8/5）</li>
+</ol>
+</div>
+
+<table>
+<tr><th>方法</th><th>安全率↑</th><th>有用性↑</th><th>MATH</th><th>过度拒绝率↓</th></tr>
+<tr><td>Base (无安全训练)</td><td>72.3%</td><td>4.21</td><td>54.8</td><td>2.1%</td></tr>
+<tr><td>标准安全 RLHF</td><td>94.6%</td><td>3.68</td><td>51.2</td><td>18.7%</td></tr>
+<tr><td>均匀安全奖励</td><td>91.8%</td><td>3.92</td><td>52.6</td><td>12.3%</td></tr>
+<tr><td>CoT 过滤 (post-hoc)</td><td>89.5%</td><td>4.05</td><td>53.9</td><td>8.6%</td></tr>
+<tr><td class="best">分层监控 + 蒸馏</td><td class="best">95.2%</td><td class="best">4.15</td><td class="best">54.3</td><td class="best">4.8%</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>监控器准确率</strong>：2B 监控器三分类准确率 88.3%，7B 版本 92.1%，2B 已经足够有效且延迟可控（+15ms/step）。(2) <strong>分层权重</strong>：均匀 \(\lambda=0.5\) 比分层差 1.2% 有用性和 3.5% 过度拒绝率，验证了差异化处理的必要性。(3) <strong>干预时机</strong>：在推理第 1-3 步就干预比在结尾干预效果好 2.1%，因为早期干预能引导整个推理方向。(4) <strong>安全 DPO vs SFT</strong>：DPO 比纯 SFT 在安全率上高 3.2%，在有用性上高 0.3%。核心贡献在于首次系统研究了 CoT 安全的多面性，提供了实用的分层优化框架。局限性：关系类型的自动判断依赖监控器质量，极端案例可能误判。</p>
+</div>
+</div>
+
+<!-- Paper 8: PRoSFI -->
+<div class="paper-card" id="paper-prosfi">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29500" target="_blank">Learning to Generate Verifiable Step-by-Step Logic Reasoning via Structured Formal Intermediaries</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 University of Edinburgh, Allen AI</span><br>
+<span class="tag tag-rl">RL</span> <span class="tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)">形式化推理</span> <span class="tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)">可验证推理</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>LLM 的逐步推理（step-by-step reasoning）虽然提升了性能，但推理过程的<strong>正确性不可验证</strong>——即使最终答案正确，中间推理步骤可能包含逻辑错误。形式化验证器（如 Lean、Isabelle）可以保证逻辑正确性，但 LLM 直接生成形式化证明的能力有限。PRoSFI（Producing Reasoning via Structured Formal Intermediaries）提出了一种折中方案：让 LLM 生成<strong>结构化形式中间表示</strong>，每一步都可被自动逻辑检查器验证，同时保持自然语言的可读性。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 结构化形式中间表示（SFI）</strong></p>
+<p>定义了一种介于自然语言和形式化语言之间的中间表示。每个推理步骤包含三个组件：</p>
+$$\text{Step}_t = (\text{NL}_t, \text{Logic}_t, \text{Ref}_t)$$
+<p>其中 \(\text{NL}_t\) 是自然语言描述，\(\text{Logic}_t\) 是一阶谓词逻辑表达式（如 \(\forall x. P(x) \implies Q(x)\)），\(\text{Ref}_t \subseteq \{1, \ldots, t-1\}\) 是所引用的前置步骤集合。自动验证器检查：\(\text{Logic}_t\) 是否可从 \(\{\text{Logic}_j : j \in \text{Ref}_t\}\) 逻辑推导得到。</p>
+
+<p><strong>② 两阶段训练</strong></p>
+<p>第一阶段：<strong>SFI 格式 SFT</strong>。从现有的数学/逻辑推理数据集中，用 GPT-4 将自然语言推理链转换为 SFI 格式，得到 50K 训练样本。对基础 LLM 做 SFT 学习 SFI 格式的生成。</p>
+<p>第二阶段：<strong>验证引导的 RL</strong>。利用自动逻辑验证器作为奖励信号：</p>
+$$R(q, \{s_t\}_{t=1}^T) = \frac{1}{T} \sum_{t=1}^T \mathbb{1}[\text{Verify}(\text{Logic}_t, \{\text{Logic}_j\}_{j \in \text{Ref}_t}) = \text{valid}] + \alpha \cdot \mathbb{1}[\text{Answer correct}]$$
+<p>每步验证得分 + 最终答案正确性的加权和。RL 使用 GRPO 算法，组大小 \(G=4\)。</p>
+
+<p><strong>③ 自动逻辑验证器</strong></p>
+<p>验证器基于一阶逻辑的自动定理证明器（如 Z3 SMT solver）。对每个推理步骤检查：</p>
+$$\text{Verify}(\text{Logic}_t, \text{Premises}) = \begin{cases} \text{valid} & \text{if } \text{Premises} \models \text{Logic}_t \\ \text{invalid} & \text{otherwise} \end{cases}$$
+<p>Z3 对一阶逻辑的可判定片段可以在毫秒级完成验证。对超出可判定范围的步骤（约 8%），退回到基于规则的启发式检查。</p>
+
+<p><strong>④ 渐进式难度提升</strong></p>
+<p>训练数据按推理步数分级：2-4 步（简单）→ 5-8 步（中等）→ 9+ 步（困难）。每级训练直到验证率 > 85% 后再进入下一级。这种课程策略比直接混合训练提升 3.2% 验证率。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：多步逻辑推理</strong>
+<p>问题: "All mammals are warm-blooded. Dolphins are mammals. All warm-blooded animals need oxygen. Does a dolphin need oxygen?"</p>
+<ol>
+<li><strong>Step 1</strong>: NL="All mammals are warm-blooded" | Logic: \(\forall x. \text{Mammal}(x) \implies \text{WarmBlooded}(x)\) | Ref: [premise]  ✅</li>
+<li><strong>Step 2</strong>: NL="Dolphins are mammals" | Logic: \(\text{Mammal}(\text{dolphin})\) | Ref: [premise]  ✅</li>
+<li><strong>Step 3</strong>: NL="Therefore dolphins are warm-blooded" | Logic: \(\text{WarmBlooded}(\text{dolphin})\) | Ref: [1,2] → Z3: <strong>VALID</strong> ✅</li>
+<li><strong>Step 4</strong>: NL="All warm-blooded animals need oxygen" | Logic: \(\forall x. \text{WarmBlooded}(x) \implies \text{NeedO2}(x)\) | Ref: [premise]  ✅</li>
+<li><strong>Step 5</strong>: NL="Therefore dolphins need oxygen" | Logic: \(\text{NeedO2}(\text{dolphin})\) | Ref: [3,4] → Z3: <strong>VALID</strong> ✅</li>
+</ol>
+<p>所有 5 步均通过 Z3 验证，推理链形式正确。</p>
+</div>
+
+<table>
+<tr><th>方法</th><th>逻辑验证率↑</th><th>答案准确率↑</th><th>FOLIO</th><th>ProofWriter</th></tr>
+<tr><td>CoT (自然语言)</td><td>—</td><td>72.8</td><td>68.3</td><td>64.1</td></tr>
+<tr><td>Lean4 直接生成</td><td>34.2</td><td>41.5</td><td>38.6</td><td>35.2</td></tr>
+<tr><td>Logic-LM</td><td>65.8</td><td>76.1</td><td>74.2</td><td>70.8</td></tr>
+<tr><td>LINC</td><td>71.3</td><td>78.4</td><td>76.5</td><td>73.1</td></tr>
+<tr><td class="best">PRoSFI (SFT only)</td><td class="best">82.6</td><td>80.2</td><td>79.8</td><td>76.4</td></tr>
+<tr><td class="best">PRoSFI (SFT + RL)</td><td class="best">89.1</td><td class="best">84.7</td><td class="best">83.5</td><td class="best">80.9</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>SFI 组件</strong>：去掉 Logic 组件（仅 NL + Ref）验证率降至 0%（不可验证）；去掉 Ref（不指定依赖）验证率降 12%，因为验证器需要知道每步的前提。(2) <strong>RL 效果</strong>：RL 在 SFT 基础上提升验证率 6.5%，答案准确率 4.5%，表明验证信号作为奖励非常有效。(3) <strong>验证器覆盖率</strong>：Z3 能自动验证 92% 的步骤；8% 需要启发式退回，这部分的准确率为 75%。(4) <strong>推理步数</strong>：2-4 步的验证率 94.3%，5-8 步 87.2%，9+ 步 78.6%，长链推理仍是挑战。局限性：SFI 格式增加了输出长度约 40%；一阶逻辑不能表达所有推理类型（如概率推理、归纳推理）。</p>
+</div>
+</div>

@@ -1,0 +1,73 @@
+
+<!-- ===== SECTION: Multimodal ===== -->
+<h2 class="section-title multimodal" id="sec-multimodal">🌐 Multimodal — 多模态大模型</h2>
+
+<!-- Paper 14: PID -->
+<div class="paper-card" id="paper-pid">
+<div class="paper-title"><a href="https://arxiv.org/abs/2603.29676" target="_blank">Information Decomposition Analysis: Understanding Decision-Making in Large Vision-Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-03-31</span><br>
+<span>🏛 University of Oxford, Alan Turing Institute</span><br>
+<span class="tag tag-multimodal">Multimodal</span> <span class="tag" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2)">可解释性</span> <span class="tag" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2)">信息论</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>大型视觉-语言模型（VLMs）在视觉问答、图像描述等任务上取得显著进步，但其内部决策机制仍是黑箱。关键问题：VLM 的回答到底有多少来自视觉信息、多少来自语言先验？当视觉和语言信息冲突时，模型如何取舍？Partial Information Decomposition (PID) 分析框架将信息论引入 VLM 可解释性，首次定量分解了视觉和语言输入对模型输出的<strong>独有信息</strong>（unique）、<strong>冗余信息</strong>（redundant）和<strong>协同信息</strong>（synergistic）贡献。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<p><strong>① 部分信息分解框架</strong></p>
+<p>给定视觉输入 \(V\)、语言输入 \(L\) 和模型输出 \(Y\)，互信息 \(I(V, L; Y)\) 可以分解为四个不重叠的分量：</p>
+$$I(V, L; Y) = \underbrace{U_V}_{\text{视觉独有}} + \underbrace{U_L}_{\text{语言独有}} + \underbrace{R}_{\text{冗余}} + \underbrace{S}_{\text{协同}}$$
+<p>其中 \(U_V = I(V; Y | L)\) 是语言无法替代的视觉贡献，\(U_L = I(L; Y | V)\) 是视觉无法替代的语言贡献，\(R\) 是两者都能提供的冗余信息，\(S\) 是只有两者结合才能产生的协同信息。</p>
+
+<p><strong>② 实用估计方法</strong></p>
+<p>直接计算 PID 在连续高维空间中不可行。作者提出了基于<strong>干预</strong>（intervention）的近似方法：</p>
+$$\hat{U}_V \approx H(Y | L_{\text{shuffled}}, V) - H(Y | L, V) \quad (\text{打乱语言输入})$$
+$$\hat{U}_L \approx H(Y | V_{\text{noise}}, L) - H(Y | V, L) \quad (\text{加噪视觉输入})$$
+<p>通过对一个模态进行扰动（打乱或加噪），观察输出熵的变化来估计另一个模态的独有贡献。协同信息通过总互信息减去其余三项得到：</p>
+$$\hat{S} = I(V, L; Y) - \hat{U}_V - \hat{U}_L - \hat{R}$$
+
+<p><strong>③ 逐层 PID 追踪</strong></p>
+<p>将 PID 分析应用到 VLM 的每一层，追踪信息组合的动态过程：</p>
+$$\text{PID}^{(l)} = (U_V^{(l)}, U_L^{(l)}, R^{(l)}, S^{(l)}) \quad \text{for layer } l = 1, \ldots, L$$
+<p>在中间层表示 \(\mathbf{h}^{(l)}\) 上执行干预实验。关键发现：浅层（1-8 层）主要处理各模态独有信息（\(U_V, U_L\) 占主导）；中间层（9-20 层）冗余信息 \(R\) 急剧增长，表示跨模态对齐正在发生；深层（21-32 层）协同信息 \(S\) 达到峰值，模型在进行真正的多模态推理。</p>
+
+<p><strong>④ 冲突诊断与偏见检测</strong></p>
+<p>当 \(U_V\) 和 \(U_L\) 指向不同答案时，定义冲突度：</p>
+$$\text{Conflict} = 1 - \frac{R}{U_V + U_L + R}$$
+<p>高冲突度意味着模型必须在视觉和语言先验之间做出选择。实验发现：在高冲突场景下，大多数 VLM 倾向于依赖语言先验（\(U_L\) 主导），这解释了 VLM 在反常识视觉场景（如颠倒的图像）中的系统性失败。</p>
+</div>
+
+<div class="example-box">
+<strong>🔍 深度案例：VQA 中的视觉-语言冲突</strong>
+<p><strong>场景</strong>：图片显示一只绿色的香蕉（未成熟），问题 "What color is the banana?"</p>
+<ol>
+<li><strong>PID 分析</strong>：</li>
+<li>\(U_V = 0.42\) nats（视觉明确显示绿色）</li>
+<li>\(U_L = 0.38\) nats（语言先验强烈偏向"黄色"）</li>
+<li>\(R = 0.05\) nats（冗余极低，两者不一致）</li>
+<li>\(S = 0.15\) nats（需要协同推理才能正确回答）</li>
+<li><strong>冲突度</strong>：0.94（极高冲突）</li>
+<li><strong>模型行为</strong>：LLaVA-1.5 回答 "yellow"（语言主导），InternVL2 回答 "green"（视觉主导）</li>
+<li><strong>逐层追踪</strong>：LLaVA 在第 12 层后 \(U_L\) 增长超过 \(U_V\)，视觉信息被语言先验覆盖</li>
+</ol>
+</div>
+
+<table>
+<tr><th>模型</th><th>标准 VQA↑</th><th>冲突场景 VQA↑</th><th>视觉偏好比↑</th><th>协同信息比↑</th></tr>
+<tr><td>LLaVA-1.5-13B</td><td>78.5</td><td>42.3</td><td>0.35</td><td>0.18</td></tr>
+<tr><td>InternVL2-26B</td><td>82.1</td><td>58.7</td><td>0.52</td><td>0.24</td></tr>
+<tr><td>Qwen-VL-Chat</td><td>79.8</td><td>49.5</td><td>0.41</td><td>0.21</td></tr>
+<tr><td>GPT-4V</td><td class="best">86.3</td><td class="best">67.8</td><td class="best">0.58</td><td class="best">0.31</td></tr>
+<tr><td>Gemini-1.5 Pro</td><td>84.7</td><td>62.1</td><td>0.55</td><td>0.28</td></tr>
+</table>
+
+<div class="module">
+<h4>📊 消融与讨论</h4>
+<p>消融实验：(1) <strong>扰动方法对比</strong>：打乱（shuffling）比高斯噪声加噪更稳定，因为噪声强度的选择对结果敏感（标准差变化 2× 导致估计值变化 18%）。(2) <strong>模型规模效应</strong>：更大的模型协同信息比 \(S/(U_V + U_L + R + S)\) 更高（7B: 0.18, 13B: 0.22, 26B: 0.26），表明规模提升了真正的多模态融合能力而非简单的模态拼接。(3) <strong>训练阶段</strong>：预训练 VLM 的 \(R\) 很低（跨模态对齐弱），视觉指令微调后 \(R\) 和 \(S\) 显著增长。(4) <strong>实用价值</strong>：PID 分析可以指导训练——在 \(S\) 低的层增加跨模态注意力可以提升冲突场景性能 +5.3%。局限性：PID 估计需要多次前向传播（约 100 次/样本），计算成本较高；对于非常长的文本输入，打乱扰动可能不够精确。</p>
+</div>
+</div>
