@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026年4月3日</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-secondary: #12121f;
+            --bg-card: #1a1a2e;
+            --bg-card-alt: #16162a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9a9ab8;
+            --text-muted: #6a6a88;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --border: #2a2a44;
+            --gradient-fire: linear-gradient(135deg, #ef4444, #f97316);
+            --gradient-gold: linear-gradient(135deg, #f59e0b, #eab308);
+            --gradient-blue: linear-gradient(135deg, #3b82f6, #6366f1);
+            --gradient-green: linear-gradient(135deg, #22c55e, #10b981);
+            --gradient-purple: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-primary: #f5f7fa;
+                --bg-secondary: #ffffff;
+                --bg-card: #ffffff;
+                --bg-card-alt: #f8f9fc;
+                --text-primary: #1a1a2e;
+                --text-secondary: #4a4a6a;
+                --text-muted: #8a8aaa;
+                --border: #e5e7eb;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+        .report-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f2a 50%, #1a0a2e 100%);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .report-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            transition: color 0.3s;
+        }
+        .report-header .back-link:hover { color: var(--accent-blue); }
+        .report-header .tag {
+            display: inline-block;
+            background: var(--gradient-fire);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .report-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #f0f0f5, #9a9ab8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .report-header .subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+        .report-header .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .report-header .meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* 重要提示横幅 */
+        .alert-banner {
+            background: linear-gradient(135deg, #f59e0b22, #ef444422);
+            border: 1px solid #f59e0b44;
+            border-radius: 14px;
+            padding: 18px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .alert-banner .icon { font-size: 1.8rem; flex-shrink: 0; }
+        .alert-banner .text { font-size: 0.95rem; color: var(--accent-gold); font-weight: 600; }
+        .alert-banner .text small { display: block; color: var(--text-secondary); font-weight: 400; font-size: 0.85rem; margin-top: 4px; }
+
+        /* 节标题 */
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 32px 0 18px;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .section-title .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        /* 卡片系统 */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 市场数据网格 */
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .market-item {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .market-item .name { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+        .market-item .value { font-size: 1.3rem; font-weight: 700; }
+        .market-item .change { font-size: 0.9rem; font-weight: 600; margin-top: 2px; }
+        .up { color: var(--accent-red); }
+        .down { color: var(--accent-green); }
+        .neutral { color: var(--accent-gold); }
+
+        /* 消息列表 */
+        .news-list { list-style: none; }
+        .news-list li {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .news-list li:last-child { border-bottom: none; }
+        .news-list .bullet {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+        .news-list .bullet.red { background: var(--accent-red); }
+        .news-list .bullet.gold { background: var(--accent-gold); }
+        .news-list .bullet.blue { background: var(--accent-blue); }
+        .news-list .bullet.green { background: var(--accent-green); }
+        .news-list .bullet.purple { background: var(--accent-purple); }
+        .news-list .content { flex: 1; }
+        .news-list .content strong { color: var(--text-primary); }
+        .news-list .content p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+        /* 技术位表格 */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .tech-table th, .tech-table td {
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .tech-table th {
+            background: var(--bg-card-alt);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tech-table td { font-size: 0.95rem; }
+        .tech-table tr:last-child td { border-bottom: none; }
+        .support { color: var(--accent-green); font-weight: 600; }
+        .resist { color: var(--accent-red); font-weight: 600; }
+
+        /* 自选股卡片 */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 16px;
+        }
+        .stock-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .stock-card:hover { transform: translateY(-2px); }
+        .stock-card .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+        .stock-card .stock-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .stock-card .stock-code {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .stock-card .stock-price {
+            text-align: right;
+        }
+        .stock-card .stock-price .price {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .stock-card .stock-price .change {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .stock-card .stock-body {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .stock-card .stock-body .label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+        .stock-card .tech-info {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+        }
+        .stock-card .tech-info span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .stock-card .trend-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .trend-badge.bullish { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+        .trend-badge.bearish { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+        .trend-badge.neutral-trend { background: rgba(245,158,11,0.15); color: var(--accent-gold); }
+
+        /* 总结区 */
+        .summary-box {
+            background: linear-gradient(135deg, #1a1a2e, #12122a);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-top: 28px;
+        }
+        .summary-box h3 {
+            font-size: 1.15rem;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .summary-box p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .holiday-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(245,158,11,0.15);
+            color: var(--accent-gold);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        footer a { color: var(--accent-blue); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .container { padding: 16px 12px; }
+            .report-header { padding: 28px 20px; }
+            .report-header h1 { font-size: 1.5rem; }
+            .stock-grid { grid-template-columns: 1fr; }
+            .market-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 报告头部 -->
+        <div class="report-header">
+            <a href="../" class="back-link">← 返回 A股港股市场分析</a>
+            <div class="tag">📊 盘前前瞻</div>
+            <h1>油价飙升 + 节前避险 · A股独立行情考验</h1>
+            <p class="subtitle">WTI暴涨11%至$112 / 港股休市5天 / CPO概念活跃 / 特斯拉Q1交付不及预期</p>
+            <div class="meta">
+                <span>📅 2026年4月3日 周五</span>
+                <span>⏰ 09:00 发布</span>
+                <span>📍 盘前前瞻报告</span>
+            </div>
+        </div>
+
+        <!-- 重要提示 -->
+        <div class="alert-banner">
+            <div class="icon">⚠️</div>
+            <div class="text">
+                假期休市提醒
+                <small>🇭🇰 港股：4月3日(周五)至4月7日(周二)休市，4月8日恢复交易 — 耶稣受难日+清明节+复活节<br>
+                🇨🇳 A股：今日(4月3日)正常交易，4月4日-6日清明节休市，4月7日恢复交易<br>
+                🇺🇸 美股：4月3日(周五)耶稣受难日休市</small>
+            </div>
+        </div>
+
+        <!-- ==================== 全球隔夜市场回顾 ==================== -->
+        <div class="section-title">
+            <div class="icon" style="background: var(--gradient-blue);">🌍</div>
+            <span>全球隔夜市场回顾（4月2日）</span>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🇺🇸 美股三大指数 — 涨跌互现，终结五周连跌</div>
+            <div class="market-grid">
+                <div class="market-item">
+                    <div class="name">道琼斯工业指数</div>
+                    <div class="value">46,504.67</div>
+                    <div class="change down">▼ -61.07 (-0.13%)</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">标普 500</div>
+                    <div class="value">6,582.69</div>
+                    <div class="change up">▲ +0.11%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">纳斯达克综合</div>
+                    <div class="value">21,879.18</div>
+                    <div class="change up">▲ +0.18%</div>
+                </div>
+            </div>
+            <ul class="news-list">
+                <li>
+                    <div class="bullet red"></div>
+                    <div class="content">
+                        <strong>盘中暴跌后急速V型反弹</strong>
+                        <p>道指一度暴跌超600点，因特朗普称对伊战争将持续"两到三周"并威胁将伊朗"炸回石器时代"，导致油价飙升、市场恐慌。但午后传出伊朗与阿曼正制定监控霍尔木兹海峡通行协议的消息，恐慌情绪大幅缓解，指数收复大部分失地。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet gold"></div>
+                    <div class="content">
+                        <strong>周线终结5连跌：四个交易日内纳指+4.4%、标普+3.4%、道指+3.0%</strong>
+                        <p>本周为因耶稣受难日缩短的四交易日周，三大指数均实现自3月初以来首次周线收涨，市场韧性超预期。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet blue"></div>
+                    <div class="content">
+                        <strong>特斯拉暴跌5.5%：Q1交付358,023辆 vs 预期365,000辆</strong>
+                        <p>特斯拉一季度交付量同比下降13%，连续第二年下滑。生产408,386辆但交付缺口达5万辆，产销失衡加剧。Robotaxi转型消耗大量资源。</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🇪🇺 欧洲市场 — 地缘恐慌拖累回调</div>
+            <div class="market-grid">
+                <div class="market-item">
+                    <div class="name">英国 FTSE 100</div>
+                    <div class="value">—</div>
+                    <div class="change down">▼ -0.6%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">德国 DAX 40</div>
+                    <div class="value">—</div>
+                    <div class="change down">▼ -1.5%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">法国 CAC 40</div>
+                    <div class="value">—</div>
+                    <div class="change down">▼ -0.8%</div>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">欧洲股市在特朗普鹰派伊朗言论后普遍回调，结束此前连续三日的反弹。DAX跌幅较大，主要受汽车出口股拖累。</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🌏 亚太市场 — A股港股承压，日经4月3日反弹</div>
+            <div class="market-grid">
+                <div class="market-item">
+                    <div class="name">上证指数（4/2收盘）</div>
+                    <div class="value" style="color: var(--accent-green);">3,919.29</div>
+                    <div class="change down">▼ -0.74%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">深证成指（4/2收盘）</div>
+                    <div class="value" style="color: var(--accent-green);">13,486.94</div>
+                    <div class="change down">▼ -1.60%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">创业板指（4/2收盘）</div>
+                    <div class="value" style="color: var(--accent-green);">2,819</div>
+                    <div class="change down">▼ -2.31%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">恒生指数（4/2收盘）</div>
+                    <div class="value" style="color: var(--accent-green);">25,116.53</div>
+                    <div class="change down">▼ -0.70%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">恒生科技（4/2收盘）</div>
+                    <div class="value" style="color: var(--accent-green);">4,679.10</div>
+                    <div class="change down">▼ -1.63%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">日经225（4/3盘中）</div>
+                    <div class="value" style="color: var(--accent-red);">52,986</div>
+                    <div class="change up">▲ +1.00%</div>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">4月2日A股走出"地缘杀"剧本，低开低走，创业板指跌超2%。成交缩量至1.84万亿，显示观望情绪浓厚。港股科网股普跌，恒生科技跌1.63%。4月3日日经反弹+1%，受霍尔木兹海峡可能重开消息提振。</p>
+        </div>
+
+        <!-- 大宗商品与汇率 -->
+        <div class="card">
+            <div class="card-title">📊 大宗商品与关键资产</div>
+            <div class="market-grid">
+                <div class="market-item">
+                    <div class="name">WTI 原油</div>
+                    <div class="value up">$112.06</div>
+                    <div class="change up">▲ +11.93% 🔥</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">现货黄金</div>
+                    <div class="value down">$4,695</div>
+                    <div class="change down">▼ -2.5%</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">10Y美债收益率</div>
+                    <div class="value">4.31%</div>
+                    <div class="change neutral">持平</div>
+                </div>
+                <div class="market-item">
+                    <div class="name">国内成品油</div>
+                    <div class="value up">↑ 调价</div>
+                    <div class="change up">汽油+230元/吨</div>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">⚡ <strong>油价是当前市场最核心变量。</strong>WTI单日暴涨近12%至$112，月度涨幅50%+，年度涨幅67%。特朗普鹰派讲话是导火索。黄金冲击$4,800后急跌，呈现避险资产内部分化。国内成品油4月3日凌晨上调，13省95号汽油重回8元时代。</p>
+        </div>
+
+        <!-- ==================== 重大隔夜消息 ==================== -->
+        <div class="section-title">
+            <div class="icon" style="background: var(--gradient-fire);">🔥</div>
+            <span>影响A股港股的重大隔夜消息</span>
+        </div>
+
+        <div class="card">
+            <ul class="news-list">
+                <li>
+                    <div class="bullet red"></div>
+                    <div class="content">
+                        <strong>🛢️ 特朗普鹰派发言：对伊朗战争将持续2-3周，威胁"炸回石器时代"</strong>
+                        <p>4月2日特朗普发表全国讲话，称美国将在未来两到三周内对伊朗进行"极其严厉的打击"。市场对战争快速结束的期望被彻底粉碎，WTI暴涨12%至$112。但盘后有缓和消息：伊朗与阿曼正制定霍尔木兹海峡通行监控协议，油价出现回落迹象。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet gold"></div>
+                    <div class="content">
+                        <strong>💵 人民币结算首现霍尔木兹海峡通行费</strong>
+                        <p>商务部消息，人民币结算首次出现在霍尔木兹海峡通行费结算中，跨境支付概念早盘爆发——中油资本、翠微股份涨停，御银股份、拉卡拉高开。人民币国际化再进一步。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet blue"></div>
+                    <div class="content">
+                        <strong>🏭 工信部发文推动"普惠算力赋能中小企业"，明确提及OCS全光交换</strong>
+                        <p>4月2日工信部发布通知，开展"普惠算力赋能中小企业发展专项行动"，明确推动全光交换（OCS）技术部署。CPO/OCS概念4月3日早盘即活跃，德科立涨超10%。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet green"></div>
+                    <div class="content">
+                        <strong>🚗 特斯拉Q1交付不及预期，中国新能源车企逆势增长</strong>
+                        <p>特斯拉Q1交付35.8万辆 vs 预期36.5万辆，同比降13%，股价暴跌5.5%。与此形成鲜明对比的是，中国车企表现强劲——港股汽车板块4月2日逆势走强，奇瑞+15%、吉利+8%、长城+7%。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet purple"></div>
+                    <div class="content">
+                        <strong>🏦 美股4月3日耶稣受难日休市 / 美国3月非农数据照常发布</strong>
+                        <p>美国劳工统计局仍定于美东时间8:30（北京时间20:30）发布3月份就业报告。该数据对美联储利率路径有重大指引，但因美股休市，反应将延迟至下周一。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet gold"></div>
+                    <div class="content">
+                        <strong>📡 亚马逊拟收购卫星通信公司Globalstar，GSAT飙升13%</strong>
+                        <p>卫星通信概念可能波及A股星网锐捷、中国卫通等相关标的。同时SBA Communications因探索出售方案暴涨14%。</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- ==================== 今日关键看点 ==================== -->
+        <div class="section-title">
+            <div class="icon" style="background: var(--gradient-gold);">🎯</div>
+            <span>今日A股关键看点</span>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔴 热点板块前瞻</div>
+            <ul class="news-list">
+                <li>
+                    <div class="bullet red"></div>
+                    <div class="content">
+                        <strong>石油天然气 / 油服板块</strong>
+                        <p>WTI暴涨12%至$112，国内成品油凌晨上调。中国石油、中国海油、中海油服、杰瑞股份等或继续受益。A股"三桶油"近期持续走强。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet blue"></div>
+                    <div class="content">
+                        <strong>CPO / OCS 光通信概念</strong>
+                        <p>工信部文件催化+算力基建持续需求。德科立、罗博特科、腾景科技、长光华芯等已在早盘活跃。中际旭创为券商4月金股热度第一。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet gold"></div>
+                    <div class="content">
+                        <strong>跨境支付 / 数字人民币</strong>
+                        <p>人民币结算首入霍尔木兹海峡通行费。中油资本、翠微股份涨停，拉卡拉、四方精创等跟涨。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet green"></div>
+                    <div class="content">
+                        <strong>航运 / 军工 / 国防</strong>
+                        <p>中东局势升级持续利好防务股和航运股。中远海发逼近涨停，航运指数节前或有博弈资金介入。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet purple"></div>
+                    <div class="content">
+                        <strong>创新药 / 医药</strong>
+                        <p>中信证券推荐创新药进入"密集数据催化期"。昨日医药板块逆势走强，节前资金或继续配置防御性品种。</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🟡 风险提示</div>
+            <ul class="news-list">
+                <li>
+                    <div class="bullet red"></div>
+                    <div class="content">
+                        <strong>节前效应 + 长假避险</strong>
+                        <p>今日为A股节前最后一个交易日（清明4/4-4/6休市）。叠加港股今日已休市，流动性可能进一步萎缩。历史上节前最后一天抛压较大，需防范尾盘跳水。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet gold"></div>
+                    <div class="content">
+                        <strong>油价飙升推高通胀预期</strong>
+                        <p>WTI月度涨50%+，若持续维持$100以上，将显著推高国内PPI和CPI。央行降息空间受限，对成长股形成压制。</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="bullet blue"></div>
+                    <div class="content">
+                        <strong>中东局势不确定性</strong>
+                        <p>假期期间外围可能出现突发事件，持仓过节需谨慎。建议控制仓位，轻仓过节。</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- ==================== 技术面快览 ==================== -->
+        <div class="section-title">
+            <div class="icon" style="background: var(--gradient-purple);">📐</div>
+            <span>技术面快览</span>
+        </div>
+
+        <div class="card">
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>指数</th>
+                        <th>昨收</th>
+                        <th>5日均线</th>
+                        <th>支撑位 S1</th>
+                        <th>支撑位 S2</th>
+                        <th>压力位 R1</th>
+                        <th>压力位 R2</th>
+                        <th>短期判断</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>上证指数</strong></td>
+                        <td>3,919</td>
+                        <td>3,928</td>
+                        <td class="support">3,900</td>
+                        <td class="support">3,860</td>
+                        <td class="resist">3,950</td>
+                        <td class="resist">3,980</td>
+                        <td><span class="trend-badge neutral-trend">震荡偏弱</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>恒生指数</strong></td>
+                        <td>25,117</td>
+                        <td>24,950</td>
+                        <td class="support">24,800</td>
+                        <td class="support">24,500</td>
+                        <td class="resist">25,300</td>
+                        <td class="resist">25,600</td>
+                        <td><span class="trend-badge neutral-trend">休市观望</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>恒生科技</strong></td>
+                        <td>4,679</td>
+                        <td>4,720</td>
+                        <td class="support">4,600</td>
+                        <td class="support">4,500</td>
+                        <td class="resist">4,760</td>
+                        <td class="resist">4,850</td>
+                        <td><span class="trend-badge bearish">偏弱</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 14px;">
+                📌 上证指数在3,900点整数关口获支撑，但昨日缩量至1.84万亿显示反弹动能不足。节前最后一天关注能否守住3,900。恒生指数与恒生科技已休市，4月8日恢复交易后需关注假期间外围消息的补跌/补涨压力。
+            </p>
+        </div>
+
+        <!-- ==================== 专属自选推演 ==================== -->
+        <div class="section-title">
+            <div class="icon" style="background: var(--gradient-fire);">⭐</div>
+            <span>专属自选股推演 · 9只核心持仓</span>
+        </div>
+
+        <div class="stock-grid">
+            <!-- 腾讯控股 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">腾讯控股</div>
+                        <div class="stock-code">0700.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">~HK$497</div>
+                        <div class="change down">▼ -1.49%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜/近日消息</div>
+                    <p>4月2日斥资3亿港元回购60.3万股（493.2-504港元），持续回购显示管理层信心。ADR（TCEHY）隔夜微跌。科网股整体承压但腾讯跌幅最小。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股今日起休市5天。腾讯ADR在美股耶稣受难日也休市。关注假期间中东局势变化对4/8复牌的影响。回购提供下方支撑。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">支撑 HK$488</span>
+                    <span class="resist">压力 HK$510</span>
+                    <span class="trend-badge neutral-trend">震荡</span>
+                </div>
+            </div>
+
+            <!-- 阿里巴巴 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">阿里巴巴</div>
+                        <div class="stock-code">9988.HK / BABA</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">~HK$120</div>
+                        <div class="change down">▼ -3.42%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>BABA ADR收于$122.07，跌1.3%。阿里在港股4/2跌3.42%，跌幅较大。AI应用及芯片股4/2普跌，智谱跌近15%。阿里云AI业务估值承压。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。ADR在美股也休市。假期后需关注阿里云AI相关催化剂和蚂蚁集团动态。近期弱于科网板块整体。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">ADR $118</span>
+                    <span class="resist">ADR $128</span>
+                    <span class="trend-badge bearish">偏弱</span>
+                </div>
+            </div>
+
+            <!-- 美团 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">美团</div>
+                        <div class="stock-code">3690.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">~HK$168</div>
+                        <div class="change down">▼ -2.07%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>科网股普跌中美团跌2.07%，跌幅中等。外卖/到店业务基本面无明显变化。油价飙升对骑手配送成本有潜在影响。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。美团无ADR，假期间无交易参考。关注4/8复牌后补跌风险。美团目前估值合理，回调中反而可能吸引南向资金。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$162</span>
+                    <span class="resist">HK$175</span>
+                    <span class="trend-badge neutral-trend">震荡</span>
+                </div>
+            </div>
+
+            <!-- 蜜雪冰城 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">蜜雪冰城</div>
+                        <div class="stock-code">2097.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price neutral">~HK$68</div>
+                        <div class="change neutral">— 休市</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>蜜雪冰城近期走势较为韧性，作为消费防御标的受益于避险资金流入。公司海外扩张持续推进，东南亚门店加速开店。入选《时代》周刊"全球100家最具影响力企业"。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。蜜雪冰城无ADR。该股属于消费防御品种，在地缘动荡中相对抗跌。关注4/8复牌后的表现，若油价回落消费股可能迎来反弹。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$64</span>
+                    <span class="resist">HK$72</span>
+                    <span class="trend-badge neutral-trend">震荡</span>
+                </div>
+            </div>
+
+            <!-- 宁德时代 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">宁德时代</div>
+                        <div class="stock-code">300750.SZ</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">¥401.17</div>
+                        <div class="change down">▼ -1.12%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>4/2跌1.12%至¥401.17，换手率0.52%，成交89.88亿。融资余额199.5亿（历史90%分位）。申通快递与宁德时代签署战略合作协议，拓展储能换电场景。特斯拉Q1交付不及预期对新能源产业链情绪有所拖累。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>今日A股正常交易，为清明节前最后一天。宁德时代在¥400关口附近震荡。中国新能源车企Q1交付数据普遍强劲，形成对特斯拉的替代效应。申通合作消息提供小催化。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">¥395</span>
+                    <span class="resist">¥415</span>
+                    <span class="trend-badge neutral-trend">震荡</span>
+                </div>
+            </div>
+
+            <!-- 泡泡玛特 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">泡泡玛特</div>
+                        <div class="stock-code">9992.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price neutral">~HK$125</div>
+                        <div class="change neutral">— 回购中</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>4月2日泡泡玛特斥资9,944万港元回购67万股，显示管理层积极护盘。公司自3月底闪崩以来持续大手笔回购。海外业务增长强劲，但估值偏高导致波动加大。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。泡泡玛特无ADR。管理层连续回购构成信号底。4/8复牌关注能否企稳。建议等待确认后再加仓。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$118</span>
+                    <span class="resist">HK$135</span>
+                    <span class="trend-badge neutral-trend">筑底</span>
+                </div>
+            </div>
+
+            <!-- 小米集团 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">小米集团</div>
+                        <div class="stock-code">1810.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">~HK$53</div>
+                        <div class="change down">▼ -3.56%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>小米4/2跌幅达3.56%，为科网股中跌幅较大个股之一。AI应用股和芯片股集体下杀是主因。小米SU7/SU8汽车业务持续放量，但油价飙升对新能源车消费信心有间接影响。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。小米无ADR。4/8复牌需消化假期间消息。小米汽车4月交付数据将成为下一个催化剂。技术面HK$52附近有支撑。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$51</span>
+                    <span class="resist">HK$56</span>
+                    <span class="trend-badge bearish">偏弱</span>
+                </div>
+            </div>
+
+            <!-- 快手 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">快手</div>
+                        <div class="stock-code">1024.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price down">~HK$52</div>
+                        <div class="change down">▼ -2.81%（4/2）</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>快手4/2跌2.81%，跟随科网股集体回调。短视频行业竞争格局稳定，快手电商业务增速放缓是近期估值压力的主因。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。快手无ADR。建议关注4月中旬可能发布的Q1运营数据预览。技术面HK$50为重要心理关口。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$50</span>
+                    <span class="resist">HK$55</span>
+                    <span class="trend-badge bearish">偏弱</span>
+                </div>
+            </div>
+
+            <!-- 优必选 -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-name">优必选</div>
+                        <div class="stock-code">9880.HK</div>
+                    </div>
+                    <div class="stock-price">
+                        <div class="price neutral">~HK$100</div>
+                        <div class="change neutral">— 4/2跟随回调</div>
+                    </div>
+                </div>
+                <div class="stock-body">
+                    <div class="label">📰 隔夜消息</div>
+                    <p>优必选作为人形机器人龙头，近期受地缘冲击回调但中期逻辑未变。具身智能赛道持续升温，特斯拉Optimus进展和国内厂商技术突破是核心催化。4/1优必选曾随大盘反弹上涨。</p>
+                    <div class="label">🎯 今日关注点</div>
+                    <p>港股休市。优必选无ADR。人形机器人主题受政策和产业双重驱动，中期看好但短期受地缘情绪压制。4/8复牌关注能否企稳HK$95上方。</p>
+                </div>
+                <div class="tech-info">
+                    <span class="support">HK$92</span>
+                    <span class="resist">HK$108</span>
+                    <span class="trend-badge neutral-trend">震荡</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 今日操作策略 ==================== -->
+        <div class="summary-box">
+            <h3>💡 今日操作策略建议</h3>
+            <p><strong>核心判断：节前最后一天，轻仓过节为上策。</strong></p>
+            <p>1️⃣ <strong>A股：</strong>今日是清明节前最后一个交易日，港股已休市。预计成交量进一步萎缩，波动收窄。上证3,900为关键心理位，若跌破可能引发止损盘。建议将仓位降至5成以下。</p>
+            <p>2️⃣ <strong>港股：</strong>今日起休市5天直至4月8日。持仓过节需承担假期间外围波动风险。考虑到特朗普对伊鹰派态度和油价不确定性，港股持仓风险偏高。</p>
+            <p>3️⃣ <strong>机会方向：</strong>石油天然气（油价受益）、CPO/OCS（政策催化）、跨境支付（人民币国际化）、创新药（防御+催化双重逻辑）。</p>
+            <p>4️⃣ <strong>规避方向：</strong>航空、旅游（油价高企压缩利润）、高估值成长股（通胀预期压制估值）。</p>
+            <p>5️⃣ <strong>关键事件：</strong>今晚20:30美国3月非农数据，虽然美股休市但将影响下周全球市场走向和美联储降息预期。</p>
+        </div>
+
+        <footer>
+            <p>📊 A股港股盘前前瞻 · 2026年4月3日 · 由 WorkBuddy 自动生成</p>
+            <p>数据来源：CNBC、Investopedia、Trading Economics、金融界、智通财经 · 仅供参考，不构成投资建议</p>
+            <p style="margin-top: 8px;"><a href="../">← 返回市场分析中心</a></p>
+        </footer>
+    </div>
+</body>
+</html>
