@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-04-04</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a14; --bg2: #12121f; --bg3: #1a1a2e;
+            --text: #e8e8f0; --text2: #a0a0b8; --accent: #38bdf8;
+            --accent2: #818cf8; --border: #2d2d44;
+            --red: #f87171; --green: #4ade80; --yellow: #fbbf24;
+            --purple: #c084fc; --pink: #f472b6; --orange: #fb923c;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; padding: 8px 16px; background: var(--bg2); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; transition: all 0.3s; }
+        .back-link:hover { background: var(--accent); color: #fff; }
+        
+        .hero { text-align: center; padding: 40px 30px; background: linear-gradient(135deg, #0f0f2a 0%, #1a1040 50%, #0f0f2a 100%); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(129,140,248,0.08) 0%, transparent 50%); }
+        .hero-icon { font-size: 3rem; margin-bottom: 12px; position: relative; }
+        .hero h1 { font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; position: relative; }
+        .hero .date { color: var(--text2); margin-top: 8px; font-size: 1rem; position: relative; }
+        .hero .stats { display: flex; justify-content: center; gap: 30px; margin-top: 18px; position: relative; }
+        .hero .stat { text-align: center; }
+        .hero .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+        .hero .stat-label { font-size: 0.8rem; color: var(--text2); }
+        
+        .toc { background: var(--bg2); border-radius: 16px; border: 1px solid var(--border); padding: 25px 30px; margin-bottom: 30px; }
+        .toc h2 { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .toc-item { display: flex; align-items: center; gap: 10px; padding: 10px 15px; background: var(--bg3); border-radius: 10px; text-decoration: none; color: var(--text); transition: all 0.2s; border: 1px solid transparent; }
+        .toc-item:hover { border-color: var(--accent); background: rgba(56,189,248,0.05); transform: translateX(3px); }
+        .toc-item .icon { font-size: 1.3rem; }
+        .toc-item .info { flex: 1; }
+        .toc-item .name { font-weight: 600; font-size: 0.95rem; }
+        .toc-item .count { font-size: 0.8rem; color: var(--text2); }
+        
+        .section { margin-bottom: 35px; }
+        .section-header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--bg2); border-radius: 14px 14px 0 0; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); }
+        .section-header .icon { font-size: 1.5rem; }
+        .section-header h2 { font-size: 1.3rem; flex: 1; }
+        .section-header .badge { background: var(--accent); color: #000; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        
+        .news-card { background: var(--bg2); border: 1px solid var(--border); border-top: none; padding: 24px; transition: all 0.2s; }
+        .news-card:last-child { border-radius: 0 0 14px 14px; }
+        .news-card:hover { background: var(--bg3); }
+        .news-card h3 { font-size: 1.1rem; margin-bottom: 10px; line-height: 1.5; }
+        .news-card h3 a { color: var(--text); text-decoration: none; border-bottom: 1px dashed var(--border); transition: all 0.2s; }
+        .news-card h3 a:hover { color: var(--accent); border-color: var(--accent); }
+        .news-card .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; font-size: 0.82rem; color: var(--text2); }
+        .news-card .meta .source { color: var(--accent); font-weight: 500; }
+        .news-card .content { color: var(--text2); font-size: 0.95rem; line-height: 1.8; }
+        .news-card .content p { margin-bottom: 8px; }
+        .news-card .highlight { background: rgba(56,189,248,0.08); border-left: 3px solid var(--accent); padding: 10px 15px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 0.9rem; }
+        .news-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .news-card .tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+        .tag-ai { background: rgba(56,189,248,0.15); color: var(--accent); }
+        .tag-robot { background: rgba(192,132,252,0.15); color: var(--purple); }
+        .tag-auto { background: rgba(74,222,128,0.15); color: var(--green); }
+        .tag-vc { background: rgba(251,191,36,0.15); color: var(--yellow); }
+        .tag-giant { background: rgba(248,113,113,0.15); color: var(--red); }
+        .tag-bio { background: rgba(244,114,182,0.15); color: var(--pink); }
+        .tag-policy { background: rgba(251,146,60,0.15); color: var(--orange); }
+        .tag-video { background: rgba(168,85,247,0.15); color: #a855f7; }
+        
+        .separator { height: 1px; background: var(--border); margin: 0; }
+        
+        footer { text-align: center; padding: 30px 20px; color: var(--text2); font-size: 0.85rem; margin-top: 20px; }
+        footer a { color: var(--accent); text-decoration: none; }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.5rem; }
+            .hero .stats { gap: 15px; }
+            .toc-grid { grid-template-columns: 1fr; }
+            .news-card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../" class="back-link">← 返回报告列表</a>
+        
+        <div class="hero">
+            <div class="hero-icon">🤖</div>
+            <h1>科技与财经每日动态</h1>
+            <p class="date">2026年4月4日 · 周六 · 12:13</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num">24</div>
+                    <div class="stat-label">深度追踪</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">7</div>
+                    <div class="stat-label">垂直赛道</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">24h</div>
+                    <div class="stat-label">时效覆盖</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 目录 -->
+        <div class="toc">
+            <h2>📋 赛道导航</h2>
+            <div class="toc-grid">
+                <a href="#ai" class="toc-item">
+                    <span class="icon">🧠</span>
+                    <div class="info">
+                        <div class="name">大模型与基础AI</div>
+                        <div class="count">8 条动态</div>
+                    </div>
+                </a>
+                <a href="#bio" class="toc-item">
+                    <span class="icon">🧬</span>
+                    <div class="info">
+                        <div class="name">脑机接口与生物科技</div>
+                        <div class="count">2 条动态</div>
+                    </div>
+                </a>
+                <a href="#robot" class="toc-item">
+                    <span class="icon">🤖</span>
+                    <div class="info">
+                        <div class="name">具身智能与机器人</div>
+                        <div class="count">3 条动态</div>
+                    </div>
+                </a>
+                <a href="#video" class="toc-item">
+                    <span class="icon">🎬</span>
+                    <div class="info">
+                        <div class="name">视频与多模态生成</div>
+                        <div class="count">3 条动态</div>
+                    </div>
+                </a>
+                <a href="#auto" class="toc-item">
+                    <span class="icon">🚗</span>
+                    <div class="info">
+                        <div class="name">自动驾驶与出行</div>
+                        <div class="count">2 条动态</div>
+                    </div>
+                </a>
+                <a href="#giant" class="toc-item">
+                    <span class="icon">🏢</span>
+                    <div class="info">
+                        <div class="name">科技巨头与财报</div>
+                        <div class="count">4 条动态</div>
+                    </div>
+                </a>
+                <a href="#vc" class="toc-item">
+                    <span class="icon">💰</span>
+                    <div class="info">
+                        <div class="name">创投与融资</div>
+                        <div class="count">2 条动态</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- ==================== 1. 大模型与基础AI ==================== -->
+        <div class="section" id="ai">
+            <div class="section-header">
+                <span class="icon">🧠</span>
+                <h2>大模型与基础AI</h2>
+                <span class="badge">8 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A06ACY00" target="_blank">阿里72小时三连发：Qwen3.5-Omni + Wan2.7-Image + Qwen3.6-Plus 密集登场</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻/白鲸实验室</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>3月30日至4月2日，阿里AI事业群（ATH）成立两周后，连续三天发布三款重磅模型，覆盖全模态、文生图和编程三大核心能力：</p>
+                    <div class="highlight">
+                        <strong>Qwen3.5-Omni</strong>（3月30日）：全模态交互模型，在 <strong>215项任务</strong> 中取得SOTA，超越 Google Gemini-3.1 Pro，覆盖音视频理解、语音识别、多语种翻译等。
+                    </div>
+                    <div class="highlight">
+                        <strong>Wan2.7-Image</strong>（4月1日）：统一图像生成与编辑模型，拿下国内生图第一。解决了业界"AI标准脸"和"色彩盲盒"两大痛点，支持从骨相到五官的全维度定制，实现"千人千面"。
+                    </div>
+                    <div class="highlight">
+                        <strong>Qwen3.6-Plus</strong>（4月2日）：编程模型，LMArena Code Arena 全球排名第二，成为排名最高的中国大模型。支持百万词元上下文、视觉智能体编程（上传设计稿→自动生成前端代码），编程表现接近 Claude 系列。
+                    </div>
+                    <p><strong>产业影响：</strong>三天三款模型三个赛道第一的节奏，标志着阿里ATH在"产模一体"战略下的协同作战能力全面爆发，也正面回应了市场对 DeepSeek V4 的期待压力。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">大模型</span>
+                    <span class="tag tag-ai">阿里</span>
+                    <span class="tag tag-ai">全模态</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A07TZV00" target="_blank">DeepSeek V4 拟4月上线：Engram长期记忆 + 原生多模态 + 编程顶尖</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻/太平洋科技</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>备受瞩目的 DeepSeek-V4 大模型即将迎来正式发布。4月2日，大参数版本已开启灰度测试，代码能力与多轮搜索大幅提升。梁文锋团队此前将发布计划从春节推迟至4月，系因底层架构级革新需要更多攻关时间。</p>
+                    <div class="highlight">
+                        <strong>四大核心突破：</strong><br>
+                        ① <strong>Engram 长期记忆</strong>——自研条件记忆机制，O(1)复杂度知识检索，永久保存对话历史<br>
+                        ② <strong>编程能力</strong>——HumanEval 87.6%，SWE-Bench Verified 83.7%，支持338种编程语言<br>
+                        ③ <strong>原生多模态</strong>——文本/图像/视频端到端语义融合，告别纯文本架构<br>
+                        ④ <strong>AI搜索强化</strong>——深度整合搜索资源，实时获取、校验全网信息
+                    </div>
+                    <p><strong>产业影响：</strong>V4被视为2026上半年全球AI最重磅发布之一。Engram长期记忆技术若验证成功，将彻底改变AI Agent的商业化格局，解决"过目即忘"的根本痛点。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">DeepSeek</span>
+                    <span class="tag tag-ai">开源模型</span>
+                    <span class="tag tag-ai">长期记忆</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://sspai.com/post/108209" target="_blank">Google 发布 Gemma 4 开源系列模型：参数效率登顶</a></h3>
+                <div class="meta">
+                    <span class="source">少数派</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，Google 发布新一代开源系列模型 Gemma 4，基于 Gemini 技术体系构建，重点强调"参数效率"（intelligence-per-parameter），号称每个参数带来的智能密度达到同级别开源模型最高水平。Gemma 4被定位为当前最智能的开源模型产品线之一。</p>
+                    <p><strong>产业影响：</strong>在 DeepSeek、Qwen 等中国开源模型强势崛起的背景下，Google 以 Gemma 4 正面应战，开源大模型竞争进入白热化阶段。"参数效率"路线也意味着端侧部署、低成本推理将成为新焦点。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">Google</span>
+                    <span class="tag tag-ai">开源模型</span>
+                    <span class="tag tag-ai">Gemma</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.yiboot.com/article/userguide/glm-5v-turbo-01.html" target="_blank">智谱发布 GLM-5V-Turbo：首个原生多模态 Coding 基座模型</a></h3>
+                <div class="meta">
+                    <span class="source">一棵AI/智谱AI</span>
+                    <span>2026-04-02</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，智谱AI正式发布 GLM-5V-Turbo——首个原生多模态 Coding 基座模型，专为视觉编程任务打造。该模型能原生处理图片、视频、设计稿、文档版面等多模态输入，上下文窗口达200K tokens。核心升级包括：原生多模态融合架构、30+任务协同强化学习、Agentic数据体系、多模态工具链。</p>
+                    <p><strong>产业影响：</strong>"给AI一张图，它就能写出整套代码"标志着视觉编程从概念走向产品化。智谱此举与阿里Qwen3.6-Plus形成正面竞争，AI编程赛道加速内卷。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">智谱AI</span>
+                    <span class="tag tag-ai">多模态编程</span>
+                    <span class="tag tag-ai">视觉理解</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A0182C00" target="_blank">豆包大模型日均 Token 突破120万亿：三个月翻倍，发布以来增长1000倍</a></h3>
+                <div class="meta">
+                    <span class="source">每日经济新闻</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，火山引擎总裁谭待在武汉AI创新巡展上宣布，豆包大模型日均 Token 使用量已突破 <strong>120万亿</strong>，较2025年12月的63万亿近乎翻倍，与2024年5月发布初期相比增长 <strong>1000倍</strong>。累计Token使用量超万亿的企业客户已从100家增长至更大规模。</p>
+                    <p><strong>产业影响：</strong>120万亿Token/天的天文数字意味着AI应用正从早期尝鲜走向规模化落地。字节跳动在C端（豆包App）和B端（火山引擎API）的双轮驱动模式被验证为当前最有效的AI商业化路径之一。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">字节跳动</span>
+                    <span class="tag tag-ai">豆包</span>
+                    <span class="tag tag-ai">商业化</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A0182C00" target="_blank">阶跃星辰发布 Step 3.5 Flash 2603：新增低推理模式，Agent调用成本再降</a></h3>
+                <div class="meta">
+                    <span class="source">每日经济新闻</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，阶跃星辰上线 Step 3.5 Flash 2603 优化版本，面向所有 Step Plan 订阅用户开放。核心升级是新增"低推理模式"（low think mode），可在保持高响应速度的同时进一步降低 Token 消耗并提升输出效率。</p>
+                    <p><strong>产业影响：</strong>在Agent场景中，大量重复低复杂度任务使用轻量模型可显著降低运营成本。阶跃星辰在OpenRouter全球调用量排名长期前三，此次优化将进一步巩固其在开发者生态中的地位。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">阶跃星辰</span>
+                    <span class="tag tag-ai">Agent</span>
+                    <span class="tag tag-ai">成本优化</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.gyznsw.cn/2026/04/03/2026-04-03-AI%E6%8A%80%E6%9C%AF%E6%AF%8F%E6%97%A5%E5%88%86%E6%9E%90-20260403/" target="_blank">微软推出自研 MAI 系列模型：不依赖 OpenAI，Foundry 平台自立门户</a></h3>
+                <div class="meta">
+                    <span class="source">工业智能算网</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，微软通过 Foundry 平台推出自家研制的 MAI 系列模型，包括 MAI-Transcribe-1（语音转文字）、MAI-Voice-1（语音合成）和 MAI-Image-2（图像生成）。微软强调这是"人文主义AI"（Humanist AI），不依赖 OpenAI 技术栈。</p>
+                    <p><strong>产业影响：</strong>微软此举标志着其在AI模型层面正式"去OpenAI化"，从单纯的投资合作关系转向平行竞争。Foundry平台的独立布局也暗示微软正在构建一个完全自主的AI基础设施生态。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">微软</span>
+                    <span class="tag tag-ai">MAI</span>
+                    <span class="tag tag-ai">自研模型</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://finance.sina.cn/2026-03-30/detail-inhstpih6571039.d.html" target="_blank">中国AI大模型调用量连续四周超美国：小米MiMo蝉联全球第一</a></h3>
+                <div class="meta">
+                    <span class="source">新浪财经/每日经济新闻</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>OpenRouter 最新数据显示，截至3月底，中国AI大模型周调用量持续领先美国，连续四周霸榜。全球调用量前四名全部为中国模型：小米 MiMo-V2-Pro 蝉联榜首（周调用量3.96万亿Token）、阶跃星辰 Step 3.5 Flash (free)第二、DeepSeek V3.2第三、MiniMax M2.5第四。</p>
+                    <p><strong>产业影响：</strong>中国大模型的API调用量已从"偶尔超越"变为"持续碾压"，背后是价格战驱动的开发者迁移、Agent应用落地的爆发，以及开源生态的全球化渗透。这预示着全球AI算力重心正不可逆转地东移。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-ai">中国AI</span>
+                    <span class="tag tag-ai">OpenRouter</span>
+                    <span class="tag tag-ai">全球竞争</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 2. 脑机接口与生物科技 ==================== -->
+        <div class="section" id="bio">
+            <div class="section-header">
+                <span class="icon">🧬</span>
+                <h2>脑机接口与生物科技</h2>
+                <span class="badge">2 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.cctv.cn/2026/04/01/ARTIJIwbbQzLIXn6sQnB6bMJ260401.shtml" target="_blank">上海集聚近60家脑机接口企业，全链条产业生态加速成型</a></h3>
+                <div class="meta">
+                    <span class="source">央视网</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>脑机接口作为"十五五"期间重点发力的未来产业，正在上海加速落地。据央视报道，上海已集聚近60家脑机接口企业，搭建起从核心器件研发、技术攻关、临床转化验证到商业化落地的全链条产业生态。此前，中国科学家研发的"植入式脑机接口手部运动功能代偿系统"（NEO系统）已正式获批并纳入医保编码。</p>
+                    <p><strong>产业影响：</strong>"十五五"规划将具身智能与脑机接口并列为未来产业十大赛道，上海的产业集聚效应正在形成区域竞争优势。NEO系统获批标志着中国脑机接口从实验室正式进入临床商业化阶段。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">脑机接口</span>
+                    <span class="tag tag-bio">产业集聚</span>
+                    <span class="tag tag-bio">临床转化</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://kpzg.people.com.cn/n1/2026/0403/c404214-40694491.html" target="_blank">"科幻+生命科学"论坛聚焦脑机接口：解码生命科学照进现实</a></h3>
+                <div class="meta">
+                    <span class="source">人民网/科普中国</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>由北京市科学技术协会主办的"科幻+生命科学"专题论坛近日在北京举办，聚焦脑机接口核心主题，汇聚了科研院所、医疗机构、前沿科技企业及科幻文学界的多位专家。论坛探讨了脑机接口在医疗康复、神经调控、人机融合等领域的最新进展与未来前景。</p>
+                    <p><strong>产业影响：</strong>学界、业界与科幻文学界的跨界对话反映了脑机接口正在从纯技术领域上升为社会议题。2026年中关村论坛上多款脑机接口产品集中亮相，标志着该领域正从"概念期"向"产品期"过渡。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-bio">脑机接口</span>
+                    <span class="tag tag-bio">医疗康复</span>
+                    <span class="tag tag-bio">人机融合</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 3. 具身智能与机器人 ==================== -->
+        <div class="section" id="robot">
+            <div class="section-header">
+                <span class="icon">🤖</span>
+                <h2>具身智能与机器人</h2>
+                <span class="badge">3 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A06IUD00" target="_blank">优必选1.24亿年薪全球招首席科学家，人形机器人年出货破千台</a></h3>
+                <div class="meta">
+                    <span class="source">腾讯新闻/太平洋科技</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，"人形机器人第一股"优必选发布2025年年报并面向全球发布重磅招聘：具身智能首席科学家，年薪 <strong>1500万元起、最高1.24亿元</strong>，刷新国内机器人领域薪酬纪录。</p>
+                    <div class="highlight">
+                        <strong>关键财务数据：</strong><br>
+                        · 2025年总营收 20.01亿元<br>
+                        · 人形机器人收入 8.2亿元（同比+2203.7%），跃升第一大收入来源<br>
+                        · 全年出货 <strong>1079台</strong>（被视为行业从"展品"到"商品"的里程碑）<br>
+                        · 单台均价约76万元，全尺寸人形毛利率高达 <strong>54.6%</strong><br>
+                        · 研发投入超5亿元，占营收 25.6%
+                    </div>
+                    <p><strong>产业影响：</strong>1.24亿年薪与OpenAI/Meta顶级科学家看齐，释放了中国机器人行业人才争夺战进入"军备竞赛"的强烈信号。千台级交付和超50%毛利率证明人形机器人的商业模式已初步跑通。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">优必选</span>
+                    <span class="tag tag-robot">人形机器人</span>
+                    <span class="tag tag-robot">天价招聘</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.36kr.com/p/3745085379575815" target="_blank">宇树科技冲刺科创板IPO：具身智能从"讲故事"到"拼分数"</a></h3>
+                <div class="meta">
+                    <span class="source">36氪</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>宇树科技正式冲刺科创板 IPO，成为继优必选之后又一家冲击资本市场的机器人明星企业。与此同时，中国信息通信研究院发布了具身智能行业评测标准，行业正从"看发布会"转向"拼硬数据"。宇树创始人王兴兴2024年年薪为249.52万元，与优必选1.24亿招聘形成鲜明对比。</p>
+                    <p><strong>产业影响：</strong>宇树IPO + 行业评测标准发布，标志着具身智能行业正从早期的概念炒作阶段进入标准化、规模化竞争阶段。资本市场对机器人板块的估值逻辑正从"梦想溢价"向"交付量溢价"转变。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">宇树科技</span>
+                    <span class="tag tag-robot">IPO</span>
+                    <span class="tag tag-robot">行业标准</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.techmami.com/flashdetail/3c6ae6e00c6e41afab0aa43ddce40390Oq3jO724rI" target="_blank">泉智博机器人关节新基地投产：90秒交付一套高精度关节，自动化率85%</a></h3>
+                <div class="meta">
+                    <span class="source">科技妈咪网</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>机器人关节核心零部件供应商泉智博宣布新生产基地正式投产，自动化率突破 85%，每 90秒即可交付一套高精度机器人关节模组。这标志着人形机器人核心供应链的产能瓶颈正在被突破。</p>
+                    <p><strong>产业影响：</strong>关节是机器人成本占比最高的核心零部件（约占整机成本30-40%）。泉智博的高自动化产线意味着关节成本有望大幅下降，进一步加速人形机器人从"奢侈品"向"工业消费品"的价格跃迁。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-robot">供应链</span>
+                    <span class="tag tag-robot">关节模组</span>
+                    <span class="tag tag-robot">量产突破</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 4. 视频与多模态生成 ==================== -->
+        <div class="section" id="video">
+            <div class="section-header">
+                <span class="icon">🎬</span>
+                <h2>视频与多模态生成</h2>
+                <span class="badge">3 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.l024.net/2026/04/aitoken120-seedance-20api.html" target="_blank">字节即梦 Seedance 2.0 面向企业开放公测，推出 CLI 一行命令生成视频</a></h3>
+                <div class="meta">
+                    <span class="source">AI日报/53AI</span>
+                    <span>2026-04-02</span>
+                </div>
+                <div class="content">
+                    <p>4月2日，火山引擎旗下即梦平台同步推出两项重大更新：Seedance 2.0 正式向普通 API 客户开放申请，支持文/图/音/视频多模态生成；同时发布即梦 CLI 工具，一行命令即可让 Agent 调用 Seedance 2.0 的视频生成能力。</p>
+                    <p><strong>产业影响：</strong>Sora关停后，AI视频赛道进入"战国时代"。Seedance 2.0 的 API+CLI 双模式开放，意味着字节跳动正将视频生成能力深度嵌入开发者工具链和 Agent 生态，与可灵、Veo 3.1 展开正面竞争。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-video">Seedance</span>
+                    <span class="tag tag-video">视频生成</span>
+                    <span class="tag tag-video">API开放</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.36kr.com/p/3737905502159113" target="_blank">OpenAI Sora 正式关停后续：AI视频赛道进入中国时间</a></h3>
+                <div class="meta">
+                    <span class="source">36氪</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>OpenAI 3月25日正式关停 Sora，距独立App上线仅6个月。Sora团队发布告别声明，全面退出消费级AI视频生成市场，将研发重心转向"能与物理世界互动的AI与机器人系统"。截至关停时，快手可灵（Kling）以 3亿美元 ARR 成为全球最大AI视频平台。</p>
+                    <p><strong>产业影响：</strong>Sora退场并非AI视频赛道降温，而是战场重心转移。中国企业（可灵3.0、Seedance 2.0、Vidu）已在商业化落地上实现反超。OpenAI转向机器人系统也暗示，"世界模型"的终极形态不是生成视频，而是控制物理世界。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-video">Sora</span>
+                    <span class="tag tag-video">关停</span>
+                    <span class="tag tag-video">可灵</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.l024.net/2026/04/aitoken120-seedance-20api.html" target="_blank">微信集中治理AI魔改视频：短视频平台AI内容监管加码</a></h3>
+                <div class="meta">
+                    <span class="source">AI日报</span>
+                    <span>2026-04-02</span>
+                </div>
+                <div class="content">
+                    <p>微信平台宣布开展AI魔改视频集中治理行动，针对利用AI技术对原有视频内容进行篡改、伪造的行为进行严厉打击。此举涵盖AI换脸、AI语音克隆、AI内容伪造等多个维度，违规内容将被下架并对账号进行处罚。</p>
+                    <p><strong>产业影响：</strong>随着AI视频生成技术的普及（Seedance 2.0、可灵等工具的开放），深度伪造和内容篡改风险急剧上升。微信作为中国最大的社交平台率先出手治理，预示着AI内容监管将成为2026年的重要政策方向。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-video">内容监管</span>
+                    <span class="tag tag-video">AI魔改</span>
+                    <span class="tag tag-policy">合规</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 5. 自动驾驶与出行 ==================== -->
+        <div class="section" id="auto">
+            <div class="section-header">
+                <span class="icon">🚗</span>
+                <h2>自动驾驶与出行</h2>
+                <span class="badge">2 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.163.com/dy/article/KPDSQLS00511IK8N.html" target="_blank">万亿赛道决胜时刻：特斯拉FSD安全里程达530万英里，Cybercab路测加速</a></h3>
+                <div class="meta">
+                    <span class="source">网易新闻</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>特斯拉公布 FSD 监督模式最新安全数据：重大事故间隔已达 <strong>530万英里</strong>，约为美国道路平均水平的 8倍。与此同时，Cybercab 纯无人驾驶出租车在奥斯汀等地的路测持续推进。特斯拉于2025年6月率先开启 Robotaxi 商业化运营，当前核心目标是将业务重心从"卖车"全面转向"交通即服务"（TaaS）。</p>
+                    <p><strong>产业影响：</strong>530万英里安全数据是自动驾驶行业迄今为止最有说服力的安全指标之一。特斯拉的TaaS转型如果成功，将重塑整个汽车行业的商业模型——从制造业转向运营服务业。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">特斯拉</span>
+                    <span class="tag tag-auto">FSD</span>
+                    <span class="tag tag-auto">Robotaxi</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.sohu.com/a/1003401088_121123925" target="_blank">Robotaxi竞争白热化：小马智行广深单车盈利，文远知行海外扩张</a></h3>
+                <div class="meta">
+                    <span class="source">搜狐科技</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>国内Robotaxi赛道格局日渐清晰。小马智行已在广州、深圳实现单车盈利，成为首家达成单位经济模型盈亏平衡的中国自动驾驶公司。萝卜快跑在武汉实现盈利并跑通可复制模式。文远知行则在海外市场发力，"自运营+金三角"双模式并行。2025年小马智行全年营收6.29亿元，作为"全球Robotaxi第一股"持续领跑。</p>
+                    <p><strong>产业影响：</strong>Robotaxi正式告别"烧钱时代"。单车盈利的实现意味着行业进入正循环——有盈利就能扩规模，扩规模又能降成本。2026年将是Robotaxi从"赔钱赚吆喝"全面转向"规模化盈利"的关键转折年。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-auto">小马智行</span>
+                    <span class="tag tag-auto">萝卜快跑</span>
+                    <span class="tag tag-auto">单车盈利</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 6. 科技巨头与财报 ==================== -->
+        <div class="section" id="giant">
+            <div class="section-header">
+                <span class="icon">🏢</span>
+                <h2>科技巨头与财报</h2>
+                <span class="badge">4 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.qq.com/rain/a/20260403A01DT600" target="_blank">SpaceX IPO目标估值超2万亿美元：2个月内估值增长近三分之二</a></h3>
+                <div class="meta">
+                    <span class="source">每日经济新闻</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>据报道，SpaceX 已将其 IPO 目标估值提高至 <strong>2万亿美元以上</strong>，将在未来几周的投资者简报会上向潜在投资者透露这一估值。此前2月，SpaceX收购马斯克的xAI后合并估值约1.25万亿美元，短短两个月内估值增长近三分之二。</p>
+                    <p><strong>产业影响：</strong>2万亿美元估值意味着SpaceX将成为全球市值最高的私营公司之一，甚至超越众多上市科技巨头。商业航天+AI基建的融合叙事正在创造史无前例的估值空间，也重新定义了"科技基础设施"的投资边界。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">SpaceX</span>
+                    <span class="tag tag-giant">IPO</span>
+                    <span class="tag tag-vc">2万亿美元</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.pconline.com.cn/2125/21251655.html" target="_blank">算力荒愈演愈烈：英伟达H100一年期租赁价半年飙升40%至$2.35/h</a></h3>
+                <div class="meta">
+                    <span class="source">太平洋电脑网</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>据半导体研究机构SemiAnalysis "H100一年期租赁合约价格指数"，英伟达H100的租赁价格从2025年10月跌至每小时 1.7美元后，已在2026年3月飙升至 <strong>每小时2.35美元</strong>，涨幅近 <strong>40%</strong>。Blackwell芯片交付周期延长至6-7个月，开源模型强劲需求与推理需求激增是主要推手。</p>
+                    <p><strong>产业影响：</strong>发布4年的H100仍"一卡难求"，说明AI算力需求远超供给增速。推理需求正在取代训练成为新的增长引擎——这意味着AI应用的真实商业价值已经产生，不再是纯粹的"基建投资"。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">英伟达</span>
+                    <span class="tag tag-giant">H100</span>
+                    <span class="tag tag-giant">算力荒</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.nasa.gov/mission/artemis-ii/" target="_blank">NASA Artemis II 任务成功发射：人类50年来首次载人绕月飞行</a></h3>
+                <div class="meta">
+                    <span class="source">NASA / HackerNews</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>NASA阿尔忒弥斯二号（Artemis II）任务于4月1日成功发射，搭载四名宇航员（Reid Wiseman、Victor Glover、Christina Koch、Jeremy Hansen）执行为期10天的绕月飞行任务。这是人类自1972年阿波罗17号以来首次载人月球任务，为后续月球着陆任务铺路。</p>
+                    <p><strong>产业影响：</strong>Artemis II的成功标志着人类深空探索重新启动。SLS火箭、猎户座飞船等关键系统的验证将为商业航天生态（SpaceX Starship、Blue Origin等）提供技术参考和信心背书。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">NASA</span>
+                    <span class="tag tag-giant">Artemis</span>
+                    <span class="tag tag-giant">载人航天</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.supertechfans.com/cn/post/2026-04-03-HackerNews/" target="_blank">LinkedIn被曝静默扫描用户浏览器扩展：隐私争议再起</a></h3>
+                <div class="meta">
+                    <span class="source">HackerNews / SuperTechFans</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>HackerNews 热帖揭露，LinkedIn 被曝通过 JavaScript 静默扫描用户浏览器已安装的扩展程序，并将扩展ID加密后传输回服务器。这一行为未在隐私政策中明确披露，引发了对大型平台深度采集用户信息、侵犯浏览器隐私的广泛争议。</p>
+                    <p><strong>产业影响：</strong>浏览器扩展信息可以被用于"指纹识别"——即便用户清除Cookie，也能通过扩展组合唯一标识用户。此事件可能引发新一轮针对科技平台隐私合规的监管审查，尤其是在GDPR和中国个人信息保护法日趋严格的背景下。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-giant">LinkedIn</span>
+                    <span class="tag tag-policy">隐私</span>
+                    <span class="tag tag-giant">微软</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 7. 创投与融资 ==================== -->
+        <div class="section" id="vc">
+            <div class="section-header">
+                <span class="icon">💰</span>
+                <h2>创投与融资</h2>
+                <span class="badge">2 条</span>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://news.pedaily.cn/202604/562306.shtml" target="_blank">OpenAI 1220亿美元融资正式收官：估值8520亿，首次向散户开放</a></h3>
+                <div class="meta">
+                    <span class="source">投资界</span>
+                    <span>2026-04-03</span>
+                </div>
+                <div class="content">
+                    <p>OpenAI于3月31日宣布完成总额 <strong>1220亿美元</strong> 融资，投后估值 <strong>8520亿美元</strong>，创下硅谷史上最大单轮融资纪录。投资方包括亚马逊、英伟达、软银、微软等巨头，值得注意的是散户投资者也贡献了约30亿美元。2025年OpenAI总营收达131亿美元，月营收20亿美元，ChatGPT月活用户超9亿。</p>
+                    <p><strong>产业影响：</strong>1220亿美元的融资规模已超越多数国家的年度科技研发预算。首次向散户开放也预示着OpenAI正在为IPO做铺垫。8520亿估值若在IPO时兑现，将超越当前多数上市科技巨头的市值。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">OpenAI</span>
+                    <span class="tag tag-vc">1220亿美元</span>
+                    <span class="tag tag-vc">IPO前奏</span>
+                </div>
+            </div>
+
+            <div class="news-card">
+                <h3><a href="https://www.allianzgi.com.cn/contents/2026/4/2-738588777bf84bac9319455474633e62.html" target="_blank">2026年科技投资风向标：AI引爆五大投资主题，推理需求成核心引擎</a></h3>
+                <div class="meta">
+                    <span class="source">安联基金</span>
+                    <span>2026-04-02</span>
+                </div>
+                <div class="content">
+                    <p>安联投资发布《Global Tech》2026年展望报告，指出AI正在引爆五大投资主题：① AI基础设施（算力/能源）② AI应用层（Agent/Copilot）③ 具身智能（人形机器人）④ 商业航天 ⑤ 量子计算。报告强调，能够区分长期结构性驱动因素与短期市场情绪的投资者，才有可能获得显著超额收益。推理需求正取代训练成为AI算力消耗的主要来源。</p>
+                    <p><strong>产业影响：</strong>全球顶级资管机构的研判具有风向标意义。"推理需求取代训练"这一判断与H100价格飙升40%的现象相互印证，意味着AI已从"建设期"正式进入"运营期"——真正的商业价值正在产生。</p>
+                </div>
+                <div class="tags">
+                    <span class="tag tag-vc">投资趋势</span>
+                    <span class="tag tag-vc">安联</span>
+                    <span class="tag tag-vc">推理需求</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>科技与财经每日动态 · 2026年4月4日 · 自动生成</p>
+            <p>数据来源：腾讯新闻、每日经济新闻、36氪、少数派、投资界、NASA、HackerNews等</p>
+            <p>报告涵盖 2026年4月2日-4月4日 的24小时时效新闻</p>
+        </footer>
+    </div>
+</body>
+</html>
