@@ -21,7 +21,12 @@
 - **arXiv Institution Whitelist (2026-04-01 新增)**: Papers from the following institutions MUST be included in the report — no exceptions: **DeepSeek, Qwen (阿里通义千问), OpenAI, Google (DeepMind/Google Research), Scale AI, Seed (字节跳动), Hunyuan (腾讯混元)**. Whitelist papers are first classified into existing sections (LLM/RL/Agent/Medical/Multimodal); if they don't fit any, they go into the **🏢 Industry Lab** section (gold/amber gradient style, `tag-industry` class). Whitelist papers do NOT count toward the 10-15 paper cap — they are always additional. Part files may expand to 5-7 parts to accommodate the Industry Lab section.
 - **Iran Commodity Daily Report Refinement (2026-03-20 & 2026-03-24)**: The `automation` task has been strictly upgraded to fetch at least 10 news items categorized into "Military" and "Diplomatic Reactions" (or the new 3-tier structure). For data visualization, it MUST use 10-day historical data. Since Yahoo Finance API frequently returns 403 Forbidden or Rate Limited, use Sina Finance API (`hq.sinajs.cn/list=hf_OIL,hf_CL,hf_NG,hf_GC,hf_SI...`) with a `Referer: https://finance.sina.com.cn` header for live quotes, and extract historical data from previous HTML reports or alternative stable APIs.
 
-- **科技与财经每日动态 (automation-2) (2026-03-23, updated 2026-03-24)**: 报告按七大垂直赛道组织：大模型与基础AI、脑机接口与生物科技、具身智能与机器人、视频与多模态生成、自动驾驶与出行、科技巨头与财报、创投与融资。
+- **科技与财经每日动态 (automation-2) (2026-03-23, updated 2026-04-02)**: 报告按七大垂直赛道组织：大模型与基础AI、脑机接口与生物科技、具身智能与机器人、视频与多模态生成、自动驾驶与出行、科技巨头与财报、创投与融资。
+  - **⚠️ 导航页更新必须使用脚本 (2026-04-02 新增)**：生成报告后，**禁止手工用 replace_in_file 更新导航页**，必须运行 `python3 tech-news/scripts/update_nav.py <date> <news_count> "<summary>"` 来自动更新 `tech-news/index.html` 和 `index.html` 两个导航页。脚本内置验证逻辑，更新后会自动校验结果。这是为了彻底杜绝之前手工替换时"最新报告"区块未生效的bug。
+
+- **GitHub Auth (2026-04-02)**：用户已通过 `gh auth login` 配置 GitHub 认证，git push 可正常工作，无需再担心认证问题。
+
+- **主页同步更新约定 (2026-04-02 新增)**：所有 automation 生成报告后，除了更新各自子目录的 `index.html` 外，还必须同步更新根目录 `index.html` 主导航页对应卡片的「最新报告」标题/日期和历史报告列表。用户已在 a-2（收盘总结）的 prompt 中加入此要求，其他 automation（a-7 盘前前瞻等）也应遵循此约定。
 
 - **A股港股自选股列表 (2026-03-26 创建, 2026-03-27 更新)**：自选股共 9 只：腾讯控股(0700.HK)、阿里巴巴(9988.HK)、美团(3690.HK)、蜜雪冰城(2097.HK)、宁德时代(300750.SZ)、泡泡玛特(9992.HK)、小米集团(1810.HK)、快手(1024.HK)、优必选(9880.HK)。已同步更新至 a-6（收盘总结）和 a-7（盘前前瞻）两个 automation 的 prompt 中。
 - **A股港股收盘报告 — 自选股趋势判断 (2026-03-26 新增)**：用户要求在收盘报告的自选股模块中增加趋势判断。每只自选股需包含：趋势定性（看多/震荡/看空）、关键技术位（支撑位/压力位）、机构目标价参考、推荐星级（⭐1-5）。使用三色趋势卡片样式（bullish=红左边栏, bearish=绿左边栏, neutral=金左边栏）。此功能应在后续每日收盘报告（a-6 automation）中持续保留。
