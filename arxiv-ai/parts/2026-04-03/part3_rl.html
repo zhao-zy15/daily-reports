@@ -1,0 +1,67 @@
+
+<h2 class="section-title rl">🎯 RL — 强化学习与对齐（4 篇）</h2>
+
+<div class="paper-card" id="paper-offlinerl">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00200">Offline Constrained RLHF with Multiple Preference Oracles</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Brenden Latham, Mehrdad Moharrami</span><br><span>🏛 University of Michigan</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLHF</span><span class="tag tag-rl">Safety</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>现实需在性能和安全/公平间权衡。现有RLHF缺乏对多偏好oracle下约束满足的理论保证。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 多Oracle奖励估计</strong>：对每个oracle k通过最大似然估计奖励函数，分析不确定性传播。</p>
+<p><strong>② KL正则化Lagrangian</strong>：</p>$$\max_\pi\min_{\lambda\geq0}\;\mathbb{E}_\pi[r_1]+\lambda(\mathbb{E}_\pi[r_2]-c)-\beta\text{KL}(\pi\|\pi_0)$$
+<p><strong>③ Gibbs策略闭式解</strong>：\(\pi^*(y|x)\propto\pi_0(y|x)\exp((r_1+\lambda r_2)/\beta)\)，化简为凸对偶优化。</p>
+<p><strong>④ 有限样本保证</strong>：首个离线约束偏好学习的高概率约束满足保证，违反量\(O(1/\sqrt{n})\)。</p></div>
+<div class="example-box"><strong>🔍 案例：安全对齐</strong><ul><li>无约束DPO：帮助性7.8，安全性5.2（低于6.0阈值），违反率32.4%</li><li>本方法：帮助性7.3，安全性6.8，违反率2.1%（有理论保证）</li></ul></div>
+<table><tr><th>方法</th><th>帮助性↑</th><th>安全性↑</th><th>违反率↓</th><th>保证</th></tr>
+<tr><td>无约束DPO</td><td>7.8</td><td>5.2</td><td>32.4%</td><td>✗</td></tr><tr><td>Safe RLHF</td><td>6.9</td><td>6.5</td><td>8.7%</td><td>✗</td></tr>
+<tr class="best"><td>Ours</td><td>7.3</td><td>6.8</td><td>2.1%</td><td>✓</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>扩展到3约束(安全+公平+简洁)仍有效。β过小导致策略偏离远、违反增加。对偶算法5步即收敛。</p></div></div>
+
+<div class="paper-card" id="paper-pirl">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00860">Policy Improvement Reinforcement Learning (PIRL)</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Huaiyang Wang, Xiaojie Li, Yaodong Yang, et al.</span><br><span>🏛 Renmin University of China, Peking University</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Reasoning</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>RLVR(如GRPO)基于瞬时批次统计量优化，从不验证更新是否真正改善了模型——开环设计可能漂移或崩溃。缺失的关键要素是策略改进反馈。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① PIRL目标</strong>：最大化累积策略改进\(\max_\pi\sum_t\Delta_t\)，证明与最大化最终任务性能完美对齐。</p>
+<p><strong>② PIPO闭环优化</strong>：回顾性验证每次更新，\(\text{score}_t=\mathbb{E}[r(\pi_t)]-\text{Baseline}_{\text{sliding}}\)，正向强化、负向抑制。</p>
+<p><strong>③ 滑动窗口基线</strong>：最近K次迭代均值，检测缓慢退化。</p>
+<p><strong>④ 理论保证</strong>：证明\(\mathbb{E}[\Delta_t|\text{PIPO}]\geq 0\)。</p></div>
+<div class="example-box"><strong>🔍 案例：MATH-500</strong><ul><li>GRPO：2000步52.3%，波动±4.5%</li><li>PIPO：56.1%，单调上升，波动±1.2%</li><li>第800步PIPO自动检测到GRPO的"幻觉崩溃"并纠正</li></ul></div>
+<table><tr><th>方法</th><th>MATH-500</th><th>GSM8K</th><th>稳定性</th><th>闭环</th></tr>
+<tr><td>GRPO</td><td>52.3</td><td>78.5</td><td>波动大</td><td>✗</td></tr><tr><td>DAPO</td><td>54.5</td><td>80.1</td><td>较好</td><td>✗</td></tr>
+<tr class="best"><td>PIPO</td><td>56.1</td><td>82.3</td><td>稳定</td><td>✓</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>K=5最优；回顾验证在训练后期(>1500步)贡献最大。额外计算开销仅3%。开创性闭环反馈RL训练。</p></div></div>
+
+<div class="paper-card" id="paper-evrl">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00442">EVOM: Execution-Verified RL for Optimization Modeling</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Runda Guan, Xiangqing Shen, et al.</span><br><span>🏛 CAS, Nanjing Univ. of Sci. & Tech.</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Optimization</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>用LLM自动化数学优化建模。现有方案依赖闭源LLM(高延迟)或过程监督SFT(过拟合单一求解器)。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 求解器作验证器</strong>：生成代码→沙盒执行→标量奖励(最优1.0/可行0.5/错误0.0)。</p>
+<p><strong>② 闭环GRPO/DAPO</strong>：生成-执行-反馈-更新，纯结果驱动。</p>
+<p><strong>③ 跨求解器泛化</strong>：切换验证环境即可迁移(Gurobi→OR-Tools→COPT)。</p>
+<p><strong>④ 低成本适配</strong>：50步RL从zero-shot 92%提升到98%。</p></div>
+<div class="example-box"><strong>🔍 案例：线性规划自动建模</strong><ul><li>输入自然语言描述工厂优化问题</li><li>EVOM生成Gurobi代码并求解得最优解</li><li>跨求解器zero-shot保持92%+性能</li></ul></div>
+<table><tr><th>方法</th><th>NL4OPT</th><th>MAMO</th><th>IndustryOR</th><th>跨求解器</th></tr>
+<tr><td>GPT-4 Agent</td><td>78.5</td><td>65.2</td><td>42.1</td><td>✓</td></tr><tr><td>SFT</td><td>72.3</td><td>58.7</td><td>38.5</td><td>✗</td></tr>
+<tr class="best"><td>EVOM</td><td>80.2</td><td>67.8</td><td>45.6</td><td>✓</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>DAPO比GRPO在复杂约束上高2.3pts。首次在优化建模领域实现RLVR范式。</p></div></div>
+
+<div class="paper-card" id="paper-refinerl">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00790">RefineRL: Self-Refinement RL for Competitive Programming</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Shaopeng Fu, Xingxing Zhang, Li Dong, Furu Wei</span><br><span>🏛 Microsoft Research Asia</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Code</span><span class="tag tag-rl">Self-Refinement</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>LLM在竞赛编程主要关注单次生成，忽略迭代精炼能力。人类通过多次提交调试解决困难问题。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① Skeptical-Agent</strong>：即使测试通过仍保持怀疑继续精炼，避免公开测试过拟合。</p>
+<p><strong>② 标准RLVR数据</strong>：仅用问题+可验证答案，无需精炼轨迹数据。</p>
+<p><strong>③ 多轮RL优化</strong>：GRPO优化整个精炼轨迹的累积奖励。</p>
+<p><strong>④ 4B挑战32B/235B</strong>：Qwen3-4B+RefineRL超越32B模型，接近235B单次性能。</p></div>
+<div class="example-box"><strong>🔍 案例：Codeforces Div.2 C</strong><ul><li>Round 1：BFS解法公开测试通过但隐藏测试TLE</li><li>Skeptical-Refine：自主优化O(V²)→O(V+E)</li><li>Round 2：通过所有测试（标准方法在Round1即停止→失败）</li></ul></div>
+<table><tr><th>模型+方法</th><th>LiveCodeBench</th><th>CodeContests</th><th>精炼轮数</th></tr>
+<tr><td>Qwen3-4B(单次)</td><td>28.5</td><td>15.2</td><td>1</td></tr><tr><td>Qwen3-32B(单次)</td><td>38.2</td><td>22.8</td><td>1</td></tr>
+<tr><td>Qwen3-235B(单次)</td><td>45.6</td><td>31.5</td><td>1</td></tr>
+<tr class="best"><td>Qwen3-4B+RefineRL</td><td>43.8</td><td>29.7</td><td>1-5</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>Skeptical vs Naive Agent +8.2pts；平均2.3轮收敛；仅SFT比RL差5.1pts。揭示自精炼是放大小模型推理能力的有效方向。</p></div></div>

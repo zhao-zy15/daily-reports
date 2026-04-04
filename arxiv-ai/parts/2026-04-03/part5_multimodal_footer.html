@@ -1,0 +1,48 @@
+
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态（1 篇）</h2>
+
+<div class="paper-card" id="paper-dyninomni">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00007">Dynin-Omni: Omnimodal Unified Large Diffusion Language Model</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Jaeik Kim, Woojin Kim, Jaeyoung Do, et al.</span><br><span>🏛 Samsung Research, Seoul National University</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">Diffusion</span><span class="tag tag-multimodal">Omnimodal</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>统一多模态模型面临两条路线：自回归序列化（丢失模态特性）和组合式（需外部解码器协调）。能否用统一的掩码扩散范式原生处理文本/图像/语音理解与生成+视频理解？</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 掩码扩散统一建模</strong>：将所有模态映射到共享离散token空间，用masked diffusion统一建模：</p>
+$$p_\theta(x_0|x_t) = \prod_{i\in\text{masked}} p_\theta(x_0^i|x_t)$$
+<p>实现双向上下文下的迭代精炼，克服自回归的单向局限。</p>
+<p><strong>② 模型合并的模态扩展</strong>：多阶段训练策略，通过model merging实现模态扩展：先训练文本+图像，再通过模型合并引入语音和视频理解，保持已有能力不退化。</p>
+<p><strong>③ 全模态对齐</strong>：跨模态对齐阶段确保不同模态在共享token空间中语义一致：</p>
+$$\mathcal{L}_{\text{align}} = \sum_{(m_1,m_2)} \text{InfoNCE}(\text{Enc}_{m_1}(x), \text{Enc}_{m_2}(x))$$
+<p><strong>④ 统一的Any-to-Any生成</strong>：单一架构同时支持文本生成、图像生成/编辑、语音合成/识别、视频理解。</p></div>
+<div class="example-box"><strong>🔍 深度案例</strong>
+<p><strong>场景</strong>：全模态基准评测</p>
+<ul><li><strong>语言推理</strong>：GSM8K = 87.6（超越多数开源统一模型）</li>
+<li><strong>图像理解</strong>：MME-P = 1733.6</li>
+<li><strong>视频理解</strong>：VideoMME = 61.4</li>
+<li><strong>图像生成</strong>：GenEval = 0.87（接近专用扩散模型）</li>
+<li><strong>语音识别</strong>：LibriSpeech test-clean WER = 2.1</li>
+<li><strong>关键突破</strong>：单一模型在 5 个模态方向上均接近或超越专用系统</li></ul></div>
+<table><tr><th>模型</th><th>GSM8K</th><th>MME-P</th><th>VideoMME</th><th>GenEval</th><th>WER↓</th></tr>
+<tr><td>Janus-Pro</td><td>79.2</td><td>1567</td><td>-</td><td>0.80</td><td>-</td></tr>
+<tr><td>AnyGPT</td><td>72.1</td><td>1423</td><td>48.2</td><td>0.72</td><td>4.8</td></tr>
+<tr><td>NExT-GPT</td><td>68.5</td><td>1512</td><td>52.1</td><td>0.75</td><td>3.5</td></tr>
+<tr class="best"><td>Dynin-Omni</td><td>87.6</td><td>1733.6</td><td>61.4</td><td>0.87</td><td>2.1</td></tr></table>
+<div class="module"><h4>💡 消融与讨论</h4><p>消融：(1) 掩码扩散 vs 自回归在图像生成上GenEval +0.08，语音合成MOS +0.3，证明扩散范式对非文本模态更适合；(2) 模型合并引入新模态时旧模态性能保持率 97%+；(3) 全模态对齐阶段带来跨模态检索能力的额外增益(+5.2% Recall@10)。首次验证掩码扩散作为全模态统一范式的可行性，为实时全模态系统奠定基础。</p></div></div>
+
+<div class="reflection">
+<h3>📝 每日反思</h3>
+<p><strong>今日趋势洞察：</strong></p>
+<p>1. <strong>闭环 RL 训练兴起</strong>：PIRL/PIPO 揭示了开环 RLVR 训练的根本缺陷——缺乏策略改进反馈。闭环验证机制可能成为下一代 RL 训练的标配，类似于控制论中的负反馈机制。</p>
+<p>2. <strong>效率革命多条路线并进</strong>：LinearARD（蒸馏）、YOCO-U（架构）、MF-QAT（量化）、Stochastic Attention（注意力）分别从不同角度攻克 LLM 效率问题。特别值得注意的是 Stochastic Attention 的生物启发设计——果蝇连接组的随机路由在 12% 计算预算下就能达到 MoBA 在 25% 预算下的效果。</p>
+<p>3. <strong>自精炼能力的 RL 训练</strong>：RefineRL 展示了通过 RL 训练 4B 小模型的自精炼能力可以接近 235B 大模型的单次性能，这为"小模型 + 多轮推理"的范式提供了强有力的实证。</p>
+<p>4. <strong>认知科学启发的智能体设计</strong>：Oblivion 的衰减驱动记忆控制和 Stochastic Attention 的连接组启发路由都说明，从生物系统中汲取设计原则正成为 AI 系统优化的重要方向。</p>
+<p>5. <strong>医疗 AI 的隐私合规推理</strong>：CARE 的双 LLM 架构（远端指导 + 本地推理）提供了一个优雅的隐私保护方案，可能被推广到金融、法律等其他敏感领域。</p>
+</div>
+
+<div class="footer">
+<p>🔬 arXiv AI 日报 · 2026-04-03 · 由 AI 自动生成 · 数据来源：arXiv RSS + API</p>
+<p>共 15 篇论文 · 覆盖 LLM / RL / Agent / Medical / Multimodal 五大方向</p>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+
+<h2 class="section-title">🧠 LLM — 纯文本大模型（5 篇）</h2>
+
+<div class="paper-card" id="paper-linearard">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00004">LinearARD: Linear-Memory Attention Distillation for RoPE Restoration</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-01</span><span>👥 Ning Yang, Hengyu Zhong, et al.</span><br>
+<span>🏛 Sun Yat-sen University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Attention</span><span class="tag tag-llm">Long Context</span></div>
+<div class="module"><h4>📌 背景与动机</h4>
+<p>扩展LLM上下文窗口通常通过缩放RoPE+轻量CPT实现，但这常破坏短文本性能。LongReD需2.56亿tokens成本极高。核心痛点：如何以极低数据成本恢复RoPE缩放后的短文本性能？</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 注意力结构一致性蒸馏</strong>：对齐teacher(原生RoPE)和student(缩放RoPE)的Q/Q、K/K、V/V自关系矩阵行分布KL散度：</p>
+$$\mathcal{L}_{\text{ARD}} = \sum_{M \in \{Q,K,V\}} \text{KL}\left(\text{softmax}\left(\frac{M_T M_T^\top}{\sqrt{d}}\right) \| \text{softmax}\left(\frac{M_S M_S^\top}{\sqrt{d}}\right)\right)$$
+<p><strong>② 线性内存核</strong>：利用per-token log-sum-exp统计量，内存从\(O(n^2)\)降至\(O(n)\)。</p>
+<p><strong>③ 冻结Teacher</strong>：仅需<strong>425万tokens</strong>完成蒸馏，成本降低60倍。</p>
+<p><strong>④ 多粒度对齐</strong>：每个注意力头独立计算损失，深层自适应优先恢复。</p></div>
+<div class="example-box"><strong>🔍 深度案例：LLaMA2-7B 4K→32K</strong>
+<ul><li>基线CPT：MMLU从46.8降至42.1(-4.7pts)</li><li>LinearARD：恢复至46.0（恢复率98.3%），LongBench超越基线</li><li>训练数据仅4.25M vs LongReD 256M（60x节省）</li></ul></div>
+<table><tr><th>方法</th><th>训练Tokens</th><th>MMLU</th><th>LongBench</th><th>恢复率</th></tr>
+<tr><td>原生LLaMA2-7B</td><td>-</td><td>46.8</td><td>N/A</td><td>100%</td></tr>
+<tr><td>直接CPT</td><td>256M</td><td>42.1</td><td>38.2</td><td>89.9%</td></tr>
+<tr><td>LongReD</td><td>256M</td><td>44.5</td><td>41.7</td><td>95.1%</td></tr>
+<tr class="best"><td>LinearARD</td><td>4.25M</td><td>46.0</td><td>42.3</td><td>98.3%</td></tr></table>
+<div class="module"><h4>💡 消融与讨论</h4><p>移除Q/Q对齐恢复率下降3.2%；线性内存核比FlashAttention-2 KL实现快2.1倍。局限：仅在LLaMA2架构验证。</p></div></div>
+
+<div class="paper-card" id="paper-ragscaling">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00715">To Memorize or to Retrieve: Scaling Laws for RAG-Considerate Pretraining</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-01</span><span>👥 Karan Singh, Michael Yu, et al.</span><br><span>🏛 Stanford University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">RAG</span><span class="tag tag-llm">Scaling Laws</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>RAG增强LM但参数化/非参数化知识的最优分配不清楚。固定数据预算下多少给预训练、多少给检索库？</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 三维Scaling框架</strong>：\(L(N,D,R)=A/N^\alpha+B/D^\beta+C/R^\gamma+E\)</p>
+<p><strong>② 大规模实验</strong>：OLMo-2 30M-3B，预训练1x-150x，检索1x-20x。</p>
+<p><strong>③ 最优分配曲面</strong>：给定\(D_{\text{total}}=D+R\)求解最优分配。</p>
+<p><strong>④ 饱和度调制</strong>：预训练充分时检索边际收益更大。</p></div>
+<div class="example-box"><strong>🔍 案例：1B模型20B预算</strong><ul><li>全预训练(D=20B)：NQ 28.3%</li><li>最优分配(D=12B,R=8B)：NQ 35.7%(+7.4pts)</li></ul></div>
+<table><tr><th>规模</th><th>纯预训练</th><th>最优RAG</th><th>提升</th><th>D:R</th></tr>
+<tr><td>30M</td><td>15.2</td><td>17.8</td><td>+2.6</td><td>80:20</td></tr><tr><td>1B</td><td>28.3</td><td>35.7</td><td>+7.4</td><td>60:40</td></tr>
+<tr class="best"><td>3B</td><td>34.6</td><td>43.2</td><td>+8.6</td><td>55:45</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>检索对QA提升(+8.6)远大于数学(+1.2)；模型越大检索占比越高。</p></div></div>
+
+<div class="paper-card" id="paper-yocu">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.01220">Universal YOCO for Efficient Depth Scaling</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Yutao Sun, Li Dong, Furu Wei</span><br><span>🏛 Tsinghua University, Microsoft Research</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Architecture</span><span class="tag tag-llm">Efficiency</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>Test-time scaling增强推理但标准Transformer效率低：KV cache随深度线性增长。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① YOCO架构</strong>：Cross-Decoder只缓存一次全局KV，\(O(n\cdot d)\)与深度无关。</p>
+<p><strong>② Universal Self-Decoder</strong>：参数共享递归\(T\)次：\(h^{(t)}=\text{SelfDec}(h^{(t-1)})\)，等效深度\(L\times T\)。</p>
+<p><strong>③ 协同效应</strong>：YOCO提供常数KV+线性预填充，递归增深度。组合优于单独。</p>
+<p><strong>④ Token Utility</strong>：递归提升低层token利用率。</p></div>
+<div class="example-box"><strong>🔍 案例：1.3B @128K</strong><ul><li>标准：KV=2.6GB, 预填充4.2s</li><li>YOCO-U(T=4)：KV=0.65GB(4x压缩), 1.8s(2.3x加速), MMLU仅差0.5</li></ul></div>
+<table><tr><th>架构</th><th>KV</th><th>MMLU</th><th>LongBench</th><th>速度</th></tr>
+<tr><td>Standard</td><td>2.6GB</td><td>60.8</td><td>42.1</td><td>1.0x</td></tr>
+<tr class="best"><td>YOCO-U</td><td>0.65GB</td><td>60.3</td><td>43.5</td><td>2.3x</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>T=1→4持续提升(+2.7)，T=8饱和。仅递归Self-Decoder效果更好+1.2。</p></div></div>
+
+<div class="paper-card" id="paper-mfqat">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00529">MF-QAT: Multi-Format Quantization-Aware Training for Elastic Inference</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Zifei Xu, Sayeh Sharify, Hesham Mostafa</span><br><span>🏛 Qualcomm AI Research</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Quantization</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>传统QAT针对单一精度，部署需动态选择。为每个格式单独训练不可扩展。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 多格式联合训练</strong>：\(\mathcal{L}_{\text{MF}}=\frac{1}{|\mathcal{F}|}\sum_f\mathcal{L}(Q_f(W),X)\)</p>
+<p><strong>② Slice-and-Scale</strong>：高精度锚点截断+重缩放到低精度，无需重训练。</p>
+<p><strong>③ 弹性推理</strong>：单一锚点检查点→运行时按需转换。</p>
+<p><strong>④ 格式外推</strong>：训练时未见格式也能工作。</p></div>
+<div class="example-box"><strong>🔍 案例：LLaMA-7B多精度</strong><ul><li>单格式INT4：PPL=5.82，跨格式FP4=7.31</li><li>MF-QAT：INT4=5.85，FP4=5.91（一个模型适配全部）</li></ul></div>
+<table><tr><th>方法</th><th>INT8</th><th>FP8</th><th>INT4</th><th>FP4</th><th>模型数</th></tr>
+<tr><td>单格式×4</td><td>5.42</td><td>5.44</td><td>5.82</td><td>5.80</td><td>4</td></tr>
+<tr class="best"><td>MF-QAT</td><td>5.43</td><td>5.45</td><td>5.85</td><td>5.91</td><td>1</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>训练成本仅1.3x（非4x）；2-bit格式损失较大(+0.8PPL)待优化。</p></div></div>
+
+<div class="paper-card" id="paper-stochattn">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.00754">Stochastic Attention: Connectome-Inspired Randomized Routing</a></div>
+<div class="paper-meta"><span>📅 2026-04-01</span><span>👥 Zehao Jin, Yanan Sui</span><br><span>🏛 Tsinghua University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Attention</span><span class="tag tag-llm">Bio-Inspired</span></div>
+<div class="module"><h4>📌 背景与动机</h4><p>果蝇13万+神经元连接率0.02%却平均4.4跳最短路径。受启发用随机路由增强滑动窗口注意力。</p></div>
+<div class="module"><h4>🔬 核心方法详解</h4>
+<p><strong>① 随机置换</strong>：\(\text{SA}(X)=\pi^{-1}(\text{SWA}(\pi(X)))\)，局部→随机全局，\(O(nw)\)。</p>
+<p><strong>② 指数感受野</strong>：L层后覆盖\(\approx 1-(1-w/n)^L\)，仅需\(O(\log_w n)\)层全覆盖。</p>
+<p><strong>③ 门控混合</strong>：\(h=g\cdot\text{SA}+(1-g)\cdot\text{SWA}\)。</p>
+<p><strong>④ 免训练推理</strong>：Qwen3-8B/30B直接替换即超越SWA。</p></div>
+<div class="example-box"><strong>🔍 案例：Qwen3-8B</strong><ul><li>SWA：RULER-128K=48.7(12%计算)</li><li>SA：63.8(同12%计算，+15.1!)</li><li>甚至超越2x计算量的MoBA(61.5)</li></ul></div>
+<table><tr><th>方法</th><th>FLOPS</th><th>RULER-128K</th><th>Zero-shot</th></tr>
+<tr><td>Full Attn</td><td>100%</td><td>72.3</td><td>68.5</td></tr><tr><td>SWA</td><td>12%</td><td>48.7</td><td>64.1</td></tr>
+<tr><td>MoBA</td><td>25%</td><td>61.5</td><td>66.8</td></tr>
+<tr class="best"><td>SA+SWA</td><td>12%</td><td>63.8</td><td>67.9</td></tr></table>
+<div class="module"><h4>💡 消融</h4><p>随机置换比固定跳跃连接好+3.2；生物启发证明随机性是强大的计算原语。</p></div></div>
