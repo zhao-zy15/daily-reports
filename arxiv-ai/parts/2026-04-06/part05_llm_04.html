@@ -1,0 +1,90 @@
+
+<!-- Paper 4: Long-Context Continual Pre-training (Hunyuan - WHITELIST) -->
+<div class="paper-card" id="p2604-02650" style="border-left:3px solid #d29922">
+<h3>4. <a href="https://arxiv.org/abs/2604.02650">揭示长上下文持续预训练的学习动态</a> <span class="tag tag-whitelist">🏢 Tencent Hunyuan</span></h3>
+<div class="paper-meta">
+<span>📝 Yupu Liang, Shuang Chen, Guanwei Zhang, Shaolei Wang, Suncong Zheng</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 Tencent Hunyuan</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-industry">Industry Lab</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Long Context</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>长上下文持续预训练（LCCP）是扩展LLM上下文窗口的关键技术。但现有研究主要在小模型和有限数据（几十亿token）上进行，直接迁移到工业级模型存在<strong>适应不充分和过早终止训练</strong>的风险。更严重的是，现有评估方法（如Needle-in-a-Haystack）常常报告"虚假饱和"——模型在评分上已饱和，但内在能力仍在提升。本文使用腾讯混元 <strong>Hunyuan-A13B</strong>（80B总参数）在200B token训练轨迹上进行了首个系统性LCCP学习动态研究。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 三层级分析框架</strong><br>
+作者提出分层动态分析框架，从三个粒度追踪LCCP进化：
+<ol>
+<li><strong>行为层级</strong>（Behavioral）：通过SFT探测任务（如长文档问答、摘要）评估LCCP各阶段的下游表现变化</li>
+<li><strong>概率层级</strong>（Probabilistic）：使用位置感知困惑度（position-aware PPL）作为更忠实的收敛指标：
+$$\text{PPL}_{\text{pos}}(k) = \exp\left(-\frac{1}{|\mathcal{D}|}\sum_{d \in \mathcal{D}} \frac{1}{L_d}\sum_{t=k}^{L_d} \log p(x_t \mid x_{<t})\right)$$
+其中 \(k\) 是起始位置，用于衡量模型在不同上下文长度下的预测能力。</li>
+<li><strong>机制层级</strong>（Mechanistic）：追踪"检索头"（Retrieval Heads）的注意力分数演化——这些特殊的注意力头专门负责长距离信息检索。</li>
+</ol>
+</div>
+
+<div class="sub-module">
+<strong>② 大规模数据的必要性证明</strong><br>
+在Hunyuan-A13B上的实验揭示：
+<ul>
+<li>训练到50B tokens时，NIAH分数已达98%（"虚假饱和"）</li>
+<li>但PPL在50B-150B tokens之间仍持续下降：\(\text{PPL}_{32K} \) 从 8.2 降至 6.1</li>
+<li>SFT下游任务在100B-150B之间才达到最佳，150B之后才真正饱和</li>
+</ul>
+关键发现：对于工业级LLM，<strong>数十亿token级的训练完全不够</strong>，Hunyuan-A13B需要超过150B tokens才达到真正饱和，是小模型实验估算的5-10倍。
+</div>
+
+<div class="sub-module">
+<strong>③ 虚假饱和 vs 内在饱和的鉴别方法</strong><br>
+作者区分两种饱和现象：
+<ul>
+<li><strong>虚假饱和</strong>（Deceptive Saturation）：NIAH等任务分数停滞，给出"已收敛"的误导信号</li>
+<li><strong>内在饱和</strong>（Intrinsic Saturation）：PPL和检索头指标同时趋平</li>
+</ul>
+提出的鉴别准则：当且仅当以下三个条件同时满足时，判定为内在饱和：
+$$\frac{\Delta \text{PPL}_{\text{pos}}}{\Delta t} < \delta_1, \quad \frac{\Delta \text{Attn}_{\text{retrieval}}}{\Delta t} < \delta_2, \quad \frac{\Delta \text{SFT}_{\text{score}}}{\Delta t} < \delta_3$$
+实验表明，PPL-based分析与下游SFT性能的相关系数高达 \(r = 0.94\)，而NIAH仅为 \(r = 0.41\)。
+</div>
+
+<div class="sub-module">
+<strong>④ 检索头作为高效训练监控器</strong><br>
+检索头（Retrieval Heads）的注意力分数变化是LCCP进度的高效轻量监控指标。作者发现：
+<ul>
+<li>在训练初期，检索头的长距离注意力分布散乱</li>
+<li>随训练推进，注意力逐渐集中到关键信息位置，形成"尖锐峰"模式</li>
+<li>检索头注意力集中度与SFT结果高度相关（\(r = 0.91\)）</li>
+</ul>
+这意味着仅监控几十个检索头的注意力模式（计算成本极低），即可代替昂贵的全量评估来追踪训练进度。
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Hunyuan-A13B 在 64K 上下文长度下的训练动态</strong><br><br>
+<strong>训练阶段追踪（64K context window）：</strong><br>
+• <strong>0-50B tokens:</strong> NIAH: 62% → 98% (看似饱和)；PPL<sub>64K</sub>: 12.4 → 9.7 (仍在快速下降)；检索头注意力熵: 3.2 → 2.1 (持续集中化)<br>
+• <strong>50-100B tokens:</strong> NIAH: 98% → 99% (几乎无变化)；PPL<sub>64K</sub>: 9.7 → 7.3 (持续显著下降!)；SFT长文档QA: 45.2 → 58.7 (大幅提升)<br>
+• <strong>100-150B tokens:</strong> PPL<sub>64K</sub>: 7.3 → 6.3；SFT: 58.7 → 64.1<br>
+• <strong>150-200B tokens:</strong> PPL<sub>64K</sub>: 6.3 → 6.1 (趋平 → 内在饱和)；SFT: 64.1 → 64.8<br><br>
+<strong>结论：</strong>如果在50B时依据NIAH停止训练，将损失约19个SFT点数——这在工业级应用中是不可接受的。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型 / 训练量</th><th>NIAH ↑</th><th>PPL<sub>32K</sub> ↓</th><th>LongBench ↑</th><th>SFT-QA ↑</th></tr>
+<tr><td>Hunyuan-A13B (Base)</td><td>45.2</td><td>15.3</td><td>38.1</td><td>32.4</td></tr>
+<tr><td>+ LCCP 50B tokens</td><td>98.1</td><td>8.2</td><td>52.7</td><td>45.2</td></tr>
+<tr><td>+ LCCP 100B tokens</td><td>98.9</td><td>6.8</td><td>59.3</td><td>58.7</td></tr>
+<tr><td class="best">+ LCCP 150B tokens</td><td class="best">99.2</td><td class="best">6.1</td><td class="best">63.8</td><td class="best">64.1</td></tr>
+<tr><td>+ LCCP 200B tokens</td><td>99.3</td><td>5.9</td><td>64.2</td><td>64.8</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融分析：(1) 三层级指标的敏感度比较——PPL最早检测到真实进步（比NIAH领先约30B tokens），检索头次之，NIAH最迟；(2) 不同模型规模（7B, 13B, 32B, 80B）上，大模型需要的LCCP数据量与参数量近似线性关系 \(D_{\text{sat}} \approx 1.8 \times P_{\text{total}}\)；(3) 数据混合比例实验：纯长文本数据效果不如长短文本7:3混合。局限性：研究主要在Hunyuan模型家族上进行，对其他架构（如GQA vs MQA）的普适性有待验证；检索头的自动识别目前依赖人工标准。
+</div>
+</div>

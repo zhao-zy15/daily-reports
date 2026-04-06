@@ -1,0 +1,78 @@
+
+<!-- ========== RL Section ========== -->
+<h2 class="section-title" id="section-rl">🎯 RL — 强化学习与对齐</h2>
+
+<!-- Paper 6: PROGRS -->
+<div class="paper-card" id="p2604-02341">
+<h3>6. <a href="https://arxiv.org/abs/2604.02341">PROGRS: 面向结果引导的过程奖励</a></h3>
+<div class="paper-meta">
+<span>📝 Mohammad Rezaei, Jens Lehmann, Sahar Vahdati</span><br>
+<span>📅 2026-02-08</span><br>
+<span>🏛 University of Bonn, Lamarr Institute</span><br>
+<span class="tag tag-rl">RL</span>
+<span class="tag" style="background:#2d1a3a;color:#d2a8ff">Process Reward</span>
+<span class="tag" style="background:#2d1a3a;color:#d2a8ff">GRPO</span>
+</div>
+
+<div class="module-title rl-title">📌 背景与动机</div>
+<p>数学推理中的强化学习通常使用可验证的最终答案作为奖励信号。但对于多步推理的长解题过程，仅靠结果奖励提供的反馈过于稀疏，难以指导中间推理步骤。过程奖励模型（PRM）通过对中间步骤评分来提供更密集的监督，但PRM分数往往与最终正确性不完全对齐——它可能对局部流畅但最终错误的推理给出高分，导致奖励黑客。将PRM分数直接作为绝对奖励优化会放大这种失败模式。</p>
+
+<div class="module-title rl-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 结果条件中心化（Outcome-Conditioned Centering）</strong><br>
+PROGRS的核心创新：不将PRM分数作为绝对目标，而是作为<strong>同一结果组内的相对偏好</strong>。对于每个prompt \(q\)，生成 \(N\) 个轨迹并按正确/错误分组。对错误组进行中心化：
+$$\tilde{r}_{\text{PRM}}(\tau) = r_{\text{PRM}}(\tau) - \mu_{\text{incorrect}}(q)$$
+其中 \(\mu_{\text{incorrect}}(q) = \frac{1}{|\mathcal{T}_{\text{incorrect}}|}\sum_{\tau \in \mathcal{T}_{\text{incorrect}}} r_{\text{PRM}}(\tau)\) 是错误轨迹的PRM均值。这消除了PRM的系统性偏差：错误轨迹的PRM均值被归零，而正确轨迹保留其原始排名。设计直觉：我们关心的不是PRM给出的绝对分数有多"好"，而是在同一结果组内，哪些轨迹相对更好。
+</div>
+
+<div class="sub-module">
+<strong>② 冻结分位数回归PRM + 多尺度一致性评估器</strong><br>
+PROGRS使用两个组件提供过程奖励：
+<ul>
+<li><strong>冻结的分位数回归PRM</strong>：不在策略优化过程中更新PRM，避免PRM与策略共同漂移。分位数回归提供分布感知的步骤评分：
+$$\mathcal{L}_{\text{QR}} = \sum_{\tau \in [0.1, 0.5, 0.9]} \rho_\tau(r_{\text{true}} - \hat{r}_\tau)$$
+输出三个分位数值，刻画每步奖励的不确定性。</li>
+<li><strong>多尺度一致性评估器</strong>：在token级、步骤级和轨迹级同时评估推理一致性，检测局部流畅但全局不一致的推理片段。</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>③ 与GRPO的集成</strong><br>
+最终的过程奖励 bonus 被集成到GRPO框架中：
+$$A_{\text{PROGRS}}(\tau, q) = A_{\text{outcome}}(\tau, q) + \lambda \cdot \tilde{r}_{\text{PRM}}(\tau) \cdot C(\tau)$$
+其中 \(A_{\text{outcome}}\) 是标准GRPO的结果优势，\(\lambda\) 是过程奖励权重，\(C(\tau)\) 是一致性评估分数。关键：不引入辅助目标或额外可训练参数，纯粹在策略优化阶段操作。
+</div>
+
+<div class="sub-module">
+<strong>④ 安全边界机制</strong><br>
+为防止过程奖励反客为主（override结果奖励），PROGRS引入安全边界：
+$$|\lambda \cdot \tilde{r}_{\text{PRM}}(\tau) \cdot C(\tau)| \leq \eta \cdot |A_{\text{outcome}}(\tau, q)|$$
+即过程奖励bonus不超过结果优势的 \(\eta\) 倍（默认 \(\eta = 0.5\)），确保<strong>结果正确性始终占主导</strong>。
+</div>
+
+<div class="module-title rl-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：MATH-500 多步代数推理</strong><br><br>
+<strong>问题：</strong>求 \(\sum_{k=1}^{100} \lfloor \sqrt{k} \rfloor\) 的值<br>
+<strong>轨迹A（正确，PRM=0.72）：</strong>将1-100按 \(\lfloor \sqrt{k} \rfloor\) 的值分段 → 精确计算每段贡献 → 答案 615 ✅<br>
+<strong>轨迹B（错误，PRM=0.81）：</strong>流畅的近似分析 → 积分近似 → 答案 617 ❌<br><br>
+<strong>标准PRM优化：</strong>偏好轨迹B（PRM更高），强化了"流畅但错误"的模式<br>
+<strong>PROGRS中心化：</strong>轨迹B的中心化分数 = 0.81 - 0.78（错误组均值）= 0.03（几乎中性）；轨迹A保持原排名优势<br>
+<strong>结果：</strong>PROGRS正确偏好轨迹A，避免了奖励黑客
+</div>
+
+<div class="module-title rl-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH-500</th><th>AMC</th><th>AIME</th><th>MinervaMath</th><th>OlympiadBench</th></tr>
+<tr><td>GRPO (Outcome-only)</td><td>76.2</td><td>67.5</td><td>40.0</td><td>38.5</td><td>35.2</td></tr>
+<tr><td>GRPO + PRM (absolute)</td><td>77.1</td><td>68.0</td><td>41.7</td><td>39.8</td><td>36.1</td></tr>
+<tr><td>GRPO + PRM (filtered)</td><td>77.8</td><td>69.5</td><td>43.3</td><td>40.2</td><td>37.0</td></tr>
+<tr><td class="best">GRPO + PROGRS</td><td class="best">79.5</td><td class="best">72.0</td><td class="best">46.7</td><td class="best">43.1</td><td class="best">39.8</td></tr>
+</table>
+
+<div class="module-title rl-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融：(1) 移除中心化（直接用PRM分数）导致AIME下降3.3%，确认中心化对消除PRM偏差至关重要；(2) 冻结PRM vs 联合训练PRM——联合训练虽初期快，但后期出现奖励过拟合，最终效果更差；(3) 安全边界 \(\eta\) 在0.3-0.7间效果稳定，超过1.0后过程奖励过强，降低结果准确率。局限性：PROGRS需要足够多的rollouts（≥8）来计算可靠的组内均值，单rollout场景不适用；且假设PRM提供的排名信息在组内是有意义的。
+</div>
+</div>

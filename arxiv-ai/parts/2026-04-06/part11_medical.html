@@ -1,0 +1,87 @@
+
+<!-- ========== Medical Section ========== -->
+<h2 class="section-title" id="section-medical">⚕️ Medical — 医学大模型</h2>
+
+<!-- Paper 13: ESL-Bench -->
+<div class="paper-card" id="p2604-02834">
+<h3>13. <a href="https://arxiv.org/abs/2604.02834">ESL-Bench: 事件驱动的纵向健康智能体基准</a></h3>
+<div class="paper-meta">
+<span>📝 Chao Li, Cailiang Liu, Ang Gao, Kexin Deng, Shu Zhang, ... (10位作者)</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 ThetaHealth, Shanda Group, Duke University</span><br>
+<span class="tag tag-medical">Medical</span>
+<span class="tag" style="background:#3a1a1a;color:#ff7b72">Health Agent</span>
+<span class="tag" style="background:#3a1a1a;color:#ff7b72">Benchmark</span>
+</div>
+
+<div class="module-title medical-title">📌 背景与动机</div>
+<p>纵向健康智能体需要对结合连续设备流、稀疏临床检查和偶发性生活事件的多源轨迹进行推理。但评估面临两个核心困难：<strong>真实世界数据无法大规模发布</strong>（隐私限制），且基于时间的归因问题<strong>在缺少结构化基本真值时难以验证</strong>。ESL-Bench通过事件驱动的合成框架解决这些问题，提供具有精确因果关系的纵向健康数据。</p>
+
+<div class="module-title medical-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 事件驱动合成引擎</strong><br>
+每个合成用户的健康轨迹由离散事件驱动的随机过程生成：
+$$y_i(t) = \mu_i + \sum_{e \in \mathcal{E}} \alpha_{e,i} \cdot \sigma\big(\beta_e(t - t_e)\big) \cdot \exp\big(-\lambda_e(t - t_e)\big) + \epsilon_i(t)$$
+其中 \(\mu_i\) 是指标基线，\(\alpha_{e,i}\) 是事件 \(e\) 对指标 \(i\) 的影响幅度，\(\sigma(\cdot)\) 控制影响的起始（sigmoid onset），\(\exp(-\lambda_e \cdot)\) 控制衰减，\(\epsilon_i(t)\) 是随机噪声。关键：每个事件对每个指标的因果关系<strong>精确参数化</strong>，允许程序化验证。
+</div>
+
+<div class="sub-module">
+<strong>② 混合生成流水线</strong><br>
+数据生成采用LLM + 算法仿真的混合方式：
+<ul>
+<li><strong>LLM负责</strong>：用户健康档案、多阶段叙事计划、生活事件描述等<strong>语义稀疏</strong>内容</li>
+<li><strong>算法仿真负责</strong>：每日设备测量、指标动态变化等<strong>数值密集</strong>内容，确保符合硬生理约束</li>
+</ul>
+生理约束包括：指标范围上下界（如心率 40-200 bpm）、变化速率限制（如血糖不可能瞬间翻倍）、指标间相关性（如BMI上升通常伴随血压升高）。
+</div>
+
+<div class="sub-module">
+<strong>③ 五维评估查询体系</strong><br>
+每个用户配有100个评估查询，跨越五个推理维度：
+<ol>
+<li><strong>查找（Lookup）</strong>：单点数据检索——"3月15日的空腹血糖值是多少？"</li>
+<li><strong>趋势（Trend）</strong>：时间序列分析——"过去6个月体重的整体趋势？"</li>
+<li><strong>比较（Comparison）</strong>：多指标或多时段对比——"运动干预前后的LDL变化？"</li>
+<li><strong>异常（Anomaly）</strong>：异常检测——"哪些时段的静息心率异常偏高？"</li>
+<li><strong>解释（Explanation）</strong>：因果归因——"是什么事件导致了4月份的血压飙升？"</li>
+</ol>
+所有答案可由事件-指标关系程序化计算，确保评估的客观性。
+</div>
+
+<div class="sub-module">
+<strong>④ 难度分级设计</strong><br>
+每个维度分为三个难度等级：
+<ul>
+<li><strong>Easy</strong>：涉及单一数据源、短时间窗口（<1周）</li>
+<li><strong>Medium</strong>：需要跨数据源整合、中等时间窗口（1周-3月）</li>
+<li><strong>Hard</strong>：需要多跳推理、长时间窗口（>3月）、因果归因</li>
+</ul>
+</div>
+
+<div class="module-title medical-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：解释类Hard查询</strong><br><br>
+<strong>用户档案：</strong>45岁男性，BMI 28，有高血压家族史<br>
+<strong>查询：</strong>"2025年9月该用户的收缩压从正常范围（125mmHg）突然升至152mmHg，请分析可能原因。"<br><br>
+<strong>Ground Truth（事件日志）：</strong><br>
+• 8月28日：工作压力事件（α=+15mmHg, onset=3天, decay=30天）<br>
+• 9月2日：停止规律运动（α=+8mmHg, onset=7天, decay=60天）<br>
+• 累积影响：125 + 15 + 8 + noise ≈ 152mmHg<br><br>
+<strong>DB Agent (最佳)：</strong>正确识别工作压力事件和运动停止事件，归因准确率87%<br>
+<strong>Memory RAG：</strong>仅识别工作压力事件，遗漏运动因素，归因准确率52%
+</div>
+
+<div class="module-title medical-title">📊 实验结果</div>
+<table>
+<tr><th>方法类型</th><th>Lookup</th><th>Trend</th><th>Comparison</th><th>Anomaly</th><th>Explanation</th><th>Overall</th></tr>
+<tr><td>LLM + Tools</td><td>72.3</td><td>55.1</td><td>38.2</td><td>41.5</td><td>28.3</td><td>47.1</td></tr>
+<tr><td>Memory RAG</td><td>68.5</td><td>48.3</td><td>30.1</td><td>35.2</td><td>21.7</td><td>38.2</td></tr>
+<tr><td class="best">DB-native Agent</td><td class="best">85.2</td><td class="best">62.7</td><td class="best">51.3</td><td class="best">53.8</td><td class="best">39.2</td><td class="best">58.4</td></tr>
+</table>
+
+<div class="module-title medical-title">🔍 消融与讨论</div>
+<div class="ablation">
+关键发现：(1) DB Agent在比较和解释查询上优势最明显（+21.2% vs Memory RAG），因这些任务需要精确的多跳推理和证据归因；(2) Hard级别查询的整体准确率仅35.2%，揭示了当前健康AI系统在复杂纵向推理上的巨大差距；(3) 合成数据的保真度验证——随机抽取50个用户轨迹由医学专家评审，93%被认为"临床合理"。局限性：合成数据虽然解决了隐私问题，但简化了真实世界的噪声和缺失数据模式；100个合成用户的人群多样性有限。
+</div>
+</div>

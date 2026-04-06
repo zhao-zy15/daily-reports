@@ -1,0 +1,81 @@
+
+<!-- Paper 2: FoE -->
+<div class="paper-card" id="p2604-02967">
+<h3>2. <a href="https://arxiv.org/abs/2604.02967">FoE: 错误森林让首个方案成为最优解</a></h3>
+<div class="paper-meta">
+<span>📝 Kehan Jiang, Haonan Dong, Zhaolu Kang, Zhengzhou Zhu, Guojie Song</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 Peking University</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Reasoning</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Test-Time Scaling</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>大型推理模型（LRMs）如 DeepSeek-R1 在复杂推理任务中展现了类人的多路径探索模式——模型在内部尝试多个替代方案后选择最优解。然而，作者发现了一个出乎意料的现象：<strong>"The First is The Best"</strong>，即模型的第一个方案往往是最优的，而后续的替代方案不仅次优，甚至可能有害。这一发现直接挑战了当前被广泛接受的测试时缩放定律（test-time scaling laws），即通过增加计算预算搜索更多方案来提升性能的假设可能存在根本性缺陷。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① "The First is The Best" 现象的量化验证</strong><br>
+作者在数学推理基准（MATH-500, AMC, AIME）上系统验证该现象。定义第 \(k\) 个方案的正确率为 \(\text{Acc}(k)\)，发现：
+$$\text{Acc}(1) > \text{Acc}(2) > \cdots > \text{Acc}(K)$$
+在 DeepSeek-R1 上，第一方案正确率为 79.3%，第二方案降至 62.1%，第三方案进一步降至 51.8%。更关键的是，当使用 majority voting 时，引入后续方案甚至会<strong>降低</strong>整体准确率，因为错误方案的"多数暴力"会覆盖正确的首方案。
+</div>
+
+<div class="sub-module">
+<strong>② 错误森林（Forest of Errors）理论框架</strong><br>
+为解释该现象，作者提出"错误森林"假说：LRM的推理空间可视为一棵搜索树，首方案沿着模型置信度最高的路径行进。当模型被迫"回退"寻找替代方案时，它进入了<strong>低概率的推理子空间</strong>，在这些区域中：
+$$P(\text{error} \mid \text{alternative}_k) \propto e^{\alpha k}, \quad \alpha > 0$$
+即替代方案的错误概率随方案编号指数增长。这是因为每次回退都会累积"分支误差"，形成一片"错误森林"，而模型缺乏有效的机制来在低概率区域保持推理一致性。
+</div>
+
+<div class="sub-module">
+<strong>③ FoE-Prune：基于首方案置信度的剪枝策略</strong><br>
+基于上述发现，作者提出 FoE-Prune 策略：
+<ol>
+<li><strong>首方案置信度评估</strong>：在模型生成首个完整方案后，计算其token级置信度均值 \(\bar{c}_1 = \frac{1}{T_1}\sum_{t} \log p(x_t \mid x_{<t})\)</li>
+<li><strong>自适应截断</strong>：若 \(\bar{c}_1 > \tau\)（高置信度阈值），直接采用首方案，不生成替代方案</li>
+<li><strong>条件搜索</strong>：仅当 \(\bar{c}_1 < \tau\) 时允许探索，但限制替代方案数量为 \(K_{\max} = \lceil \beta / (|\bar{c}_1 - \tau|) \rceil\)</li>
+</ol>
+设计直觉：当模型对首方案很有信心时，额外搜索几乎不会带来收益，反而增加错误风险；只有当首方案不确定时，有限的额外搜索才值得。
+</div>
+
+<div class="sub-module">
+<strong>④ FoE-Weight：方案质量感知的加权投票</strong><br>
+对于需要多方案聚合的场景，FoE-Weight替代简单的majority voting：
+$$\hat{y} = \arg\max_{y} \sum_{k=1}^{K} w_k \cdot \mathbb{1}[y_k = y], \quad w_k = e^{-\gamma k} \cdot \bar{c}_k$$
+其中 \(\gamma > 0\) 是衰减因子，\(\bar{c}_k\) 是第 \(k\) 方案的置信度。首方案获得最高权重，后续方案权重指数衰减，同时低置信度方案被进一步降权。
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：AIME 2024 竞赛数学题</strong><br><br>
+<strong>问题：</strong>求满足 \(x^3 + y^3 + z^3 = 33\) 的整数解个数（\(|x|, |y|, |z| \leq 10^4\)）<br><br>
+<strong>DeepSeek-R1 标准生成（5个方案）：</strong><br>
+方案1 ✅ 正确：系统化搜索 + 模余分析 → 答案 2<br>
+方案2 ❌ 错误：跳过奇偶性约束 → 答案 6<br>
+方案3 ❌ 错误：错误的上界估算 → 答案 0<br>
+方案4 ❌ 错误：回退到方案2的错误分支 → 答案 6<br>
+方案5 ❌ 错误：尝试穷举但上界错误 → 答案 4<br>
+<strong>Majority vote 结果：</strong>6（错误！多数被错误方案淹没）<br>
+<strong>FoE-Prune（τ阈值过关，直接采用首方案）：</strong>2 ✅<br>
+<strong>节省 token：</strong>3,842 → 780（节省 80% 计算量）
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH-500</th><th>AMC</th><th>AIME</th><th>Avg Tokens</th></tr>
+<tr><td>First-only</td><td>79.3</td><td>72.5</td><td>46.7</td><td>780</td></tr>
+<tr><td>Best-of-5</td><td>83.1</td><td>76.0</td><td>53.3</td><td>3,842</td></tr>
+<tr><td>Majority@5</td><td>77.8</td><td>70.0</td><td>43.3</td><td>3,842</td></tr>
+<tr><td>Weighted Vote@5</td><td>80.2</td><td>73.5</td><td>48.3</td><td>3,842</td></tr>
+<tr><td class="best">FoE-Prune</td><td class="best">81.5</td><td class="best">75.0</td><td class="best">50.0</td><td class="best">1,456</td></tr>
+<tr><td>FoE-Weight@5</td><td>82.4</td><td>75.5</td><td>51.7</td><td>3,842</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+关键消融结果：(1) 阈值 \(\tau\) 的选择至关重要——过高导致过度搜索，过低则过于激进截断，最优 \(\tau\) 在不同模型间有差异（DeepSeek-R1: -0.15, QWQ-32B: -0.22）；(2) "First is Best" 现象在不同模型（DeepSeek-R1, QWQ-32B, Gemini 3）上一致成立，但程度有所不同，强模型差距更明显；(3) 在代码生成任务上该现象弱于数学推理，因代码任务的方案空间更结构化。局限性：该方法假设首方案质量可通过token置信度衡量，但在某些需要创造性推理的任务上，低置信度并不意味着低质量。
+</div>
+</div>

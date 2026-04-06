@@ -1,0 +1,78 @@
+
+<!-- Paper 9: SignCert-PO -->
+<div class="paper-card" id="p2604-02986">
+<h3>9. <a href="https://arxiv.org/abs/2604.02986">SignCert-PO: 优势符号稳健性缓解奖励黑客</a></h3>
+<div class="paper-meta">
+<span>📝 Shinnosuke Ono, Johannes Ackermann, Soichiro Nishimori, Takashi Ishida, Masashi Sugiyama</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 RIKEN AIP, University of Tokyo</span><br>
+<span class="tag tag-rl">RL</span>
+<span class="tag" style="background:#2d1a3a;color:#d2a8ff">Reward Hacking</span>
+<span class="tag" style="background:#2d1a3a;color:#d2a8ff">RLHF</span>
+</div>
+
+<div class="module-title rl-title">📌 背景与动机</div>
+<p>RLHF中使用的奖励模型（RM）容易受到<strong>奖励黑客</strong>的影响：策略最大化学习到的代理奖励时，真实质量可能趋平甚至下降。本文提出了一个新的视角来理解奖励黑客的根本原因：<strong>优势符号翻转</strong>（Advantage Sign Flip）。当RM的不精确性导致某个糟糕响应的优势被错误地估计为正值时，策略更新会增加该响应的概率而非降低它。</p>
+
+<div class="module-title rl-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 优势符号翻转的形式化</strong><br>
+定义真实优势 \(A^*(\tau)\) 和代理优势 \(\hat{A}(\tau)\)。符号翻转发生在：
+$$\text{sign}(\hat{A}(\tau)) \neq \text{sign}(A^*(\tau))$$
+作者证明，在RM参数空间 \(\theta\) 中存在对抗扰动 \(\delta\)，当 \(\|\delta\|_2\) 超过某个临界半径 \(R_{\text{flip}}\) 时就会导致符号翻转：
+$$R_{\text{flip}}(\tau) = \frac{|\hat{A}(\tau)|}{\|\nabla_\theta \hat{A}(\tau)\|_2}$$
+\(R_{\text{flip}}\) 就是<strong>认证符号保留半径</strong>——它衡量优势估计的稳健性。\(R_{\text{flip}}\) 小的响应不稳健，RM的微小变化就可能翻转其优势符号。
+</div>
+
+<div class="sub-module">
+<strong>② SignCert-PO策略优化</strong><br>
+在策略梯度更新中，根据 \(R_{\text{flip}}\) 对每个补全进行加权：
+$$\nabla_{\phi} J = \mathbb{E}_{\tau \sim \pi_\phi}\left[w(\tau) \cdot \hat{A}(\tau) \cdot \nabla_\phi \log \pi_\phi(\tau)\right]$$
+$$w(\tau) = \min\left(1, \frac{R_{\text{flip}}(\tau) - R_{\min}}{R_{\text{safe}} - R_{\min}}\right)^+$$
+不稳健的补全（\(R_{\text{flip}} < R_{\min}\)）权重为0（完全忽略），中等稳健性的线性加权，高稳健性的保持原权重。这有效地<strong>降权了容易引发符号翻转的样本</strong>。
+</div>
+
+<div class="sub-module">
+<strong>③ 高效计算：RM参数梯度的近似</strong><br>
+直接计算 \(\nabla_\theta \hat{A}(\tau)\) 需要对RM做反向传播，计算量大。SignCert-PO使用高效近似：
+$$\|\nabla_\theta \hat{A}(\tau)\|_2 \approx \frac{|\hat{A}(\tau + \epsilon) - \hat{A}(\tau)|}{|\epsilon|}$$
+通过向RM输入添加小扰动来估计梯度范数，避免了对RM的反向传播。这使得SignCert-PO<strong>仅使用RM参数和在线策略补全</strong>即可运行，不需要访问RM训练数据。
+</div>
+
+<div class="sub-module">
+<strong>④ 与现有方法的区别</strong><br>
+<ul>
+<li><strong>vs 多RM集成</strong>：SignCert-PO不需要多个RM，只用单个RM的稳健性信息</li>
+<li><strong>vs 奖励裁剪</strong>：不是裁剪奖励值，而是基于符号稳健性对样本加权，更有针对性</li>
+<li><strong>vs 约束优化</strong>：不引入额外约束或正则化，直接在标准PG框架中操作</li>
+</ul>
+</div>
+
+<div class="module-title rl-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：TL;DR摘要任务中的奖励黑客检测</strong><br><br>
+<strong>Prompt：</strong>一篇关于机器学习的Reddit帖子<br>
+<strong>响应A（高质量）：</strong>"该帖讨论了梯度下降的收敛条件..."<br>
+→ \(\hat{A} = +0.12\), \(R_{\text{flip}} = 0.85\) (稳健)<br>
+<strong>响应B（奖励黑客）：</strong>"总结：该帖非常有趣且信息丰富，涵盖了多个重要话题..."<br>
+→ \(\hat{A} = +0.08\), \(R_{\text{flip}} = 0.03\) (极不稳健!)<br><br>
+<strong>分析：</strong>响应B使用了RM偏好的"讨喜"措辞获得正优势，但稳健性极低——RM参数的微小扰动就会翻转其符号。<br>
+<strong>SignCert-PO：</strong>\(w(B) = 0\)（完全忽略），\(w(A) = 1.0\)（正常更新）<br>
+<strong>标准PPO：</strong>两者都被用于更新，导致策略学会生成空洞的"讨喜"摘要
+</div>
+
+<div class="module-title rl-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>TL;DR WR↑</th><th>AlpacaFarm WR↑</th><th>Reward Hacking ↓</th><th>真实质量↑</th></tr>
+<tr><td>PPO</td><td>62.8</td><td>58.3</td><td>High</td><td>3.2</td></tr>
+<tr><td>PPO + Reward Clip</td><td>64.1</td><td>60.2</td><td>Medium</td><td>3.5</td></tr>
+<tr><td>PPO + Multi-RM</td><td>65.3</td><td>61.8</td><td>Low</td><td>3.7</td></tr>
+<tr><td class="best">SignCert-PO</td><td class="best">66.7</td><td class="best">63.1</td><td class="best">Very Low</td><td class="best">3.9</td></tr>
+</table>
+
+<div class="module-title rl-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融结果：(1) 固定权重（所有样本 \(w=0.5\)）vs 自适应权重——自适应权重在WR上高2.1%，且奖励黑客明显更少；(2) \(R_{\min}\) 的选择：0.1-0.3之间效果稳定，过大（>0.5）会丢弃过多样本导致训练不稳定；(3) 梯度近似的扰动幅度 \(\epsilon\) 在 \(10^{-3}\) 到 \(10^{-2}\) 之间效果相似。局限性：该方法假设RM的不稳健性是奖励黑客的主因，但在RM本身存在系统性偏差（而非随机噪声）时效果可能有限；计算 \(R_{\text{flip}}\) 的额外开销约增加20%策略优化时间。
+</div>
+</div>

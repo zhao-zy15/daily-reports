@@ -1,0 +1,75 @@
+
+<!-- Paper 5: JoyAI-LLM Flash -->
+<div class="paper-card" id="p2604-03044">
+<h3>5. <a href="https://arxiv.org/abs/2604.03044">JoyAI-LLM Flash: Token高效的中等规模LLM</a></h3>
+<div class="paper-meta">
+<span>📝 Aichen Cai, Anmeng Zhang, Anyu Li, Bo Zhang, ... (69位作者)</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 JoyAI (乐言科技)</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Token Efficiency</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Training</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>当前LLM竞争集中在两个极端：千亿参数的巨型模型和10B以下的小型模型。<strong>中等规模（30-70B）</strong>LLM在成本-性能权衡中占据重要位置，但其训练效率被忽视。大多数中等规模模型遵循与大模型相同的训练范式，导致token利用率低下——大量训练数据被"浪费"在模型已经掌握的简单模式上。JoyAI-LLM Flash 提出了一种token感知训练策略，通过自适应地分配训练注意力，让模型在更少数据上达到更好效果。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Token难度感知采样（Token Difficulty-Aware Sampling）</strong><br>
+传统训练对所有token等权处理。JoyAI引入动态采样权重：
+$$w_t = \begin{cases} 1 + \alpha \cdot \mathcal{L}_t / \bar{\mathcal{L}} & \text{if } \mathcal{L}_t > \bar{\mathcal{L}} \\ \beta & \text{if } \mathcal{L}_t \leq \bar{\mathcal{L}} \end{cases}$$
+其中 \(\mathcal{L}_t\) 是token \(t\) 的损失，\(\bar{\mathcal{L}}\) 是batch均值。高损失token（模型未掌握的知识）获得更高权重，低损失token（已掌握的）被降权但不完全忽略（\(\beta = 0.3\)保留基础覆盖）。
+</div>
+
+<div class="sub-module">
+<strong>② 课程式数据混合调度（Curriculum Data Mixing）</strong><br>
+训练分为三个阶段，数据混合比例动态调整：
+<ol>
+<li><strong>基础阶段</strong>（0-40% tokens）：网页文本60% + 代码20% + 书籍15% + 专业知识5%——建立广泛的语言基础</li>
+<li><strong>深化阶段</strong>（40-80%）：专业知识30% + 推理数据25% + 代码25% + 对话15% + 网页5%——聚焦高价值数据</li>
+<li><strong>精调阶段</strong>（80-100%）：高质量合成数据40% + 推理链数据35% + 多轮对话25%——锐化特定能力</li>
+</ol>
+关键直觉：像人类学习一样，先广泛涉猎，再逐渐聚焦到困难材料上。
+</div>
+
+<div class="sub-module">
+<strong>③ 自适应学习率与批大小联合调度</strong><br>
+JoyAI采用学习率和批大小联合调度策略：
+$$\text{lr}(t) = \text{lr}_{\text{peak}} \cdot \cos\left(\frac{\pi t}{2T}\right) \cdot \left(1 + \gamma \cdot \text{Var}[\nabla \mathcal{L}(t)]\right)$$
+$$\text{bs}(t) = \text{bs}_0 \cdot \left(1 + \frac{t}{T} \cdot (\text{bs}_{\max}/\text{bs}_0 - 1)\right)$$
+学习率随梯度方差自适应调整——高方差时增加lr以加速逃离局部最优；批大小线性增长，训练后期使用大batch以提高稳定性。
+</div>
+
+<div class="sub-module">
+<strong>④ 知识蒸馏增强的预训练（KD-Augmented Pre-training）</strong><br>
+在预训练后半程（50%后），从一个更大的教师模型（JoyAI-70B）蒸馏知识：
+$$\mathcal{L}_{\text{total}} = (1-\lambda) \cdot \mathcal{L}_{\text{CE}} + \lambda \cdot \text{KL}(p_{\text{teacher}} \| p_{\text{student}})$$
+其中 \(\lambda\) 从0线性增加到0.3。这使得中等规模模型能从大模型的"暗知识"中获益，在不增加参数的情况下提升性能。
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Token效率对比实验</strong><br><br>
+<strong>设定：</strong>JoyAI-LLM Flash (32B) vs Qwen3-32B，均训练至性能收敛<br>
+• Qwen3-32B：使用 18T tokens 达到收敛<br>
+• JoyAI-32B (标准训练)：使用 15T tokens 达到相似性能<br>
+• <strong>JoyAI-32B Flash：</strong>使用 <strong>8.5T tokens</strong> 达到相似性能（节省 53%！）<br><br>
+<strong>节省分解：</strong>Token难度感知采样贡献约 20% token节省；课程混合贡献约 18%；KD增强贡献约 15%。三者的协同效应总计约 53% 的数据效率提升。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>训练Tokens</th><th>MMLU</th><th>HumanEval</th><th>GSM8K</th><th>C-Eval</th></tr>
+<tr><td>Qwen3-32B</td><td>18T</td><td>82.1</td><td>79.3</td><td>87.5</td><td>85.2</td></tr>
+<tr><td>LLaMA-3.3-70B</td><td>15T</td><td>86.0</td><td>80.5</td><td>91.2</td><td>72.3</td></tr>
+<tr><td>JoyAI-32B (Standard)</td><td>15T</td><td>81.8</td><td>78.9</td><td>86.8</td><td>84.7</td></tr>
+<tr><td class="best">JoyAI-32B Flash</td><td class="best">8.5T</td><td class="best">81.5</td><td class="best">79.1</td><td class="best">87.2</td><td class="best">85.0</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融实验：(1) 仅使用Token难度感知采样可节省22% tokens且不损失性能；(2) 课程混合的阶段划分对结果敏感——将深化阶段提前10%会导致基础能力不稳；(3) KD增强在训练早期（0-50%）引入反而有害，因为此时学生模型基础不牢，无法有效利用教师知识；(4) \(\beta = 0.3\) 是降权系数的最优值，设为0会导致遗忘问题。局限性：该方法需要一个更大的教师模型，增加了总体计算资源需求；Token难度评估的额外计算开销约增加8%训练时间。
+</div>
+</div>

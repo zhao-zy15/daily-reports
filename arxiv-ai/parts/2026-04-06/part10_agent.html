@@ -1,0 +1,247 @@
+
+<!-- ========== Agent Section ========== -->
+<h2 class="section-title" id="section-agent">🤖 Agent — 智能体</h2>
+
+<!-- Paper 10: Holos -->
+<div class="paper-card" id="p2604-02334">
+<h3>10. <a href="https://arxiv.org/abs/2604.02334">Holos: 面向代理网络的Web规模多智能体系统</a></h3>
+<div class="paper-meta">
+<span>📝 Xiaohang Nie, Zihan Guo, Zicai Cui, ... (23位作者)</span><br>
+<span>📅 2026-01-18</span><br>
+<span>🏛 Shanghai Jiao Tong University</span><br>
+<span class="tag tag-agent">Agent</span>
+<span class="tag" style="background:#1a3a2a;color:#56d364">Multi-Agent</span>
+<span class="tag" style="background:#1a3a2a;color:#56d364">Agentic Web</span>
+</div>
+
+<div class="module-title agent-title">📌 背景与动机</div>
+<p>LLM驱动的智能体正从独立的任务求解器进化为持久的数字实体。"代理网络"（Agentic Web）标志着一个关键转折——异构智能体自主交互和协同进化的生态系统。然而，现有的基于LLM的多智能体系统（LaMAS）受到三个核心问题的阻碍：<strong>扩展摩擦</strong>（智能体数量增长时协调成本剧增）、<strong>协调崩溃</strong>（分布式决策的一致性难以保证）和<strong>价值消散</strong>（智能体行为与人类意图逐渐偏离）。</p>
+
+<div class="module-title agent-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Nuwa引擎：高效智能体生成与托管</strong><br>
+Nuwa是一个智能体工厂，支持零代码创建专业化智能体：
+<ul>
+<li><strong>模板化生成</strong>：定义角色描述、能力边界和交互协议，自动构建智能体配置</li>
+<li><strong>资源弹性分配</strong>：每个智能体的计算资源根据当前负载动态伸缩
+$$R_i(t) = R_{\text{base}} + \Delta R \cdot \sigma\big(\text{load}_i(t) - \bar{\text{load}}\big)$$</li>
+<li><strong>版本化管理</strong>：智能体的知识和行为策略支持版本化，可回滚到历史状态</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>② 市场驱动的编排器（Market-Driven Orchestrator）</strong><br>
+任务分配采用内部市场机制而非中心化调度：
+<ol>
+<li>任务作为"需求"广播到市场，附带描述和奖励预算</li>
+<li>智能体评估自身能力匹配度并"出价" \(b_i = \text{capability}_i \cdot \text{availability}_i\)</li>
+<li>市场通过改进的VCG拍卖机制分配任务：
+$$i^* = \arg\max_i \big(b_i - \text{cost}_i\big), \quad \text{payment} = \max_{j \neq i^*} b_j$$</li>
+</ol>
+优势：去中心化，单点故障风险低；激励相容，智能体有动力诚实报告能力。
+</div>
+
+<div class="sub-module">
+<strong>③ 内生价值循环（Endogenous Value Loop）</strong><br>
+为解决价值消散问题，Holos建立了闭环反馈系统：
+<ul>
+<li><strong>价值追踪</strong>：每个智能体维护"信誉分"，由任务完成质量和用户反馈更新：\(\text{rep}_i(t+1) = \alpha \cdot \text{rep}_i(t) + (1-\alpha) \cdot \text{feedback}_i(t)\)</li>
+<li><strong>自然选择</strong>：低信誉智能体被降低任务优先级，最终被淘汰或强制重训</li>
+<li><strong>共进化</strong>：智能体间可以交换"知识碎片"，形成协作而非纯竞争的生态</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>④ 五层架构设计</strong><br>
+Holos采用分层架构：
+<ol>
+<li><strong>基础层</strong>：LLM推理引擎和资源管理</li>
+<li><strong>智能体层</strong>：Nuwa引擎管理的智能体池</li>
+<li><strong>协调层</strong>：市场驱动的编排器</li>
+<li><strong>价值层</strong>：内生价值循环和信誉系统</li>
+<li><strong>应用层</strong>：面向用户的接口和生态工具</li>
+</ol>
+</div>
+
+<div class="module-title agent-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Web规模旅行规划任务</strong><br><br>
+<strong>用户请求：</strong>"规划一次东京5天深度游，预算$3000，要求包含隐藏景点"<br>
+<strong>市场竞标：</strong><br>
+• 旅行规划Agent（出价0.92）→ 获得主任务<br>
+• 本地知识Agent-东京（出价0.88）→ 子任务：隐藏景点推荐<br>
+• 预算优化Agent（出价0.75）→ 子任务：费用估算<br>
+• 航班搜索Agent（出价0.85）→ 子任务：机票比价<br><br>
+<strong>协调流程：</strong>旅行规划Agent作为主协调者，将子任务分派给获胜的专业Agent，汇总结果后生成统一行程<br>
+<strong>价值反馈：</strong>用户评分4.5/5 → 所有参与Agent信誉分上升
+</div>
+
+<div class="module-title agent-title">📊 实验结果</div>
+<table>
+<tr><th>系统</th><th>任务完成率↑</th><th>协调开销↓</th><th>扩展性 (100→1000 agents)</th><th>用户满意度↑</th></tr>
+<tr><td>AutoGen</td><td>72.3</td><td>High</td><td>2.3× slowdown</td><td>3.5</td></tr>
+<tr><td>CrewAI</td><td>68.1</td><td>Medium</td><td>3.1× slowdown</td><td>3.3</td></tr>
+<tr><td>MetaGPT</td><td>75.8</td><td>Medium</td><td>2.7× slowdown</td><td>3.7</td></tr>
+<tr><td class="best">Holos</td><td class="best">81.2</td><td class="best">Low</td><td class="best">1.4× slowdown</td><td class="best">4.1</td></tr>
+</table>
+
+<div class="module-title agent-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融：(1) 移除市场机制（改用Round-Robin分配）导致任务完成率下降6.3%，主要因为任务-能力不匹配增加；(2) 关闭价值循环后，智能体质量在长期运行中逐渐退化（7天后满意度从4.1降至3.4）；(3) Nuwa引擎的零代码创建使智能体部署时间从平均2小时降至5分钟。局限性：市场机制在极低延迟要求的任务上有额外的竞标延迟（约200ms）；信誉系统可能被策略性操纵（如初期刷高分后降低服务质量）。
+</div>
+</div>
+
+<!-- Paper 11: GrandCode -->
+<div class="paper-card" id="p2604-02721">
+<h3>11. <a href="https://arxiv.org/abs/2604.02721">GrandCode: 竞技编程中达到大师级水平</a></h3>
+<div class="paper-meta">
+<span>📝 DeepReinforce Team: Xiaoya Li, Xiaofei Sun, Guoyin Wang, Songqiao Su, Chris Shum, Jiwei Li</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 DeepReinforce</span><br>
+<span class="tag tag-agent">Agent</span>
+<span class="tag" style="background:#1a3a2a;color:#56d364">Code Generation</span>
+<span class="tag" style="background:#1a3a2a;color:#56d364">Competitive Programming</span>
+</div>
+
+<div class="module-title agent-title">📌 背景与动机</div>
+<p>竞技编程是AI对抗人类最后的堡垒之一。此前最好的AI系统——Google的Gemini 3 Deep Think——在未参加实时比赛的情况下也仅获得第8名。GrandCode是首个在Codeforces<strong>实时比赛</strong>中持续击败所有人类选手的AI系统，包括传奇特级大师（Legendary Grandmaster）。</p>
+
+<div class="module-title agent-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 多智能体协作架构</strong><br>
+GrandCode将竞技编程分解为多个专业化智能体模块：
+<ul>
+<li><strong>Hypothesis Agent</strong>：分析题目并提出多个解题假设（算法策略选择）</li>
+<li><strong>Solver Agent</strong>：将假设转化为具体的代码实现</li>
+<li><strong>Test Generator Agent</strong>：生成对抗性测试用例以发现边界情况</li>
+<li><strong>Summarizer Agent</strong>：从失败尝试中提取经验教训，反馈给Hypothesis Agent</li>
+</ul>
+模块间通过结构化消息传递协作，形成假设→实现→测试→反思的闭环。
+</div>
+
+<div class="sub-module">
+<strong>② Agentic GRPO：解决延迟奖励与离策略漂移</strong><br>
+智能体RL中的核心挑战是<strong>延迟奖励</strong>（完整编程解决方案通过测试后才知道是否正确）和<strong>严重离策略漂移</strong>（多轮交互导致轨迹与当前策略偏离）。Agentic GRPO通过多阶段设计解决：
+$$A_{\text{agentic}}(\tau) = \sum_{k=1}^{K} \gamma^{K-k} \cdot A_k(\tau_k) + r_{\text{final}}(\tau)$$
+其中 \(A_k\) 是第 \(k\) 个智能体动作的局部优势（通过内部奖励评估），\(r_{\text{final}}\) 是最终的测试通过/失败奖励。衰减因子 \(\gamma\) 平衡了即时反馈和最终结果。
+</div>
+
+<div class="sub-module">
+<strong>③ 后训练 + 在线测试时RL</strong><br>
+GrandCode的训练分两阶段：
+<ol>
+<li><strong>离线后训练</strong>：在历史Codeforces题目上训练所有智能体模块，使用Agentic GRPO</li>
+<li><strong>在线测试时RL</strong>：在实时比赛中，利用每道题的多次提交机会进行在线学习：
+$$\pi_{t+1} = \arg\min_\pi \text{KL}(\pi \| \pi_t) - \eta \cdot \mathbb{E}[r_{\text{submit}}]$$
+其中 \(r_{\text{submit}}\) 是提交结果反馈（AC/WA/TLE/MLE）。这使得系统能在比赛中实时适应。</li>
+</ol>
+</div>
+
+<div class="sub-module">
+<strong>④ 测试生成器的对抗性学习</strong><br>
+Test Generator Agent经过对抗训练，专门生成能暴露Solver弱点的测试用例：
+$$\max_{\text{TestGen}} \mathbb{P}[\text{Solver fails on generated test}]$$
+通过这种对抗博弈，Solver的鲁棒性持续提升。测试生成器学会了生成大数溢出、边界条件、极端稀疏/稠密图等Solver容易失误的案例。
+</div>
+
+<div class="module-title agent-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Codeforces Round 1087 (2026年3月21日) — 第一名</strong><br><br>
+<strong>题目E (2500分)：</strong>给定含N个节点的有向图，求最小权重子图使所有点的出入度相等<br>
+<strong>GrandCode求解过程：</strong><br>
+• <strong>Hypothesis Agent：</strong>3个假设 — (H1) 最小费用流 (H2) 线性规划松弛 (H3) 贪心匹配<br>
+• <strong>Solver Agent (H1)：</strong>实现MCMF，首次提交WA（整数溢出）<br>
+• <strong>Test Generator：</strong>发现大权重边界case → 反馈给Solver<br>
+• <strong>Solver Agent (H1 v2)：</strong>改用long long + 溢出保护 → AC ✅<br>
+<strong>总耗时：</strong>8分23秒（第一名人类用时34分钟）
+</div>
+
+<div class="module-title agent-title">📊 实验结果</div>
+<table>
+<tr><th>系统/选手</th><th>Round 1087</th><th>Round 1088</th><th>Round 1089</th><th>Rating</th></tr>
+<tr><td>GrandCode</td><td class="best">1st</td><td class="best">1st</td><td class="best">1st</td><td class="best">3,847</td></tr>
+<tr><td>tourist (人类 #1)</td><td>3rd</td><td>2nd</td><td>4th</td><td>3,792</td></tr>
+<tr><td>Gemini 3 Deep Think</td><td>—</td><td>—</td><td>8th*</td><td>~3,400*</td></tr>
+<tr><td>AlphaCode 2</td><td>—</td><td>—</td><td>—</td><td>~1,650</td></tr>
+</table>
+
+<div class="module-title agent-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融分析：(1) 移除Test Generator Agent导致首次AC率从78%降至61%，边界bug成为主要失败原因；(2) 单Agent（无协作分解）在2500+分题目上的解决率仅为23%（vs GrandCode 67%）；(3) 在线测试时RL在每场比赛中平均额外解决0.5道题。局限性：系统在交互式题目和构造性证明题上表现较弱；实时比赛的提交次数限制（每题50次）约束了在线RL的探索空间。
+</div>
+</div>
+
+<!-- Paper 12: UI-Oceanus (Tencent WHITELIST) -->
+<div class="paper-card" id="p2604-02345" style="border-left:3px solid #d29922">
+<h3>12. <a href="https://arxiv.org/abs/2604.02345">UI-Oceanus: 合成环境动力学扩展GUI智能体</a> <span class="tag tag-whitelist">🏢 WeChat/Tencent</span></h3>
+<div class="paper-meta">
+<span>📝 Mengzhou Wu, Yuzhe Guo, Yuan Cao, Haochuan Lu, ... (19位作者)</span><br>
+<span>📅 2026-02-11</span><br>
+<span>🏛 Peking University, WeChat (Tencent Inc.), SFU, UT Dallas</span><br>
+<span class="tag tag-agent">Agent</span>
+<span class="tag tag-industry">Industry Lab</span>
+<span class="tag" style="background:#1a3a2a;color:#56d364">GUI Agent</span>
+</div>
+
+<div class="module-title agent-title">📌 背景与动机</div>
+<p>扩展通用GUI智能体面临<strong>数据可扩展性瓶颈</strong>：人类演示数据昂贵，而从教师模型蒸馏存在"蒸馏天花板"——学生模型无法超越教师的能力上限。UI-Oceanus提出了一个范式转变：不再模仿高层轨迹，而是通过地面真实（ground-truth）的环境反馈来<strong>掌握交互物理学</strong>。</p>
+
+<div class="module-title agent-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 前向动力学作为核心驱动力</strong><br>
+通过系统性调查自监督目标，作者发现<strong>前向动力学预测</strong>（预测动作后的界面状态变化）是可扩展性的核心驱动力，显著优于逆向推理（从状态变化推断动作）。形式化：
+$$\mathcal{L}_{\text{forward}} = -\log p_\theta(s_{t+1} \mid s_t, a_t)$$
+其中 \(s_t\) 是当前界面状态，\(a_t\) 是执行的动作，\(s_{t+1}\) 是结果状态。模型通过预测动作后果来构建<strong>内部世界模型</strong>，理解UI元素的行为规律。
+</div>
+
+<div class="sub-module">
+<strong>② 低成本自主探索 + 系统验证</strong><br>
+数据获取策略：
+<ol>
+<li>智能体在真实UI环境中进行<strong>自主探索</strong>——随机或策略性地点击、滑动、输入</li>
+<li>系统执行验证提供<strong>地面真实反馈</strong>——实际的界面状态变化被精确记录</li>
+<li>将 (状态, 动作, 结果状态) 三元组转化为<strong>高密度生成监督</strong>信号</li>
+</ol>
+关键优势：不需要人类标注，不依赖教师模型，验证由系统执行本身保证100%准确。
+</div>
+
+<div class="sub-module">
+<strong>③ 持续预训练（CPT）策略</strong><br>
+将合成动力学数据用于持续预训练，而非直接用于SFT：
+$$\mathcal{L}_{\text{CPT}} = \lambda_1 \cdot \mathcal{L}_{\text{forward}} + \lambda_2 \cdot \mathcal{L}_{\text{LM}} + \lambda_3 \cdot \mathcal{L}_{\text{UI-grounding}}$$
+其中 \(\mathcal{L}_{\text{LM}}\) 保持语言能力，\(\mathcal{L}_{\text{UI-grounding}}\) 增强UI元素定位。CPT方式使模型在不遗忘语言能力的前提下学习UI交互知识。
+</div>
+
+<div class="sub-module">
+<strong>④ 数据量的扩展效应</strong><br>
+实验发现导航性能与合成数据量呈对数线性关系：
+$$\text{SuccessRate} \approx a + b \cdot \log(D_{\text{synthetic}})$$
+这意味着通过增加探索数据量可以持续提升性能，且数据收集成本几乎为零（自主探索），为GUI智能体提供了一条无需人工数据就能持续扩展的路径。
+</div>
+
+<div class="module-title agent-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：跨应用导航任务</strong><br><br>
+<strong>任务：</strong>"在微信上找到张三的最近一条消息，复制其中的地址，然后在高德地图中搜索这个地址"<br>
+<strong>非CPT模型：</strong>成功打开微信 → 找到联系人 → 但在"复制消息文本"步骤失败（不知道长按会弹出复制菜单）<br>
+<strong>UI-Oceanus (CPT)：</strong>通过前向动力学学习到"长按消息 → 弹出菜单含复制选项"的物理规律 → 正确完成跨应用操作<br>
+<strong>关键：</strong>该交互物理知识完全来自自主探索中的前向动力学学习，无需人工演示
+</div>
+
+<div class="module-title agent-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>离线基准 SR↑</th><th>在线导航 SR↑</th><th>跨域泛化↑</th></tr>
+<tr><td>SFT (人工演示)</td><td>52.3</td><td>38.1</td><td>31.2</td></tr>
+<tr><td>Distillation (教师模型)</td><td>56.8</td><td>41.5</td><td>34.7</td></tr>
+<tr><td>Inverse Dynamics CPT</td><td>54.1</td><td>39.8</td><td>33.0</td></tr>
+<tr><td class="best">UI-Oceanus (Forward CPT)</td><td class="best">63.5 (+7%)</td><td class="best">58.3 (+16.8%)</td><td class="best">49.2</td></tr>
+</table>
+
+<div class="module-title agent-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融实验：(1) 前向动力学 vs 逆向动力学——前向在在线导航上高12.5%，证实了前向预测的决定性优势；(2) CPT方式 vs 直接SFT——CPT在语言基准上几乎无退化（MMLU -0.3%），而SFT导致MMLU降4.2%；(3) 数据量扩展实验：10K→100K→1M探索轨迹，成功率分别为45.2、54.7、63.5，对数线性关系成立。局限性：当前仅在Android/微信环境验证，iOS和桌面端的探索效率可能不同；极少数UI交互（如多指手势、3D Touch）难以通过简单探索发现。
+</div>
+</div>

@@ -1,0 +1,75 @@
+
+<!-- ========== LLM Section ========== -->
+<h2 class="section-title" id="section-llm">🧠 LLM — 纯文本大模型</h2>
+
+<!-- Paper 1: DEMASK -->
+<div class="paper-card" id="p2604-02560">
+<h3>1. <a href="https://arxiv.org/abs/2604.02560">DEMASK: 离散扩散语言模型中的依赖引导并行解码</a></h3>
+<div class="paper-meta">
+<span>📝 Liran Ringel, Ameen Ali, Yaniv Romano</span><br>
+<span>📅 2026-04-02</span><br>
+<span>🏛 Technion — Israel Institute of Technology</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Diffusion</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Parallel Decoding</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>离散扩散语言模型（dLLMs）通过在单步中同时解掩多个token来加速文本生成，摆脱了自回归模型逐token生成的瓶颈。然而，并行解码的核心问题在于<strong>分布失配</strong>：它使用完全分解的逐token边缘分布乘积来近似真实的联合条件分布。当被选中解掩的token之间存在强依赖关系时（例如搭配词组、主谓一致等），这种独立性假设会严重降低输出质量。现有的基于置信度或KL散度的方法缺乏对token间依赖关系的直接建模，导致在加速与质量之间难以取得良好平衡。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 依赖预测器架构</strong><br>
+DEMASK在dLLM的最终隐藏状态之上附加一个轻量级依赖预测器。对于掩码位置集合 \(\mathcal{M}\)，该预测器通过单次前向传播估计任意两个掩码位置 \(i, j \in \mathcal{M}\) 之间的<strong>成对条件影响</strong>：
+$$d(i,j) = \text{TV}\big(p(x_j \mid \mathbf{x}_{\setminus\{i,j\}}), \; p(x_j \mid x_i, \mathbf{x}_{\setminus\{i,j\}})\big)$$
+其中 \(\text{TV}\) 表示总变分距离。\(d(i,j)\) 量化了当位置 \(i\) 的token被揭示后，对位置 \(j\) 预测分布的影响程度。该预测器使用交叉注意力机制，将隐藏状态作为key/value，可训练的位置查询作为query，计算复杂度仅为 \(O(|\mathcal{M}|^2 \cdot d)\)。
+</div>
+
+<div class="sub-module">
+<strong>② 贪心依赖约束选择算法</strong><br>
+给定依赖预测 \(d(i,j)\) 和一个累积依赖预算 \(\epsilon\)，DEMASK使用贪心算法选择一组可以安全并行解掩的位置子集 \(\mathcal{S} \subseteq \mathcal{M}\)：
+<ol>
+<li>按模型置信度对所有掩码位置降序排列</li>
+<li>初始化 \(\mathcal{S} = \emptyset\)，累积依赖 \(\Delta = 0\)</li>
+<li>依次考虑每个位置 \(i\)：若 \(\Delta + \sum_{j \in \mathcal{S}} d(i,j) \leq \epsilon\)，则将 \(i\) 加入 \(\mathcal{S}\) 并更新 \(\Delta\)</li>
+</ol>
+关键设计直觉：高置信度但彼此低依赖的位置优先被选入，确保并行解掩不会引入过大误差。
+</div>
+
+<div class="sub-module">
+<strong>③ 理论保证：总变分距离上界</strong><br>
+在次可加性假设下（即联合影响不超过各个影响之和），作者证明了DEMASK并行采样分布 \(q\) 与真实联合分布 \(p\) 之间的总变分距离满足：
+$$\text{TV}(p, q) \leq \sum_{i \in \mathcal{S}} \sum_{j \in \mathcal{S}, j \neq i} d(i,j) \leq \epsilon$$
+这提供了<strong>可控的质量退化保证</strong>，用户可以通过调节 \(\epsilon\) 在速度和质量之间权衡。
+</div>
+
+<div class="sub-module">
+<strong>④ 自适应步长调度</strong><br>
+DEMASK在解码过程中动态调整每步解掩的token数量。在生成早期（大部分位置被掩码），由于候选位置多且依赖分散，\(|\mathcal{S}|\) 较大，实现高度并行；随着生成推进，剩余掩码位置减少且依赖增强，\(|\mathcal{S}|\) 自适应缩小，最终可退化为逐步解掩，保证末端质量。
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：在Dream-7B上生成科学文本</strong><br><br>
+<strong>输入提示：</strong>"The relationship between entropy and information is"<br>
+<strong>标准并行（8个token/步）：</strong>"The relationship between entropy and information is <u>deeply complex connected fundamental mathematical</u> in nature."（出现语法错误和语义重复）<br>
+<strong>DEMASK（动态选择）：</strong>"The relationship between entropy and information is <u>fundamental</u> to <u>modern</u> <u>physics</u>."<br><br>
+<strong>分析：</strong>标准方法同时解掩 "deeply"、"complex"、"connected"、"fundamental" 等强依赖词，导致冗余堆砌。DEMASK检测到这些词之间的依赖分数 \(d > 0.3\)，每步只选择 2-3 个低依赖位置，在14步内完成（vs 标准8步），但总加速仍达 <strong>1.9×</strong>（vs 逐步的32步），且生成文本通顺。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>加速比</th><th>MAUVE ↑</th><th>Gen. PPL ↓</th><th>Entropy ↑</th></tr>
+<tr><td>逐步解码（Baseline）</td><td>1.0×</td><td>0.85</td><td>12.3</td><td>4.21</td></tr>
+<tr><td>Confidence-based Top-K</td><td>2.1×</td><td>0.72</td><td>15.8</td><td>3.89</td></tr>
+<tr><td>KL-threshold</td><td>1.8×</td><td>0.78</td><td>14.1</td><td>4.02</td></tr>
+<tr><td class="best">DEMASK (ε=0.3)</td><td class="best">2.2×</td><td class="best">0.86</td><td class="best">12.1</td><td class="best">4.25</td></tr>
+<tr><td>DEMASK (ε=0.5)</td><td>2.8×</td><td>0.81</td><td>13.2</td><td>4.10</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融实验表明：(1) 移除依赖预测器（仅用置信度排序）导致MAUVE下降0.13，证实依赖建模至关重要；(2) 将次可加性假设替换为更松弛的上界会导致选择过于保守，加速比降至1.4×；(3) ε从0.1到0.5的扫描显示0.3是质量-速度的甜点。局限性方面：依赖预测器需要额外训练，且在超长序列（>4K tokens）上的预测准确性有所下降；另外，该方法仅适用于离散扩散架构，不直接适用于自回归模型。
+</div>
+</div>

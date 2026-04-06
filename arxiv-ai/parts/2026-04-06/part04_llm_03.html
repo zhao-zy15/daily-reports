@@ -1,0 +1,74 @@
+
+<!-- Paper 3: NeuReasoner -->
+<div class="paper-card" id="p2604-02972">
+<h3>3. <a href="https://arxiv.org/abs/2604.02972">NeuReasoner: 基于神经元混合专家的可解释推理</a></h3>
+<div class="paper-meta">
+<span>📝 Haonan Dong, Kehan Jiang, Haoran Ye, Wenhao Zhu, Zhaolu Kang, Guojie Song</span><br>
+<span>📅 2026-04-03</span><br>
+<span>🏛 Peking University</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Reasoning</span>
+<span class="tag" style="background:#1a2a3a;color:#79c0ff">Interpretability</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>大型推理模型（LRMs）在复杂推理中取得了显著成功，但三个层次的失败模式严重影响了性能和成本：<strong>I) 步骤内层级</strong>——计算或推导错误；<strong>II) 步骤间层级</strong>——振荡（反复切换策略）和停滞（在同一错误路径上徘徊）；<strong>III) 实例层级</strong>——不适应的过度思考（对简单问题浪费大量token）。现有方法要么只针对单一层级，要么依赖黑箱RL训练，缺乏统一的可解释框架来同时诊断和控制所有三个层级的推理行为。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 推理神经元（Reasoning Neurons）的发现与定义</strong><br>
+NeuReasoner 首先在LRM的FFN层中识别出"推理神经元"——对推理任务激活模式与通用文本显著不同的神经元。定义推理神经元得分：
+$$s_n = \mathbb{E}_{\mathbf{x} \sim \mathcal{D}_{\text{reason}}}[\sigma(W_n^T h)] - \mathbb{E}_{\mathbf{x} \sim \mathcal{D}_{\text{general}}}[\sigma(W_n^T h)]$$
+其中 \(W_n\) 是第 \(n\) 个神经元的权重，\(h\) 是输入隐藏状态。\(s_n\) 高的神经元即为推理神经元。作者发现这些神经元集中在模型的中间层（Layer 12-20 in 32层模型），且自然形成了与不同推理操作对应的簇。
+</div>
+
+<div class="sub-module">
+<strong>② Mixture-of-Neurons (MoN) 路由机制</strong><br>
+受MoE启发，NeuReasoner将识别出的推理神经元分为 \(K\) 组"神经元专家"，每组对应一种推理操作（如算术计算、逻辑推导、策略切换等）。在推理时，一个轻量级路由器根据当前隐藏状态选择激活哪些神经元组：
+$$\mathbf{g} = \text{TopK}\big(\text{Softmax}(W_r \cdot h + b_r), k\big)$$
+$$h' = h + \sum_{i=1}^{K} g_i \cdot \text{FFN}_{\text{neurons}_i}(h)$$
+路由器不仅提供了选择依据，还通过门控值 \(g_i\) 提供了可解释的推理操作描述。
+</div>
+
+<div class="sub-module">
+<strong>③ 三层级控制机制</strong><br>
+<ol>
+<li><strong>步骤内控制</strong>：当检测到计算神经元组的激活异常偏低（低于历史均值2σ），触发"重新计算"信号，强制模型重新进行当前步骤的计算</li>
+<li><strong>步骤间控制</strong>：监测策略切换神经元组的激活频率 \(f_{\text{switch}}\)。若 \(f_{\text{switch}} > \theta_{\text{osc}}\)（振荡阈值），抑制该组激活以稳定推理路径；若检测到停滞模式（连续N步同一错误策略），则增强策略切换组</li>
+<li><strong>实例级控制</strong>：引入"思考预算"模块，根据问题难度（通过初始几步的推理神经元激活强度估算）动态分配最大推理步数 \(T_{\max}\)：\(T_{\max} = T_0 \cdot (1 + \lambda \cdot \bar{a}_{\text{reason}})\)</li>
+</ol>
+</div>
+
+<div class="sub-module">
+<strong>④ 可解释性输出与诊断</strong><br>
+NeuReasoner可以在推理过程中实时输出每一步的"推理操作标签"（由路由器门控值最高的神经元组决定），生成人类可读的推理轨迹注释。例如："[Step 3] Operation: 代数化简 (g=0.72) → [Step 4] Operation: 策略回退 (g=0.85) → [Step 5] Operation: 数值验证 (g=0.91)"。这使得研究者可以精确定位推理失败的位置和类型。
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：数学竞赛题中的振荡诊断</strong><br><br>
+<strong>问题：</strong>求 \(\int_0^1 \frac{\ln(1+x)}{1+x^2} dx\) 的精确值<br>
+<strong>标准LRM生成：</strong>模型在部分分式分解和换元法之间反复切换（振荡12次），最终耗尽token预算未给出答案<br>
+<strong>NeuReasoner诊断：</strong><br>
+• Step 3-4: 策略切换神经元异常高频激活 (\(f_{\text{switch}} = 0.83\))，检测到振荡<br>
+• 干预：抑制策略切换组，锁定换元法路径<br>
+• Step 5-8: 计算神经元稳定激活，完成 \(x = \tan\theta\) 换元<br>
+• <strong>最终答案：</strong>\(\frac{\pi}{8}\ln 2\) ✅<br>
+<strong>Token节省：</strong>2,847 → 634 (节省 78%)
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH-500</th><th>AIME</th><th>OlympiadBench</th><th>Avg Tokens ↓</th></tr>
+<tr><td>QwQ-32B (Baseline)</td><td>80.1</td><td>50.0</td><td>41.2</td><td>2,340</td></tr>
+<tr><td>+ Budget Forcing</td><td>80.5</td><td>50.0</td><td>42.1</td><td>1,890</td></tr>
+<tr><td>+ S3 (Step-level)</td><td>81.3</td><td>51.7</td><td>43.5</td><td>2,120</td></tr>
+<tr><td class="best">+ NeuReasoner</td><td class="best">83.7</td><td class="best">55.0</td><td class="best">46.8</td><td class="best">1,340</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<div class="ablation">
+消融分析：(1) 仅使用步骤内控制（+0.8%准确率），仅步骤间控制（+1.5%），仅实例级控制（-15% tokens但准确率不变）——三者结合产生协同效果；(2) 推理神经元的聚类数 \(K\) 在8-12之间效果最好，过少（K=4）导致操作区分度不足，过多（K=20）导致路由不稳定；(3) 该方法在模型规模≥7B时有效，小于7B时推理神经元的分离度不够清晰。局限性：推理神经元的识别需要标注的推理数据集，且在不同模型间不可迁移，需要针对每个模型重新识别。
+</div>
+</div>
