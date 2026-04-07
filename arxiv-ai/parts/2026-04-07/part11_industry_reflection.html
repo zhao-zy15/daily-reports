@@ -1,0 +1,95 @@
+<!-- ==================== Industry Lab Section ==================== -->
+<h2 class="section-title">🏢 Industry Lab — 行业实验室</h2>
+
+<!-- Paper 18: Google DeepMind StoryScope -->
+<div class="paper-card" id="p-2604-03136">
+<h3><a href="https://arxiv.org/abs/2604.03136" target="_blank">🏛 [Google DeepMind] StoryScope: AI 小说的话语级特征分析</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.03136</span><span>📅 2026-04-03</span><br>
+<span>🏛 University of Maryland, Google DeepMind</span><br>
+<span class="tag tag-whitelist">🏢 Google DeepMind</span><span class="tag tag-industry">Industry Lab</span><span class="tag tag-industry">AI 文学</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>随着 AI 生成小说日益普遍，作者身份和原创性问题变得至关重要。现有 AI 文本检测主要关注表面特征（词选择、句法结构），但本文提出一个更深层的问题：AI 生成的故事是否可以在不依赖文体信号的情况下，仅通过话语级叙事选择（如角色主体性、时间线断裂、视角转换）与人类区分？Google DeepMind 参与的这项研究构建了 StoryScope——一个自动提取和分析话语级叙事特征的管线。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 话语级叙事特征空间</div>
+<p>定义了 10 个维度的叙事特征：(1) 角色主体性（character agency）：角色主动行动 vs 被动反应；(2) 时间线连续性（chronological continuity）：叙事是否按时间线性推进；(3) 视角稳定性（perspective consistency）：叙事视角是否在段落间跳跃；(4) 情节密度（plot density）：单位文本中事件数量；(5) 对话-叙述比；(6) 情感弧线复杂度；(7) 环境描写深度；(8) 冲突类型分布；(9) 意外性/可预测性；(10) 结局类型。每个维度由 LLM 评估器自动量化（1-5 分）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 大规模对比数据集</div>
+<p>收集 3 组数据：(1) <strong>人类小说</strong>：从 Project Gutenberg 和现代出版物中抽取 500 篇短篇（1K-10K 词）；(2) <strong>AI 小说</strong>：使用 GPT-4o、Claude-3.5、Gemini 各生成 500 篇同主题故事；(3) <strong>AI-编辑小说</strong>：人类作家使用 AI 辅助创作的 200 篇。对所有故事提取 10 维特征向量，形成可分析的叙事空间。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 特征空间分析</div>
+<p>使用 PCA 和 t-SNE 可视化叙事空间。关键发现：AI 小说在话语层面呈现系统性差异——(1) 角色主体性显著低于人类（AI: 2.8/5 vs Human: 3.9/5），AI 角色更"被动"、更"反应式"；(2) 时间线几乎总是线性的（AI: 4.5/5 vs Human: 3.1/5），缺乏闪回、预叙等复杂叙事技巧；(3) 结局高度可预测（AI 意外性: 2.1/5 vs Human: 3.5/5）。判别分析：</p>
+<p>$$\text{Accuracy}_{\text{discourse}} = \text{LDA}(\mathbf{f}_{\text{AI}}, \mathbf{f}_{\text{human}}) = 78.3\%$$</p>
+<p>仅用 10 维话语特征（无文体特征）即可区分 AI/人类小说。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 模型间差异</div>
+<p>不同 AI 模型的叙事"指纹"也可区分：GPT-4o 偏好"解决冲突"型结局（82%），Claude 偏好"内省反思"型（71%），Gemini 偏好"开放式"型（65%）。跨模型判别准确率 67%（3 分类），显著高于随机（33%）。这意味着话语特征不仅能区分 AI/人类，还能识别具体的 AI 模型。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：话语级特征对比</strong>
+<ol>
+<li><strong>同一主题</strong>："一个孤独的宇航员在火星上发现了古代遗迹"</li>
+<li><strong>人类小说</strong>：以宇航员第一人称开场 → 插入 15 年前的回忆（时间线断裂）→ 宇航员主动决定独自探索（高主体性）→ 发现遗迹后陷入存在主义危机（意外转折）</li>
+<li><strong>AI 小说</strong>：第三人称线性叙述 → 宇航员"被任务控制中心派去调查"（低主体性）→ 逐步发现 → 以"人类终于不再孤独"结尾（可预测结局）</li>
+<li><strong>特征差异</strong>：时间线连续性 Human=2.1 vs AI=4.8，角色主体性 Human=4.2 vs AI=2.5，意外性 Human=4.0 vs AI=1.8</li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>检测方法</th><th>AI vs Human</th><th>跨模型识别</th><th>对 AI-编辑的检测</th><th>使用文体特征?</th></tr>
+<tr><td>文体特征 (DetectGPT)</td><td>92.1%</td><td>—</td><td>71.2%</td><td>是</td></tr>
+<tr><td>困惑度阈值</td><td>85.3%</td><td>—</td><td>58.5%</td><td>是</td></tr>
+<tr><td class="highlight">StoryScope (话语特征)</td><td class="highlight">78.3%</td><td class="highlight">67.2%</td><td class="highlight">65.8%</td><td>否</td></tr>
+<tr><td>StoryScope + 文体</td><td>94.5%</td><td>71.8%</td><td>75.2%</td><td>混合</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>10 个特征维度中，角色主体性（+12.3% 判别贡献）和时间线连续性（+10.8%）是最具区分力的维度。有趣的是，AI-编辑小说的特征分布介于纯 AI 和纯人类之间，但更偏向人类——说明人类编辑主要修正了 AI 的话语级缺陷。将 StoryScope 特征与传统文体特征结合，总体检测准确率达到 94.5%，超过任一单独使用。局限：10 维特征的 LLM 评估器本身可能引入偏差；实验仅覆盖英语短篇小说，长篇、诗歌和其他文体未验证；话语特征的文化依赖性未探讨。</p>
+</div>
+</div>
+
+<!-- ==================== Daily Reflection ==================== -->
+<div class="reflection">
+<h2>📝 每日反思</h2>
+<p><strong>2026年4月7日 — 从词汇禁令到幻觉探索：约束与自由的辩证法</strong></p>
+<ul>
+<li><strong>最惊人的发现</strong>：禁止 "very"、"really" 等填充词就能提升 LLM 推理能力 +6pp（2604.02699），效果甚至超过精心设计的 E-Prime 语言约束。这暗示了一个深刻的道理——有时候，不是"怎么约束"重要，而是"有约束本身"就足够了。</li>
+<li><strong>RL 方向的三个前沿</strong>：(1) RLSD 将自蒸馏的 token-level 信号与 RLVR 的可靠方向解耦结合，是两全其美的优雅设计；(2) 奖励黑客的符号鲁棒性检测提供了新视角——用 RM 的参数稳定性而非输出值来衡量可靠性；(3) 随机选择在 DPO 中难以被主动学习击败，这个负面结果同样珍贵。</li>
+<li><strong>白名单亮点</strong>：腾讯混元在 80B MoE 上做的 200B LCCP 动力学研究极具工业参考价值——"欺骗性饱和"现象提醒我们不要过早停止长上下文训练；阿里巴巴的 Rubrics-to-Tokens 将评分规则转为 token-level 奖励，填补了指令遵循 RL 训练的方法空白。</li>
+<li><strong>安全预警</strong>：AgentHazard 揭示所有主流计算机使用智能体在间接注入攻击下防御率低于 55%——这是整个行业在 Agent 安全上的最大盲区。</li>
+<li><strong>多模态洞见</strong>：幻觉在 RL 训练中的双刃剑效应是个深刻的发现——探索阶段需要适度的"试错"（包括幻觉），过早抑制反而限制了学习能力。这与人类学习中"允许犯错"的教育理念不谋而合。</li>
+</ul>
+</div>
+
+<footer>
+<p>📊 数据来源：arXiv RSS (cs.CL, cs.AI, cs.LG) | 共扫描 160 篇新论文</p>
+<p>🏛 白名单机构：Tencent Hunyuan (1), Alibaba Group (1), Google DeepMind (1)</p>
+<p>🤖 由 AI 自动生成，所有论文分析基于原文内容 | 生成时间 2026-04-07</p>
+</footer>
+
+</div>
+</body>
+</html>

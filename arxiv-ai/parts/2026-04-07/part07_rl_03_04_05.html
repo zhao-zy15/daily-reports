@@ -1,0 +1,215 @@
+<!-- Paper 9: RL Knowledge Distillation -->
+<div class="paper-card" id="p-2604-02621">
+<h3><a href="https://arxiv.org/abs/2604.02621" target="_blank">LLM-as-a-Judge 驱动的 RL 知识蒸馏</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02621</span><span>📅 2026-04-03</span><br>
+<span>🏛 University of Iowa</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">知识蒸馏</span><span class="tag tag-rl">LLM-as-Judge</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>现有 RL 训练（如 RLVR）依赖可验证的 ground-truth 标签来计算奖励，这在数学和代码任务上可行，但在开放域任务（如摘要、对话、创意写作）上标签不可获取。知识蒸馏可以从大模型向小模型传递能力，但传统 KD 仅使用 SFT 损失，无法充分利用 RL 的探索-利用机制。本文提出以 LLM-as-a-Judge 替代 ground-truth 奖励，实现无标签的 RL 知识蒸馏。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 单 Token 奖励评判</div>
+<p>关键创新：让 Judge LLM 输出单个 token（如 "A"、"B"、"C" 对应评分 1-5），而非长文本评价。这将奖励计算成本从 ~500 tokens 降至 1 token：</p>
+<p>$$r(x, y) = \sum_{k=1}^{5} k \cdot P_{\text{judge}}(\text{token}_k | \text{prompt}(x, y))$$</p>
+<p>其中 \(\text{prompt}(x, y)\) 包含评价标准和学生模型输出 \(y\)。实验证明单 token 评分与多 token 评价的相关性达 \(r = 0.93\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② RL 蒸馏训练框架</div>
+<p>采用 GRPO 风格的策略优化，但奖励来自 Judge 而非验证器。对输入 \(x\)，采样 \(G\) 个学生回答 \(\{y_1, \ldots, y_G\}\)，计算 Judge 奖励后归一化为优势：</p>
+<p>$$\hat{A}_i = \frac{r(x, y_i) - \text{mean}(\{r(x, y_j)\}_{j=1}^G)}{\text{std}(\{r(x, y_j)\}_{j=1}^G) + \epsilon}$$</p>
+<p>然后使用标准 PPO/GRPO 目标优化学生策略。与标准 RLVR 的唯一区别是奖励来源从二值验证器变为连续的 Judge 评分。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ Judge 校准与一致性</div>
+<p>为提高 Judge 奖励的可靠性，引入两项校准措施：(1) <strong>位置去偏</strong>：随机打乱 Judge prompt 中的回答顺序，取平均评分，消除位置偏差；(2) <strong>一致性过滤</strong>：对同一样本评分 3 次，仅保留标准差 < 0.5 的样本用于训练（过滤约 15% 不稳定样本）。校准后 Judge 与人类评分的 Kendall \(\tau\) 从 0.61 提升至 0.72。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 无标签大规模训练</div>
+<p>由于不依赖标注数据，训练可在任意无标签文本上进行。使用 1M 无标签指令（从 WildChat 过滤）训练 7B 学生模型，Judge 使用 70B 教师。训练成本主要在 Judge 推理上（单 token 输出使其可控），约为标准 SFT 蒸馏的 2.5× 但远低于全量 RLHF。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：开放域摘要任务的 RL 蒸馏</strong>
+<ol>
+<li><strong>输入</strong>：一篇 2000 词的新闻文章，要求生成 150 词摘要</li>
+<li><strong>SFT 蒸馏</strong>：学生模型直接模仿教师输出，但倾向于生成冗长、包含不必要细节的摘要</li>
+<li><strong>RL 蒸馏</strong>：学生采样 8 个摘要候选，Judge 评分范围 [2.1, 4.3]，最高分候选简洁且覆盖关键信息 → 策略更新强化简洁风格</li>
+<li><strong>结果</strong>：AlpacaEval 2.0 上 LC win rate 从 SFT 的 18.3% 提升至 RL 蒸馏的 <strong>28.7%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>AlpacaEval 2.0 LC</th><th>MT-Bench</th><th>MMLU</th><th>训练数据需求</th></tr>
+<tr><td>SFT 蒸馏 (70B→7B)</td><td>18.3%</td><td>7.52</td><td>63.1%</td><td>100K 标注</td></tr>
+<tr><td>DPO 蒸馏</td><td>22.1%</td><td>7.81</td><td>63.5%</td><td>50K 偏好对</td></tr>
+<tr><td class="highlight">RL 蒸馏 + Judge</td><td class="highlight">28.7%</td><td class="highlight">8.12</td><td class="highlight">64.2%</td><td>1M 无标签</td></tr>
+<tr><td>教师 (70B)</td><td>42.5%</td><td>8.85</td><td>78.3%</td><td>—</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>关键消融：(1) 多 token Judge vs 单 token Judge：性能差距仅 0.8pp（28.7% vs 29.5%），但单 token 快 5×；(2) 一致性过滤贡献 +2.1pp，位置去偏贡献 +1.3pp；(3) 采样数 G 从 4 增到 16 时性能从 26.8% 增至 29.1% 但训练时间增加 4×，G=8 是最优平衡点。局限：Judge 的质量上限决定了蒸馏天花板（Judge 本身有偏差时会传递到学生）；在需要精确事实核查的任务上，Judge 评分可能不可靠。</p>
+</div>
+</div>
+
+<!-- Paper 10: Random is Hard to Beat -->
+<div class="paper-card" id="p-2604-02766">
+<h3><a href="https://arxiv.org/abs/2604.02766" target="_blank">随机选择难以被击败：在线 DPO 主动选择研究</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02766</span><span>📅 2026-04-03</span><br>
+<span>🏛 Seoul National University</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">DPO</span><span class="tag tag-rl">ICLR 2026</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>在线 DPO（Direct Preference Optimization）中，模型不断生成新样本并收集偏好反馈。一个自然的问题是：应该主动选择哪些样本来收集反馈？直觉上，"不确定性采样"或"信息增益最大化"等主动学习策略应该优于随机选择。本文在现代 LLM（GPT-4 级别）上进行了系统性实验，结果却令人惊讶——随机选择极难被超越。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 在线 DPO 主动选择框架</div>
+<p>每轮训练中，模型对 \(N\) 个 prompt 各生成 \(K\) 个回答，但仅对其中 \(B \ll NK\) 个 prompt 收集偏好标注。主动选择策略决定选哪些 prompt 标注。测试了 5 种策略：随机选择、不确定性采样（基于 DPO 隐式奖励的方差）、预期信息增益（BALD）、loss 预测、多样性采样。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 大规模对比实验</div>
+<p>使用 Llama-3-8B 和 Mistral-7B，在 UltraFeedback 和 HH-RLHF 数据集上进行 5 轮在线 DPO，每轮标注预算 \(B \in \{500, 1000, 2000, 5000\}\)。每种策略 × 模型 × 数据集 × 预算组合重复 3 次（共 240 次实验），评估指标包括 AlpacaEval、MT-Bench 和人类评价。总标注量超过 50K 偏好对。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 为何主动选择失效</div>
+<p>通过分析发现两个原因：(1) <strong>DPO 隐式奖励的不确定性估计不准确</strong>：DPO 没有显式的奖励模型，不确定性只能从损失或梯度间接估计，但现代 LLM 的过参数化使这些估计噪声极大；(2) <strong>偏好标注的固有噪声淹没了选择信号</strong>：人类/AI 偏好标注的 inter-annotator agreement 仅约 0.7，使得"选对样本"带来的信息增益被标注噪声抵消。形式化：</p>
+<p>$$\text{SNR}_{\text{selection}} = \frac{\text{Var}(\text{informativeness across samples})}{\text{Var}(\text{annotation noise})} \approx 0.3$$</p>
+<p>信噪比远低于 1，说明选择信号被噪声淹没。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 何时主动选择有效</div>
+<p>发现在两种极端情况下主动选择可以超越随机：(1) 标注预算极低（\(B < 200\)）且标注质量极高（agreement > 0.9）；(2) 数据分布高度不均匀（少数主题含大量信息）。但在实际场景（\(B > 500\)，正常标注质量）中，随机选择的鲁棒性最强。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：5000 标注预算的在线 DPO 对比</strong>
+<ol>
+<li><strong>不确定性采样</strong>：倾向选择模型生成差异大的 prompt → 但这些 prompt 往往是歧义/主观的 → 标注质量低 → AlpacaEval LC 34.2%</li>
+<li><strong>信息增益采样</strong>：倾向选择预期梯度更新最大的 prompt → 但梯度估计不准 → 选到噪声样本 → AlpacaEval LC 33.8%</li>
+<li><strong>随机采样</strong>：均匀覆盖所有主题，标注质量稳定 → AlpacaEval LC <strong>35.1%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>选择策略</th><th>AlpacaEval LC (B=1K)</th><th>AlpacaEval LC (B=5K)</th><th>MT-Bench</th><th>计算开销</th></tr>
+<tr><td>不确定性采样</td><td>28.5%</td><td>34.2%</td><td>7.62</td><td>+20%</td></tr>
+<tr><td>BALD (信息增益)</td><td>28.1%</td><td>33.8%</td><td>7.58</td><td>+35%</td></tr>
+<tr><td>Loss 预测</td><td>29.0%</td><td>34.5%</td><td>7.65</td><td>+15%</td></tr>
+<tr><td>多样性采样</td><td>28.8%</td><td>34.8%</td><td>7.68</td><td>+10%</td></tr>
+<tr><td class="highlight">随机选择</td><td class="highlight">29.3%</td><td class="highlight">35.1%</td><td class="highlight">7.71</td><td>+0%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>最令人惊讶的发现：在所有 80 组实验配置中，随机选择在 72 组中排名前 2。特别是在高预算（B=5K）时，所有主动选择策略均未显著超越随机（p > 0.1）。将标注质量从 agreement 0.7 人为提升至 0.95 时，BALD 策略在 B=500 时首次超越随机 +1.8pp。作者呼吁社区重新审视在线 RLHF 中主动学习的价值——在当前标注质量和预算下，简单的随机选择可能是最佳实践。局限：仅测试了 DPO，PPO 等方法可能有不同结论；实验模型规模限于 7-8B。</p>
+</div>
+</div>
+
+<!-- Paper 11: Alibaba Rubrics to Tokens (Whitelist) -->
+<div class="paper-card" id="p-2604-02795">
+<h3><a href="https://arxiv.org/abs/2604.02795" target="_blank">🏛 [阿里巴巴] Rubrics to Tokens: 从评分规则到 Token 级奖励</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02795</span><span>📅 2026-04-03</span><br>
+<span>🏛 Shanghai Jiao Tong University, Alibaba Group, Zhejiang University</span><br>
+<span class="tag tag-whitelist">🏢 阿里巴巴</span><span class="tag tag-rl">RL</span><span class="tag tag-rl">奖励建模</span><span class="tag tag-rl">指令遵循</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>指令遵循（Instruction Following）任务中，模型需要严格遵守复杂的多维约束（如格式、长度、语言风格等）。现有的 outcome-level 奖励（如 IFEval 的二值通过/失败）粒度太粗，无法为 RL 训练提供足够的信号梯度。而 token-level 奖励（如 PRM）在推理任务上有效，但在指令遵循任务上尚无成熟方案。阿里巴巴团队提出将人类评分规则（rubrics）自动转化为 token-level 奖励信号。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 评分规则分解</div>
+<p>将指令遵循的评分规则（如 "回答必须包含至少 3 个要点，使用 Markdown 格式，不超过 200 词"）分解为原子约束集 \(\mathcal{C} = \{c_1, c_2, \ldots, c_K\}\)。每个约束 \(c_k\) 可独立验证。对于 \(K\) 个约束的 response，约束满足向量为 \(\mathbf{v} = [v_1, \ldots, v_K] \in \{0,1\}^K\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 约束-Token 归因</div>
+<p>核心创新：将每个约束的满足/违反归因到具体的 token 位置。使用 attention attribution 方法：对约束 \(c_k\) 的验证器输出 \(v_k\)，计算每个 token \(t\) 的归因分数：</p>
+<p>$$a_k(t) = \sum_{l,h} \alpha_{l,h}(t) \cdot \frac{\partial v_k}{\partial \alpha_{l,h}(t)}$$</p>
+<p>其中 \(\alpha_{l,h}(t)\) 是第 \(l\) 层第 \(h\) 头对 token \(t\) 的注意力权重。归因分数 \(a_k(t)\) 高的 token 是约束 \(c_k\) 被满足/违反的关键位置。Token-level 奖励定义为所有约束归因的加权和：</p>
+<p>$$r(t) = \sum_{k=1}^{K} w_k \cdot (2v_k - 1) \cdot a_k(t)$$</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ Token-level PPO 训练</div>
+<p>用 token-level 奖励 \(r(t)\) 替代传统的 sequence-level 奖励进行 PPO 训练。每个 token 的优势函数直接可用，无需 GAE（Generalized Advantage Estimation）的 \(\lambda\)-回报近似：</p>
+<p>$$A(s_t, a_t) = r(t) + \gamma V(s_{t+1}) - V(s_t)$$</p>
+<p>这提供了比 sequence-level 更精细的信用分配，让模型精确知道哪些 token 导致了约束违反。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 迭代细化机制</div>
+<p>训练过程采用迭代细化：每 500 步重新计算约束归因，因为模型的注意力模式随训练改变。实验发现不更新归因会在 2000 步后导致奖励信号过时（stale rewards），性能下降 2.8pp。同时引入约束难度自适应权重 \(w_k = 1 - \mathbb{E}[v_k]\)（越难满足的约束权重越高）。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：多约束指令遵循的 Token-level 奖励</strong>
+<ol>
+<li><strong>指令</strong>："用 Markdown 列表写出 3 个 AI 应用案例，每个不超过 50 词，使用中文"</li>
+<li><strong>约束分解</strong>：\(c_1\)=Markdown列表格式, \(c_2\)=恰好3个要点, \(c_3\)=每点≤50词, \(c_4\)=中文</li>
+<li><strong>模型输出</strong>："1. AI在医疗诊断中的应用..." — 违反 \(c_1\)（用数字而非 Markdown "- "）</li>
+<li><strong>Token 归因</strong>："1." 这两个 token 的 \(a_1(t)\) 最高（0.82），是格式违反的关键位置 → 对应 token 获得负奖励 \(r(t) = -0.82 \times w_1\)</li>
+<li><strong>训练效果</strong>：模型快速学会使用 "- " 开头，IFEval 格式通过率从 71.2% → <strong>89.5%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>IFEval Strict</th><th>IFEval Loose</th><th>FollowBench</th><th>MT-Bench</th></tr>
+<tr><td>SFT 基线</td><td>52.3%</td><td>61.8%</td><td>58.5</td><td>7.42</td></tr>
+<tr><td>Sequence-level RLHF</td><td>61.7%</td><td>70.2%</td><td>64.3</td><td>7.65</td></tr>
+<tr><td>Sequence-level DPO</td><td>59.8%</td><td>68.1%</td><td>62.8</td><td>7.58</td></tr>
+<tr><td class="highlight">R2T (Token-level PPO)</td><td class="highlight">72.5%</td><td class="highlight">79.8%</td><td class="highlight">71.2</td><td class="highlight">7.89</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>消融实验：(1) 去掉注意力归因改用均匀 token 奖励，IFEval 下降 8.3pp，证明精确归因的重要性；(2) 去掉迭代归因更新，2000 步后性能下降 2.8pp；(3) 约束难度自适应权重贡献 +3.1pp。在 5 种约束类型的细分分析中，格式约束的改善最大（+22pp），内容约束次之（+15pp），长度约束改善最小（+8pp）——可能因为长度约束涉及全局统计，单 token 归因不够精确。局限：注意力归因的计算成本较高（每次需完整前向传播+梯度计算），目前仅支持可自动验证的约束。</p>
+</div>
+</div>

@@ -1,0 +1,142 @@
+<!-- Paper 5: Gradient Boosting Attention -->
+<div class="paper-card" id="p-2604-03190">
+<h3><a href="https://arxiv.org/abs/2604.03190" target="_blank">单注意力层内的梯度提升机制</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.03190</span><span>📅 2026-04-03</span><br>
+<span>🏛 University of Windsor</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Transformer</span><span class="tag tag-llm">注意力机制</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>标准 Transformer 注意力通过 softmax 加权平均计算值（values）的单次估计——这是一个"一次通过"的过程，无法纠正自身的错误。当注意力权重分配不精确时（如在长序列中注意力分散），错误会直接传播到输出。梯度提升（Gradient Boosting）是集成学习中的经典范式，通过迭代拟合残差来逐步修正预测。本文首次将梯度提升的原理引入单个注意力层内部，让第二次注意力传播修正第一次的残差。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 标准注意力的残差分析</div>
+<p>标准注意力输出为 \(O = \text{softmax}(QK^T/\sqrt{d})V\)。定义残差 \(R = V_{\text{target}} - O\)，其中 \(V_{\text{target}}\) 是理想输出。关键观察：当查询 \(q_i\) 对多个 key 的相似度接近时，softmax 趋于均匀分布，输出趋向值的平均而非精确选择。残差 \(R\) 编码了这种"注意力模糊"带来的误差。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 梯度提升注意力（GBA）</div>
+<p>核心创新：在同一层内执行两次注意力传播。第一次为标准注意力，第二次专门拟合残差：</p>
+<p>$$O_1 = \text{Attn}(Q, K, V), \quad R_1 = \text{StopGrad}(V - O_1)$$</p>
+<p>$$O_2 = \text{Attn}(Q_r, K_r, R_1), \quad O_{\text{final}} = O_1 + \eta \cdot O_2$$</p>
+<p>其中 \(Q_r = W_r^Q \cdot Q\)、\(K_r = W_r^K \cdot K\) 是残差注意力的投影，\(\eta\) 是学习率（可学习标量）。\(\text{StopGrad}\) 防止第二次传播的梯度影响第一次，确保训练稳定性。总参数增加仅为 \(2 \times d^2\)（两个额外投影矩阵），约为标准层的 +50%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 理论分析：近似误差收敛</div>
+<p>作者证明在温和假设下，两轮提升后的注意力近似误差满足：</p>
+<p>$$\|O_{\text{final}} - V_{\text{target}}\|_2 \leq (1 - \eta) \|O_1 - V_{\text{target}}\|_2 + \eta \epsilon_2$$</p>
+<p>其中 \(\epsilon_2\) 是第二次注意力对残差的近似误差。当 \(\eta \in (0, 1)\) 且 \(\epsilon_2 < \|R_1\|\) 时，误差严格递减。这为 GBA 的有效性提供了理论保证。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 计算效率优化</div>
+<p>为降低两次注意力计算的开销，提出"共享-KV 变体"：第二次注意力重用第一次的 KV 缓存，仅计算新的 Q 投影和残差 V。这将额外 FLOPs 开销从 100% 降至约 35%（主要节省在 KV 计算上）。在推理时，KV cache 可完全共享，不增加内存。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：长序列中的 Needle-in-a-Haystack 检索</strong>
+<ol>
+<li><strong>问题</strong>：在 8K token 上下文中检索特定事实（"The secret code is 7294"）</li>
+<li><strong>标准注意力</strong>：注意力权重在 8K 位置上分散，目标位置权重仅 0.03 → 输出模糊 → 检索失败率 12%</li>
+<li><strong>GBA</strong>：第一次注意力输出残差较大（R₁ = 0.28），第二次注意力聚焦修正 → 残差后注意力权重集中到目标位置（权重 0.15）→ 检索失败率降至 <strong>4%</strong></li>
+<li><strong>计算开销</strong>：共享-KV 变体仅增加 35% FLOPs</li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>模型/变体</th><th>WikiText PPL ↓</th><th>MMLU</th><th>GSM8K</th><th>额外参数</th><th>额外 FLOPs</th></tr>
+<tr><td>GPT-2 Medium (基线)</td><td>22.4</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>GPT-2 Medium + GBA</td><td>21.1</td><td>—</td><td>—</td><td>+12%</td><td>+35%</td></tr>
+<tr><td>LLaMA-350M (基线)</td><td>18.7</td><td>32.1%</td><td>8.2%</td><td>—</td><td>—</td></tr>
+<tr><td class="highlight">LLaMA-350M + GBA</td><td class="highlight">17.3</td><td class="highlight">34.8%</td><td class="highlight">11.5%</td><td>+12%</td><td>+35%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>消融实验：(1) 去掉 StopGrad 后训练不稳定，损失在 5K 步后开始振荡；(2) 固定 \(\eta=0.5\) vs 可学习 \(\eta\)：可学习版本更好（PPL 17.3 vs 17.8），学习到的 \(\eta\) 在深层趋向 0.6-0.8，浅层趋向 0.2-0.3，说明深层注意力需要更多修正；(3) 将提升轮数从 2 增加到 3 仅带来 0.1 PPL 改善但增加 70% FLOPs，边际收益递减。局限：目前仅在 350M 规模验证，大规模（7B+）的效果尚不明确；GBA 增加的参数和计算可能与简单加深层数的效果相当。</p>
+</div>
+</div>
+
+<!-- Paper 6: Tencent Hunyuan (Whitelist) -->
+<div class="paper-card" id="p-2604-02650">
+<h3><a href="https://arxiv.org/abs/2604.02650" target="_blank">🏛 [腾讯混元] 长上下文持续预训练的学习动力学</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02650</span><span>📅 2026-04-03</span><br>
+<span>🏛 Tencent Hunyuan, Beijing</span><br>
+<span class="tag tag-whitelist">🏢 腾讯混元</span><span class="tag tag-llm">LLM</span><span class="tag tag-llm">长上下文</span><span class="tag tag-llm">预训练</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>长上下文持续预训练（LCCP）是扩展 LLM 上下文窗口的关键阶段，但现有研究主要聚焦于小规模模型（7B）和有限数据（数十 B tokens），其结论直接迁移到工业级模型存在风险。此外，当前评估方法过度依赖 Needle-in-a-Haystack（NIAH）等下游基准，这些指标常出现"欺骗性饱和"——指标显示模型已收敛，但实际的长上下文建模能力仍在持续改善。腾讯混元团队首次在工业级 MoE 模型 Hunyuan-A13B（80B 总参数）上系统研究 200B token LCCP 训练的完整动力学过程。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 三层次分析框架</div>
+<p>提出层次化分析方法，从三个逐步深入的层次研究 LCCP：(1) <strong>行为层</strong>：使用轻量级 SFT 探针评估下游长上下文理解能力；(2) <strong>概率层</strong>：分析细粒度困惑度（PPL）和连续 NIAH 分数以捕捉内在收敛状态；(3) <strong>机制层</strong>：识别内部注意力模式的演变及专门"检索头"的涌现。三层次的交叉验证揭示了仅看单一指标无法发现的训练动态。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 欺骗性饱和现象的量化</div>
+<p>在 Hunyuan-A13B 的 32K→64K LCCP 过程中，NIAH 分数在 50B tokens 时已达到 98.5%，看似已饱和。但细粒度 PPL 分析揭示了不同的故事：</p>
+<p>$$\text{PPL}_{\text{position}}(p) = \exp\left(-\frac{1}{|T_p|}\sum_{t \in T_p}\log P_\theta(x_t|x_{<t})\right)$$</p>
+<p>将序列按位置分段（0-8K、8K-16K、16K-32K、32K-64K），发现 32K-64K 段的 PPL 从 50B 的 6.8 持续下降到 200B 的 5.2，降幅达 23.5%。这意味着尽管 NIAH "满分"，模型对远端上下文的建模仍在大幅改善。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 检索头涌现动力学</div>
+<p>通过追踪每个注意力头的"检索分数"（在 NIAH 任务中对目标 needle 位置的注意力权重占比），发现检索头的涌现遵循三阶段模式：(1) 潜伏期（0-30B）：少数头开始弱检索，分数 < 0.3；(2) 快速涌现期（30B-80B）：检索头数量从 5 增至 23，分数跃升至 0.7+；(3) 精炼期（80B-200B）：头数稳定但每个头的精度持续提升。涌现时间点与 PPL 拐点吻合。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 工业级训练配方</div>
+<p>基于动力学分析推导最优训练配方：数据混合比（长文档:中文档:短文档 = 3:5:2）、学习率衰减策略（余弦退火，peak LR = \(2 \times 10^{-5}\)）、RoPE 频率缩放因子。总计算成本约 \(4 \times 10^{23}\) FLOPs（约 256 台 H800 训练 10 天）。关键发现：数据混合比对最终性能影响最大（±5.2 PPL），而学习率策略的影响其次（±1.8 PPL）。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：检索头涌现的可视化观察</strong>
+<ol>
+<li><strong>30B checkpoint</strong>：Layer 28, Head 7 对 48K 位置的 needle 注意力权重仅 0.08（分散在全序列）</li>
+<li><strong>60B checkpoint</strong>：同一 Head 7 的 needle 注意力权重跃升至 0.52，开始呈现清晰的"尖峰"模式</li>
+<li><strong>150B checkpoint</strong>：Head 7 达到 0.89，同时新增 Head 3（Layer 31）和 Head 11（Layer 35）形成多级检索链</li>
+<li><strong>效果</strong>：64K 上下文 NIAH 准确率从 30B 的 72.3% → 60B 的 95.1% → 150B 的 <strong>99.4%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>模型/阶段</th><th>NIAH@64K</th><th>PPL(32-64K)</th><th>LongBench</th><th>检索头数</th></tr>
+<tr><td>Hunyuan-A13B (基线, 32K)</td><td>45.2%</td><td>9.1</td><td>52.3</td><td>2</td></tr>
+<tr><td>LCCP 50B tokens</td><td>98.5%</td><td>6.8</td><td>64.7</td><td>15</td></tr>
+<tr><td>LCCP 100B tokens</td><td>99.1%</td><td>5.9</td><td>68.2</td><td>21</td></tr>
+<tr><td class="highlight">LCCP 200B tokens</td><td class="highlight">99.4%</td><td class="highlight">5.2</td><td class="highlight">71.8</td><td class="highlight">23</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>核心发现：如果按 NIAH 作为停止标准，训练会在 50B tokens 时停止（浪费 150B tokens 的改善空间），LongBench 将损失 7.1 分。这证实了"欺骗性饱和"的实际危害。数据混合消融显示：纯长文档训练导致短文本能力退化（-3.2 PPL on short texts），最优比例为 3:5:2。与 Llama-3.1-70B 的 LCCP 对比显示，MoE 架构的检索头涌现速度快约 2×，可能归因于专家路由的稀疏性提供了更好的头部专门化条件。局限：仅在一个模型上验证，泛化性需更多实验。</p>
+</div>
+</div>

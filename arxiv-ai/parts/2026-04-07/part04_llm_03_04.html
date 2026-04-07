@@ -1,0 +1,138 @@
+<!-- Paper 3: RAG Real-World Benchmark -->
+<div class="paper-card" id="p-2604-02640">
+<h3><a href="https://arxiv.org/abs/2604.02640" target="_blank">RAG-Gym: 真实世界 RAG 基准与多维诊断框架</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02640</span><span>📅 2026-04-03</span><br>
+<span>🏛 Fujitsu AI Laboratories</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">RAG</span><span class="tag tag-llm">Benchmark</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>尽管 RAG（检索增强生成）在学术基准上表现出色，但在企业实际部署中却常被批评为"不实用"。原因在于现有基准（如 NQ、TriviaQA）使用的是人工策划的干净文档集，无法反映真实场景中的文档噪声、跨格式异构性和多步推理需求。Fujitsu 团队从内部企业文档中构建了全新的 RAG 基准，同时提出多维诊断框架来精确定位 RAG 管线的瓶颈环节。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 真实世界基准构建</div>
+<p>基准数据来自 Fujitsu 内部技术文档库（涵盖产品手册、FAQ、技术报告等 5,000+ 篇文档），包含 4 类问题难度：单文档单步、单文档多步、跨文档单步、跨文档多步。总计 1,200 条 QA 对，每条标注了必需检索文档 ID、推理链和最终答案。文档格式包括 PDF 表格、HTML 嵌套列表、纯文本等混合形式。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 多维诊断框架（MDD）</div>
+<p>框架将 RAG 失败分解为 4 个独立维度，每个维度可独立评估：</p>
+<p>$$\text{RAG\_Score} = \underbrace{R_{\text{retrieval}}}_{\text{检索质量}} \times \underbrace{R_{\text{context}}}_{\text{上下文利用}} \times \underbrace{R_{\text{reasoning}}}_{\text{推理能力}} \times \underbrace{R_{\text{grounding}}}_{\text{事实锚定}}$$</p>
+<p>其中 \(R_{\text{retrieval}}\) 通过 Gold Passage Rate 评估检索器是否找到必需文档；\(R_{\text{context}}\) 测量 LLM 能否从正确文档中提取关键信息；\(R_{\text{reasoning}}\) 评估多步推理能力；\(R_{\text{grounding}}\) 检查答案是否忠实于检索文档。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 瓶颈归因分析</div>
+<p>通过"理想替代"消融法逐步替换每个组件为理想版本。例如将检索器替换为 Oracle（直接返回标注文档），测量性能提升 \(\Delta_R\)。瓶颈贡献定义为：\(\text{Bottleneck}(i) = \Delta_i / \sum_j \Delta_j\)。在 Fujitsu 数据集上发现：检索占瓶颈的 42%，上下文理解占 31%，推理占 19%，事实锚定占 8%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 跨格式鲁棒性测试</div>
+<p>创新性地测试了同一问题在不同文档格式下的 RAG 性能差异。发现 PDF 表格转 Markdown 后检索 recall 下降 23%；HTML 嵌套列表的 chunk 切分导致上下文碎片化，推理准确率下降 18%。提出"格式感知 chunking"策略，根据文档结构动态调整切分粒度。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：跨文档多步推理的诊断</strong>
+<ol>
+<li><strong>问题</strong>："产品 A 的最大并发连接数在升级到 v3.2 后是否超过产品 B 的默认配置？"</li>
+<li><strong>必需文档</strong>：产品 A 的 v3.2 Release Notes（PDF 表格中）+ 产品 B 的 Configuration Guide（HTML）</li>
+<li><strong>诊断结果</strong>：检索器找到了 Release Notes 但遗漏 Configuration Guide（\(R_{\text{retrieval}} = 0.5\)）→ 替换为 Oracle 检索后，LLM 仍无法从 PDF 表格正确提取 "max_concurrent=8192"（\(R_{\text{context}} = 0.6\)）→ 最终瓶颈归因：<strong>检索 50% + 上下文理解 35% + 推理 15%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>RAG 系统</th><th>单文档单步</th><th>单文档多步</th><th>跨文档单步</th><th>跨文档多步</th><th>总体</th></tr>
+<tr><td>Naive RAG (BM25+GPT-4)</td><td>78.2%</td><td>52.1%</td><td>61.3%</td><td>28.7%</td><td>55.1%</td></tr>
+<tr><td>Advanced RAG (Cohere+GPT-4)</td><td>83.5%</td><td>58.6%</td><td>67.2%</td><td>34.1%</td><td>60.9%</td></tr>
+<tr><td>HyDE + Reranker</td><td>85.1%</td><td>61.3%</td><td>70.8%</td><td>37.5%</td><td>63.7%</td></tr>
+<tr><td class="highlight">MDD-Guided Optimization</td><td class="highlight">88.3%</td><td class="highlight">67.2%</td><td class="highlight">74.6%</td><td class="highlight">43.8%</td><td class="highlight">68.5%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>MDD 框架的最大价值在于精准定位瓶颈：在跨文档多步场景中，仅优化检索（加入 multi-query + HyDE）就带来 +5.1pp 提升，而同等投入在推理优化上仅带来 +1.2pp。格式感知 chunking 在 PDF 表格密集型文档上额外贡献 +3.2pp。局限：基准数据来自单一企业（Fujitsu），领域偏向 IT 产品文档，泛化性需进一步验证；MDD 的 4 维分解假设各维度独立，但实际中检索质量和推理能力可能耦合。</p>
+</div>
+</div>
+
+<!-- Paper 4: Single-Agent vs Multi-Agent -->
+<div class="paper-card" id="p-2604-02460">
+<h3><a href="https://arxiv.org/abs/2604.02460" target="_blank">单智能体 vs 多智能体：等算力下的推理对决</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02460</span><span>📅 2026-04-02</span><br>
+<span>🏛 Contextual AI</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">多智能体</span><span class="tag tag-llm">推理</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>多智能体 LLM 系统（MAS）近期在复杂推理任务上报告了令人印象深刻的性能，催生了大量多 Agent 框架。然而一个被忽视的混淆因素是：MAS 天然使用了更多的 test-time 计算量（多个 Agent 各自生成 + 讨论 + 汇总）。当计算量被标准化后，单智能体（SAS）是否仍处于劣势？本文首次在严格等 token 预算下系统性对比 SAS 和 MAS。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 等 Thinking Token 预算框架</div>
+<p>定义"思考 token 预算" \(B_T\) 为系统在推理过程中生成的所有 token 总量（不含最终答案）。对于 \(k\) 个 Agent 的 MAS，每个 Agent 分配 \(B_T/k\) 个 token 进行独立思考加讨论。对于 SAS，单个 Agent 使用全部 \(B_T\) 个 token 进行深度推理。形式化：</p>
+<p>$$\text{MAS}(k, B_T): \quad \sum_{i=1}^{k} |T_i| = B_T, \quad \text{SAS}(B_T): \quad |T_1| = B_T$$</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 多跳推理任务设计</div>
+<p>聚焦于 MAS 声称优势最大的多跳推理任务：HotpotQA（2-hop）、MuSiQue（2-4 hop）、Bamboogle（multi-hop with distractors）。设计 4 种 MAS 拓扑：Debate（Agent 间辩论）、Round-Robin（轮流发言）、Hierarchical（分层汇总）、Mixture-of-Agents。SAS 则使用 Chain-of-Thought 扩展思考。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 信息论分析</div>
+<p>从信息论角度分析：MAS 中 Agent 间的信息传递存在冗余和信息丢失。定义信息利用效率：</p>
+<p>$$\eta_{\text{info}} = \frac{I(\text{Answer}; \text{Generated Tokens})}{B_T} = \frac{H(\text{Answer}) - H(\text{Answer}|\text{Generated Tokens})}{B_T}$$</p>
+<p>实验发现 SAS 的 \(\eta_{\text{info}}\) 平均比 MAS 高 37%——单 Agent 的连续推理链比多 Agent 的碎片化讨论更高效地利用每个 token 传递有用信息。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ Scaling Law 拟合</div>
+<p>对 SAS 和 MAS 分别拟合 test-time compute scaling law：\(\text{Acc}(B_T) = A - C \cdot B_T^{-\alpha}\)。发现 SAS 的 \(\alpha_{\text{SAS}} = 0.42\) 显著大于 MAS 的 \(\alpha_{\text{MAS}} = 0.28\)，意味着 SAS 随计算量增加的性能提升更快。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：MuSiQue 4-hop 推理，预算 B_T = 2048 tokens</strong>
+<ol>
+<li><strong>MAS (4 Agents)</strong>：每个 Agent 分配 512 tokens → Agent 1 处理 hop 1-2 但未完成推理 → Agent 2 重复 hop 1 → 讨论轮次浪费 ~400 tokens 在格式和协调上 → <strong>准确率 41.2%</strong></li>
+<li><strong>SAS (1 Agent)</strong>：使用全部 2048 tokens → 完成完整的 4-hop 推理链，每步包含验证 → <strong>准确率 58.7%</strong></li>
+<li><strong>结论</strong>：等预算下 SAS 领先 <strong>+17.5 pp</strong>，信息利用效率 SAS 0.034 vs MAS 0.022</li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>系统</th><th>HotpotQA</th><th>MuSiQue</th><th>Bamboogle</th><th>平均</th></tr>
+<tr><td>MAS-Debate (3 agents)</td><td>62.1%</td><td>38.5%</td><td>55.2%</td><td>51.9%</td></tr>
+<tr><td>MAS-Hierarchical (4 agents)</td><td>64.3%</td><td>41.2%</td><td>57.8%</td><td>54.4%</td></tr>
+<tr><td>MAS-MoA (3 agents)</td><td>65.8%</td><td>42.7%</td><td>58.1%</td><td>55.5%</td></tr>
+<tr><td class="highlight">SAS-CoT (equal budget)</td><td class="highlight">71.2%</td><td class="highlight">52.3%</td><td class="highlight">64.7%</td><td class="highlight">62.7%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>当不限制计算预算时，MAS 确实比标准 SAS 表现更好（因为 MAS 使用了 3-4× 更多 token），但这纯粹是计算量差异而非架构优势。消融显示：(1) MAS 中 30-45% 的 token 用于协调开销（格式化、角色说明、重复内容）；(2) Agent 数量从 2 增加到 5 时，协调开销占比从 25% 增至 52%。局限：实验仅覆盖推理任务，MAS 在需要多角色分工的创意任务上可能仍有优势；测试仅使用 GPT-4 和 Claude-3.5，其他模型可能有不同表现。</p>
+</div>
+</div>

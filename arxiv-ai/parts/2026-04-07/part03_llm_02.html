@@ -1,0 +1,69 @@
+<!-- Paper 2: Trivial Vocabulary Bans -->
+<div class="paper-card" id="p-2604-02699">
+<h3><a href="https://arxiv.org/abs/2604.02699" target="_blank">词汇禁令出人意料地提升 LLM 推理能力</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02699</span><span>📅 2026-04-03</span><br>
+<span>🏛 Independent Researcher</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">推理</span><span class="tag tag-llm">输出正则化</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>先前研究提出"Umwelt 工程"假说：通过移除特定词汇（如 E-Prime，即去掉 "to be" 动词）来重构语言模型的认知环境，从而选择性地影响推理能力。这一假说的核心是"词汇-认知映射"——特定词汇的缺失会迫使模型进行更深层的认知重构。然而，该理论缺乏严格的控制实验验证。本文设计了一项大规模复制与扩展实验，通过引入主动控制组来检验该假说——结果令人惊讶：所有预测均被干净彻底地否证。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 五条件实验设计</div>
+<p>实验测试 5 种生成约束条件：(1) <strong>无约束控制组</strong>（基线）；(2) <strong>E-Prime</strong>（禁止 "to be" 所有形式，理论最深约束）；(3) <strong>No-Have</strong>（禁止 "to have" 所有形式）；(4) <strong>元认知提示</strong>（显式要求 "仔细思考"）；(5) <strong>填充词禁令</strong>（禁止 "very", "really", "just" 等无逻辑功能的词）。前两者基于认知重构假说应产生最大效果，后两者作为预期无效的主动控制组。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 大规模多模型多任务评估</div>
+<p>跨 6 个模型（GPT-4o、Claude 3.5 Sonnet、Gemini 1.5 Pro 三大前沿 + Llama-3-8B、Mistral-7B、Phi-3-mini 三个小模型）× 7 项推理任务（GSM8K、ARC、LogiQA、PIQA 等），共 \(N = 15{,}600\) 次试验（合规过滤后 \(N = 11{,}919\)）。对每个条件计算绝对准确率和相对于控制组的改进（以 pp 为单位），并通过 bootstrap 置信区间评估显著性。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 输出正则化假说（新发现）</div>
+<p>实验结果完美否证了认知重构假说：四种约束条件的效果大小与理论深度<strong>呈完美反比</strong>——最浅的填充词禁令（+6.0 pp）效果最大，最深的 E-Prime（+3.7 pp）效果最小。作者提出替代解释："输出正则化"机制。任何生成约束都迫使模型偏离默认生成路径，打断流畅但浅层的响应模式，从而改善推理。形式化为：</p>
+<p>$$\Delta_{\text{reasoning}} \propto f(\text{monitoring\_load}) \cdot g^{-1}(\text{conceptual\_disruption})$$</p>
+<p>浅层约束（如禁 "very"）施加恒定的监控负载但几乎不干扰概念表达，因此效果最好。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 跨模型相关性检验</div>
+<p>原始研究报告了高跨模型相关性（表明效果具有结构性），但本文复制实验中该信号完全消失：平均 Pearson \(r = 0.005\)，范围 \([-0.856, +0.539]\)。通过排列检验确认：原始相关性信号更可能是样本量不足导致的噪声伪迹，而非真实的认知重构签名。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：GSM8K 数学推理中的填充词禁令效果</strong>
+<ol>
+<li><strong>控制组提示</strong>："Solve: A baker makes 12 muffins per batch..." → 模型回答 "So the baker <em>really</em> needs to make <em>just</em> 3 batches, which is <em>very</em> simple..."（流畅但跳步推理）</li>
+<li><strong>填充词禁令</strong>：禁止 "very, really, just, quite, simply, actually" → 模型被迫生成 "The baker needs 36 muffins total. Each batch produces 12 muffins. Therefore, 36 ÷ 12 = 3 batches are required."（更精确的逐步推理）</li>
+<li><strong>效果</strong>：GPT-4o 上 GSM8K 准确率从 89.2% → <strong>95.1%（+5.9 pp）</strong>；Llama-3-8B 上从 62.4% → <strong>71.8%（+9.4 pp）</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>约束条件</th><th>理论深度</th><th>全模型 Acc</th><th>Δ vs 控制</th><th>合规率</th></tr>
+<tr><td>无约束控制组</td><td>—</td><td>83.0%</td><td>—</td><td>100%</td></tr>
+<tr><td>E-Prime (去 "to be")</td><td>最深</td><td>86.7%</td><td>+3.7 pp</td><td>72.1%</td></tr>
+<tr><td>No-Have (去 "to have")</td><td>深</td><td>87.6%</td><td>+4.6 pp</td><td>78.3%</td></tr>
+<tr><td>元认知提示</td><td>浅</td><td>88.2%</td><td>+5.2 pp</td><td>95.8%</td></tr>
+<tr><td class="highlight">填充词禁令</td><td class="highlight">最浅</td><td class="highlight">89.0%</td><td class="highlight">+6.0 pp</td><td>84.6%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>关键发现：(1) 效果大小与理论深度呈完美反比（Spearman ρ = −1.0），这是认知重构假说的最强反证；(2) 前沿模型和小模型均呈现相同趋势，说明该机制是架构无关的；(3) 合规过滤后效果更加显著（填充词禁令达 +6.7 pp），表明约束的实际执行比约束类型更重要。局限：本研究仅覆盖英语推理任务，多语言泛化尚未验证；"输出正则化"假说虽解释力更强，但尚缺乏机制层面的理论支撑（如注意力模式分析）。</p>
+</div>
+</div>

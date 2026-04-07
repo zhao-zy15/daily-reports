@@ -1,0 +1,147 @@
+<!-- ==================== RL Section ==================== -->
+<h2 class="section-title">🎯 RL — 强化学习与对齐</h2>
+
+<!-- Paper 7: Self-Distilled RLVR -->
+<div class="paper-card" id="p-2604-03128">
+<h3><a href="https://arxiv.org/abs/2604.03128" target="_blank">RLSD: 自蒸馏增强的 RLVR</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.03128</span><span>📅 2026-04-03</span><br>
+<span>🏛 Chinese Academy of Sciences, JD.COM</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">自蒸馏</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>RLVR（Reinforcement Learning with Verifiable Rewards）通过可验证的奖励信号训练推理模型，已成为提升数学和代码推理能力的主流范式。然而，RLVR 仅提供 outcome-level 的二值反馈（对/错），缺乏 token-level 的精细信号来指导每一步推理。自蒸馏（Self-Distillation）可以提供 token-level 信息，但作者发现单纯的自蒸馏会导致严重的信息泄露和长期训练不稳定。如何安全地结合两者的优势？</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 在线策略自蒸馏（OPSD）的失败分析</div>
+<p>首先分析了直接使用 OPSD 的问题：教师模型（训练前的策略 \(\pi_{\text{ref}}\)）拥有完整的"特权信息"（正确答案），自蒸馏损失 \(\mathcal{L}_{\text{SD}} = \text{KL}(\pi_\theta \| \pi_{\text{ref}})\) 实际上在引导学生"记住"正确路径而非学习推理。实验显示：纯 OPSD 在前 500 步提升快但随后性能下降（信息泄露导致的过拟合），训练 2000 步后性能低于基线 RLVR 3.2pp。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② RLSD: 方向与幅度的解耦</div>
+<p>RLSD 的核心思想是解耦更新方向和更新幅度：</p>
+<p>$$\nabla_\theta \mathcal{L}_{\text{RLSD}} = \underbrace{r_{\text{RLVR}} \cdot \text{sign}(\nabla_\theta \mathcal{L}_{\text{RLVR}})}_{\text{方向：来自RLVR的可靠信号}} \cdot \underbrace{|\pi_\theta(a_t|s_t) - \pi_{\text{ref}}(a_t|s_t)|}_{\text{幅度：来自自蒸馏的精细差异}}$$</p>
+<p>RLVR 提供可靠的更新方向（哪些推理路径应该被强化/抑制），自蒸馏提供 token-level 的策略差异来确定每个 token 的更新幅度。这避免了自蒸馏的信息泄露问题，因为方向完全由 RLVR 的环境反馈决定。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 自适应温度调节</div>
+<p>为防止自蒸馏幅度信号过大或过小，引入自适应温度：</p>
+<p>$$w_t = \sigma\left(\frac{|\pi_\theta(a_t|s_t) - \pi_{\text{ref}}(a_t|s_t)|}{\tau_t}\right), \quad \tau_t = \text{EMA}(\text{std}(\Delta\pi))$$</p>
+<p>其中 \(\sigma\) 是 sigmoid 函数，\(\tau_t\) 通过指数移动平均跟踪策略差异的标准差。这确保了在训练初期（策略差异小）自蒸馏信号被放大，在训练后期（策略差异大）被适当抑制。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 训练稳定性保证</div>
+<p>通过 KL 散度约束确保训练稳定：\(\text{KL}(\pi_\theta \| \pi_{\text{ref}}) \leq \beta\)，其中 \(\beta\) 从 0.1 线性增长到 0.5。同时引入"奖励一致性检查"：如果自蒸馏幅度与 RLVR 奖励方向矛盾（如 RLVR 给予正奖励但自蒸馏推高了错误 token 的概率），则丢弃该样本。实验显示这过滤了约 8% 的训练样本，但显著减少了训练振荡。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：MATH-500 数学推理改进</strong>
+<ol>
+<li><strong>基线 RLVR</strong>：模型解 "If \(x^2 + 3x - 10 = 0\), find \(x\)" → 生成长推理链但在因式分解步骤犯错 → 获得 reward=0，但不知道具体哪步出错</li>
+<li><strong>RLSD</strong>：自蒸馏幅度信号识别出 token "\((x-2)(x+5)\)" 处策略差异最大（\(|\Delta\pi| = 0.34\)），表明模型在此处最不确定 → RLVR reward=1 时重点强化该 token；reward=0 时重点抑制</li>
+<li><strong>结果</strong>：RLSD 在 MATH-500 上从 67.2%（RLVR）提升到 <strong>72.8%（+5.6pp）</strong>，收敛速度快 1.5×</li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>MATH-500</th><th>GSM8K</th><th>AIME2024</th><th>LiveCodeBench</th></tr>
+<tr><td>SFT (基线)</td><td>58.4%</td><td>82.1%</td><td>16.7%</td><td>25.3%</td></tr>
+<tr><td>RLVR (GRPO)</td><td>67.2%</td><td>88.5%</td><td>23.3%</td><td>31.8%</td></tr>
+<tr><td>OPSD (纯自蒸馏)</td><td>64.1%</td><td>86.3%</td><td>20.0%</td><td>29.5%</td></tr>
+<tr><td class="highlight">RLSD (ours)</td><td class="highlight">72.8%</td><td class="highlight">91.2%</td><td class="highlight">26.7%</td><td class="highlight">35.1%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>消融显示：(1) 去掉自适应温度 \(\tau_t\) 后性能下降 2.1pp（固定温度无法适应训练动态）；(2) 去掉奖励一致性检查后训练在 1500 步出现性能下降；(3) 将自蒸馏替换为固定权重 \(w_t = 1\) 退化为标准 RLVR + uniform scaling，仅比 RLVR 好 1.2pp。关键发现：RLSD 的改善主要集中在中等难度问题上（MATH Level 3-4），对最简单和最难的问题改善有限，说明 token-level 信号在推理链较长但不超出能力边界时最有价值。局限：需要维护参考策略 \(\pi_{\text{ref}}\)，内存开销翻倍。</p>
+</div>
+</div>
+
+<!-- Paper 8: Reward Hacking Mitigation -->
+<div class="paper-card" id="p-2604-02986">
+<h3><a href="https://arxiv.org/abs/2604.02986" target="_blank">优势符号鲁棒性缓解 RLHF 奖励黑客</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02986</span><span>📅 2026-04-03</span><br>
+<span>🏛 University of Tokyo, RIKEN AIP</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLHF</span><span class="tag tag-rl">奖励黑客</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>RLHF 中的奖励模型（RM）是人类偏好的不完美代理，模型可能学会利用 RM 的漏洞获得高奖励但不实际提升质量——即"奖励黑客"（reward hacking）。现有方法主要通过 KL 约束或 reward clipping 来缓解，但这些方法要么过于保守（限制了有效探索），要么难以精确识别哪些梯度更新是可靠的。本文提出基于优势函数符号鲁棒性的新视角。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 优势符号假设</div>
+<p>核心观察：当 RM 在某样本上的评分不可靠时（奖励黑客区域），优势函数 \(A(s,a) = Q(s,a) - V(s)\) 的符号（正/负）会在 RM 的微小扰动下翻转。而在可靠区域，优势符号对 RM 扰动是稳定的。据此定义"符号鲁棒性"：</p>
+<p>$$\rho(s,a) = \Pr_{\epsilon \sim \mathcal{N}(0, \sigma^2)}\left[\text{sign}(A_{\theta}(s,a)) = \text{sign}(A_{\theta+\epsilon}(s,a))\right]$$</p>
+<p>直觉：如果给 RM 加噪声后优势符号不变，说明该样本的梯度方向可靠。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 鲁棒性加权 PPO</div>
+<p>将符号鲁棒性作为 PPO 策略梯度的权重：</p>
+<p>$$\nabla_\theta J = \mathbb{E}\left[\rho(s_t, a_t) \cdot \text{clip}\left(\frac{\pi_\theta}{\pi_{\text{old}}}, 1-\epsilon, 1+\epsilon\right) \cdot A(s_t, a_t) \cdot \nabla_\theta \log \pi_\theta(a_t|s_t)\right]$$</p>
+<p>当 \(\rho \approx 1\) 时梯度正常更新；当 \(\rho \approx 0.5\)（接近随机）时梯度被大幅衰减。这自动过滤了奖励黑客区域的不可靠梯度。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 高效鲁棒性估计</div>
+<p>精确计算 \(\rho\) 需要多次 RM 前向传播，计算成本过高。提出近似方法：利用 RM 最后一层的 Fisher 信息矩阵估计参数敏感性，并通过一阶 Taylor 展开近似扰动后的优势：</p>
+<p>$$A_{\theta+\epsilon}(s,a) \approx A_\theta(s,a) + \epsilon^T \nabla_\theta A_\theta(s,a)$$</p>
+<p>符号翻转条件简化为 \(|A_\theta| < |\epsilon^T \nabla_\theta A_\theta|\)，可在单次前向传播中高效计算。额外计算开销仅 15%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 理论分析</div>
+<p>在线性 RM 假设下证明：当 RM 的真实误差 \(\delta_{RM}\) 有界时，鲁棒性加权 PPO 的 regret bound 为 \(O(\sqrt{T \cdot \delta_{RM}})\)，优于标准 PPO 的 \(O(T \cdot \delta_{RM})\)。这说明鲁棒性加权将 RM 误差的影响从线性降至亚线性。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：检测并阻断奖励黑客行为</strong>
+<ol>
+<li><strong>模型行为</strong>：在 RLHF 训练中，模型学会生成"冗长但空洞"的回答（如重复同义表达 3 次），RM 给出高分 4.2/5.0</li>
+<li><strong>鲁棒性检测</strong>：对 RM 施加 \(\sigma=0.01\) 的参数扰动，该样本的优势符号从 +0.18 翻转为 -0.05 → \(\rho = 0.32\)（高度不稳定）</li>
+<li><strong>加权更新</strong>：该样本的梯度被衰减 68%（\(\rho=0.32\)），模型不再强化这种冗长行为</li>
+<li><strong>效果</strong>：使用鲁棒性加权后，人类评估的 win rate 从 52.1% 提升至 <strong>61.8%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>RM Score ↑</th><th>Human Win Rate</th><th>Reward Hacking Rate ↓</th><th>额外开销</th></tr>
+<tr><td>PPO (标准)</td><td>4.12</td><td>52.1%</td><td>23.4%</td><td>—</td></tr>
+<tr><td>PPO + KL penalty</td><td>3.85</td><td>55.6%</td><td>18.7%</td><td>0%</td></tr>
+<tr><td>PPO + Reward Clipping</td><td>3.91</td><td>56.2%</td><td>17.2%</td><td>0%</td></tr>
+<tr><td class="highlight">PPO + Sign Robustness</td><td class="highlight">4.05</td><td class="highlight">61.8%</td><td class="highlight">9.8%</td><td>+15%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>扰动标准差 \(\sigma\) 的影响：\(\sigma=0.005\) 时过于宽松（几乎不过滤），\(\sigma=0.05\) 时过于严格（过滤 60% 样本导致欠训练），最优在 \(\sigma=0.01\)。Fisher 近似 vs Monte Carlo 估计：Fisher 近似的计算开销仅为 MC 的 1/10，但鲁棒性估计的相关性达 0.91。局限：Fisher 近似在高度非线性 RM 上可能不准确；方法假设 RM 误差是各向同性的，但实际 RM 可能有结构化偏差。</p>
+</div>
+</div>

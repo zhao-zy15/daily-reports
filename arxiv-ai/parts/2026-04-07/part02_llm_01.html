@@ -1,0 +1,75 @@
+<!-- ==================== LLM Section ==================== -->
+<h2 class="section-title">🧠 LLM — 纯文本大模型</h2>
+
+<!-- Paper 1: DEMASK -->
+<div class="paper-card" id="p-2604-02560">
+<h3><a href="https://arxiv.org/abs/2604.02560" target="_blank">DEMASK: 离散扩散语言模型的依赖引导并行解码</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.02560</span><span>📅 2026-04-03</span><br>
+<span>🏛 Technion, Tel Aviv University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">解码加速</span><span class="tag tag-llm">扩散模型</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>离散扩散语言模型（dLLMs）通过并行解掩码（unmask）多个 token 来加速文本生成，已成为自回归生成的有力替代。然而，现有并行解码策略（如基于置信度的策略）将联合条件分布近似为完全独立的边缘分布乘积，当被选中的 token 之间存在强依赖时，输出质量严重下降。例如在 GSM8K 数学推理任务中，简单的并行策略会导致数字和运算符之间的逻辑不一致。核心挑战在于：如何在加速的同时精确控制并行采样带来的分布偏差？</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 成对依赖估计器</div>
+<p>DEMASK 在 dLLM 的最终隐状态上附加一个轻量级依赖预测头，在单次前向传播中估计所有掩码位置之间的成对条件影响。给定掩码位置集合 \(M = \{m_1, \ldots, m_{|M|}\}\)，依赖矩阵 \(D \in [0,1]^{|M| \times |M|}\) 定义为：</p>
+<p>$$D_{i,j} = \mathbb{E}_{Y_{m_j} \sim P_\theta(\cdot|X,Y_U)} \left[ \text{TV}\left(P_\theta(Y_{m_i}|X,Y_U),\; P_\theta(Y_{m_i}|X,Y_U,Y_{m_j})\right) \right]$$</p>
+<p>其中 \(\text{TV}(P,Q) = \frac{1}{2}\sum_{y \in \mathcal{V}}|P(y)-Q(y)|\) 为全变差距离。\(D_{i,j} \approx 0\) 意味着位置 \(m_i\) 给定上下文后与 \(m_j\) 近似条件独立。该预测头使用全连接层实现，参数量仅为 dLLM 主体的 0.3%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 贪心子集选择算法</div>
+<p>基于依赖矩阵 \(D\)，DEMASK 使用贪心策略选择最大的可并行解掩码子集 \(S \subseteq M\)。对每个候选位置 \(m_i\)，计算其累积依赖 \(c_i = \sum_{j \in S} D_{i,j}\)。选择规则为：仅当 \(c_i \leq \tau\)（依赖阈值）且 \(p_{\text{top1}}(m_i) \geq \gamma\)（置信度阈值）时，才将 \(m_i\) 加入 \(S\)。算法按置信度降序遍历候选位置，时间复杂度为 \(O(|M|^2)\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 理论保证：次可加性条件下的误差界</div>
+<p>在次可加性假设下，作者证明了并行采样分布 \(Q_\theta(Y_S|X,Y_U) = \prod_{i \in S} P_\theta(Y_i|X,Y_U)\) 与真实联合分布之间的全变差距离上界：</p>
+<p>$$\text{TV}\left(P_\theta(Y_S|X,Y_U),\; Q_\theta(Y_S|X,Y_U)\right) \leq \sum_{i \in S} c_i \leq |S| \cdot \tau$$</p>
+<p>这保证了当阈值 \(\tau\) 足够小时，并行采样的误差可控。通过调节 \(\tau\) 和 \(\gamma\)，可以在速度和质量之间灵活权衡。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 迭代扩散生成流程</div>
+<p>完整的 DEMASK 解码循环为：(1) 前向传播获取概率矩阵 \(\hat{P}\) 和依赖矩阵 \(\hat{D}\)；(2) 贪心选择子集 \(S\)；(3) 并行采样 \(Y_S\)；(4) 更新已解掩码集合 \(U \leftarrow U \cup S\)。循环直至所有位置解掩码。每步的并行解掩码数量自适应调整——低依赖区域一次性解掩码更多 token，高依赖区域则更保守。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：GSM8K 数学推理加速</strong>
+<ol>
+<li><strong>输入</strong>：数学应用题 "A store sells pencils for $0.50 each..."，序列长度 256 tokens</li>
+<li><strong>传统方法</strong>：Dream-7B 基线每步仅解掩码 1 token → 134 步前向传播</li>
+<li><strong>DEMASK</strong>（\(\tau=0.04, \gamma=0.9\)）：依赖预测器识别出 "pencils"、"$0.50"、"each" 等位置间依赖较低（\(D_{i,j} < 0.02\)），可同时解掩码；而 "=", "15", "$7.50" 等算术关键位置依赖较高（\(D_{i,j} > 0.1\)），保持串行</li>
+<li><strong>结果</strong>：仅需 81.3 步（<strong>1.65× 加速</strong>），准确率反而从 81.2% 提升至 <strong>82.8%</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>GSM8K Acc</th><th>平均步数</th><th>加速比</th><th>HumanEval Pass@1</th></tr>
+<tr><td>Dream-7B (1 TPF)</td><td>81.2%</td><td>134</td><td>1.0×</td><td>65.2%</td></tr>
+<tr><td>Confidence-only (γ=0.9)</td><td>78.5%</td><td>76</td><td>1.76×</td><td>61.8%</td></tr>
+<tr><td>KLASS (KL-based)</td><td>82.0%</td><td>120.7</td><td>1.11×</td><td>64.9%</td></tr>
+<tr><td class="highlight">DEMASK (ours)</td><td class="highlight">82.8%</td><td class="highlight">81.3</td><td class="highlight">1.65×</td><td class="highlight">66.1%</td></tr>
+<tr><td>DEMASK (aggressive)</td><td>80.1%</td><td>61</td><td>2.20×</td><td>63.5%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>消融实验表明：(1) 去除依赖预测器仅靠置信度选择，加速比虽达 1.76× 但准确率下降 2.7pp；(2) 依赖阈值 \(\tau\) 从 0.04 增大至 0.10 时，加速比从 1.65× 提升至 2.2× 但准确率下降 2.7pp，说明阈值控制了精度-速度权衡；(3) 预测头仅有 2M 参数（Dream-7B 总量的 0.03%），训练仅需 500 步。局限性：当前仅在 Dream-7B 上验证，尚未推广到更大规模 dLLM（如 70B+）；依赖矩阵计算的 \(O(|M|^2)\) 复杂度在超长序列上可能成为瓶颈。</p>
+</div>
+</div>

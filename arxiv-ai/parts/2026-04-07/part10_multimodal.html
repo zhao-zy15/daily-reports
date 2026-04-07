@@ -1,0 +1,143 @@
+<!-- ==================== Multimodal Section ==================== -->
+<h2 class="section-title">🌐 Multimodal — 多模态大模型</h2>
+
+<!-- Paper 16: Hallucination in Multimodal RL -->
+<div class="paper-card" id="p-2604-03179">
+<h3><a href="https://arxiv.org/abs/2604.03179" target="_blank">幻觉在多模态推理 RL 后训练中的角色</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.03179</span><span>📅 2026-04-03</span><br>
+<span>🏛 UIUC, Rutgers University, Arizona State University</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">幻觉</span><span class="tag tag-multimodal">RL 后训练</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>RL 后训练已成为提升多模态大语言模型（MLLM）视觉推理能力的主流方法。然而，一个未被深入探讨的问题是：RL 训练过程中幻觉（hallucination）扮演什么角色？直觉上幻觉是有害的，但本文发现了一个反直觉的现象——在 RL 训练的探索阶段，适度的幻觉实际上可以带来更好的最终性能。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 幻觉类型的精细分类</div>
+<p>将 MLLM 中的幻觉分为 3 类：(1) <strong>事实幻觉</strong>：对图像中不存在的对象做出断言（"图中有一只猫"但实际没有）；(2) <strong>属性幻觉</strong>：错误描述存在对象的属性（"红色汽车"实际为蓝色）；(3) <strong>推理幻觉</strong>：基于正确视觉感知但逻辑推理错误。通过对 10K 条 RL 训练轨迹的标注，发现推理幻觉占比 68%，事实幻觉 22%，属性幻觉 10%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 幻觉-探索假说</div>
+<p>提出"幻觉-探索"假说：RL 训练中，模型需要"试错"来发现正确的推理路径。推理幻觉本质上是错误的推理尝试——当这些尝试获得负奖励后，模型学会了"什么不能做"，从而间接提升推理能力。形式化：</p>
+<p>$$\text{Performance}(T) = f\left(\underbrace{\text{Exploration}(T)}_{\text{包含幻觉}}\right) - g\left(\underbrace{\text{Hallucination\_Damage}(T)}_{\text{幻觉带来的负面}}\right)$$</p>
+<p>在训练早期 \(f > g\)（探索收益大于幻觉损害），晚期 \(f < g\)（需要抑制幻觉）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 分阶段幻觉管理</div>
+<p>基于假说设计分阶段训练策略：(1) <strong>探索阶段</strong>（前 30% 步数）：不惩罚推理幻觉，仅惩罚事实幻觉（KL 约束较松，\(\beta=0.01\)）；(2) <strong>过渡阶段</strong>（30%-60%）：引入幻觉检测器，对推理幻觉施加轻微惩罚；(3) <strong>收敛阶段</strong>（后 40%）：全面惩罚所有幻觉，收紧 KL 约束（\(\beta=0.1\)）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ 幻觉检测与量化</div>
+<p>使用轻量级幻觉检测器（基于 CLIP 的视觉-文本一致性检查器）：对每个生成 token 计算与图像的对齐分数 \(a_t = \cos(\text{CLIP}(I), \text{CLIP}(y_{\leq t}))\)。当 \(a_t\) 急剧下降（\(\Delta a_t < -0.1\)）时标记为潜在幻觉点。该检测器的精度 82%，召回 75%，计算开销仅 5%。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：MathVista 几何推理中的幻觉探索效果</strong>
+<ol>
+<li><strong>问题</strong>：图中三角形的面积（底=8, 给出斜边和角度）</li>
+<li><strong>探索阶段幻觉</strong>："底边长度为 10"（事实幻觉，但随后的推理步骤是正确的勾股定理应用）→ 获得负奖励</li>
+<li><strong>同阶段另一尝试</strong>："使用正弦定理求高..."（推理幻觉，公式应用错误）→ 也获得负奖励，但模型学到了"需要检查公式条件"</li>
+<li><strong>收敛阶段</strong>：模型正确识别底=8，使用面积公式 \(S = \frac{1}{2}bh\)，先正确求高 → <strong>答案正确</strong></li>
+<li><strong>效果</strong>：分阶段策略比全程抑制幻觉高 <strong>+4.3pp</strong> on MathVista</li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>训练策略</th><th>MathVista</th><th>MMMU</th><th>POPE (幻觉) ↑</th><th>CHAIR ↓</th></tr>
+<tr><td>SFT 基线</td><td>42.1%</td><td>38.5%</td><td>83.2</td><td>12.8</td></tr>
+<tr><td>RL (全程惩罚幻觉)</td><td>48.3%</td><td>42.1%</td><td>88.7</td><td>8.5</td></tr>
+<tr><td>RL (不惩罚幻觉)</td><td>50.1%</td><td>43.8%</td><td>79.5</td><td>15.2</td></tr>
+<tr><td class="highlight">RL (分阶段管理)</td><td class="highlight">52.6%</td><td class="highlight">45.2%</td><td class="highlight">87.1</td><td class="highlight">9.1</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>关键发现：(1) "不惩罚幻觉"组推理性能最高但幻觉指标恶化（POPE 降 3.7，CHAIR 升 6.7）——证实了幻觉的双刃剑效应；(2) 分阶段管理在推理（+4.3pp vs 全程惩罚）和幻觉控制（POPE 仅降 1.6）之间取得最佳平衡；(3) 探索阶段的最优长度因任务而异——数学推理偏好更长探索（40%），而事实性 VQA 偏好更短（20%）。局限：幻觉检测器的精度有限，可能误标正确推理为幻觉；分阶段策略的超参数需要任务特定调优。</p>
+</div>
+</div>
+
+<!-- Paper 17: Chart-RL -->
+<div class="paper-card" id="p-2604-03157">
+<h3><a href="https://arxiv.org/abs/2604.03157" target="_blank">Chart-RL: 图表问答中的视觉推理强化学习</a></h3>
+<div class="paper-meta">
+<span>📄 arXiv:2604.03157</span><span>📅 2026-04-03</span><br>
+<span>🏛 Amazon</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">图表理解</span><span class="tag tag-multimodal">RL</span>
+</div>
+
+<div class="module">
+<h4>📌 背景与动机</h4>
+<p>图表问答（Chart Question Answering, CQA）是视觉语言模型的关键应用场景——从柱状图、折线图、饼图中回答复杂问题。现有 VLM 在 CQA 上的主要瓶颈包括：数值提取不精确、隐式视觉关系（如"趋势"、"最大差值"）理解不足、注意力机制未能聚焦图表的关键数据区域。本文提出用 RL 策略优化来增强图表视觉推理能力。</p>
+</div>
+
+<div class="module">
+<h4>🔬 核心方法详解</h4>
+
+<div class="sub-module">
+<div class="sub-title">① 图表感知奖励函数</div>
+<p>设计三维奖励函数，分别评估 CQA 的不同能力：</p>
+<p>$$R(y|q,c) = \alpha \cdot R_{\text{answer}}(y, y^*) + \beta \cdot R_{\text{numerical}}(y, c) + \gamma \cdot R_{\text{reasoning}}(y)$$</p>
+<p>其中 \(R_{\text{answer}}\) 是答案正确性（精确匹配或数值容差内）；\(R_{\text{numerical}}\) 评估中间数值提取的准确性（通过 OCR 验证器检查提到的数字是否与图表一致）；\(R_{\text{reasoning}}\) 评估推理链的逻辑完整性（使用规则检查器验证数学运算步骤）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">② 视觉注意力引导</div>
+<p>在 RL 训练中引入视觉注意力辅助损失：鼓励模型的 cross-attention 聚焦于图表的数据区域（坐标轴、数据点、图例）而非背景。通过 OCR 预处理获取图表中数据区域的 bounding box，构建注意力掩码 \(M_{\text{data}}\)：</p>
+<p>$$\mathcal{L}_{\text{attn}} = -\sum_{l,h} \text{KL}\left(\text{CrossAttn}_{l,h} \| M_{\text{data}}\right)$$</p>
+<p>这确保模型在生成推理链时"看对地方"。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">③ 数值提取增强</div>
+<p>CQA 的核心难点是从图表图像中精确提取数值。提出"坐标空间对齐"策略：首先通过 OCR 提取坐标轴刻度，然后训练模型学会通过坐标轴映射关系估算数据点的精确值。对柱状图，数值误差从平均 8.3% 降至 2.1%。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-title">④ GRPO 训练策略</div>
+<p>使用 Group Relative Policy Optimization (GRPO) 进行训练。对每个图表问答对采样 \(G=8\) 个回答，按三维奖励排序后计算组内相对优势。训练 3000 步，batch size 128，学习率 \(1 \times 10^{-6}\)。为防止灾难性遗忘，混合 20% 通用 VQA 数据。</p>
+</div>
+</div>
+
+<div class="module">
+<h4>💡 深度案例</h4>
+<div class="example-box">
+<strong>场景：复合柱状图的趋势推理</strong>
+<ol>
+<li><strong>问题</strong>："2020-2023年间，产品A的年增长率是否持续高于产品B？"（需要读取8个柱状值并计算4组增长率）</li>
+<li><strong>SFT 模型</strong>：提取数值 [120, 135, 148, 170]（产品A）和 [80, 95, 112, 125]（产品B），但将 2022 年产品B 误读为 108 → 计算错误 → <strong>回答错误</strong></li>
+<li><strong>Chart-RL</strong>：视觉注意力精确聚焦在柱状顶部 → 正确提取 [120, 135, 148, 170] 和 [80, 95, 112, 125] → 增长率 A: [12.5%, 9.6%, 14.9%], B: [18.8%, 17.9%, 11.6%] → "不是，2020-2022年B增长率更高" → <strong>回答正确</strong></li>
+</ol>
+</div>
+</div>
+
+<div class="module">
+<h4>📊 实验结果</h4>
+<table>
+<tr><th>方法</th><th>ChartQA</th><th>PlotQA</th><th>Chart-to-Text</th><th>数值精度 ↑</th></tr>
+<tr><td>InternVL2 (SFT)</td><td>72.8%</td><td>61.5%</td><td>32.1 BLEU</td><td>91.7%</td></tr>
+<tr><td>Qwen-VL (SFT)</td><td>74.2%</td><td>63.8%</td><td>33.5 BLEU</td><td>92.3%</td></tr>
+<tr><td class="highlight">Chart-RL (InternVL2)</td><td class="highlight">79.5%</td><td class="highlight">69.2%</td><td class="highlight">36.8 BLEU</td><td class="highlight">97.9%</td></tr>
+</table>
+</div>
+
+<div class="module">
+<h4>🔍 消融与讨论</h4>
+<p>三维奖励的贡献分析：\(R_{\text{answer}}\) 单独贡献 +3.2pp，\(R_{\text{numerical}}\) 额外贡献 +2.1pp，\(R_{\text{reasoning}}\) 额外贡献 +1.4pp。视觉注意力引导在复杂多系列图表上贡献最大（+3.8pp），在简单单系列图表上贡献较小（+0.8pp）。数值精度提升是性能增长的主要驱动力——将数值误差从 8.3% 降至 2.1% 直接带来了大量"差一点答对"的样本翻正。局限：OCR 预处理依赖外部工具；对手绘或低质量图表效果有限；训练数据需要图表级的结构化标注。</p>
+</div>
+</div>
