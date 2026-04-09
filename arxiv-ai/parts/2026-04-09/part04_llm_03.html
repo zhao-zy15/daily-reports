@@ -1,0 +1,60 @@
+<div class="paper-card" id="paper-06393">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.06393">ART: Attention Replacement Technique to Improve Factuality in LLMs</a></h3>
+<div class="paper-meta">
+<span>👤 Ziqin Luo, Yihao Quan, Xiaofeng Zhang, Xiaosong Yuan, Chen Shen</span>
+<span>🏛 Shanghai Jiao Tong University, Fudan University, Alibaba Cloud</span>
+<span>📅 2026-04-07 · arXiv:2604.06393</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Hallucination</span> <span class="tag tag-industry">🏢 Alibaba Cloud</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 幻觉问题在 QA 任务中尤为严重。已有方法多需外部知识库或重训模型。本文发现 LLM 浅层存在大量<b>均匀注意力头</b>（对序列均匀分配注意力），导致模型无法聚焦关键信息，是幻觉来源之一。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 注意力模式分类与 m-index</div>
+<p>定义 m-index 量化注意力头与均匀注意力的偏离：$$m_h^l = \frac{1}{N(N+1)/2} \sum_{i \geq j} \max\!\left(\frac{A_h^l[i,j]}{U[i,j]}, \frac{U[i,j]}{A_h^l[i,j]}\right)$$m-index 小→uniform 头，大→local 头。按此排序将头分为三类。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 模式影响验证</div>
+<p>消融实验表明：mask 单个 local 头即严重损害生成；mask 少量 uniform 头几乎无影响甚至可提升。uniform 头具有高冗余性。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ ART 替换机制</div>
+<p>浅层（前2层）中将 \(k = \lfloor 0.1 \times N_h \rfloor\) 个 uniform 头替换为 local 注意力：$$\text{ART-MHA}^l(X) = \sum_{i \in \mathcal{I}} A_{\text{local}}^l f_i^l(X) + \sum_{i \notin \mathcal{I}} A_i^l f_i^l(X)$$两种变体：ART-max（取 m-index 最大单头）和 ART-mean（所有 local 头均值）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 零训练即插即用</div>
+<p>仅在推理时干预浅层 MHA，不需微调或训练数据，不影响推理效率。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>ART-inverse 反向实验：</strong>
+<ul>
+<li><b>Qwen2.5-7B：</b>TruthfulQA 0.0%, LogiQA 2.0%, GSM8K 7.5%——将 local 替换为 uniform 使模型几乎完全失效</li>
+<li>正向 ART 则稳定提升 +1.0~3.4pp</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>方法</th><th>TruthfulQA</th><th>LogiQA</th><th>GSM8K</th><th>Avg</th></tr>
+<tr><td>Qwen2.5-7B</td><td>Vanilla</td><td>51.2</td><td>50.7</td><td>93.2</td><td>72.1</td></tr>
+<tr><td>Qwen2.5-7B</td><td>ART-max</td><td class="best">54.6(+3.4)</td><td>52.1</td><td>93.8</td><td class="best">73.5</td></tr>
+<tr><td>Llama3.1-8B</td><td>Vanilla</td><td>46.5</td><td>38.8</td><td>88.1</td><td>66.7</td></tr>
+<tr><td>Llama3.1-8B</td><td>ART-mean</td><td>46.8</td><td class="best">40.2(+1.4)</td><td>89.0</td><td class="best">67.4</td></tr>
+<tr><td>Qwen2.5-32B</td><td>Vanilla</td><td>71.6</td><td>63.0</td><td>94.7</td><td>81.8</td></tr>
+<tr><td>Qwen2.5-32B</td><td>ART-mean</td><td>71.8</td><td>63.5</td><td class="best">95.5(+0.8)</td><td class="best">82.1</td></tr>
+</table>
+
+<div class="module-title">🧪 消融与讨论</div>
+<p class="ablation-text">k=10%N_h 最优，k>20% 开始退化。ART 对 7B/8B 模型提升更大（0.6-1.7pp），14B/32B 提升较小（0.3-0.5pp）。与 ITI/ACT/DoLa 相比，ART 无需任务特定数据，是更实用的即插即用方案。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">ART 揭示了 LLM 浅层 <b>uniform 头冗余、local 头关键</b>的规律，通过简单注意力替换即可零训练提升事实性。在多模型多任务上均有效。</p>
+</div>

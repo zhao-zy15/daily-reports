@@ -1,0 +1,71 @@
+<h2 class="section-title">🧠 LLM — 纯文本大模型</h2>
+
+<div class="paper-card" id="paper-06192">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.06192">The Stepwise Informativeness Assumption: Why are Entropy Dynamics and Reasoning Correlated in LLMs?</a></h3>
+<div class="paper-meta">
+<span>👤 Mar Gonzàlez I Català, Haitz Sáez de Ocáriz Borde, George D. Montañez, Pietro Liò</span>
+<span>🏛 University of Cambridge, Harvey Mudd College</span>
+<span>📅 2026-04-11 · arXiv:2604.06192</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Reasoning</span> <span class="tag tag-llm">Information Theory</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>近年来大量实证研究发现，LLM 推理过程中的内部熵动态与外部正确性之间存在鲁棒的相关性——低熵轨迹更可能导向正确答案。然而，<b>内部熵完全由模型预测分布定义，而正确性由外部真实答案分布定义</b>，两者理论上无先验关联。现有方法要么将此相关性视为经验事实直接利用，要么诉诸训练导致对齐的模糊直觉，却从未严格回答：为什么模型内部的不确定性降低能预测推理成功？</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 逐步信息增益框架（Stepwise Information Gain）</div>
+<p>定义推理链中每个 token \(C_k\) 的<b>信息增益</b>为：</p>
+$$\Delta_k(q,a,c_{1:k}) = h(a|q,c_{<k}) - h(a|q,c_{\leq k})$$
+<p>其中 \(h\) 是关于真实答案的点惊讶度。\(\Delta_k > 0\) 意味着该步骤使正确答案概率更高（信息性步骤），\(\Delta_k < 0\) 则反之。<b>累积增益</b> \(G_k = \sum_{t=1}^k \Delta_t\) 可将条件答案熵分解为初始不确定性减去到目前为止积累的信息量。关键引理证明 \(\mathbb{E}[\Delta_k] = I(A; C_k | Q, C_{<k})\)，即期望信息增益恰等于条件互信息。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 逐步信息性假设（SIA）</div>
+<p>在一个联合耦合 \(p \in \Pi\) 下（保持真实答案分布和模型推理分布的边际），假设推理前缀关于真实答案是信息性的：</p>
+$$I_p(A; C_{1:k} | Q) \geq \epsilon_k > 0 \quad \forall k \geq 1$$
+<p>SIA 不要求每个 token 都是信息性的——它约束的是<b>前缀整体</b>所包含的答案相关信息。SIA 成立时，条件答案熵可被解释为推理的<b>进度变量</b>：它沿成功推理链单调递减。Theorem 1 进一步通过 Fano 不等式证明：熵约束了可达准确率的下界 \(P_e^{(k)} \geq \frac{H_p(A|Q,C_{1:k}) - \log 2}{\log(|\mathcal{A}|-1)}\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ SIA 从 MLE 训练中涌现</div>
+<p>论文证明了一个 SIA 传递定理（Theorem 2）：如果人类推理轨迹的数据生成分布 \(r\) 满足 \(I_r(A; C_{\leq k}|Q) > 0\)，且模型通过 MLE 训练使得 \(\text{KL}(r \| p_\theta) \leq \delta_k\)，则模型分布也满足 \(I_{p_\theta}(A; C_{\leq k}|Q) \geq \epsilon_k/2\)。证明依赖于条件互信息在 KL 散度下的连续性（经由 Fannes-Audenaert 不等式→Pinsker 不等式的链式推导）。这解释了为什么 SFT 和 RL 后训练能<b>诱导</b>内部熵与正确性的对齐。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 可观测签名与失败模式</div>
+<p>SIA 预测三个可观测签名：<b>(a) 早期信息锁定</b>——正确轨迹在推理早期就积累大量答案信息；<b>(b) 早期可分性</b>——用条件熵即可在推理早期区分正确/错误轨迹（AUC 显著高于随机）；<b>(c) 饱和</b>——对齐模型的条件熵收敛至接近零的平台。SIA 不成立时（如基座模型），这些签名消失或减弱，内部熵下降可能反映对错误假说的确信（即幻觉的信息论形式化）。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>SIA 对齐系数实验：</strong>
+<p>对每条推理轨迹计算 \(\rho_{\text{SIA}} = \text{corr}_k(H_\theta(A|q,c_{\leq k}), -\log p_\theta(a^*|q,c_{\leq k}))\)：</p>
+<ul>
+<li><b>Base Gemma-2-2B:</b> \(\rho = -0.530\)（负相关！熵下降时远离正确答案）</li>
+<li><b>SFT Qwen-2.5-3B-it:</b> \(\rho = 0.744\)（强正对齐）</li>
+<li><b>RL DeepSeek-R1-Distilled:</b> \(\rho = 0.795\)（接近完美对齐）</li>
+<li><b>SFT+RL OLMo-3-7B-Think-SFT:</b> \(\rho = 0.964\)（几乎完美）</li>
+</ul>
+<p>Shuffle-prefix 消融：随机打乱前缀 token 顺序后，Qwen-2.5-3B 的 \(\rho\) 从 0.682 暴跌至 -0.132，证实信息积累依赖结构化序列，而非简单的 token 计数。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>训练阶段</th><th>GSM8K \(\rho\)</th><th>SVAMP \(\rho\)</th><th>ARC \(\rho\)</th></tr>
+<tr><td>Gemma-2-2B</td><td>Base</td><td>-0.530</td><td>0.169</td><td>-0.208</td></tr>
+<tr><td>Gemma-2-2B-it</td><td>SFT</td><td>0.522</td><td>0.462</td><td>0.578</td></tr>
+<tr><td>Qwen-2.5-3B</td><td>Base</td><td>0.682</td><td>0.603</td><td>0.344</td></tr>
+<tr><td>Qwen-2.5-3B-it</td><td>SFT</td><td>0.744</td><td>0.835</td><td>0.666</td></tr>
+<tr><td>DeepSeek-R1-Distilled</td><td>SFT+RL</td><td class="best">0.795</td><td>0.593</td><td class="best">0.783</td></tr>
+<tr><td>OLMo-3-7B-Think-SFT</td><td>SFT</td><td class="best">0.964</td><td class="best">0.884</td><td class="best">0.960</td></tr>
+<tr><td>OLMo-3-7B-Think</td><td>SFT+RL</td><td>0.885</td><td>0.778</td><td>0.887</td></tr>
+</table>
+
+<div class="module-title">🧪 消融与讨论</div>
+<p class="ablation-text">Shuffle-prefix 消融明确证实熵-正确性对齐依赖于 token 的<b>结构化排列</b>。Monte-Carlo 估计鲁棒性消融（MC=32, stride=4）显示结果定性不变。SIA 的关键局限：(1) 对创意写作等无明确终端变量的任务不直接适用；(2) 强 SIA 条件下 base 模型仍可能出现负对齐（对错误假说的确信），此时熵诊断方法理论上不成立。论文未覆盖是否可以通过干预熵动态来改变推理结果。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文首次为"LLM 内部熵为何能预测推理正确性"提供了<b>信息论解释</b>：通过 SIA 假设，条件答案熵成为推理的进度变量。MLE 训练在人类推理轨迹上自然诱导 SIA，SFT 和 RL 进一步强化。这为所有基于熵的推理诊断方法（早停、探索、质量预测）提供了理论基础，也指出了失败模式——当训练未能诱导 SIA 时，熵信号可能具有误导性。</p>
+</div>

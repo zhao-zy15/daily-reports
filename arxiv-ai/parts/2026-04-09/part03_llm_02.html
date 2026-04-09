@@ -1,0 +1,64 @@
+<div class="paper-card" id="paper-06374">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.06374">The Illusion of Superposition? A Principled Analysis of Latent Thinking in Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Michael Rizvi-Martel, Guillaume Rabusseau, Marius Mosbach</span>
+<span>🏛 Mila, Université de Montréal, McGill University</span>
+<span>📅 2026-04-07 · arXiv:2604.06374</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Latent Reasoning</span> <span class="tag tag-llm">Interpretability</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>连续思维链（Latent CoT）被认为比离散 CoT 更具表达力，其核心假说是<b>叠加（superposition）</b>：模型可以在单一表示中同时维护多个候选解，在提交答案前并行探索多条推理路径。然而，这一吸引人的假说缺乏实证验证。现有 Soft Thinking 和 Coconut 方法声称利用叠加，但<b>模型实际上是否真的在用叠加推理？</b>这直接关系到潜在推理方法的设计方向。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Soft Thinking 叠加崩溃分析</div>
+<p>Soft Thinking 在每步构造软 token：\(\tilde{e}_t = \sum_{k \in \mathcal{V}} p_{t,k} \cdot e_k\)，其中 \(p_t\) 是 top-\(k_{\text{soft}}\) token 的 softmax 权重。使用 Logit Lens 在 QwQ-32B（64层）的 5 个均匀采样层分析软 token 与离散 token 的熵剖面。结果显示：<b>Shannon 熵在各层几乎完全相同</b>（图2a），两者在中间层的 KL 散度降至 \(\sim 10^{-4}\)。进一步的 token 级干预实验（将单个软 token 替换为其 argmax 离散 token）显示余弦相似度 \(0.996 \pm 0.025\)。叠加在前向传播的最初几层即崩溃为单一解释。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Coconut 微调模型的快捷学习</div>
+<p>在 ProsQA 图遍历任务上微调 GPT-2(124M)。关键发现：<b>移除所有潜在 token 后，模型仍达到 96.6% 准确率</b>（完整 Coconut 为 99.0%）。通过实体级信念探测（将 LM head 投影到词汇空间，追踪 correct-next/wrong-neighbor/target/other 四类实体的概率演化），发现 Coconut 模型的 target 实体从第 0 步就主导分布（无逐步推理签名），而离散 CoT 模型则展现正确的逐步信念转移。这表明微调模型学到了<b>快捷解</b>——在单次前向传播中直接获取答案，然后通过潜在 token 复制。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 从头训练模型中叠加的涌现</div>
+<p>用 GPT-2 风格小模型（8头, 768维, 2层）在简化 ProsQA 上从头训练 Coconut。结果与微调截然不同：<b>从头训练的模型确实展现叠加推理签名</b>——中间推理步骤中 correct-next 实体概率主导但 wrong-neighbor 保持显著概率（图4），且移除潜在 token 后准确率从 94.5% 暴跌至 13.8%。信念在推理步骤间逐步演化，符合并行探索假说。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 崩溃的双因素解释</div>
+<p><b>因素1：预训练的最后层 token 承诺</b>——对 Qwen2-1.5B 注入均匀权重叠加输入，预训练模型在最终层熵急剧下降至接近零，而随机初始化模型保持高熵。预训练的 next-token prediction 目标创建了在最后层分离 token 身份的表示。<b>因素2：容量效应</b>——即使从头训练，过大的模型（8/12层）也倾向于学习快捷解；只有容量受限的浅层模型（2/4层）才发展出叠加推理。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>ProsQA 示例：</strong>"Every dax is a wug. Every dax is a zug. Every wug is a blicket. Rex is a dax. Is Rex a blicket or a gorple?"
+<ul>
+<li><b>离散 CoT：</b> 逐步推理 dax→wug→blicket，每步 correct-next 概率最高</li>
+<li><b>微调 Coconut：</b> 从第 0 步起 target="blicket" 概率即占 80%+（无逐步推理）</li>
+<li><b>从头 Coconut (2L)：</b> 步骤1 correct-next="wug" ~60%, wrong-neighbor="zug" ~25%；步骤2 target="blicket" 概率上升——真正的叠加信念演化</li>
+</ul>
+<p>移除潜在 token 后：微调模型 96.6%→96.6%（几乎无影响），从头模型 94.5%→13.8%（灾难性下降）。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型配置</th><th>条件</th><th>准确率 (%)</th></tr>
+<tr><td>微调 GPT-2 (12L)</td><td>CoT (离散, 5-hop)</td><td>85.3</td></tr>
+<tr><td>微调 GPT-2 (12L)</td><td>Coconut (6 latent tokens)</td><td class="best">99.0</td></tr>
+<tr><td>微调 GPT-2 (12L)</td><td>Coconut (无 latent tokens)</td><td>96.6</td></tr>
+<tr><td>从头训练 (2L)</td><td>有 latent</td><td class="best">94.5</td></tr>
+<tr><td>从头训练 (2L)</td><td>无 latent</td><td>13.8</td></tr>
+<tr><td>从头训练 (4L)</td><td>有 latent / 无 latent</td><td>96.2 / 16.0</td></tr>
+<tr><td>从头训练 (8L)</td><td>有 latent / 无 latent</td><td>80.7 / 62.8</td></tr>
+<tr><td>从头训练 (12L)</td><td>有 latent / 无 latent</td><td>61.6 / 63.0</td></tr>
+</table>
+
+<div class="module-title">🧪 消融与讨论</div>
+<p class="ablation-text">容量消融（2/4/8/12 层）清晰展示：叠加与模型大小呈<b>负相关</b>——过大的模型直接学快捷解。Soft Thinking 的混合权重熵仅 \(0.18 \pm 0.34\) nats，输入已近乎离散。Top-3 token 可视化显示高 KL 步骤的叠加发生在语义无关的标点/格式 token 之间（如 "(" 和 "{"），而非有意义的推理路径探索。局限：未测试 RL 训练的连续 CoT（如 Butt et al. 2025）和循环层方法。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文系统性地揭示了<b>潜在推理中叠加假说的幻觉</b>：现有的 Soft Thinking 和 Coconut 微调方法并未真正利用叠加推理，只有容量受限的从头训练模型才发展出叠加。根本原因是预训练的 next-token prediction 目标在最后层创建了 token 身份分离的压力。这对潜在推理方法的未来设计有重要启示：叠加可能需要在更高抽象层面（推理策略级而非 token 级）才有意义，且需要专门的训练机制来对抗预训练偏置。</p>
+</div>

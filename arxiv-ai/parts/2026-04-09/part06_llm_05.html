@@ -1,0 +1,27 @@
+<div class="paper-card" id="paper-06542">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.06542">Does a Global Perspective Help Prune Sparse MoEs Elegantly? (GRAPE)</a></h3>
+<div class="paper-meta">
+<span>👤 Zeliang Zhang, Nikhil Ghosh, Jiani Liu, Bin Yu, Xiaodong Liu</span>
+<span>🏛 University of Rochester, Flatiron Institute, UC Berkeley, Microsoft Research</span>
+<span>📅 2026-04-08 · arXiv:2604.06542</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag tag-llm">MoE</span> <span class="tag tag-llm">Pruning</span></span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>稀疏 MoE 模型内存开销巨大。现有剪枝方法在局部层级独立评估每层专家，忽略跨层冗余差异。GRAPE 提出<b>全局视角</b>进行跨层预算分配。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 全局专家重要性评估</div><p>使用校准数据计算每个专家的激活频率与输出范数贡献。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 全局预算分配</div><p>按重要性分数全局排序，移除分数最低的专家。“重要层”保留更多专家，“冗余层”更激进剪枝。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 轻量路由器微调</div><p>剪枝后仅微调路由器 gate 参数，无需全模型重训。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>Mixtral-8x7B 50%剪枝分布：</strong>浅层保留6/8专家(25%剪枝)，中间层4/8(50%)，深层3/8(62%)。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>模型</th><th>方法</th><th>50%剪枝 PPL</th><th>平均准确率</th></tr>
+<tr><td>Mixtral-8x7B</td><td>Uniform</td><td>7.82</td><td>62.1%</td></tr>
+<tr><td>Mixtral-8x7B</td><td class="best">GRAPE</td><td class="best">6.94</td><td class="best">65.8%</td></tr>
+<tr><td>DeepSeek-MoE</td><td>Uniform</td><td>8.45</td><td>58.3%</td></tr>
+<tr><td>DeepSeek-MoE</td><td class="best">GRAPE</td><td class="best">7.21</td><td class="best">62.7%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p class="ablation-text">5个 MoE 模型上 GRAPE 一致优于局部方法。全局视角在高剪枝比(60-70%)下优势更显著。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">GRAPE 证明<b>全局视角</b>对 MoE 剪枝至关重要，不同层冗余度差异巨大。</p>
+</div>
