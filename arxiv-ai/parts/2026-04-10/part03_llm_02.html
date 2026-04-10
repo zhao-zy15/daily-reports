@@ -1,0 +1,62 @@
+<div class="paper-card" id="paper-07822">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07822">Loop, Think &amp; Generalize: Implicit Reasoning in Recurrent-Depth Transformers</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07822</span>
+<span>🏛 The Ohio State University</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag">隐式推理</span> <span class="tag">循环深度Transformer</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>标准 Transformer 尽管在预训练中存储了大量事实知识，但在隐式推理（单次前向传播中组合知识）方面表现不佳。核心瓶颈在于：知识分布在不同层中，而各层参数不共享，导致需要在更深层组合的知识可能无法被正确访问。这限制了 LLM 在组合泛化和深度推理方面的能力。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 循环深度架构 — 共享权重的迭代计算</div>
+<p>使用 \(L\) 层 GPT-2 风格 Transformer block，重复应用 \(R\) 次迭代，有效深度 \(D = L \times R\)。每次迭代的计算为：
+\[h^{(r+1)} = f_\theta(h^{(r)}; m), \quad r = 0, \dots, R-1\]
+权重共享使得每一层都能在每次迭代中访问所有存储的知识，突破了标准 Transformer 中知识被绑定到特定层深度的限制。使用零初始化（c_proj 矩阵初始化为零）确保训练稳定性。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 系统泛化：三阶段 Grokking 动态</div>
+<p>在 2-hop 推理任务上（知识图谱 \(|E|=2000\), \(|R|=200\)），循环深度 Transformer 展现出独特的三阶段学习动态：<br>
+<strong>Stage 1</strong>（记忆）：模型过拟合训练集，OOD 准确率为 0；<br>
+<strong>Stage 2</strong>（ID 泛化）：经过延长训练后涌现分布内泛化（grokking）；<br>
+<strong>Stage 3</strong>（系统泛化）：模型在从未见过的知识组合上实现泛化。标准 Transformer（\(R=1\)）完全无法达到 Stage 3。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 深度外推：推理时迭代扩展</div>
+<p>训练时使用动态迭代策略 \(R \sim \text{clip}(\text{Poisson}(\lambda), R_{\min}, R_{\max})\)，推理时增加迭代次数可解锁更深推理。模型在仅训练 5-hop 后，通过增加推理迭代可泛化到 19-hop 以上。关键发现：训练时最大迭代数决定外推范围，动态迭代优于固定迭代。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">④ Overthinking 限制与自适应停止</div>
+<p>过多的推理迭代会导致 overthinking：logit margin 先升后降。提出结合 KL 散度和输出熵的自适应停止准则：
+\[\text{KL}(p_t \| p_{t-1}) < \varepsilon_\text{KL} \quad \text{and} \quad H(p_t) < H_\text{thresh}\]
+相比仅用 KL 散度的方法，该准则能更好地分配计算资源，避免过早停止。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：2-hop 系统泛化</strong>
+<ol>
+<li><strong>输入</strong>：知识图谱包含 40K 原子事实，95% 用于组合训练（\(\mathcal{C}_{ID}\)），5% 保留为 OOD（\(\mathcal{C}_{OOD}\)）</li>
+<li><strong>Logit Lens 分析</strong>：在 \(R=2\) 模型的 Stage 3，桥接实体在浅层被成功解码，目标实体在深层被正确预测——说明模型学会了真正的两步组合推理</li>
+<li><strong>对比</strong>：标准 8 层 Transformer 虽然能在 OOD 数据上解码桥接实体，但无法在深层完成第二跳推理</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>训练迭代R</th><th>ID 准确率</th><th>OOD 准确率(系统泛化)</th><th>最大外推深度</th></tr>
+<tr><td>Vanilla (R=1)</td><td>1</td><td>~99%</td><td>0%</td><td>训练深度</td></tr>
+<tr><td>Recurrent R=2</td><td>2</td><td>~99%</td><td>~85% (7K epochs)</td><td>—</td></tr>
+<tr><td>Recurrent R=4</td><td>4</td><td>~99%</td><td class="best">~90% (2K epochs)</td><td>—</td></tr>
+<tr><td>Fixed R=8</td><td>8</td><td>≤16-hop</td><td>—</td><td>24-hop</td></tr>
+<tr><td>Dynamic</td><td>Poisson</td><td class="best">≤22-hop</td><td>—</td><td class="best">26-hop</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">初始化策略至关重要：使用默认高斯初始化（而非零初始化）时，不同种子间结果高度不稳定，增加循环次数不产生一致的改进。相反，零初始化确保恒等映射起点，训练稳定且结果可复现。动态迭代策略在相同数据下的外推性能与 R=8 固定迭代相当，但可学习更深的 ID 泛化深度。课程学习中存在"相变"：模型需要 130 万步 grokking 到 4-hop，之后快速学会直到 19-hop。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文首次系统证明循环深度 Transformer 能实现标准 Transformer 无法做到的两大能力：(1) 系统泛化——组合从未在训练中一起出现的知识；(2) 深度外推——通过增加推理时迭代泛化到远超训练复杂度的任务。核心启示是权重共享使知识不再绑定于固定层深度，而是可在任意迭代中灵活访问。Overthinking 是当前主要限制，未来工作需解决推理计算的最优分配问题。</p>
+</div>

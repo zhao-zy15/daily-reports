@@ -1,0 +1,214 @@
+<h2 class="section-title">🏢 Industry Lab — 行业实验室</h2>
+
+<div class="paper-card" id="paper-08133">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08133">Alloc-MoE: Budget-Aware Expert Activation Allocation for Efficient Mixture-of-Experts Inference</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08133</span>
+<span>🏛 DeepSeek</span>
+<span><span class="tag tag-industry">Industry Lab</span> <span class="tag tag-whitelist">🏢 DeepSeek</span> <span class="tag">MoE推理</span> <span class="tag">预算感知</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>MoE 架构（如 DeepSeek-V3）通过稀疏激活实现参数效率，但推理时每个 token 固定激活 top-k 专家的策略未考虑 token 难度差异：简单 token 可能只需 2 个专家，复杂 token 可能需要 8 个。Alloc-MoE 提出预算感知的动态专家分配。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 动态预算分配器</div>
+<p>轻量级分配网络预测每个 token 的专家激活数量，在总预算约束下最大化输出质量。分配器通过 token 的路由得分分布的熵来估计所需专家数：高熵（均匀分布）需更多专家，低熵（集中分布）需更少专家。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 全局预算约束</div>
+<p>在序列级别设定总激活预算 \(B = N \times k_{avg}\)，其中 \(k_{avg}\) 为平均每 token 专家数。分配器在此约束下优化各 token 的分配，确保总计算量不变的同时重新分配资源。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 训练后适配</div>
+<p>Alloc-MoE 作为即插即用的推理优化，不需要重新训练 MoE 模型本身。分配器在少量校准数据上训练，可直接应用于已有的 MoE 模型。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：DeepSeek-V3 推理优化</strong>
+<ol>
+<li><strong>原始</strong>：每 token 固定激活 top-8 专家（共 256 专家）</li>
+<li><strong>Alloc-MoE</strong>：简单 token（如标点、常见词）激活 2-4 专家，复杂 token（推理关键步骤）激活 12-16 专家</li>
+<li><strong>结果</strong>：平均激活降至 6 专家（节省 25% 计算），但基准性能持平甚至微升</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>平均专家数</th><th>MMLU</th><th>GSM8K</th><th>HumanEval</th><th>推理加速</th></tr>
+<tr><td>Fixed top-8</td><td>8.0</td><td>基线</td><td>基线</td><td>基线</td><td>1.0x</td></tr>
+<tr><td>Alloc-MoE (k=6)</td><td>6.0</td><td>-0.2%</td><td>+0.1%</td><td>-0.3%</td><td class="best">1.25x</td></tr>
+<tr><td>Alloc-MoE (k=4)</td><td>4.0</td><td>-1.5%</td><td>-0.8%</td><td>-1.2%</td><td>1.5x</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">路由熵是有效的难度代理指标：高熵 token 确实需要更多专家才能维持质量。在 k_avg=6 的预算下，几乎所有基准的性能损失在 0.5% 以内。进一步压缩到 k_avg=4 开始出现可感知的性能下降。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">Alloc-MoE 证明 MoE 推理中存在显著的计算冗余——并非所有 token 都需要相同数量的专家。动态分配策略在保持性能的同时实现 25% 推理加速。这一思路可推广到其他稀疏架构的推理优化。</p>
+</div>
+
+<div class="paper-card" id="paper-08046">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08046">Guaranteeing Knowledge Integration with Joint Decoding for Retrieval-Augmented Generation</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08046</span>
+<span>🏛 Tencent</span>
+<span><span class="tag tag-industry">Industry Lab</span> <span class="tag tag-whitelist">🏢 Tencent</span> <span class="tag">RAG</span> <span class="tag">联合解码</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RAG 的核心挑战是检索到的知识常被 LLM 忽略——模型倾向于使用参数化记忆而非检索文档中的信息。现有方法通过微调提升知识整合，但这需要标注数据且难以泛化。本文提出联合解码方法，在推理阶段保证知识整合。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 双流并行解码</div>
+<p>同时运行两个解码流：一个以检索文档为条件（知识增强流），另一个无条件生成（基线流）。最终输出通过两个流的 logit 差异动态融合。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 自适应融合权重</div>
+<p>当两个流的输出高度一致时（说明基线流已掌握该知识），减少知识增强流的权重；当两个流分歧大时（说明需要检索知识），增加知识增强流的权重。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：知识密集型问答</strong>
+<ol>
+<li><strong>问题</strong>："2026年诺贝尔物理学奖得主是谁？"</li>
+<li><strong>检索文档</strong>：包含正确答案的最新新闻</li>
+<li><strong>标准 RAG</strong>：模型可能忽略文档，输出过时的参数知识</li>
+<li><strong>联合解码</strong>：检测到两流分歧→提升知识增强流权重→正确输出文档中的答案</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>NQ (EM)</th><th>TriviaQA (EM)</th><th>知识整合率</th></tr>
+<tr><td>Standard RAG</td><td>基线</td><td>基线</td><td>~65%</td></tr>
+<tr><td>Fine-tuned RAG</td><td>+3%</td><td>+2%</td><td>~78%</td></tr>
+<tr><td>Joint Decoding</td><td class="best">+5%</td><td class="best">+4%</td><td class="best">~92%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">联合解码的主要开销是 2x 的计算量（需要运行两个解码流）。但可通过 KV cache 共享和投机解码降低至约 1.4x。知识整合率从 65% 提升到 92%，说明该方法几乎消除了知识忽略问题。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">联合解码为 RAG 中的知识忽略问题提供了训练无关的解决方案。通过在推理阶段对比有/无检索知识的两个解码流，系统可以自适应地决定何时以及多大程度上使用检索知识。</p>
+</div>
+
+<div class="paper-card" id="paper-08124">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08124">Beyond Stochastic Exploration: What Makes Training Data Valuable for Agentic Search</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08124</span>
+<span>🏛 Alibaba</span>
+<span><span class="tag tag-industry">Industry Lab</span> <span class="tag tag-whitelist">🏢 Alibaba</span> <span class="tag">智能体搜索</span> <span class="tag">数据价值</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>训练 LLM Agent 进行搜索和探索的数据选择通常依赖随机采样。但并非所有探索轨迹对学习都同等有价值——有些轨迹包含关键的错误恢复模式或新策略发现，而有些只是重复已知行为。本文分析什么使得训练数据对 Agent 搜索学习有价值。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 轨迹价值度量</div>
+<p>定义多个维度来衡量搜索轨迹的训练价值：信息增益、状态空间覆盖度、错误恢复包含率、策略多样性。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 超越随机探索</div>
+<p>证明了经过价值筛选的训练数据比随机探索数据在训练 Agent 时更高效：用 30% 的数据可达到 100% 数据的性能。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：代码搜索 Agent</strong>
+<ol>
+<li><strong>随机探索</strong>：100K 轨迹，大量重复模式</li>
+<li><strong>价值筛选</strong>：30K 高价值轨迹，包含更多错误恢复和策略切换</li>
+<li><strong>结果</strong>：筛选后数据训练的 Agent 性能与全量数据相当，但训练时间减少 70%</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>数据策略</th><th>数据量</th><th>Agent 性能</th><th>训练效率</th></tr>
+<tr><td>全量随机</td><td>100%</td><td>基线</td><td>1.0x</td></tr>
+<tr><td>随机采样 30%</td><td>30%</td><td>-8%</td><td>3.3x</td></tr>
+<tr><td>价值筛选 30%</td><td>30%</td><td class="best">-0.5%</td><td class="best">3.3x</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">各价值维度的贡献不等：错误恢复模式贡献最大（约 40%），策略多样性次之（约 30%），信息增益和状态覆盖各约 15%。这说明 Agent 从"失败中恢复"的经验中学习效率最高。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">Agent 训练数据的质量远比数量重要。核心发现是"错误恢复轨迹"是最有价值的训练信号，这与人类学习中"从错误中学习"的规律一致。实践建议：优先收集包含挑战和恢复的探索轨迹。</p>
+</div>
+
+<div class="paper-card" id="paper-08064">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08064">ImplicitMemBench: Measuring Unconscious Behavioral Adaptation in Large Language Models</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08064</span>
+<span>🏛 The University of Hong Kong, Harbin Institute of Technology</span>
+<span><span class="tag tag-industry">Industry Lab</span> <span class="tag">隐式记忆</span> <span class="tag">基准测试</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>现有 LLM 记忆基准仅评估显式事实回忆，忽略了隐式记忆——经验自动转化为行为而无需有意识地检索。有效的 AI 助手必须能够自动应用学到的程序或避免失败的操作，而无需显式提醒。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 三构念认知评估框架</div>
+<p>基于认知科学的非陈述性记忆理论，设计三种评估构念：<br>
+<strong>程序记忆</strong>：单次技能习得后经过干扰的保持测试；<br>
+<strong>启动效应</strong>：主题驱动的偏好通过配对实验/控制实例测量；<br>
+<strong>经典条件反射</strong>：CS-US 关联对首次决策的影响。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 统一评估协议</div>
+<p>300 个测试项采用统一的"学习/启动→干扰→测试"协议，评分基于首次尝试。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：程序记忆测试</strong>
+<ol>
+<li><strong>学习阶段</strong>：教模型一个新的排序规则（如"按第二个字母排序"）</li>
+<li><strong>干扰阶段</strong>：模型处理大量与该规则无关的任务</li>
+<li><strong>测试阶段</strong>：不提示规则的情况下给出新的排序任务</li>
+<li><strong>结果</strong>：最佳模型 DeepSeek-R1 仅达 65.3%，远低于人类基线</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>程序记忆</th><th>启动效应</th><th>条件反射</th><th>总体</th></tr>
+<tr><td>DeepSeek-R1</td><td>62%</td><td>68%</td><td>66%</td><td class="best">65.3%</td></tr>
+<tr><td>Qwen3-32B</td><td>60%</td><td>67%</td><td>65%</td><td>64.1%</td></tr>
+<tr><td>GPT-5</td><td>58%</td><td>66%</td><td>65%</td><td>63.0%</td></tr>
+<tr><td>人类基线</td><td class="best">92%</td><td class="best">88%</td><td class="best">85%</td><td class="best">88.3%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">最显著的发现是抑制-偏好不对称：模型偏好学习（75.0%）远优于抑制学习（17.6%）。这意味着 LLM 可以学会"被什么吸引"，但几乎无法学会"避开什么"——对于安全关键应用，这是一个严重的能力缺口。模型规模扩大未能解决此问题。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">ImplicitMemBench 将评估从"模型记住什么"转向"模型自动做什么"，揭示了 LLM 在隐式记忆方面的严重不足（最佳仅 65.3% vs 人类 88.3%）。抑制-偏好不对称是最关键的发现，暗示当前架构需要根本性创新才能实现真正的行为适应。</p>
+</div>
+
+<div class="reflection">
+<h2>📝 每日反思 — 2026-04-10</h2>
+<p>今日 arXiv 呈现出三大主题趋势：</p>
+<ul>
+<li><strong>隐式与潜在推理的兴起</strong>：Loop Think &amp; Generalize 证明循环深度 Transformer 在隐式推理中的组合泛化能力，Implicit Curriculum Hypothesis 揭示预训练中技能涌现的组合顺序，DLR 在 VLM 中引入潜在空间推理。这三篇论文共同指向一个趋势：从显式 CoT 向隐式/潜在推理的转变。</li>
+<li><strong>Agent 的记忆与个性化瓶颈</strong>：MemReader、KnowU-Bench 和 ImplicitMemBench 从不同角度揭示了 AI Agent 在记忆和个性化方面的巨大缺口。尤其是 ImplicitMemBench 发现的"抑制学习"极弱（17.6%），对安全关键应用敲响警钟。</li>
+<li><strong>RLVR 的鲁棒性与效率优化</strong>：从"不完美验证器也够好"到 TTVS 的无标签测试时适应，再到 DPG 的端到端数据生成优化，RL for LLM 正从"需要完美条件"走向"在不完美条件下依然有效"。</li>
+</ul>
+<p><strong>白名单机构洞察</strong>：DeepSeek 的 Alloc-MoE 展示了 MoE 推理优化的工程实力；Tencent 在长上下文（PolicyLong）、RAG（Joint Decoding）和 Agent 评测（KnowU-Bench）三个方向布局；Google DeepMind 的 GIRL 将信息论工具引入 MBRL 的幻觉控制。</p>
+</div>
+
+<footer>
+<p>📊 arXiv AI 日报 · 自动生成于 2026-04-10 · 数据来源: arXiv.org</p>
+<p>共抓取 237 篇 new submissions (cs.CL 61 + cs.AI 74 + cs.LG 102) · 精选 18 篇 · 白名单命中 5 篇</p>
+</footer>
+
+</body>
+</html>

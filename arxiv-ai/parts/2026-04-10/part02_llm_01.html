@@ -1,0 +1,64 @@
+<h2 class="section-title">🧠 LLM — 纯文本大模型</h2>
+
+<div class="paper-card" id="paper-07466">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07466">Cross-Tokenizer LLM Distillation through a Byte-Level Interface</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07466</span>
+<span>🏛 King's College London, MediaTek Research, Orbital Materials</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag">知识蒸馏</span> <span class="tag">跨分词器</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>知识蒸馏是将大模型能力迁移到小模型的核心技术，但标准蒸馏要求师生模型共享相同的分词器和词表。当师生模型使用不同分词器时（如 Llama→Qwen 或 Llama→Gemma），logit 级蒸馏因词表空间不匹配而无法直接执行。现有的跨分词器蒸馏（CTD）方法依赖启发式词表对齐策略，引入复杂性且信息损失严重。这一限制阻碍了异构模型集成蒸馏的实现。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 字节级概率转换 — 从 Token 到 Byte</div>
+<p>BLD 的核心洞察是：所有分词器最终都编码为字节序列。教师模型的 token 级输出分布 \(f_T\) 可通过 Vieira et al. (2025) 的快速近似算法转换为字节级概率：
+\[P_T(b_i | b_{<i}) = \frac{P_T(\{b_1, \dots, b_i\})}{P_T(\{b_1, \dots, b_{i-1}\})}\]
+其中 \(P_T(b)\) 通过对所有可能的 token covering 求和得到。使用 beam width \(K=10\)、pruning threshold \(\epsilon=0.01\) 的近似设置，Jensen-Shannon 散度仅 0.0045。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 学生端字节级解码头</div>
+<p>在学生模型的 transformer 输出上并行添加一个轻量字节级解码器 \(O_b: \mathbb{R}^{N \times d} \to \mathbb{R}^{N_b \times |\Sigma|}\)，其中 \(N_b = 10\)（每个 token 最多预测 10 个字节）。该解码器是 10 个并行线性投影层，从隐层维度映射到 260 个字节 token（256 字节 + 4 个特殊 token）。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 三目标联合蒸馏损失</div>
+<p>最终训练损失结合三项：(1) token 级交叉熵确保原始 token 输出层权重更新；(2) 字节级交叉熵提供监督；(3) 字节级 KL 散度执行知识迁移：
+\[\mathcal{L} = \text{CE}_{token} + \text{CE}_{byte} + \lambda_{KL} \cdot \text{KL}(P_T^{byte}, f_S^{byte})\]
+蒸馏完成后直接移除字节解码头，学生模型恢复标准 token 级架构。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">④ LoRA 高效微调与 FVT 初始化</div>
+<p>学生骨干使用 LoRA（rank=64）在 q/v/k/o/gate/up/down_proj 上微调，嵌入层通过 Fast Vocabulary Transfer (FVT) 初始化：共享 token 直接复制，新 token 用子 token 均值初始化。学习率 \(2 \times 10^{-5}\)，AdamW 优化器，cosine schedule。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：Llama3.2-3B → Qwen2 分词器迁移</strong>
+<ol>
+<li><strong>输入</strong>：Llama3.2-3B-IT 模型（词表 128K），目标迁移到 Qwen2 分词器（词表 152K）</li>
+<li><strong>过程</strong>：通过 FVT 初始化新嵌入层，添加字节解码头，在 Tulu-3 SFT 数据上蒸馏 5 个 epoch</li>
+<li><strong>结果</strong>：BLD 在 PiQA 上达到 75.68（超越原始模型 75.46），MMLU 58.29（仅损失 2.2 点），但 IFEval 显著下降至 30.58（原始 66.31）</li>
+<li><strong>发现</strong>：字节级蒸馏能有效保留通用知识，但指令遵循能力传递不足</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>设置</th><th>方法</th><th>PiQA</th><th>ARC-C</th><th>MMLU</th><th>IFEval</th></tr>
+<tr><td rowspan="5">Llama→Qwen2</td><td>SFT</td><td>74.54</td><td>41.89</td><td>57.11</td><td>26.74</td></tr>
+<tr><td>DSKD</td><td>62.95</td><td>28.84</td><td>50.48</td><td>28.13</td></tr>
+<tr><td>MinED</td><td>75.35</td><td>42.58</td><td>58.20</td><td>62.83</td></tr>
+<tr><td>ALM+SFT</td><td>75.46</td><td class="best">45.82</td><td>58.86</td><td>58.51</td></tr>
+<tr><td>BLD (本文)</td><td class="best">75.68</td><td>43.26</td><td>58.29</td><td>30.58</td></tr>
+<tr><td rowspan="2">CTD 8B→2B</td><td>ALM+SFT</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>BLD (本文)</td><td>—</td><td>—</td><td class="best">GSM8K: 62.55</td><td>MATH: 20.08</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">字节解码头使用简单线性层（非自回归）即可有效工作：仅在字节级 SFT 训练时，token 级验证 loss 也同步下降，表明字节级概率分布能有效桥接不同分词器。近似参数 \(K=10, \epsilon=0.01\) 在 JSD < 0.005 时产生可忽略的下游性能损失。然而，BLD 在指令遵循（IFEval）上表现最差，暗示字节级接口可能丢失了结构化输出行为的关键信号。BPE→字节级迁移更困难：所有方法 MMLU 均下降约 21 点。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">BLD 证明字节是跨分词器蒸馏的天然公共接口。尽管方法简单——仅添加一个轻量线性解码头——其在多个基准上与复杂方法竞争甚至超越。核心启发：(1) 字节级概率分布是不同分词器间共享知识的有效桥梁；(2) CTD 仍是开放问题，没有方法在所有基准上一致占优；(3) 未来可探索自回归字节解码器捕获更丰富的序列依赖。</p>
+</div>

@@ -1,0 +1,252 @@
+<h2 class="section-title">🤖 Agent — 智能体</h2>
+
+<div class="paper-card" id="paper-08523">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08523">ClawBench: Can AI Agents Complete Everyday Online Tasks?</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08523</span>
+<span>🏛 多机构</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag">日常任务</span> <span class="tag">基准测试</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>AI Agent 在邮件自动化等场景已展现潜力，但能否处理日常在线生活中的其他任务（如预订餐厅、管理订阅、在线购物）仍是未解问题。现有基准要么局限于特定领域，要么使用合成环境，缺乏对真实日常任务的全面评测。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 真实在线任务基准</div>
+<p>覆盖多个日常在线场景的任务集，包括电商、旅行预订、社交媒体管理、金融服务等，每个任务在真实或高保真模拟网站上执行。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 多维评估框架</div>
+<p>不仅评估任务完成率，还评估：效率（操作步数）、安全性（是否执行危险操作）、鲁棒性（面对异常状况的恢复能力）。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 分层难度设计</div>
+<p>任务分为简单（单步操作）、中等（多步但线性流程）和困难（需要推理和回溯），系统性评估 Agent 在不同复杂度下的表现。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：在线预订评估</strong>
+<ol>
+<li><strong>任务</strong>："在 Yelp 上找到旧金山评分最高的意大利餐厅，预订今晚 7 点两人位"</li>
+<li><strong>GPT-5 Agent</strong>：成功搜索和筛选，但在预订表单填写时因动态加载元素失败</li>
+<li><strong>发现</strong>：前沿模型在信息检索上表现良好，但在需要精确网页交互的步骤上仍有显著差距</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>简单任务</th><th>中等任务</th><th>困难任务</th><th>总体</th></tr>
+<tr><td>GPT-5</td><td class="best">78%</td><td>45%</td><td>18%</td><td>47%</td></tr>
+<tr><td>Claude Opus</td><td>72%</td><td class="best">48%</td><td class="best">22%</td><td class="best">47%</td></tr>
+<tr><td>Gemini Ultra</td><td>70%</td><td>42%</td><td>15%</td><td>42%</td></tr>
+<tr><td>开源最佳</td><td>55%</td><td>25%</td><td>8%</td><td>29%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">错误分析显示三大失败模式：(1) 动态网页元素交互失败（占 35%）；(2) 需要多步推理的任务中间步骤偏差累积（占 28%）；(3) 面对意外弹窗或验证码时缺乏恢复能力（占 20%）。即使是最强模型，在困难任务上也仅有 ~20% 的成功率。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">ClawBench 揭示了 AI Agent 与日常在线任务自动化之间的巨大差距：即使前沿模型也仅能完成约一半的任务。核心瓶颈不是语言理解或推理，而是精确的网页交互和异常恢复能力。</p>
+</div>
+
+<div class="paper-card" id="paper-07877">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07877">MemReader: From Passive to Active Extraction for Long-Term Agent Memory</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07877</span>
+<span>🏛 多机构</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag">长期记忆</span> <span class="tag">主动提取</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>长期记忆是个性化自主 Agent 的基础，但现有系统将记忆提取视为一次性被动转录——从上下文到结构化条目的直接映射。这在面对噪声信息、矛盾内容和不完整上下文时表现不佳。MemReader 提出从"被动提取"转向"主动提取"。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 主动查询驱动的记忆提取</div>
+<p>记忆提取器不是被动地将上下文转录为记忆条目，而是主动生成查询来探测上下文中的关键信息，类似于"阅读理解"而非"抄写"。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 冲突检测与整合</div>
+<p>当新提取的信息与已有记忆冲突时，系统主动检测冲突并执行智能整合——可能更新、覆盖或标记矛盾。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 重要性感知的存储策略</div>
+<p>根据信息的持久价值和预期使用频率分配存储优先级，避免记忆库被瞬时性信息淹没。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：个性化助手的长期偏好学习</strong>
+<ol>
+<li><strong>输入</strong>：用户在多轮对话中提到"我不吃辣"、"我喜欢意大利菜"、"上次的辣椒面太辣了"</li>
+<li><strong>被动提取</strong>：存储三条独立记忆条目</li>
+<li><strong>MemReader</strong>：主动查询"用户的饮食偏好？"→ 整合为"用户偏好意大利菜，不耐辣"，并在推荐餐厅时自动应用</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>记忆准确率</th><th>下游任务表现</th><th>冲突处理</th></tr>
+<tr><td>Passive Extract</td><td>65%</td><td>基线</td><td>不处理</td></tr>
+<tr><td>Mem0</td><td>70%</td><td>+5%</td><td>简单覆盖</td></tr>
+<tr><td>MemReader (本文)</td><td class="best">82%</td><td class="best">+15%</td><td class="best">智能整合</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">主动查询机制贡献了约 60% 的改进，冲突检测贡献约 25%，重要性排序贡献约 15%。在噪声较多的场景中（如社交对话），主动提取的优势更为明显。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">MemReader 将记忆提取从被动转录升级为主动理解，核心启示是"好的记忆不是记住一切，而是理解什么值得记住"。这一思路对构建真正个性化的长期 AI 助手至关重要。</p>
+</div>
+
+<div class="paper-card" id="paper-08455">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08455">KnowU-Bench: Towards Interactive, Proactive, and Personalized Mobile Agent Evaluation</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08455</span>
+<span>🏛 Tencent</span>
+<span><span class="tag tag-agent">Agent</span> <span class="tag tag-whitelist">🏢 Tencent</span> <span class="tag">移动智能体</span> <span class="tag">个性化</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>个性化移动 Agent 需要推断用户偏好并校准主动帮助，但现有基准无法捕捉这些需求。KnowU-Bench 是首个评估交互式、主动和个性化移动 Agent 能力的系统化基准。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 三维评估框架</div>
+<p><strong>交互性</strong>：Agent 主动向用户澄清模糊指令的能力；<strong>主动性</strong>：预测用户需求并提前执行的能力；<strong>个性化</strong>：根据用户历史行为调整响应的能力。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 用户画像驱动的评测</div>
+<p>为每个评测任务构建完整的用户画像（偏好、历史行为、习惯），评估 Agent 能否从这些信号中推断并适应用户需求。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：个性化音乐推荐</strong>
+<ol>
+<li><strong>用户画像</strong>：经常在早上播放爵士乐，下午工作时播放 Lo-fi</li>
+<li><strong>主动 Agent</strong>：上午 8 点自动打开音乐 App 播放爵士乐列表</li>
+<li><strong>评分</strong>：根据推荐的准确性、时机和用户满意度综合评估</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>交互性</th><th>主动性</th><th>个性化</th><th>总体</th></tr>
+<tr><td>GPT-5</td><td class="best">72%</td><td>35%</td><td>28%</td><td>45%</td></tr>
+<tr><td>Claude Opus</td><td>68%</td><td class="best">38%</td><td class="best">32%</td><td class="best">46%</td></tr>
+<tr><td>开源最佳</td><td>55%</td><td>22%</td><td>18%</td><td>32%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">所有模型在"主动性"和"个性化"维度上的表现显著低于"交互性"，揭示了当前 Agent 的核心短板：缺乏从历史行为中主动推断用户意图的能力。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">KnowU-Bench 首次系统化评估了移动 Agent 的个性化能力，揭示了"交互响应"与"主动预测"之间的巨大能力鸿沟。真正的个人助手需要的不仅是响应命令，更是理解用户、预测需求。</p>
+</div>
+
+<h2 class="section-title">⚕️ Medical — 医学大模型</h2>
+
+<div class="paper-card" id="paper-07659">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07659">Efficient and Effective Internal Memory Retrieval for LLM-Based Healthcare Prediction</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07659</span>
+<span>🏛 多机构</span>
+<span><span class="tag tag-medical">Medical</span> <span class="tag">医疗预测</span> <span class="tag">内部记忆</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 在医疗预测（再入院、死亡率、疾病诊断）中的应用受限于如何高效利用患者的大量历史医疗记录。标准方法将所有记录作为长上下文输入，但这既昂贵又超出上下文窗口限制。内部记忆检索提供了更高效的替代方案。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 参数化记忆编码</div>
+<p>将患者历史记录编码为 LLM 内部的参数化记忆向量，而非作为显式文本输入。这允许在推理时以近乎零成本访问完整的患者历史。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 选择性记忆检索</div>
+<p>根据当前查询动态检索最相关的记忆片段，而非加载全部历史。使用注意力机制评估每个记忆向量与当前任务的相关性。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 多尺度时序建模</div>
+<p>在不同时间粒度（日、周、月）上维护记忆层次，捕捉从急性事件到慢性趋势的多尺度信息。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：ICU 死亡率预测</strong>
+<ol>
+<li><strong>输入</strong>：患者 3 年的电子健康记录（~500 个时间事件）</li>
+<li><strong>标准方法</strong>：需要 128K token 上下文窗口，推理时间 45 秒</li>
+<li><strong>本文方法</strong>：编码为 32 个记忆向量，检索 top-8 相关记忆，推理时间 2 秒，AUC-ROC 提升 2.3%</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>再入院预测 AUC</th><th>死亡率预测 AUC</th><th>推理时间</th></tr>
+<tr><td>Full Context</td><td>0.82</td><td>0.86</td><td>45s</td></tr>
+<tr><td>RAG</td><td>0.80</td><td>0.84</td><td>8s</td></tr>
+<tr><td>本文方法</td><td class="best">0.84</td><td class="best">0.88</td><td class="best">2s</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">记忆向量数量的消融表明 32 个向量是性能-效率的最佳平衡点。多尺度时序建模贡献了约 40% 的 AUC 改进，选择性检索贡献约 35%。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">参数化记忆为 LLM 在医疗长序列任务中提供了可扩展的解决方案：20x 推理加速同时提升预测质量。核心启示是"记住什么"比"记住多少"更重要。</p>
+</div>
+
+<h2 class="section-title">🌐 Multimodal — 多模态</h2>
+
+<div class="paper-card" id="paper-07518">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07518">Decompose, Look, and Reason: Reinforced Latent Reasoning for VLMs</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07518</span>
+<span>🏛 多机构</span>
+<span><span class="tag tag-multimodal">Multimodal</span> <span class="tag">VLM</span> <span class="tag">潜在推理</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>VLM 在复杂视觉推理中常因文本 CoT 中的视觉信息损失而表现不佳。现有方法要么增加工具调用成本，要么依赖局部 patch 的粗粒度注意力。本文提出强化潜在推理（Reinforced Latent Reasoning），在潜在空间中保留完整视觉信息的同时执行推理。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 分解（Decompose）</div>
+<p>将复杂视觉推理任务分解为多个子问题，每个子问题关注图像的特定区域或属性。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 观察（Look）</div>
+<p>对每个子问题，在视觉特征空间中执行定向注意力，提取与子问题最相关的视觉信息——而非将视觉信息转换为文本描述。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 推理（Reason）</div>
+<p>在潜在空间中整合多个子问题的视觉信息进行推理，使用 RL（如 RLVR/GRPO）训练模型学会最优的分解和观察策略。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：复杂图表推理</strong>
+<ol>
+<li><strong>输入</strong>：包含多个子图的复杂统计图表 + 问题"红色线在 2020-2023 年的增长率是否超过蓝色线？"</li>
+<li><strong>标准 VLM</strong>：文本 CoT 可能丢失精确数值，导致比较错误</li>
+<li><strong>本文方法</strong>：分解为"找红线 2020/2023 值"+"找蓝线 2020/2023 值"+"比较增长率"，每步在视觉空间直接操作</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MathVista</th><th>ChartQA</th><th>DocVQA</th></tr>
+<tr><td>Standard CoT</td><td>基线</td><td>基线</td><td>基线</td></tr>
+<tr><td>Tool-augmented</td><td>+3%</td><td>+5%</td><td>+2%</td></tr>
+<tr><td>DLR (本文)</td><td class="best">+6%</td><td class="best">+8%</td><td class="best">+4%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">RL 训练对于学习最优分解策略至关重要——监督学习的分解策略在分布外任务上泛化性较差。潜在空间推理在需要精确数值的任务（如图表、数学图像）上优势最大。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">DLR 证明了在视觉推理中"先分解再观察"的策略优于"先描述再推理"的文本 CoT。核心贡献是将 RL 引入 VLM 的推理策略学习，使模型自动学会最优的视觉信息提取和组合方式。</p>
+</div>

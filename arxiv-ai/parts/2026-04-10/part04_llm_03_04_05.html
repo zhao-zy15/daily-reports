@@ -1,0 +1,165 @@
+<div class="paper-card" id="paper-08510">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08510">What Do Language Models Learn and When? The Implicit Curriculum Hypothesis</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08510</span>
+<span>🏛 Carnegie Mellon University, Johns Hopkins University, Northeastern University, USC</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag">预训练动态</span> <span class="tag">技能涌现</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 预训练通常仅通过交叉熵 loss 监控，但 loss 的平滑下降掩盖了技能获取的离散过程。现有 scaling law 告诉我们模型改善多少，却不告诉我们获取了什么技能、按什么顺序获取。当 GSM8k 性能停滞时，无法诊断瓶颈是数值流利度、多步规划还是自然语言理解。本文提出"隐式课程假说"试图揭示这一结构。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 隐式课程假说的三个核心预测</div>
+<p><strong>H1 组合顺序</strong>：前置技能的涌现时间不晚于依赖它们的组合技能：\(\forall \tau_j, \forall \tau_i \in P(\tau_j): t^*_{\tau_i}(m) \leq t^*_{\tau_j}(m)\)<br>
+<strong>H2 跨模型稳定性</strong>：涌现排序在不同模型间产生的偏序一致（Spearman \(\rho\) 显著高于随机）<br>
+<strong>H3 表征对齐</strong>：内部表征相似的任务学习轨迹也相似，可从表征几何预测未评估的组合任务轨迹。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 91个可组合任务探针设计</div>
+<p>设计 53 个简单任务（字符串操作、形态变换、翻译、算术、逻辑、阅读理解）和 38 个组合任务（如 gerund_upper: "run"→"RUNNING"）。所有任务使用 exact-match 准确率评估。覆盖 4 个模型家族（OLMo-2/3, LLM360, Pythia）、9 个模型（410M-13B 参数），每个模型约 20 个预训练 checkpoint。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 函数向量提取与任务相似度</div>
+<p>使用 Todd et al. (2024) 的 function vector 方法提取任务表征：对每个任务构建 ICL prompt，只保留正确回答的样本，提取注意力头输出或残差流隐状态作为任务向量 \(v_\tau\)。任务间相似度通过余弦相似度度量，核岭回归用于预测保留任务的学习轨迹：
+\[\hat{a}_c(t) = k_c^\top (K_S + \lambda I)^{-1} y_t\]
+其中 \(K\) 使用 RBF 核。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">④ 绝对阈值 vs 相对阈值的关键区别</div>
+<p>涌现排序的一致性仅在绝对阈值定义下成立（mean \(\rho = .81\)），相对阈值（以模型最优性能的比例定义）下一致性大幅下降（mean \(\rho = .50\)）。原因：弱模型可能在低绝对性能时就达到相对阈值，而强模型可能永远无法满足同一相对标准。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：OLMo2-7B 上 0-1T tokens 的组合任务轨迹预测</strong>
+<ol>
+<li><strong>任务</strong>：fr_eng_upper（法译英后大写）</li>
+<li><strong>预测</strong>：仅从函数向量空间中其他任务的相似度，使用核岭回归预测其学习轨迹</li>
+<li><strong>结果</strong>：\(R^2 = 0.99\)，MAE = 0.017——预测曲线几乎完美追踪真实轨迹，包括涌现时间和改进速率</li>
+<li><strong>局限</strong>：eng_fr_upper 预测较差（\(R^2 = 0.51\)），说明某些组合任务的轨迹不完全由最近邻表征解释</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型对</th><th>Spearman ρ (θ=0.8)</th><th>模型对</th><th>Spearman ρ (θ=0.8)</th></tr>
+<tr><td>OLMo2-7B ↔ 13B</td><td class="best">0.93</td><td>OLMo2-1B ↔ Pythia-410M</td><td>0.84</td></tr>
+<tr><td>OLMo2-7B ↔ OLMo3-7B</td><td>0.93</td><td>Amber ↔ Pythia-12B</td><td>0.90</td></tr>
+<tr><td>Amber ↔ Crystal</td><td>0.87</td><td>全部 45 对均值</td><td>0.81</td></tr>
+</table>
+<table>
+<tr><th>模型</th><th>LOO R² (All tasks)</th><th>MAE</th><th>LOO R² (Simple only)</th><th>MAE</th></tr>
+<tr><td>Pythia-410M</td><td>0.681</td><td>0.195</td><td>0.717</td><td>0.301</td></tr>
+<tr><td>OLMo2-7B</td><td>0.767</td><td>0.068</td><td>0.693</td><td>0.208</td></tr>
+<tr><td>OLMo2-13B</td><td class="best">0.838</td><td class="best">0.099</td><td>0.860</td><td>0.242</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">组合瓶颈效应：将预测基限制为仅简单任务时，所有模型 MAE 平均增加 0.135，说明组合任务间共享的结构信息超出其简单组件能解释的范围。涌现顺序呈现清晰模式：复制→简单字符串操作→事实提取和指代消解→逻辑→世界知识→多步算术。54/76 的组合任务确实在其"父任务"之后涌现，但有 19 个弱反转和 3 个强反转（全部涉及 first_letter 组件）。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文统一了技能涌现、量化假说和简单性偏好三条研究线索，证明预训练遵循一个"隐式课程"——技能按组合依赖关系稳定涌现，且该顺序在不同模型家族间高度一致（\(\rho = .81\)）。更强的发现是这种结构可从模型内部表征中读取，使得仅通过函数向量相似度即可预测未评估任务的学习轨迹。实际启示：(1) 任务探针可作为预训练监控的结构化工具；(2) 涌现顺序的一致性暗示存在通用的技能获取规律。</p>
+</div>
+
+<div class="paper-card" id="paper-08169">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08169">Activation Steering for Aligned Open-ended Generation without Sacrificing Coherence</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08169</span>
+<span>🏛 Tara Research, Technical University of Munich, Mila Quebec AI Institute</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag">对齐</span> <span class="tag">激活引导</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 的对齐比通常认为的更脆弱：对抗性 prompt、良性微调、涌现性失对齐和目标错误泛化都可以触发不对齐行为。研究表明，安全对齐主要控制前几个输出 token，后续生成缺乏保护。激活引导作为轻量级运行时防御方案，可在整个生成过程中持续修正不对齐的激活。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① SwFC — 固定系数引导</div>
+<p>标准方法：在每个 token 生成时对残差流添加固定向量 \(h' = h + \alpha \cdot v\)，其中 \(v\) 是对齐方向向量。简单但可能对已对齐的 token 造成不必要干扰。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② StTP — 目标投影引导（本文提出）</div>
+<p>训练逻辑回归分类器学习对齐/不对齐激活的决策边界。仅当 token 激活落在不对齐侧时才进行引导，将其投影到目标分布阈值位置。这避免了对已对齐 token 的过度干预，更好地保持通用能力。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ StMP — 镜像投影引导（本文提出）</div>
+<p>在 StTP 基础上进一步——将不对齐激活"镜像翻转"到决策边界的对齐侧，投影距离为原始激活到边界距离的镜像。这提供了更强的纠正力度，同时仍保持选择性干预。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：恶意系统 prompt 下的诚实性恢复</strong>
+<ol>
+<li><strong>设置</strong>：Llama-3.3-70B-Instruct 注入 dismissiveness（轻蔑）系统 prompt</li>
+<li><strong>无引导</strong>：模型表现出持续的轻蔑和不关心行为</li>
+<li><strong>StTP 引导</strong>：compassion 得分恢复至接近无恶意 prompt 基线，同时 MMLU/MT-Bench 下降最小（< 1%）</li>
+<li><strong>SwFC 引导</strong>：也恢复目标特质，但 MT-Bench 下降更大且多轮对话中出现更多重复</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>Honesty 恢复</th><th>Compassion 恢复</th><th>MMLU 保持</th><th>MT-Bench 保持</th></tr>
+<tr><td>无引导(恶意prompt)</td><td>低</td><td>低</td><td>100%</td><td>100%</td></tr>
+<tr><td>SwFC</td><td>高</td><td>高</td><td>~98%</td><td>~95%</td></tr>
+<tr><td>StTP</td><td>高</td><td>高</td><td class="best">~99%</td><td class="best">~98%</td></tr>
+<tr><td>StMP</td><td class="best">最高</td><td class="best">最高</td><td>~99%</td><td>~97%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">投影感知方法（StTP/StMP）相比固定系数方法（SwFC）在通用能力保持和多轮对话重复控制上均更优。在 Llama-3.3-70B 和 Qwen3-32B 两种架构上结果一致。局限性：引导向量需要标注数据来训练逻辑回归分类器，且当前方法假设不对齐行为可在线性子空间中表示。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">激活引导是对抗 LLM 对齐脆弱性的有效轻量级防线。投影感知方法（StTP/StMP）通过选择性干预在恢复对齐属性的同时最小化对通用能力的影响。核心启示：对齐不是二元状态，而是可以在激活空间中持续调节的连续属性。</p>
+</div>
+
+<div class="paper-card" id="paper-07809">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07809">PolicyLong: Towards On-Policy Context Extension</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07809</span>
+<span>🏛 Tencent</span>
+<span><span class="tag tag-llm">LLM</span> <span class="tag tag-whitelist">🏢 Tencent</span> <span class="tag">长上下文</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 长上下文能力的扩展通常通过在合成或手工构造的长文档上继续预训练实现（off-policy data），但这种方法产生的数据分布与模型自身生成的分布存在差距。PolicyLong 提出"on-policy 上下文扩展"——使用模型自身生成的长文本作为训练数据来扩展上下文窗口。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① On-Policy 长文本数据生成</div>
+<p>让基础模型在短上下文窗口内自回归生成文本，然后将多段生成拼接成长序列。关键在于这些文本来自模型自身的分布，消除了 off-policy 偏差。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 渐进式上下文长度课程</div>
+<p>采用分阶段训练：先在较短上下文（如 8K）上训练，逐步扩展到目标长度（如 128K），每阶段使用 RoPE 位置编码缩放。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 选择性注意力稀疏化</div>
+<p>在长上下文训练中引入注意力稀疏化策略，降低计算复杂度同时保持对关键 token 的注意力。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：从 8K 扩展到 128K 上下文</strong>
+<ol>
+<li><strong>基线</strong>：标准 off-policy 长上下文训练（使用 LongAlpaca 等数据集）</li>
+<li><strong>PolicyLong</strong>：使用模型自身生成的拼接文本训练</li>
+<li><strong>结果</strong>：在 RULER 和 Longbench 等长上下文基准上，PolicyLong 在 needle-in-haystack 任务上更稳定，减少了"lost in the middle"现象</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>RULER (128K)</th><th>Longbench</th><th>短文本保持</th></tr>
+<tr><td>Off-policy CPT</td><td>基线</td><td>基线</td><td>轻微下降</td></tr>
+<tr><td>PolicyLong</td><td class="best">+3-5%</td><td class="best">+2-4%</td><td class="best">无下降</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">On-policy 数据的核心优势在于消除了模型从未见过的文本模式带来的分布偏差。消融实验表明渐进式课程和稀疏注意力的组合效果优于单独使用。局限：on-policy 数据生成本身需要计算开销，且对于需要外部知识的长文档理解任务，模型自生成的数据可能信息密度不足。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">PolicyLong 开辟了长上下文训练的新思路：与其寻找高质量的长文档训练数据（off-policy），不如使用模型自身的生成分布来消除 train-test distribution gap。这一思路与 RL 中的 on-policy 训练理念一脉相承，为 LLM 的上下文扩展提供了更原则性的方法论。</p>
+</div>

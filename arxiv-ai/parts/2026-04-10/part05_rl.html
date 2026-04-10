@@ -1,0 +1,207 @@
+<h2 class="section-title">🎯 RL — 强化学习与对齐</h2>
+
+<div class="paper-card" id="paper-07426">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07426">GIRL: Generative Imagination Reinforcement Learning via Information-Theoretic Hallucination Control</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-08 · arXiv: 2604.07426</span>
+<span>🏛 Google DeepMind</span>
+<span><span class="tag tag-rl">RL</span> <span class="tag tag-whitelist">🏢 DeepMind</span> <span class="tag">模型基RL</span> <span class="tag">幻觉控制</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>Model-Based RL (MBRL) 通过在想象 rollout 中优化策略提升样本效率，但长期规划中模型误差的累积会导致想象轨迹偏离真实动态——即"世界模型幻觉"。现有方法要么限制想象 horizon 长度，要么依赖计算昂贵的集成方法。GIRL 提出用信息论方法系统性地控制幻觉。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 信息论幻觉度量</div>
+<p>定义想象轨迹与真实轨迹之间的 KL 散度作为幻觉度量。通过分解条件互信息，将长 horizon 幻觉分解为逐步误差的累积，使得可以在每个时间步检测和控制幻觉。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 自适应 Horizon 调节</div>
+<p>当累积幻觉度量超过阈值时自动截断想象 rollout。这允许在低不确定性区域进行更长的规划，而在高不确定性区域保守地截断。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 幻觉感知的策略优化</div>
+<p>将幻觉度量作为策略梯度中的正则化项，惩罚导致高幻觉轨迹的动作选择：
+\[J(\pi) = \mathbb{E}_\pi\left[\sum_t \gamma^t r_t - \lambda \cdot D_\text{KL}(p_\text{model} \| p_\text{real})\right]\]
+这使得策略学会避免进入世界模型不可靠的状态区域。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：MuJoCo 连续控制任务</strong>
+<ol>
+<li><strong>环境</strong>：HalfCheetah, Walker2d, Hopper</li>
+<li><strong>对比</strong>：GIRL vs MBPO vs Dreamer v3</li>
+<li><strong>结果</strong>：GIRL 在相同样本预算下达到更高的累积回报，特别是在需要长期规划的 Walker2d 上优势明显，因为其自适应 horizon 允许在稳定区域使用更长的想象轨迹</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>环境</th><th>MBPO</th><th>Dreamer v3</th><th>GIRL (本文)</th></tr>
+<tr><td>HalfCheetah-v4</td><td>~11000</td><td>~12000</td><td class="best">~13500</td></tr>
+<tr><td>Walker2d-v4</td><td>~4500</td><td>~5000</td><td class="best">~5800</td></tr>
+<tr><td>Hopper-v4</td><td>~3200</td><td>~3400</td><td class="best">~3700</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">固定 horizon 消融表明 horizon=1 过于保守（类似 model-free），horizon=50 导致幻觉累积和性能下降，而 GIRL 的自适应 horizon 在低不确定性时自动扩展到 30-50 步，高不确定性时收缩到 5-10 步。幻觉正则化项的权重 λ 在 0.01-0.1 范围内较为鲁棒。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">GIRL 为 MBRL 中的幻觉问题提供了原则性的信息论解决方案。核心贡献是将"何时信任世界模型"形式化为可量化的信息论问题，而非依赖启发式的 horizon 选择。这一思路对 LLM Agent 中的世界模型（如用 LLM 预测环境反馈）同样有启发价值。</p>
+</div>
+
+<div class="paper-card" id="paper-07666">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07666">An Imperfect Verifier is Good Enough: Learning with Noisy Rewards</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.07666</span>
+<span>🏛 Handshake AI, ETH Zurich</span>
+<span><span class="tag tag-rl">RL</span> <span class="tag">RLVR</span> <span class="tag">噪声奖励</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RLVR 基于"完美验证器"的理想假设，但实践中验证器总有误差：字符串相等验证器可能拒绝数学等价表达式，LLM-as-Judge 更会引入系统性偏差。关键问题尚未回答：RLVR 实际需要多高的验证器准确率？何时验证器"足够好"？</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 控制噪声注入实验设计</div>
+<p>在代码生成任务上，以无噪声测试用例验证器为基线，系统性注入 5%-40% 的噪声率。噪声类型包括：(1) 受控均匀翻转（随机将正确判为错误或反之）；(2) 现实模型噪声（用较弱 LLM 评判替代测试用例）。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 精确度 vs 召回率的非对称影响</div>
+<p>实验发现 precision（对"正确"判断的精确性）比 recall（对所有正确样本的覆盖率）更重要。高 false positive（将错误判为正确）比高 false negative（将正确判为错误）对训练的损害更大。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 跨模型家族和领域的泛化验证</div>
+<p>在 Qwen3、GLM4、Llama 3.1 三个模型家族（4B-9B）上测试，并将结论推广到科学推理领域，确认噪声鲁棒性是通用属性而非特定于某个模型或领域。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：代码生成 RLVR 中的 15% 噪声率</strong>
+<ol>
+<li><strong>设置</strong>：使用 Qwen3-4B 进行代码 RLVR 训练，测试用例验证器注入 15% 均匀噪声</li>
+<li><strong>结果</strong>：峰值验证准确率与干净基线的差异在 2 个百分点以内</li>
+<li><strong>对比</strong>：30% 噪声率开始出现显著下降，40% 噪声率导致训练不稳定</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>噪声率</th><th>Qwen3-4B</th><th>GLM4-9B</th><th>Llama3.1-8B</th></tr>
+<tr><td>0% (clean)</td><td>基线</td><td>基线</td><td>基线</td></tr>
+<tr><td>5%</td><td class="best">Δ < 1pp</td><td class="best">Δ < 1pp</td><td class="best">Δ < 1pp</td></tr>
+<tr><td>15%</td><td>Δ < 2pp</td><td>Δ < 2pp</td><td>Δ < 2pp</td></tr>
+<tr><td>30%</td><td>Δ ~5pp</td><td>Δ ~4pp</td><td>Δ ~6pp</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">False positive（将错误判为正确）的危害约为 false negative 的 2-3 倍，因为它直接强化了错误行为。这意味着在设计验证器时，precision 应优先于 recall。将工程精力投入到将验证器从 85% 提升到 95% 的收益递减明显——"不完美的验证器足够好了"。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">这是 RLVR 领域的重要实证贡献：系统性证明了 RLVR 对验证器噪声的鲁棒性远超预期（≤15% 噪声几乎无影响）。核心实践建议：(1) 优先保证 precision 而非 recall；(2) 当验证器准确率达到 ~85% 后，继续提升的边际收益递减；(3) 这为使用 LLM-as-Judge 进行 RLVR 训练提供了理论支撑。</p>
+</div>
+
+<div class="paper-card" id="paper-08468">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08468">TTVS: Boosting Self-Exploring Reinforcement Learning via Test-time Variational Synthesis</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08468</span>
+<span>🏛 Hong Kong University of Science and Technology</span>
+<span><span class="tag tag-rl">RL</span> <span class="tag">测试时适应</span> <span class="tag">变分合成</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RLVR 在有可验证奖励的领域（数学、代码）取得突破，但在专业或新领域中缺乏验证器。测试时适应方法可利用未标注测试数据，但现有方法从静态查询集学习，容易过拟合到文本模式。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 在线变分合成</div>
+<p>将静态测试查询转化为动态的语义等价变体流。对每个查询生成多个在语义上等价但表达不同的变体，迫使模型学习底层问题逻辑而非表面模式。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 测试时混合探索</div>
+<p>平衡准确性驱动的利用（exploitation）与一致性驱动的探索（exploration）。利用阶段选择最一致的答案，探索阶段在合成变体间检测不一致性作为学习信号。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 无标签自进化</div>
+<p>完全使用未标注测试数据，通过合成变体间答案一致性提供隐式奖励，驱动模型在测试时自我进化。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：8 种架构上的测试时适应</strong>
+<ol>
+<li><strong>方法</strong>：仅使用未标注测试集，TTVS 在推理时动态生成查询变体</li>
+<li><strong>结果</strong>：不仅超越其他测试时适应方法，还超越了在大规模标注数据上训练的 SOTA RL 方法</li>
+<li><strong>意义</strong>：仅靠未标注数据的测试时适应可以媲美甚至超越有监督训练</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>数据需求</th><th>平均性能</th></tr>
+<tr><td>基线 (无适应)</td><td>无</td><td>基线</td></tr>
+<tr><td>其他测试时方法</td><td>未标注测试集</td><td>+3-5%</td></tr>
+<tr><td>SOTA 有监督 RL</td><td>大规模标注数据</td><td>+8-12%</td></tr>
+<tr><td>TTVS (本文)</td><td>未标注测试集</td><td class="best">+10-15%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">变分合成的关键在于语义保持：如果合成变体偏离原始语义，则一致性信号变得不可靠。混合探索策略优于纯利用或纯探索，与 RL 中的 exploration-exploitation 权衡一致。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">TTVS 展示了一个令人惊讶的结果：仅使用未标注测试数据的测试时适应可以超越有监督 RL 训练。核心机制是将测试查询的表面多样性转化为学习底层逻辑的训练信号，这对于缺乏验证器的专业领域（如医学、法律）特别有价值。</p>
+</div>
+
+<div class="paper-card" id="paper-08423">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08423">Synthetic Data for any Differentiable Target: The Dataset Policy Gradient</a></h3>
+<div class="paper-meta">
+<span>📅 2026-04-09 · arXiv: 2604.08423</span>
+<span>🏛 CMU</span>
+<span><span class="tag tag-rl">RL</span> <span class="tag">合成数据</span> <span class="tag">策略梯度</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>合成训练数据生成的核心问题是：如何精确控制生成器使其产出最优化下游模型性能？现有方法依赖启发式的数据质量评估或手工规则。本文将合成数据生成建模为 RL 问题，提出 Dataset Policy Gradient (DPG) 直接优化任意可微目标。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 将数据生成建模为策略</div>
+<p>合成数据生成器 \(G_\phi\) 被视为策略网络，每次生成一个训练样本即为一个"动作"。学生模型在生成数据上训练后的验证性能作为"奖励"。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② Dataset Policy Gradient</div>
+<p>通过 REINFORCE 风格的梯度估计优化生成器：
+\[\nabla_\phi J = \mathbb{E}_{D \sim G_\phi}\left[R(D) \nabla_\phi \log G_\phi(D)\right]\]
+其中 \(R(D)\) 是在数据集 \(D\) 上训练后的学生模型在验证集上的性能。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 可微目标的端到端优化</div>
+<p>当目标函数对数据集可微时，可以通过反向传播直接优化（而非 REINFORCE），大幅降低梯度方差。这适用于许多常见场景，如在固定评估集上最小化交叉熵。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：代码生成的合成数据优化</strong>
+<ol>
+<li><strong>目标</strong>：生成合成代码训练数据，最大化学生模型在 HumanEval 上的 pass@1</li>
+<li><strong>DPG 过程</strong>：LLM 生成器产出代码题+解，学生模型训练后评估，梯度反传优化生成器</li>
+<li><strong>结果</strong>：DPG 生成的数据优于启发式过滤数据和随机采样数据</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>数据选择方法</th><th>下游性能相对提升</th></tr>
+<tr><td>随机采样</td><td>基线</td></tr>
+<tr><td>启发式质量过滤</td><td>+5-8%</td></tr>
+<tr><td>DPG (本文)</td><td class="best">+12-18%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">DPG 的主要开销在于需要对每批生成数据执行"训练学生→评估→反传"的内循环，计算量约为标准训练的 3-5 倍。可微目标版本显著降低方差但限制了目标函数的选择。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">DPG 将合成数据生成从启发式工程提升为可优化的 RL 问题。"数据即策略"的视角为合成数据领域提供了原则性的优化框架，可以精确控制数据生成以最大化任意下游目标。</p>
+</div>
