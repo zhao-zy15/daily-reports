@@ -1,0 +1,176 @@
+<h2 class="section-title">🏢 Industry Lab — 行业实验室</h2>
+
+<div class="paper-card" id="paper-09360">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09360" target="_blank">LLM-Rosetta: A Hub-and-Spoke Intermediate Representation for Cross-Provider LLM API Translation</a></h3>
+<div class="paper-meta">
+<span>👤 Peng Ding</span>
+<span>🏛 University of Chicago</span>
+<span>📅 2026-04-10 | <span class="tag tag-industry">Industry Lab</span> <span class="tag tag-industry">API</span> <span class="tag tag-industry">Interoperability</span> <span class="tag tag-whitelist">🏢 OpenAI</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 提供商各自使用专有 API 格式，应用开发者需要为每对提供商编写适配器——\(O(N^2)\) 的维护成本。LLM-Rosetta 采用<strong>轮辐式中间表示（Hub-and-Spoke IR）</strong>：只需为每个提供商编写一个到 IR 的映射，就能实现任意两个提供商间的 API 互通，将复杂度降为 \(O(N)\)。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 统一中间表示设计</div>
+<p>IR 将 LLM API 的核心概念抽象为 5 个原语：<strong>Message</strong>（消息）、<strong>Model</strong>（模型参数）、<strong>Tool</strong>（工具调用）、<strong>Stream</strong>（流式输出）和 <strong>Response</strong>（响应格式）。每个原语有标准化的 schema，覆盖 OpenAI、Anthropic、Google、Cohere 等主流提供商 95%+ 的 API 功能。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 语义保持的翻译规则</div>
+<p>对每个提供商定义双向映射规则 \(f_{\text{provider} \to \text{IR}}\) 和 \(f_{\text{IR} \to \text{provider}}\)。翻译规则处理语义差异：如 OpenAI 的 <code>function_calling</code> vs. Anthropic 的 <code>tool_use</code>，以及参数命名差异（<code>max_tokens</code> vs. <code>max_output_tokens</code>）。不可翻译的特性标记为可选降级。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 运行时适配层</div>
+<p>提供一个轻量级的运行时中间件：应用发送 IR 格式请求 → 中间件翻译为目标提供商格式 → 转发请求 → 翻译响应回 IR → 返回应用。延迟开销 &lt; 5ms，不影响流式输出。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：从 OpenAI 无缝切换到 Anthropic</strong>
+<p>原始 OpenAI API 调用：</p>
+<ul>
+<li><code>model: "gpt-4o"</code>, <code>messages: [{role: "user", content: "..."}]</code>, <code>tools: [{type: "function", function: {...}}]</code></li>
+</ul>
+<p>IR 中间表示：</p>
+<ul>
+<li><code>model: IR_MODEL("gpt-4o")</code>, <code>messages: [IR_MSG(user, "...")]</code>, <code>tools: [IR_TOOL(function, ...)]</code></li>
+</ul>
+<p>翻译为 Anthropic API：</p>
+<ul>
+<li><code>model: "claude-sonnet-4-20250514"</code>, <code>messages: [{role: "user", content: [{type: "text", text: "..."}]}]</code>, <code>tools: [{name: ..., input_schema: {...}}]</code></li>
+</ul>
+<p>应用代码无需任何修改，仅需更改配置中的目标提供商。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>翻译路径</th><th>API 功能覆盖率 ↑</th><th>语义保持率 ↑</th><th>延迟开销</th><th>需要代码修改?</th></tr>
+<tr><td>OpenAI → Anthropic</td><td>96.2%</td><td>98.5%</td><td>+3ms</td><td>✗</td></tr>
+<tr><td>Anthropic → Google</td><td>91.8%</td><td>97.1%</td><td>+4ms</td><td>✗</td></tr>
+<tr><td>Google → Cohere</td><td>88.5%</td><td>96.3%</td><td>+3ms</td><td>✗</td></tr>
+<tr><td class="best">平均（6 对提供商）</td><td class="best">93.4%</td><td class="best">97.6%</td><td class="best">+3.5ms</td><td>✗</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">功能覆盖差距主要来自提供商特有功能（如 Anthropic 的 <code>thinking</code> 模式、Google 的 Grounding API），这些无法在其他提供商上实现。IR 设计中将这些标记为"optional extensions"。与直接双边适配器相比，IR 方案在 10 个提供商的场景下将维护成本从 90 个适配器降到 10 个。局限性：快速变化的 API 需要频繁更新 IR schema。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">LLM-Rosetta 用经典的编译器中间表示思想解决了 LLM 生态碎片化问题。\(O(N)\) 的维护成本和 &lt;5ms 的延迟开销使其具有实际工程价值。这一工作也暴露了 LLM API 标准化的迫切需求。</p>
+</div>
+
+<div class="paper-card" id="paper-09212">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09212" target="_blank">SPASM: Stable Persona-driven Agent Simulation for Multi-turn Dialogue Generation</a></h3>
+<div class="paper-meta">
+<span>👤 Han Luo, Guy Laban</span>
+<span>🏛 University of Leeds, Southwest Jiaotong University, Ben-Gurion University</span>
+<span>📅 2026-04-10 | <span class="tag tag-industry">Industry Lab</span> <span class="tag tag-industry">Dialogue</span> <span class="tag tag-industry">Persona</span> <span class="tag tag-whitelist">🏢 DeepSeek</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 在多轮对话中越来越多地扮演特定角色（如辅导、咨询），但 LLM-LLM 对话会累积<strong>身份相关失效</strong>——角色漂移、目标遗忘、语气不一致。这在生成合成训练数据时尤为严重。SPASM 提出一个稳定的人格驱动对话生成框架，确保跨长对话的角色一致性。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 结构化人格表示</div>
+<p>将人格（persona）分解为 4 个维度：<strong>身份</strong>（名字、背景）、<strong>目标</strong>（对话要达成的任务）、<strong>性格</strong>（语气、表达习惯）和<strong>知识</strong>（领域专业知识）。每个维度用结构化模板表示，并在每轮对话开始时作为系统 prompt 的一部分注入。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 一致性检查器（Consistency Checker）</div>
+<p>在每轮生成后，运行一个轻量级的一致性检查模块，检测 4 个维度的漂移：</p>
+<p>$$C_{\text{drift}}(t) = \sum_{d \in \{id, goal, style, know\}} w_d \cdot \text{sim}(r_t^d, p^d)$$</p>
+<p>其中 \(r_t^d\) 是第 \(t\) 轮回复在维度 \(d\) 上的表现，\(p^d\) 是原始人格设定。当 \(C_{\text{drift}} < \tau\) 时触发重新生成。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 长程记忆锚定</div>
+<p>在长对话（>10 轮）中，仅靠系统 prompt 不足以维持人格一致性。SPASM 引入<strong>记忆锚点</strong>机制：每 5 轮提取一次对话中的关键人格表现（如"在第 3 轮使用了幽默的语气"），并将这些锚点追加到后续轮次的 prompt 中，作为额外的人格约束。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：心理咨询师角色的 20 轮对话</strong>
+<p>人格设定：温和的心理咨询师 "Dr. Chen"，专注于认知行为疗法，目标是帮助来访者识别消极思维模式。</p>
+<ul>
+<li><strong>无 SPASM（基线）</strong>：在第 12 轮后，"Dr. Chen" 开始给出直接建议（偏离 CBT 引导式风格），第 16 轮角色称呼从 "Dr. Chen" 变成了"AI 助手"</li>
+<li><strong>SPASM</strong>：一致性检查器在第 12 轮检测到目标漂移（sim=0.62 < 阈值 0.70），触发重新生成；记忆锚点提醒模型"之前一直使用开放式提问"，成功维持 20 轮角色一致</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>人格一致性 (10轮) ↑</th><th>人格一致性 (20轮) ↑</th><th>对话质量 (GPT-4 评分) ↑</th><th>角色漂移率 ↓</th></tr>
+<tr><td>直接生成（无人格约束）</td><td>0.53</td><td>0.31</td><td>3.2</td><td>45.2%</td></tr>
+<tr><td>系统 Prompt 人格注入</td><td>0.72</td><td>0.58</td><td>3.8</td><td>28.7%</td></tr>
+<tr><td>CharacterChat</td><td>0.78</td><td>0.65</td><td>4.0</td><td>21.3%</td></tr>
+<tr><td class="best">SPASM (ours)</td><td class="best">0.89</td><td class="best">0.82</td><td class="best">4.4</td><td class="best">8.5%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">(1) 去除一致性检查器：20 轮一致性从 0.82 降至 0.68，角色漂移率从 8.5% 升至 19.2%；(2) 去除记忆锚定：10 轮内影响小（-0.03），但 20 轮下降明显（-0.11），说明长程记忆对长对话至关重要；(3) 不同 LLM 后端：DeepSeek-V3 和 Qwen2.5-72B 的角色一致性差异 &lt; 0.05，说明 SPASM 框架具有模型无关性。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">SPASM 为 LLM 多轮角色扮演提供了系统化的解决方案：结构化人格表示 + 实时一致性检查 + 长程记忆锚定。将 20 轮对话的角色漂移率从 28.7% 降至 8.5%。这对合成对话数据生成和实际的角色驱动应用都有重要价值。</p>
+</div>
+
+<div class="paper-card" id="paper-08948">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08948" target="_blank">TaxPraBen: A Scalable Benchmark for Structured Evaluation of LLMs in Chinese Real-World Tax Practice</a></h3>
+<div class="paper-meta">
+<span>👤 Gang Hu, Yating Chen, Haiyan Ding, Wang Gao, Jiajia Huang, Min Peng</span>
+<span>🏛 Yunnan University, Wuhan University, Jianghan University, Nanjing Audit University</span>
+<span>📅 2026-04-10 | <span class="tag tag-industry">Industry Lab</span> <span class="tag tag-industry">Benchmark</span> <span class="tag tag-industry">Tax/Finance</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 在通用领域表现出色，但在中国税务这一高度专业化、知识密集且法律严格监管的领域存在明显差距。现有税务基准多聚焦于孤立的 NLP 任务，忽略了真实实践能力。TaxPraBen 是首个面向<strong>中国真实税务实践</strong>的结构化基准，基于 Bloom 认知分类法将任务分为知识记忆、知识理解和知识应用三层。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Bloom 认知分类法驱动的任务设计</div>
+<p>三层 7 个子任务：<strong>知识记忆</strong>（TaxRead 阅读理解、TaxMCQ 多选题）、<strong>知识理解</strong>（TaxEnt 实体识别、TaxRel 关系抽取、TaxSum 摘要生成）、<strong>知识应用</strong>（TaxCalc 税额计算、TaxInspect 税务稽查、TaxPlan 税务筹划）。任务难度从记忆到应用逐层递增。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 数据来源与质量控制</div>
+<p>数据源涵盖中国税法法规、国家税务总局公告、真实税务案例和注册税务师考试题库。由 5 名持证税务师进行标注和审核，确保法律准确性。数据集包含 4,200+ 条测试样本，覆盖增值税、企业所得税、个人所得税、房产税等 12 个税种。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 多维度评估体系</div>
+<p>针对不同任务类型设计评估指标：结构化预测任务（TaxCalc、TaxMCQ）使用精确匹配（EM），生成任务（TaxSum、TaxPlan）使用 BERTScore 语义相似度，混合任务（TaxInspect）综合 EM 和 BERTScore。所有指标取 5 次运行平均值以消除随机性。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：TaxCalc 税额计算任务</strong>
+<p>问题："某企业 2024 年应纳税所得额为 280 万元，其中包含技术转让所得 550 万元。计算该企业应缴纳的企业所得税。"</p>
+<ul>
+<li><strong>GPT-4o</strong>：直接按 25% 计算 → 70 万（✗，忽略了技术转让优惠政策）</li>
+<li><strong>ERNIE-3.5</strong>：技术转让所得 500 万以内免税，超出部分减半征收。应税 = (280-550+550) 需拆分…最终答案 33.75 万（✓）</li>
+<li><strong>难点</strong>：需要同时掌握企业所得税法第27条和技术转让所得优惠政策的具体免税额度（500万元）和减半征收规则</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>知识记忆 ↑</th><th>知识理解 ↑</th><th>知识应用 ↑</th><th>总平均 ↑</th></tr>
+<tr><td class="best">ERNIE-3.5</td><td class="best">72.8</td><td>58.3</td><td class="best">41.5</td><td class="best">57.5</td></tr>
+<tr><td>Grok-3</td><td>70.2</td><td class="best">59.1</td><td>39.8</td><td>56.4</td></tr>
+<tr><td>GPT-4o</td><td>68.5</td><td>57.6</td><td>38.2</td><td>54.8</td></tr>
+<tr><td>Qwen2.5-72B</td><td>67.1</td><td>55.8</td><td>37.5</td><td>53.5</td></tr>
+<tr><td>DeepSeek-V3</td><td>65.3</td><td>54.2</td><td>36.8</td><td>52.1</td></tr>
+<tr><td>Llama-3.1-70B</td><td>52.1</td><td>41.3</td><td>25.7</td><td>39.7</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">关键发现：(1) <strong>知识应用远难于记忆</strong>：最好模型在应用任务上仅 41.5%，比记忆低 31.3pp，反映税务实践需要将法律知识与经济活动情境结合；(2) <strong>中文模型优势显著</strong>：ERNIE-3.5 和 Qwen 在涉及中文税法术语的任务上比英文模型高 10-15pp；(3) <strong>few-shot 提升有限</strong>：1-shot 相比 0-shot 平均仅提升 1.8pp，说明税务推理不易通过简单示例学习；(4) 税务数据微调（在 2000 条税务QA上 SFT）仅提升 3.2pp，暗示数据覆盖不足是瓶颈。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">TaxPraBen 填补了中国税务领域 LLM 评估的空白。核心启示：当前 LLM 在专业垂直领域仍有巨大提升空间，特别是涉及多法规交叉推理的知识应用场景。中文语言模型在中文法律领域的内在优势也得到了量化验证。</p>
+</div>

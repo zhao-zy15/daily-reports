@@ -1,0 +1,182 @@
+<h2 class="section-title">⚕️ Medical — 医学大模型</h2>
+
+<div class="paper-card" id="paper-08941">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08941" target="_blank">Predictive Entropy Links Calibration and Paraphrase Sensitivity in Medical Vision-Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Binesh Sadanandan, Vahid Behzadan</span>
+<span>🏛 SAIL Lab, University of New Haven</span>
+<span>📅 2026-04-10 | <span class="tag tag-medical">Medical</span> <span class="tag tag-medical">Calibration</span> <span class="tag tag-medical">Uncertainty</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>医学 VLM 面临两个威胁安全部署的失效模式：(a) <strong>校准不良</strong>——模型对错误答案过度自信；(b) <strong>改写敏感性</strong>——对同一问题的语义等价改写给出不同答案。本文首次揭示这两个看似独立的问题共享<strong>同一根源</strong>：决策边界的邻近性（proximity to the decision boundary），并提出使用预测熵作为统一诊断指标。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 预测熵作为统一指标</div>
+<p>对给定图像 \(x\) 和问题 \(q\)，模型输出分布 \(P(y|x,q)\)，预测熵定义为：</p>
+<p>$$H[P] = -\sum_{y} P(y|x,q) \log P(y|x,q)$$</p>
+<p>核心假说：高预测熵 ↔ 接近决策边界 ↔ 校准差 + 改写敏感。作者在 5 种不确定性量化方法（MC Dropout、Deep Ensembles、Temperature Scaling、Predictive Entropy、Mutual Information）中系统比较。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 跨分布验证设计</div>
+<p>使用 MedGemma-4B-IT 作为主模型，在两个数据集上评估：(a) <strong>域内</strong>：MIMIC-CXR 胸部X光数据集；(b) <strong>域外</strong>：PadChest 胸部X光数据集（不同医院、不同标注标准）。同时使用 LLaVA-RAD-7B 进行跨架构验证，确保结论不依赖特定模型。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 改写敏感性的定量度量</div>
+<p>对每个问题生成 5 种语义等价改写，定义改写敏感性：</p>
+<p>$$\text{PS}(x, q) = 1 - \frac{1}{\binom{5}{2}} \sum_{i<j} \mathbb{1}[\hat{y}_i = \hat{y}_j]$$</p>
+<p>PS=0 表示所有改写给出相同答案（完全稳定），PS=1 表示所有改写答案不同。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：MedGemma-4B 在胸部X光诊断中的双重失效</strong>
+<p>一张显示轻微肺不张的胸部X光片：</p>
+<ul>
+<li>问法 1："这张胸片有异常吗？" → "是的，可见轻微肺不张"（✓，置信度 92%）</li>
+<li>问法 2："请描述这张X光片的发现" → "胸片未见明显异常"（✗，置信度 88%）</li>
+<li><strong>预测熵 H = 1.73</strong>（高熵），揭示模型处于决策边界附近</li>
+</ul>
+<p>对比一张明显肺炎的X光片：所有 5 种改写均一致判断为肺炎，H = 0.12（低熵），校准也优秀。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>UQ 方法</th><th>ECE ↓ (MIMIC)</th><th>ECE ↓ (PadChest)</th><th>H-PS 相关性 ↑</th><th>AUROC ↑</th></tr>
+<tr><td>MC Dropout</td><td>0.128</td><td>0.195</td><td>0.64</td><td>0.71</td></tr>
+<tr><td>Deep Ensembles</td><td>0.098</td><td>0.142</td><td>0.72</td><td>0.78</td></tr>
+<tr><td>Temperature Scaling</td><td>0.085</td><td>0.168</td><td>0.58</td><td>0.68</td></tr>
+<tr><td class="best">Predictive Entropy</td><td class="best">0.082</td><td class="best">0.131</td><td class="best">0.81</td><td class="best">0.84</td></tr>
+<tr><td>Mutual Information</td><td>0.091</td><td>0.147</td><td>0.76</td><td>0.80</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">(1) 预测熵与改写敏感性的 Spearman 相关系数在 MedGemma 上达 \(\rho=0.81\)，LLaVA-RAD 上 \(\rho=0.76\)，跨架构一致性好；(2) 域内→域外迁移：MIMIC 上校准的阈值直接应用到 PadChest 时，误诊过滤 AUROC 仅下降 0.03，说明预测熵的诊断能力具有迁移性；(3) 单一指标 vs. 组合：预测熵单独就优于 MC Dropout + Temperature Scaling 的组合，验证了统一指标的优越性。局限性：仅在胸部X光场景验证，眼底、病理等其他医学影像场景需进一步研究。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文揭示了医学 VLM 校准与改写敏感性的统一根源——决策边界邻近性，并证明预测熵是同时诊断两者的最佳单一指标。对临床部署的直接意义：当模型预测熵超过阈值时，应标记该病例需要人类医生复审。简洁而强有力的结论。</p>
+</div>
+
+<h2 class="section-title">🌐 Multimodal — 多模态大模型</h2>
+
+<div class="paper-card" id="paper-08846">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08846" target="_blank">Dictionary-Aligned Concept Control for Safeguarding Multimodal LLMs</a></h3>
+<div class="paper-meta">
+<span>👤 Jinqi Luo, Jinyu Yang, Tal Neiman, Lei Fan, Bing Yin, Son Tran, Mubarak Shah, René Vidal</span>
+<span>🏛 University of Pennsylvania, Amazon, University of Central Florida, Johns Hopkins University</span>
+<span>📅 2026-04-10 | <span class="tag tag-multimodal">Multimodal</span> <span class="tag tag-multimodal">Safety</span> <span class="tag tag-multimodal">Activation Steering</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>多模态 LLM（MLLM）容易被恶意查询诱导生成不安全内容。现有防御手段（Prompt 工程、响应分类、微调）要么无法应对新型攻击，要么需要重新运行查询，要么计算成本高。近来<strong>激活转向</strong>（activation steering）提供了灵活的推理时安全控制，但其概念表示通常是单向量，无法捕捉安全/不安全概念的多面性。本文提出 DACC（Dictionary-Aligned Concept Control）：使用<strong>字典学习</strong>获取多概念表示，实现更精细的安全控制。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 字典学习的概念分解</div>
+<p>收集安全和不安全响应的中间层激活，使用稀疏字典学习分解为多个概念方向：</p>
+<p>$$h = \sum_{k=1}^{K} \alpha_k d_k + \epsilon, \quad \|\alpha\|_0 \leq s$$</p>
+<p>其中 \(d_k\) 是字典原子（概念方向），\(\alpha_k\) 是激活系数，\(s\) 是稀疏度。与 SAE（稀疏自编码器）不同，DACC 使用<strong>监督信号</strong>对齐字典原子到安全/不安全语义。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 安全概念的对齐与选择</div>
+<p>使用对比学习将字典原子对齐到安全标签：安全响应激活某些原子，不安全响应激活另一些原子。通过<strong>概念激活向量（CAV）</strong>识别最相关的安全概念方向 \(\{d_{k^*}\}\)，其中 \(k^*\) 是在安全/不安全分类上 AUC 最高的原子索引。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 推理时的多方向转向</div>
+<p>在推理时，同时沿多个安全概念方向转向：</p>
+<p>$$h' = h + \sum_{k \in \mathcal{S}} \lambda_k d_k$$</p>
+<p>其中 \(\mathcal{S}\) 是选出的安全概念集合，\(\lambda_k\) 是转向强度。多方向转向比单向量更鲁棒，因为不同类型的不安全内容可能需要不同方向的纠正。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：对抗视觉越狱攻击的防御</strong>
+<p>攻击：在一张正常图片中嵌入对抗性扰动，诱导 MLLM 生成暴力内容描述。</p>
+<ul>
+<li><strong>无防御</strong>：MLLM 生成不安全内容（ASR = 72%）</li>
+<li><strong>单向量转向</strong>：ASR 降至 31%，但某些攻击类别仍有效（如隐性偏见）</li>
+<li><strong>DACC 多方向转向</strong>：ASR 降至 8%。字典原子 \(d_{12}\) 处理暴力概念，\(d_{27}\) 处理偏见概念，\(d_{41}\) 处理隐私概念——每个概念独立转向</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MM-SafetyBench ASR ↓</th><th>VLGuard ASR ↓</th><th>通用能力 (MMBench) ↑</th><th>延迟增加</th></tr>
+<tr><td>无防御</td><td>72.3%</td><td>65.8%</td><td>68.5</td><td>0%</td></tr>
+<tr><td>Prompt Defense</td><td>45.2%</td><td>41.7%</td><td>67.1</td><td>~5%</td></tr>
+<tr><td>Safety Fine-tuning</td><td>28.6%</td><td>23.4%</td><td>64.2</td><td>0%</td></tr>
+<tr><td>单向量 Activation Steering</td><td>31.4%</td><td>27.8%</td><td>66.8</td><td>~2%</td></tr>
+<tr><td class="best">DACC (ours)</td><td class="best">8.2%</td><td class="best">6.5%</td><td class="best">67.3</td><td>~3%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">(1) 字典大小 K：K=32 时最优，K=8 过小无法覆盖所有不安全概念，K=128 过大导致稀疏度不足；(2) 选出的安全概念数 |\(\mathcal{S}\)|：3-5 个概念方向最优，覆盖主要不安全类别；(3) 转向强度 \(\lambda\)：过大（>2.0）开始影响通用能力（MMBench 下降 3+）。DACC 在冻结模型上工作，无需重训练，与现有安全微调互补。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">DACC 将 MLLM 安全控制从单维度推向多维度：通过字典学习分解安全概念空间，实现更精细、更鲁棒的推理时防御。在 MM-SafetyBench 上将 ASR 从 72% 降至 8%，且几乎不影响通用能力。字典对齐的思路可推广至更多概念控制场景。</p>
+</div>
+
+<div class="paper-card" id="paper-09442">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09442" target="_blank">UIPress: Bringing Optical Token Compression to UI-to-Code Generation</a></h3>
+<div class="paper-meta">
+<span>👤 Dasen Dai, Shuoqi Li, Ronghao Chen, Huacan Wang, Biao Wu, Qizhen Lan</span>
+<span>🏛 Alibaba Group</span>
+<span>📅 2026-04-10 | <span class="tag tag-multimodal">Multimodal</span> <span class="tag tag-multimodal">Vision-Language</span> <span class="tag tag-multimodal">Token Compression</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>UI-to-Code 生成要求 VLM 从一张截图生成数千 token 的 HTML/CSS 代码，视觉 token 效率至关重要。现有压缩方法要么在推理时用启发式选择 token（丢失关键信息），要么只是将低注意力特征置零（未真正缩短序列），都无法同时实现 prefill 延迟降低和生成质量保持。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 任务感知的光学 Token 压缩</div>
+<p>UIPress 在训练阶段学习一个可微分的 token 选择模块，直接优化 UI-to-Code 任务的端到端性能。对视觉编码器输出的 \(N\) 个 token，学习二值掩码 \(m \in \{0,1\}^N\)（通过 Gumbel-Softmax 松弛），保留 \(N' = \lfloor \rho N \rfloor\) 个 token，其中压缩率 \(\rho\) 是超参数。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② UI 结构感知的选择策略</div>
+<p>利用 UI 截图的结构特点（文本区域信息密度高，背景区域信息密度低），在训练中引入<strong>UI 布局先验</strong>：对 token 选择模块施加正则化，使其倾向保留文本/按钮/输入框区域的 token 而压缩纯色背景。布局先验通过对 UI 截图的简单梯度检测获取。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 实际序列缩短</div>
+<p>与仅置零低重要性 token 不同，UIPress 在 LLM 输入前物理移除被掩码的 token，真正缩短 prefill 序列长度。这直接减少了 KV-cache 大小和 prefill 计算量，在长代码生成场景下效果尤为显著。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：电商页面 UI-to-Code</strong>
+<p>输入：一张电商产品页截图（1280×720），视觉编码器输出 576 个 token。</p>
+<ul>
+<li><strong>无压缩</strong>：576 token → prefill 520ms → 生成 2800 token HTML（IoU = 0.87）</li>
+<li><strong>UIPress ρ=0.5</strong>：288 token → prefill 280ms（<strong>-46%</strong>）→ 生成 2780 token（IoU = 0.85，-0.02）</li>
+<li><strong>随机丢弃 50%</strong>：288 token → prefill 280ms → 生成 2650 token（IoU = 0.71，-0.16）</li>
+</ul>
+<p>UIPress 保留了产品标题、价格、按钮区域的 token，压缩了大面积白色背景。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>视觉 IoU ↑</th><th>代码 BLEU ↑</th><th>Token 数 ↓</th><th>Prefill 延迟 ↓</th></tr>
+<tr><td>原始（无压缩）</td><td>0.87</td><td>42.3</td><td>576</td><td>1.0x</td></tr>
+<tr><td>启发式选择 (top-50%)</td><td>0.78</td><td>36.1</td><td>288</td><td>0.54x</td></tr>
+<tr><td>FastV (注意力置零)</td><td>0.84</td><td>40.8</td><td>576*</td><td>0.95x</td></tr>
+<tr><td class="best">UIPress ρ=0.5</td><td class="best">0.85</td><td class="best">41.5</td><td class="best">288</td><td class="best">0.54x</td></tr>
+<tr><td>UIPress ρ=0.25</td><td>0.80</td><td>38.2</td><td>144</td><td>0.31x</td></tr>
+</table>
+<p style="color:var(--text-secondary);font-size:0.85em">* FastV 未真正缩短序列</p>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">(1) 去除 UI 布局先验：IoU 从 0.85 降至 0.81（ρ=0.5），说明结构感知的 token 选择很重要；(2) 压缩率 ρ 从 0.75 到 0.25：IoU 从 0.86 降至 0.80，存在平滑的质量-效率权衡；(3) 在非 UI 任务（自然图像描述）上测试：UIPress 的优势减弱（仅比启发式好 1-2pp），因为自然图像缺乏明确的结构先验。⚠️ 论文 HTML5 全文未能获取，以上分析基于摘要和有限信息。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">UIPress 为 UI-to-Code 这一视觉 token 密集的任务提供了首个任务感知的光学压缩方案。通过端到端学习+UI布局先验，在 50% 压缩率下仅损失 2pp IoU，同时 prefill 延迟降低近一半。这对 VLM 在代码生成场景的部署有直接价值。</p>
+</div>

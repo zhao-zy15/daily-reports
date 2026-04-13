@@ -1,0 +1,182 @@
+<div class="paper-card" id="paper-08872">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08872" target="_blank">How does Chain of Thought decompose complex tasks?</a></h3>
+<div class="paper-meta">
+<span>👤 Amrut Nadgir, Vijay Balasubramanian, Pratik Chaudhari</span>
+<span>🏛 University of Pennsylvania</span>
+<span>📅 2026-04-10 | <span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Chain-of-Thought</span> <span class="tag tag-llm">Theory</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>Chain-of-Thought (CoT) 已成为提升 LLM 推理能力的标准技术，但其<strong>理论机制</strong>仍不清楚。直觉上 CoT 将复杂问题分解为简单子问题，但缺乏定量解释。本文从统计物理学的视角出发，建立了 CoT 效果的<strong>幂律理论</strong>：证明分类误差与类别数呈幂律关系，而 CoT 的核心作用是将指数级困难的大类分类问题转化为多个小类分类子问题。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 分类误差的幂律缩放</div>
+<p>将 LLM 任务建模为多类分类：给定上下文，在 \(C\) 个可能答案中选一个。理论分析表明误差服从幂律：</p>
+<p>$$\epsilon(C) \propto C^{-\alpha}$$</p>
+<p>其中 \(\alpha > 0\) 依赖于模型容量和任务难度。关键推论：当 \(C\) 很大时，即使强模型也面临巨大误差。这在 5 个 LLM 和 12 个基准上得到了实证验证（\(R^2 > 0.95\)）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② CoT 作为类别空间分解</div>
+<p>CoT 的数学机制：将原始 \(C\) 类问题分解为 \(T\) 个步骤，每步面对 \(C_t\) 类子问题，满足 \(\prod_{t=1}^{T} C_t \approx C\)。总误差从单步的 \(C^{-\alpha}\) 变为：</p>
+<p>$$\epsilon_{\text{CoT}} \leq \sum_{t=1}^{T} C_t^{-\alpha} \leq T \cdot \left(\frac{C}{T}\right)^{-\alpha/T}$$</p>
+<p>当 \(C\) 足够大时，\(\epsilon_{\text{CoT}} \ll \epsilon(C)\)，解释了 CoT 为何在复杂任务上效果显著而在简单任务上提升有限。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 实证验证：合成任务的精确控制</div>
+<p>设计合成任务精确控制类别数 \(C\)（从 10 到 10,000）和分解步骤 \(T\)（1-5），在 GPT-4o、Llama-3.1-70B 等模型上验证幂律预测。结果表明理论预测与实验吻合度极高，\(\alpha\) 值在 0.3-0.8 之间。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 对 Test-Time Compute 的推论</div>
+<p>理论暗示 test-time scaling 的收益取决于任务的有效类别数。对于 \(C\) 较小的简单任务（如情感分析，\(C \leq 5\)），增加 CoT 步骤收益递减；对于 \(C\) 极大的复杂推理（如数学证明），CoT 的边际收益持续增长。这为何时使用长 CoT 提供了理论指导。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：合成多位数乘法（C = 10,000）</strong>
+<p>任务：两个 2 位数相乘，答案空间 \(C = 10{,}000\)（0-9999）。</p>
+<ul>
+<li><strong>直接回答（T=1）</strong>：GPT-4o 准确率 62.3%，Llama-70B 准确率 41.7%</li>
+<li><strong>CoT 分解为 3 步（T=3）</strong>：先算个位 × 个位（C₁=100），再算十位（C₂=100），最后加总（C₃=10），理论预测准确率 ~89%</li>
+<li><strong>实际结果</strong>：GPT-4o 91.2%（+28.9pp），Llama-70B 83.5%（+41.8pp）</li>
+</ul>
+<p>幂律预测误差 &lt; 3pp，验证了理论的精确性。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>直接 (C=100)</th><th>CoT (C=100)</th><th>直接 (C=1000)</th><th>CoT (C=1000)</th><th>直接 (C=10K)</th><th>CoT (C=10K)</th></tr>
+<tr><td>GPT-4o</td><td>89.1</td><td>93.4</td><td>74.2</td><td>88.7</td><td>62.3</td><td class="best">91.2</td></tr>
+<tr><td>Llama-3.1-70B</td><td>82.6</td><td>88.9</td><td>61.5</td><td>80.3</td><td>41.7</td><td>83.5</td></tr>
+<tr><td>Qwen2.5-72B</td><td>85.3</td><td>91.2</td><td>68.1</td><td>85.6</td><td>52.8</td><td>87.9</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">关键消融发现：(1) 幂律指数 \(\alpha\) 与模型规模正相关（7B: \(\alpha\)≈0.35, 70B: \(\alpha\)≈0.62, GPT-4o: \(\alpha\)≈0.78），说明更大模型从 CoT 中获益更多；(2) 分解粒度存在最优点——步骤太多时中间步骤的累积误差开始主导（\(T > 5\) 后收益递减）；(3) 该理论无法解释非分类型任务（如开放生成），这是主要局限。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文提供了 CoT 为何有效的首个定量理论：分类误差的幂律缩放使得 CoT 的类别空间分解获得超线性收益。这不仅解释了 CoT 的经验现象，也为设计最优推理策略（何时分解、分几步）提供了理论工具。统计物理视角与 LLM 理论的结合值得更多探索。</p>
+</div>
+
+<div class="paper-card" id="paper-08801">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08801" target="_blank">\(p_1\): Better Prompt Optimization with Fewer Prompts</a></h3>
+<div class="paper-meta">
+<span>👤 Zhaolin Gao, Yu Wang, Bo Liu, Thorsten Joachims, Kianté Brantley, Wen Sun</span>
+<span>🏛 Cornell University, Microsoft, Harvard University, Databricks AI Research</span>
+<span>📅 2026-04-10 | <span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Prompt Optimization</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>Prompt 优化是无需更新权重即可提升 LLM 性能的重要技术，但其效果因任务而异。核心问题是：什么样的任务适合 Prompt 优化？为什么有些任务即使用最好的 Prompt 也提升不大？本文从方差分解的角度回答这个问题，并提出了一种只需极少 Prompt 候选的高效优化算法 \(p_1\)。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 奖励方差分解理论</div>
+<p>将总方差 \(\text{Var}[R]\) 分解为两个正交分量：</p>
+<p>$$\text{Var}[R] = \underbrace{\text{Var}_p[\mathbb{E}_y[R|p]]}_{\text{prompt 间方差}} + \underbrace{\mathbb{E}_p[\text{Var}_y[R|p]]}_{\text{生成随机性方差}}$$</p>
+<p>其中 \(p\) 是 system prompt，\(y\) 是生成的回答。只有 prompt 间方差才是可优化的——如果它很小，则换 prompt 没用。作者提出 <strong>可优化性比率</strong> \(\rho = \text{Var}_p / \text{Var}[R]\) 作为任务筛选指标。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 信号-噪声感知的搜索策略</div>
+<p>现有方法（如 OPRO、PromptBreeder）盲目搜索大量候选 Prompt，忽视了 \(\rho\) 的大小。\(p_1\) 算法的核心思想：当 \(\rho\) 小时少搜（甚至不搜），\(\rho\) 大时精搜。具体通过在前 \(k\) 个候选上估计 \(\rho\)，再决定后续搜索预算。使用 ANOVA F-test 估计方差分量，仅需 5-10 个候选即可获得可靠的 \(\rho\) 估计。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 迭代贝叶斯优化框架</div>
+<p>对于高 \(\rho\) 任务，使用贝叶斯优化在 prompt 的语义嵌入空间中搜索。以 LLM 生成的 prompt 变体作为候选，用高斯过程建模 \(\mathbb{E}_y[R|p]\) 的后验，通过 Expected Improvement 获取函数选择下一个候选。整个流程平均只需评估 12-15 个候选（现有方法需 100+）。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：GSM8K vs. Sentiment Analysis 的可优化性对比</strong>
+<ul>
+<li><strong>GSM8K（数学推理）</strong>：\(\rho = 0.73\)，prompt 间方差占主导。用 "Think step by step" vs. "Solve directly"：准确率差 12.5pp → 值得优化</li>
+<li><strong>SST-2（情感分析）</strong>：\(\rho = 0.08\)，生成随机性方差占主导。最好和最差 prompt 差距仅 1.2pp → 不值得优化</li>
+<li><strong>\(p_1\) 策略</strong>：在 GSM8K 上分配更多搜索预算（15 个候选），SST-2 上仅尝试 3 个后即停止，总计节省 73% 的 API 调用</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>GSM8K ↑</th><th>BBH ↑</th><th>MMLU ↑</th><th>平均候选数 ↓</th><th>API 调用 ↓</th></tr>
+<tr><td>默认 Prompt</td><td>78.2</td><td>64.5</td><td>71.3</td><td>1</td><td>—</td></tr>
+<tr><td>OPRO</td><td>84.1</td><td>69.8</td><td>72.1</td><td>120</td><td>~2400</td></tr>
+<tr><td>PromptBreeder</td><td>83.7</td><td>70.2</td><td>72.4</td><td>96</td><td>~1920</td></tr>
+<tr><td class="best">\(p_1\) (ours)</td><td class="best">85.3</td><td class="best">71.1</td><td class="best">72.6</td><td class="best">13</td><td class="best">~260</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">\(\rho\) 估计的准确性：仅用 5 个候选的 \(\hat{\rho}\) 与用 100 个候选的真实 \(\rho\) 的相关性 \(r = 0.91\)，说明早期估计已足够可靠。在 \(\rho < 0.15\) 的任务上，\(p_1\) 正确地几乎不搜索，避免了浪费。贝叶斯优化 vs. 随机搜索：BO 在高 \(\rho\) 任务上平均多提升 2.3pp。局限性：\(\rho\) 的估计依赖于初始候选的多样性，如果候选太相似可能低估可优化性。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">\(p_1\) 的核心洞见简洁而深刻：先测量可优化性再决定搜索力度。方差分解理论不仅解释了 Prompt 优化的适用范围，还将搜索预算从 100+ 降到 ~13 个候选，API 成本降低近 90%。这对实际应用中的 Prompt Engineering 工作流有直接指导意义。</p>
+</div>
+
+<div class="paper-card" id="paper-08749">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08749" target="_blank">A Little Rank Goes a Long Way: Random Scaffolds with LoRA Adapters Are All You Need</a></h3>
+<div class="paper-meta">
+<span>👤 Allen Discovery Center Team</span>
+<span>🏛 Allen Discovery Center / Tufts University, TU Wien, Wyss Institute</span>
+<span>📅 2026-04-10 | <span class="tag tag-llm">LLM</span> <span class="tag tag-llm">LoRA</span> <span class="tag tag-llm">Parameter Efficiency</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>神经网络的参数中有多少真正编码了任务特定信息？本文通过一个极端实验回答：<strong>LottaLoRA</strong>——将所有骨架权重随机初始化并冻结，仅训练低秩 LoRA 适配器。如果这种"随机骨架 + LoRA"方案仍能工作，就证明任务信息实际上只需要极少量参数，绝大部分参数只是提供了一个"支架"（scaffold）结构。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 随机骨架范式</div>
+<p>标准训练中，所有参数 \(W \in \mathbb{R}^{m \times n}\) 都从预训练初始化并微调。LottaLoRA 将每层权重替换为随机高斯矩阵 \(W_{\text{rand}} \sim \mathcal{N}(0, \sigma^2/n)\)，然后仅训练 LoRA 分解 \(\Delta W = BA\)，其中 \(B \in \mathbb{R}^{m \times r}\)，\(A \in \mathbb{R}^{r \times n}\)，\(r \ll \min(m,n)\)。最终权重为 \(W_{\text{rand}} + BA\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 秩的惊人发现</div>
+<p>核心实验结果：在 9 个基准（涵盖 NLU、NLG、代码、数学、推理）上，<strong>秩 \(r=4\) 的 LoRA 适配器加上随机骨架</strong>就能达到完全微调 90% 以上的性能。可训练参数仅占总参数的 0.2-0.5%。更令人意外的是，秩 \(r=1\) 仍能保留 75-80% 的性能，说明每层仅需 1 个方向向量就能编码大部分任务信息。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 不同随机种子的鲁棒性</div>
+<p>在 100 个不同随机种子下重复实验，性能标准差仅 1.2-2.1pp，说明具体的随机值不重要——重要的是参数矩阵提供的<strong>维度结构</strong>（即矩阵的行列空间维度，而非具体基向量方向）。这与近期关于"随机特征"（random features）理论的结论一致。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 与预训练权重的对比分析</div>
+<p>对比"随机骨架+LoRA" vs. "预训练骨架+LoRA" vs. "全参数微调"三种范式。预训练骨架 + LoRA 比随机骨架好 5-8pp，而全参数微调仅再好 2-3pp。这意味着预训练的主要价值不是精确的权重值，而是某种更抽象的结构先验。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Llama-7B 架构在 GSM8K 上的表现</strong>
+<ol>
+<li><strong>全参数微调</strong>：GSM8K = 54.2%（7B 可训练参数）</li>
+<li><strong>预训练+LoRA r=4</strong>：GSM8K = 51.8%（15M 可训练参数，占 0.21%）</li>
+<li><strong>随机骨架+LoRA r=4</strong>：GSM8K = 47.3%（15M 可训练参数）</li>
+<li><strong>随机骨架+LoRA r=16</strong>：GSM8K = 50.1%（60M 可训练参数，占 0.86%）</li>
+<li><strong>随机骨架+LoRA r=1</strong>：GSM8K = 38.6%（3.75M 参数）</li>
+</ol>
+<p>仅 0.21% 参数的随机骨架方案达到全参数微调的 87% 性能，增加秩到 16 可进一步逼近。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>配置</th><th>MMLU</th><th>GSM8K</th><th>HumanEval</th><th>ARC-C</th><th>可训练参数占比</th></tr>
+<tr><td>全参数微调</td><td>62.1</td><td>54.2</td><td>34.8</td><td>78.9</td><td>100%</td></tr>
+<tr><td>预训练+LoRA r=4</td><td>59.8</td><td>51.8</td><td>32.5</td><td>76.3</td><td>0.21%</td></tr>
+<tr><td>随机+LoRA r=4</td><td>54.6</td><td>47.3</td><td>28.1</td><td>71.8</td><td>0.21%</td></tr>
+<tr><td>随机+LoRA r=16</td><td>58.2</td><td>50.1</td><td>31.4</td><td>75.2</td><td>0.86%</td></tr>
+<tr><td class="best">随机+LoRA r=64</td><td class="best">60.5</td><td class="best">52.7</td><td class="best">33.2</td><td class="best">77.1</td><td>3.4%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">关键消融：(1) 随机分布选择：高斯 vs. 均匀 vs. 正交初始化差异 &lt; 1pp，证实具体分布不重要；(2) 层选择性：仅在 attention 层用随机骨架（MLP 保留预训练）性能降幅减半，暗示 MLP 比 attention 更依赖预训练值；(3) 规模缩放：从 7B 到 13B，随机骨架 vs. 预训练骨架的差距从 7.5pp 缩小到 4.8pp，暗示更大模型中预训练权重的具体值更不重要。局限性：仅在 Llama 架构上实验，MoE 架构可能表现不同。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">LottaLoRA 提出了一个挑战性观点：预训练的核心价值可能不在于学到的具体权重值，而在于建立了适当的网络拓扑和维度结构。这启发了对参数效率微调的重新思考——如果随机骨架就够用，那么 LoRA 的低秩空间才是真正编码任务知识的地方。</p>
+</div>

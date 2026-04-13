@@ -1,0 +1,65 @@
+<h2 class="section-title">🧠 LLM — 纯文本大模型</h2>
+
+<div class="paper-card" id="paper-09494">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09494" target="_blank">RecaLLM: Addressing the Lost-in-Thought Phenomenon with Explicit In-Context Retrieval</a></h3>
+<div class="paper-meta">
+<span>👤 Kyle Whitecross, Negin Rahimi</span>
+<span>🏛 University of Massachusetts Amherst</span>
+<span>📅 2026-04-10 | <span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Long Context</span> <span class="tag tag-llm">Reasoning</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>推理型 LLM（如 DeepSeek-R1、Qwen3）在长链思维（CoT）推理中表现出色，但作者发现了一个被忽视的致命缺陷——<strong>"沉思迷失"（Lost-in-Thought）</strong>：模型在进行推理后，上下文检索能力会急剧下降。即使推理答案正确，模型也无法从上下文中准确提取对应的值。在 5 个 7-8B 开源 LLM 上的实验显示，128K 上下文长度下，推理后的检索准确率比直接检索低 40-60 个百分点。这揭示了 test-time scaling 的一个核心瓶颈。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Recall Tokens 与 Recall Spans</div>
+<p>在基础词汇表 \(\mathcal{V}\) 中添加两个特殊标记：<code>&lt;|start_recall|&gt;</code>（\(R_{\text{start}}\)）和 <code>&lt;|end_recall|&gt;</code>（\(R_{\text{end}}\)）。模型生成序列在推理与检索之间交替：</p>
+<p>$$(\underbrace{y_1, \ldots, y_T}_{\text{reasoning}},\; R_{\text{start}},\; \underbrace{r_1, \ldots, r_K}_{\text{recall span}},\; R_{\text{end}},\; \underbrace{y_{T+1}, \ldots}_{\text{reasoning}}, \ldots)$$</p>
+<p>模型自主决定何时需要检索以及检索什么内容，recall span 内的 token 通过约束解码保证逐字复制。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 上下文感知约束解码（Context-Aware Constrained Decoding）</div>
+<p>在 recall span 内部，生成被约束为上下文中的有效延续。具体来说，对输入序列 \(x = (x_1, \ldots, x_n)\)，recall span 中每个 token \(r_k\) 的采样被限制在：能够延续已匹配上下文子串的 token 集合中。这通过维护一个候选匹配位置集合实现，每生成一个 token 就更新匹配集，确保 recall span 始终是上下文的逐字子串。该机制的计算开销可忽略不计（\(O(n)\) 预处理后每步 \(O(1)\) 查询）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ SFT 冷启动 + RL 训练框架</div>
+<p>训练分两阶段：(a) <strong>SFT 冷启动</strong>：在合成数据上教会模型使用 recall token 的基本格式，数据包含多跳QA、单跳QA、KV检索等任务，上下文长度 8-10K tokens；(b) <strong>RL 训练</strong>：使用 GRPO 算法在 4 个 A100 GPU 上训练，16 rollouts/example。奖励函数包含两部分：答案正确性奖励 \(R_{\text{ans}}\) 和上下文检索奖励 \(R_{\text{ret}}\)（基于 character-level F1 overlap），总奖励为 \(R = R_{\text{ans}} + \lambda \cdot R_{\text{ret}}\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 密度惩罚与正确性惩罚</div>
+<p>为防止滥用 recall span，引入两种惩罚：密度惩罚在 recall span 频率超过阈值时指数衰减奖励；正确性惩罚检测格式错误的 recall span（如极短 span 或不匹配的 start/end 标记）。这确保模型学会有选择性地、高质量地使用检索能力。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>场景：128K 上下文的多跳 QA</strong>
+<p>输入包含一个大型 JSON 字典（~100K tokens 的键值对）和一个数学问题。模型需要：</p>
+<ol>
+<li>先推理数学问题得到查询键（如 "key_7342"）</li>
+<li>从 128K 上下文中找到对应值</li>
+</ol>
+<p><strong>Baseline（Qwen2.5-7B）</strong>：数学准确率 95%，但推理后检索准确率仅 31%（直接检索为 89%），差距 58pp</p>
+<p><strong>RecaLLM</strong>：数学准确率 95%，推理后检索准确率 87%。模型在推理完毕后自动插入 <code>&lt;|start_recall|&gt;</code>，约束解码确保逐字复制正确值。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>RULER (avg)</th><th>HELMET (avg)</th><th>In-Domain 4K</th><th>In-Domain 32K</th><th>In-Domain 128K</th></tr>
+<tr><td>Qwen2.5-7B-Instruct</td><td>72.1</td><td>45.3</td><td>78.2</td><td>61.4</td><td>31.0</td></tr>
+<tr><td>R1-Distill-Llama-8B</td><td>68.5</td><td>42.1</td><td>75.6</td><td>55.8</td><td>26.3</td></tr>
+<tr><td>ProLong-8B-512K</td><td>75.8</td><td>48.7</td><td>80.1</td><td>68.2</td><td>42.5</td></tr>
+<tr><td>RecaLLM-Qwen (ours)</td><td class="best">82.4</td><td class="best">56.2</td><td class="best">85.3</td><td class="best">79.6</td><td class="best">71.8</td></tr>
+<tr><td>RecaLLM-Llama (ours)</td><td>79.1</td><td>52.8</td><td>82.7</td><td>75.3</td><td>65.4</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融实验显示：(1) 去除约束解码后，recall span 中仅 43% 能实现逐字匹配（有约束时为 100%），RULER 下降 6.2 点；(2) 去除 RL 训练仅用 SFT 时，RULER 下降 8.7 点，说明 RL 是学会有效检索的关键；(3) 仅使用 10K 训练上下文即可泛化到 128K 评测，远短于 ProLong 的 512K 训练序列。局限性在于 recall span 增加了输出长度（平均增加 15-20%），对推理延迟有一定影响。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">RecaLLM 首次揭示并系统解决了推理 LLM 的"沉思迷失"现象。通过将上下文检索从隐式能力转变为显式、可验证的操作，RecaLLM 在 10K 训练长度下实现了 128K 的泛化，这为长上下文能力的高效扩展提供了全新路径——与其训练超长序列，不如教会模型更好地检索。</p>
+</div>

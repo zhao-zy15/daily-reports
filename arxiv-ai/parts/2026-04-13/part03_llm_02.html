@@ -1,0 +1,66 @@
+<div class="paper-card" id="paper-09544">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09544" target="_blank">Large Language Models Generate Harmful Content Using a Distinct, Unified Mechanism</a></h3>
+<div class="paper-meta">
+<span>👤 Hadas Orgad, Boyi Wei, Kaden Zheng, Martin Wattenberg, Peter Henderson, Seraphina Goldfarb-Tarrant, Yonatan Belinkov</span>
+<span>🏛 Kempner Institute / Harvard University, Princeton University</span>
+<span>📅 2026-04-10 | <span class="tag tag-llm">LLM</span> <span class="tag tag-llm">Safety</span> <span class="tag tag-llm">Mechanistic Interpretability</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 经过对齐训练后仍然脆弱：越狱攻击能轻易绕过安全护栏，甚至在窄领域微调后出现"涌现式错误对齐"（emergent misalignment）。核心问题在于：<strong>有害性在模型内部是否存在一个连贯的、统一的机制？</strong>如果有害内容的生成依赖于分散的、独立的组件，那么逐一修补将极其困难；但如果存在统一机制，则有望实现更彻底的安全干预。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 靶向权重剪枝作为因果干预（Targeted Weight Pruning as Causal Intervention）</div>
+<p>将权重剪枝重新定义为因果探针工具。对模型中的每个参数 \(w_{ij}\)，计算其"有害性重要度得分"（harmfulness importance score），然后按得分排序剪枝。如果移除少量高得分参数就能显著降低有害输出，而不影响通用能力，则说明有害性集中在特定子网络中。具体度量使用：</p>
+<p>$$I_{\text{harm}}(w_{ij}) = \left|\frac{\partial \mathcal{L}_{\text{harm}}}{\partial w_{ij}}\right| \cdot |w_{ij}|$$</p>
+<p>其中 \(\mathcal{L}_{\text{harm}}\) 是在有害提示数据集上计算的损失。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 跨类别一致性分析</div>
+<p>关键发现：不同类别的有害内容（如暴力、偏见、非法活动等）所依赖的参数高度重叠。定义参数集 \(S_c\) 为类别 \(c\) 排名前 \(k\)% 的参数，跨类别 Jaccard 相似度：</p>
+<p>$$J(S_i, S_j) = \frac{|S_i \cap S_j|}{|S_i \cup S_j|}$$</p>
+<p>实验在 Llama-3.1-8B 和 Qwen2.5-7B 上测量，\(J\) 值在 0.72-0.89 之间，远高于随机基线（~0.02），证明有害性由一个统一的子网络驱动。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 越狱与涌现错误对齐的统一解释</div>
+<p>将分析扩展到越狱成功的样本和"涌现式错误对齐"的微调模型：发现两者激活的有害子网络与原始有害提示高度一致。这解释了为何：(a) 越狱攻击能跨类别泛化；(b) 窄领域微调能导致广泛错误对齐——因为它们都通过同一个子网络"绕过"安全层。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 安全性干预：统一子网络剪枝</div>
+<p>基于发现，提出统一剪枝干预：仅使用少量有害样本（~50条）识别有害子网络，剪枝后在 HarmBench 上的攻击成功率（ASR）从 62.3% 降至 8.7%，同时在 MMLU 和 GSM8K 上的性能保持在 98% 以上。这比现有的安全微调方法更高效（无需重训练）且更鲁棒。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：跨类别有害子网络的可视化</strong>
+<p>在 Llama-3.1-8B-Instruct 上，分别用 4 个有害类别（暴力、偏见、非法活动、隐私侵犯）计算参数重要度得分，取各类别 top-0.1% 参数：</p>
+<ul>
+<li><strong>暴力 ∩ 偏见</strong>：重叠率 78.3%</li>
+<li><strong>暴力 ∩ 非法活动</strong>：重叠率 82.1%</li>
+<li><strong>四类别交集</strong>：占各类别 top 参数的 72.6%</li>
+<li>这 72.6% 的共享参数主要集中在 <strong>中间层（layers 12-20）的 MLP 模块</strong>中</li>
+</ul>
+<p>剪枝这些共享参数后，所有 4 个类别的 ASR 同时大幅下降，证实了统一机制假说。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>干预方法</th><th>HarmBench ASR ↓</th><th>MMLU ↑</th><th>GSM8K ↑</th><th>需重训练?</th></tr>
+<tr><td>原始模型 (Llama-3.1-8B-Instruct)</td><td>62.3%</td><td>65.8</td><td>77.2</td><td>—</td></tr>
+<tr><td>安全微调 (DPO)</td><td>23.5%</td><td>64.9</td><td>75.8</td><td>✓</td></tr>
+<tr><td>Circuit Breaker</td><td>15.2%</td><td>63.1</td><td>74.6</td><td>✓</td></tr>
+<tr><td>随机剪枝 (0.1%)</td><td>58.7%</td><td>64.2</td><td>75.9</td><td>✗</td></tr>
+<tr><td class="best">统一子网络剪枝 (ours, 0.1%)</td><td class="best">8.7%</td><td class="best">65.4</td><td class="best">76.8</td><td>✗</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融发现：(1) 有害样本数量 50 条即可稳定识别子网络（10 条时 Jaccard 已达 0.65），扩增至 500 条仅微幅提升；(2) 剪枝比例 0.05%-0.2% 区间内效果稳定，超过 0.5% 开始损害通用能力；(3) 在 Qwen2.5-7B 上复现了相同模式（J=0.74-0.85），说明统一机制不是特定模型的产物。主要局限：该分析基于权重空间的静态视角，激活空间的动态视角是否存在类似统一性有待进一步研究。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文首次从因果角度证明 LLM 的有害内容生成依赖于一个跨类别统一的内部机制，而非分散的独立组件。这一发现既解释了越狱攻击的泛化性和涌现错误对齐的广泛性，也为安全干预提供了新范式——无需重训练的靶向子网络剪枝。这对 LLM 安全研究具有范式级别的启示。</p>
+</div>

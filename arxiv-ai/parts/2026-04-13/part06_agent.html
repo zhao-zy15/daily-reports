@@ -1,0 +1,177 @@
+<h2 class="section-title">🤖 Agent — 智能体</h2>
+
+<div class="paper-card" id="paper-09482">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09482" target="_blank">Process Reward Agents for Steering Knowledge-Intensive Reasoning</a></h3>
+<div class="paper-meta">
+<span>👤 Jiwoong Sohn, Tomasz Sternal, Kenneth Styppa, Torsten Hoefler, Michael Moor</span>
+<span>🏛 ETH Zürich, Heidelberg University</span>
+<span>📅 2026-04-10 | <span class="tag tag-agent">Agent</span> <span class="tag tag-agent">Process Reward</span> <span class="tag tag-agent">Knowledge Reasoning</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>知识密集型推理（如医学诊断、法律分析）的中间步骤难以局部验证——不像数学可以逐步检查，评估某个推理步骤是否正确可能需要综合大量外部知识。现有过程奖励模型（PRM）是事后评分（post-hoc scoring），无法在推理过程中实时纠错。本文提出 Process Reward Agents (PRA)：将 PRM 从被动评分器升级为<strong>主动引导智能体</strong>。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 智能体化的过程奖励（Agentic PRM）</div>
+<p>PRA 在每个推理步骤后执行三个动作：(a) <strong>检索</strong>——从知识库中主动查询与当前步骤相关的证据；(b) <strong>验证</strong>——基于检索到的证据评估当前步骤的正确性；(c) <strong>引导</strong>——如果步骤有误，生成修正建议并反馈给推理模型。形式化为 MDP：状态 \(s_t = (q, r_{1:t}, e_{1:t})\) 包括问题 \(q\)、推理轨迹 \(r\) 和证据 \(e\)，动作空间包括 \(\{检索, 批准, 修正\}\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 检索增强的步骤验证</div>
+<p>验证得分结合局部一致性和全局证据支持：</p>
+<p>$$V(r_t | r_{1:t-1}, e_{1:t}) = \alpha \cdot \text{Coherence}(r_t, r_{1:t-1}) + (1-\alpha) \cdot \text{Support}(r_t, e_t)$$</p>
+<p>其中 Coherence 由语言模型评估推理步骤与前文的逻辑一致性，Support 由检索到的证据与当前步骤的语义相似度计算。当 \(V < \tau_{\text{reject}}\) 时触发修正。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 知识驱动的修正生成</div>
+<p>修正模块接收当前有误的步骤 \(r_t\)、具体的验证反馈（哪个方面出错）和检索到的正确证据 \(e_t\)，生成替代步骤 \(r_t'\)。使用 constrained generation 确保修正后的步骤引用了检索证据中的具体信息，避免"自由幻觉"式修正。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：医学诊断推理</strong>
+<p>问题："患者，65 岁男性，持续咳嗽 3 个月，CT 显示右肺上叶 3cm 结节伴毛刺征，CEA 升高。最可能的诊断是？"</p>
+<ol>
+<li><strong>推理步骤 1</strong>："3cm 结节 + 毛刺征提示恶性可能"→ PRA 检索医学文献，验证 ✓（支持度 0.92）</li>
+<li><strong>推理步骤 2</strong>："CEA 升高通常见于<em>小细胞肺癌</em>" → PRA 检索 ✗：CEA 主要关联<strong>腺癌</strong>而非小细胞癌（支持度 0.15）→ 触发修正</li>
+<li><strong>修正步骤 2'</strong>："CEA 升高主要见于肺腺癌"（基于检索证据）</li>
+<li><strong>最终诊断</strong>：右肺上叶腺癌可能性最大 → ✓ 正确</li>
+</ol>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MedQA</th><th>PubMedQA</th><th>BioASQ</th><th>Legal-QA</th><th>平均</th></tr>
+<tr><td>GPT-4o (直接推理)</td><td>78.5</td><td>72.3</td><td>68.4</td><td>61.2</td><td>70.1</td></tr>
+<tr><td>GPT-4o + RAG</td><td>82.1</td><td>76.8</td><td>73.5</td><td>66.3</td><td>74.7</td></tr>
+<tr><td>GPT-4o + PRM (post-hoc)</td><td>80.3</td><td>74.5</td><td>70.8</td><td>63.7</td><td>72.3</td></tr>
+<tr><td class="best">GPT-4o + PRA (ours)</td><td class="best">85.7</td><td class="best">80.2</td><td class="best">77.1</td><td class="best">70.8</td><td class="best">78.5</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融发现：(1) 去除检索（PRA 仅做验证+修正）：平均下降 4.2pp，说明知识检索是纠错的基础；(2) 去除修正（PRA 仅标记错误步骤让模型自行重试）：平均下降 2.8pp；(3) 阈值 \(\tau\) 从 0.3 调到 0.7：低阈值过于保守（频繁中断推理），高阈值漏检过多错误。最优点在 0.4-0.5 区间。局限性：每步检索增加了推理延迟（约 2x），实时场景下需权衡。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">PRA 将过程奖励模型从"事后评委"升级为"实时导师"——在推理过程中主动检索知识、验证步骤、纠正错误。这对知识密集型推理场景（医学、法律）意义重大，因为这些领域的中间步骤错误传播成本极高。检索+验证+修正的三位一体框架具有很强的通用性。</p>
+</div>
+
+<div class="paper-card" id="paper-09155">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.09155" target="_blank">CORA: Conformal Risk-Controlled Agents for Safeguarded Mobile GUI Automation</a></h3>
+<div class="paper-meta">
+<span>👤 HKU, CUHK, University of Tokyo Team</span>
+<span>🏛 University of Hong Kong, Chinese University of Hong Kong, University of Tokyo</span>
+<span>📅 2026-04-10 | <span class="tag tag-agent">Agent</span> <span class="tag tag-agent">GUI Agent</span> <span class="tag tag-agent">Safety</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>VLM 驱动的 GUI 智能体正从被动辅助转向自主操作，但不受约束的动作空间暴露用户于严重且不可逆的风险——误操作可能导致财务损失、隐私泄露或社交伤害。现有安全措施依赖 Prompt 工程、启发式规则或 VLM-as-critic，缺乏<strong>形式化保障</strong>和用户可调的风险控制。CORA 引入<strong>Conformal Prediction</strong>为 GUI 智能体提供有概率保证的安全框架。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Conformal Risk Score 定义</div>
+<p>对每个候选动作 \(a\)，定义非一致性得分（non-conformity score）：</p>
+<p>$$s(a) = 1 - P_{\theta}(\text{safe} | a, \text{context})$$</p>
+<p>其中 \(P_{\theta}\) 是安全分类器的输出概率。Conformal prediction 基于校准集 \(\{s_1, \ldots, s_n\}\) 计算阈值 \(\hat{q}\)，使得：</p>
+<p>$$P(\text{unsafe action passes}) \leq \alpha$$</p>
+<p>用户通过设定 \(\alpha\)（如 0.05 = 5% 误放率）控制风险容忍度。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 分层风险分类</div>
+<p>将 GUI 动作分为三个风险层级：(a) <strong>低风险</strong>（滚动、查看）：直接执行；(b) <strong>中风险</strong>（点击按钮、输入文本）：在 conformal set 内则执行，否则请求确认；(c) <strong>高风险</strong>（支付、删除、发送消息）：始终需要用户确认。风险层级基于动作类型和目标 UI 元素的语义（如按钮标签包含"购买"、"删除"等关键词）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 在线校准更新</div>
+<p>conformal 阈值 \(\hat{q}\) 在使用过程中通过用户反馈在线更新。当用户确认或拒绝动作时，更新校准集并重新计算 \(\hat{q}\)：</p>
+<p>$$\hat{q}_{t+1} = \text{Quantile}_{1-\alpha}\left(\{s_1, \ldots, s_t, s_{t+1}\}\right)$$</p>
+<p>这使阈值适应特定用户的风险偏好和使用场景（如金融 app 用户可能需要更严格的阈值）。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：移动支付场景的安全控制</strong>
+<p>任务："帮我给张三转账 500 元"</p>
+<ol>
+<li>打开支付 App → 低风险 → 直接执行 ✓</li>
+<li>搜索"张三" → 中风险，conformal score 0.12 &lt; \(\hat{q}\)=0.18 → 执行 ✓</li>
+<li>输入金额"500" → 中风险，score 0.15 &lt; \(\hat{q}\) → 执行 ✓</li>
+<li>点击"确认转账" → <strong>高风险</strong> → 弹出确认："即将向张三转账 ¥500，确认？" → 用户确认 ✓</li>
+</ol>
+<p>如果 Agent 误将金额识别为 5000，conformal score 在步骤 3 会升高（0.31 > \(\hat{q}\)），触发中风险确认。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>任务成功率 ↑</th><th>安全违规率 ↓</th><th>用户确认次数 ↓</th><th>覆盖保证</th></tr>
+<tr><td>无安全措施</td><td>82.3%</td><td>18.7%</td><td>0</td><td>无</td></tr>
+<tr><td>Prompt-based Safety</td><td>75.1%</td><td>11.2%</td><td>0</td><td>无</td></tr>
+<tr><td>VLM-as-Critic</td><td>77.8%</td><td>8.5%</td><td>4.2</td><td>无</td></tr>
+<tr><td class="best">CORA (α=0.05)</td><td class="best">80.5%</td><td class="best">3.8%</td><td class="best">2.7</td><td>✓ (≤5%)</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融实验：(1) 去除分层风险分类（所有动作统一阈值）：确认次数增加到 5.1（过度保守）或安全违规升至 7.2%（过度宽松）；(2) 去除在线校准更新：在分布偏移场景（从社交 app 切换到金融 app）下安全违规率上升 2.3pp；(3) α 从 0.01 到 0.1：任务成功率从 74.2% 升至 83.1%，安全违规从 1.2% 升至 6.5%，体现了精细可调的风险-效率权衡。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">CORA 首次为 GUI 智能体引入了有概率保证的安全框架。Conformal prediction 的优势在于分布无关的覆盖保证和用户可调的风险控制——这正是自主智能体走向实用部署所必需的。分层风险 + 在线校准的设计使其能适应多样化的应用场景。</p>
+</div>
+
+<div class="paper-card" id="paper-07877">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.07877" target="_blank">MemReader: From Passive to Active Extraction for Long-Term Agent Memory</a></h3>
+<div class="paper-meta">
+<span>👤 Jingyi Kang, Chunyu Li et al.</span>
+<span>🏛 MemTensor (Shanghai) Technology, China Telecom Research Institute</span>
+<span>📅 2026-04-09 | <span class="tag tag-agent">Agent</span> <span class="tag tag-agent">Memory</span> <span class="tag tag-agent">Long-term</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>长期记忆是对话智能体维持跨会话连贯性和个性化的关键，但现有方法（RAG 或图记忆）依赖<strong>被动提取</strong>——仅在需要时通过检索匹配获取记忆。这导致：(a) 检索失败时记忆完全丢失；(b) 无法主动整合和更新记忆。MemReader 将记忆管理从被动检索转变为<strong>主动提取、整合和遗忘</strong>的闭环系统。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 主动记忆提取（Active Memory Extraction）</div>
+<p>在每轮对话结束后，MemReader 主动识别对话中的<strong>新增事实</strong>、<strong>偏好变化</strong>和<strong>关系更新</strong>，将其结构化存储。提取使用 LLM 作为信息抽取器，输出格式化的记忆条目：\(\text{mem} = (\text{entity}, \text{relation}, \text{value}, \text{confidence}, \text{timestamp})\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 记忆整合与冲突解决</div>
+<p>新记忆可能与已有记忆冲突。MemReader 使用基于时间衰减和置信度的冲突解决策略：</p>
+<p>$$\text{Priority}(\text{mem}_i) = \text{conf}_i \cdot \exp(-\lambda (t_{\text{now}} - t_i))$$</p>
+<p>当新旧记忆冲突时，保留 Priority 更高的版本。同时维护一个"历史版本"链以支持溯源。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 主动遗忘机制</div>
+<p>灵感来自人类记忆的遗忘曲线：长时间未被访问且置信度低的记忆会被主动清除，防止记忆库无限膨胀。遗忘阈值基于 Ebbinghaus 曲线建模，访问频率高的记忆保留更久。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：多会话个人助理场景</strong>
+<p>会话 1："我周末喜欢去爬山" → 提取 (User, hobby, hiking, conf=0.8)</p>
+<p>会话 5："我最近膝盖受伤了，暂时不能爬山" → 冲突检测！新条目 (User, hobby_status, hiking_suspended, conf=0.9) 覆盖旧条目</p>
+<p>会话 8：用户问"帮我推荐周末活动" → MemReader <strong>主动</strong>考虑：hobby=hiking + status=suspended → 推荐室内活动而非爬山</p>
+<p>被动 RAG 系统可能检索到旧记忆"喜欢爬山"而忽略受伤状态。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>LoCoMo (F1)</th><th>MSC (BLEU-4)</th><th>个性化一致性 ↑</th><th>记忆冲突率 ↓</th></tr>
+<tr><td>RAG baseline</td><td>42.3</td><td>18.7</td><td>0.61</td><td>15.2%</td></tr>
+<tr><td>Graph Memory</td><td>48.6</td><td>21.5</td><td>0.68</td><td>11.8%</td></tr>
+<tr><td>HyperMem</td><td>51.2</td><td>23.1</td><td>0.72</td><td>9.3%</td></tr>
+<tr><td class="best">MemReader (ours)</td><td class="best">57.8</td><td class="best">26.4</td><td class="best">0.81</td><td class="best">4.7%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">(1) 去除主动提取（退化为 RAG）：F1 下降 11.3pp，证明主动提取是核心贡献；(2) 去除冲突解决：记忆冲突率从 4.7% 升至 12.1%，个性化一致性下降 0.08；(3) 去除主动遗忘：50 轮对话后记忆库膨胀 3.2x，检索延迟增加 2.1x。局限性：主动提取依赖 LLM 的信息抽取能力，对隐含信息的提取仍不理想。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">MemReader 通过"提取-整合-遗忘"三位一体的主动记忆管理，在长期对话智能体中实现了更高的一致性和更低的冲突率。核心启示：好的记忆不是记住所有信息，而是知道记住什么、更新什么、遗忘什么。</p>
+</div>

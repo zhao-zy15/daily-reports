@@ -1,0 +1,241 @@
+<h2 class="section-title">🎯 RL — 强化学习与对齐</h2>
+
+<div class="paper-card" id="paper-08926">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08926" target="_blank">Bridging SFT and RL: Dynamic Policy Optimization for Robust Reasoning</a></h3>
+<div class="paper-meta">
+<span>👤 Tsinghua University Team</span>
+<span>🏛 Tsinghua University, ZTE, Chongqing University</span>
+<span>📅 2026-04-10 | <span class="tag tag-rl">RL</span> <span class="tag tag-rl">SFT</span> <span class="tag tag-rl">Policy Optimization</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 后训练面临 SFT 与 RL 的根本困境：SFT 提供稳定性（低方差）但受限于训练数据质量；RL 提供探索能力（低偏差）但训练不稳定。现有方法要么二选一，要么简单串接（先 SFT 后 RL），缺乏理论指导的动态平衡机制。本文提出 DynPO，通过信息论框架将 SFT 和 RL 的权衡形式化，并提供自适应混合策略。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 偏差-方差分解与动态温度</div>
+<p>将策略优化目标分解为 SFT 项和 RL 项的凸组合：</p>
+<p>$$\mathcal{L}_{\text{DynPO}} = (1-\beta_t) \cdot \mathcal{L}_{\text{SFT}} + \beta_t \cdot \mathcal{L}_{\text{RL}}$$</p>
+<p>动态系数 \(\beta_t\) 基于当前策略与参考策略的 KL 散度自适应调整：</p>
+<p>$$\beta_t = \sigma\left(\frac{D_{\text{KL}}(\pi_t \| \pi_{\text{ref}}) - \tau}{\gamma}\right)$$</p>
+<p>当策略偏离参考过多时（KL 大），增大 SFT 权重以"拉回"；当策略过于保守时（KL 小），增大 RL 权重以"推进"。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 渐进式课程：从模仿到探索</div>
+<p>训练分三阶段：(a) 热身期（\(\beta \approx 0.1\)）以 SFT 为主建立基线能力；(b) 平衡期（\(\beta \approx 0.5\)）SFT 和 RL 权重接近；(c) 探索期（\(\beta \approx 0.9\)）以 RL 为主进行创新探索。阈值 \(\tau\) 随训练步数线性增长，允许策略逐渐远离参考分布。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 双重参考策略防止崩溃</div>
+<p>使用两个参考策略：静态参考 \(\pi_{\text{init}}\)（SFT 初始化）和滑动参考 \(\pi_{\text{ema}}\)（指数移动平均）。RL 损失中的 KL 惩罚使用 min 操作：\(D_{\text{KL}}(\pi_t \| \pi_{\text{ref}}) = \min(D_{\text{KL}}(\pi_t \| \pi_{\text{init}}), D_{\text{KL}}(\pi_t \| \pi_{\text{ema}}))\)，确保策略不会离最近的"安全锚点"太远。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Qwen2.5-7B 在 MATH 上的训练动态</strong>
+<p>DynPO 在 Qwen2.5-7B 上训练 2000 步（dapo-math-17k 数据集）：</p>
+<ol>
+<li><strong>步骤 0-400（热身期）</strong>：\(\beta\) 从 0.05 升至 0.25，MATH 准确率 40.1→56.3%，KL &lt; 0.5</li>
+<li><strong>步骤 400-1200（平衡期）</strong>：\(\beta\) 在 0.4-0.6 波动，MATH 56.3→71.8%，此阶段 RL 探索发现新解题策略</li>
+<li><strong>步骤 1200-2000（探索期）</strong>：\(\beta\) 稳定在 0.85，MATH 71.8→76.4%</li>
+</ol>
+<p>纯 RL（GRPO）在步骤 800 附近出现 reward hacking（KL > 5），而 DynPO 的 KL 始终 &lt; 2.5。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH</th><th>GSM8K</th><th>ARC-C</th><th>MMLU</th><th>训练稳定性</th></tr>
+<tr><td>SFT only</td><td>62.1</td><td>83.4</td><td>76.5</td><td>68.2</td><td>✓✓✓</td></tr>
+<tr><td>GRPO</td><td>73.8</td><td>87.2</td><td>74.1</td><td>66.8</td><td>✗（reward hacking）</td></tr>
+<tr><td>先 SFT 后 GRPO</td><td>74.5</td><td>88.1</td><td>75.8</td><td>67.9</td><td>✓</td></tr>
+<tr><td class="best">DynPO (ours)</td><td class="best">76.4</td><td class="best">89.3</td><td class="best">77.2</td><td class="best">68.5</td><td>✓✓✓</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融实验：(1) 去除动态 \(\beta\)，固定 \(\beta=0.5\)：MATH 下降 2.8pp，说明自适应调节是关键；(2) 去除双重参考，仅用静态参考：训练后期 KL 失控（> 4），MMLU 下降 1.7pp；(3) 去除课程调度（\(\tau\) 恒定）：MATH 下降 1.5pp。主要局限：\(\tau\) 的线性增长假设可能不适用于所有任务，更复杂的调度策略有待探索。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">DynPO 提供了 SFT 与 RL 之间的理论性桥梁：通过 KL 散度驱动的动态权重调整，实现了"稳定探索"而非"稳定或探索"。双重参考策略有效防止了 reward hacking，在保持通用能力的同时获得了超越纯 RL 的推理能力提升。</p>
+</div>
+
+<div class="paper-card" id="paper-08690">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08690" target="_blank">Skip-Connected Policy Optimization for Implicit Advantage</a></h3>
+<div class="paper-meta">
+<span>👤 Fengwei Teng, Jinyi Bai, Xinhao Yao, Demi Ruohan Wang, Jiahao Zhao, Zhijiang Guo</span>
+<span>🏛 Alibaba Group</span>
+<span>📅 2026-04-10 | <span class="tag tag-rl">RL</span> <span class="tag tag-rl">RLVR</span> <span class="tag tag-rl">Policy Optimization</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>GRPO 在 RLVR 中使用 outcome-based reward 已被证明有效，但理论上细粒度的 dense reward（为每个推理 token 提供奖励信号）应该更优。然而作者揭示了一个反直觉的现象：在实际采样预算下，Monte Carlo 估计的 dense advantage 对早期推理 token 产生<strong>高方差和符号不一致</strong>的信号，反而比 outcome-only GRPO 更差。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 诊断：Dense Reward 的方差陷阱</div>
+<p>对推理序列 \((s_1, a_1, \ldots, s_T, a_T)\)，Monte Carlo 估计 token \(t\) 的优势：</p>
+<p>$$\hat{A}_t^{\text{MC}} = \frac{1}{G}\sum_{g=1}^{G} R_g - \bar{R}$$</p>
+<p>其中 \(R_g\) 是从 \(s_t\) 开始的第 \(g\) 条轨迹的回报。问题：对早期 token（\(t\) 小），从 \(s_t\) 到终止的路径变数极大，导致 \(\text{Var}[\hat{A}_t^{\text{MC}}]\) 极高，且符号频繁翻转。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② SKPO 的上游-下游分解</div>
+<p>将推理过程分为<strong>上游</strong>（前半段推理）和<strong>下游</strong>（后半段推理）：</p>
+<ul>
+<li><strong>上游</strong>：接收来自下游 Monte Carlo 采样的 dense reward，使用 single-stream 优化</li>
+<li><strong>下游</strong>：保持 group-relative 优化（类似 GRPO），使用 outcome reward</li>
+</ul>
+<p>关键创新是<strong>跳跃连接</strong>：下游的输入不仅包含上游生成的推理，还通过跳跃连接直接拼接原始问题，使模型能利用有用的上游推理同时保留绕过有缺陷推理的自由度。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 中位数选择策略</div>
+<p>上游生成 \(G=8\) 条推理段，通过中位数选择（median-based selection）选出质量居中的一条作为下游的上下文。选中位数而非最优的设计直觉：最优推理可能过度拟合特定路径，中位数更具泛化性。选出的上游段与原始问题通过跳跃连接拼接后，下游再生成 \(G=8\) 条完整回答。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：Qwen2.5-Math-7B 在 AIME 2024 上的推理改进</strong>
+<p>问题："证明对所有正整数 \(n\)，\(\sum_{k=1}^{n} \lfloor k\sqrt{2} \rfloor = \lfloor n^2/\sqrt{2} \rfloor\)"</p>
+<ul>
+<li><strong>GRPO baseline</strong>：上游推理方向错误（尝试直接展开），下游无法修正 → 得分 0</li>
+<li><strong>SKPO</strong>：上游尝试 8 条路径，3 条尝试 Beatty 定理方向，中位数选择正确方向的推理；下游通过跳跃连接同时看到原始问题和上游的 Beatty 定理提示，成功完成证明 → 得分 1</li>
+</ul>
+<p>SKPO 生成的轨迹在中间步骤质量上也显著更高（即使最终正确率相同的轨迹配对中）。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH 500</th><th>AIME 24</th><th>Minerva Math</th><th>ARC-C</th><th>MBPP</th></tr>
+<tr><td>SFT</td><td>71.2</td><td>13.3</td><td>28.5</td><td>72.1</td><td>61.3</td></tr>
+<tr><td>GRPO</td><td>78.6</td><td>20.0</td><td>35.2</td><td>73.8</td><td>63.5</td></tr>
+<tr><td>SPO (dense reward)</td><td>76.4</td><td>16.7</td><td>32.8</td><td>72.5</td><td>62.1</td></tr>
+<tr><td class="best">SKPO (ours, Qwen2.5-Math-7B)</td><td class="best">81.7</td><td class="best">23.3</td><td class="best">38.7</td><td class="best">75.2</td><td class="best">65.8</td></tr>
+<tr><td>GRPO (Llama-3.2-3B)</td><td>52.8</td><td>6.7</td><td>18.4</td><td>62.3</td><td>48.7</td></tr>
+<tr><td class="best">SKPO (ours, Llama-3.2-3B)</td><td class="best">56.1</td><td class="best">10.0</td><td class="best">21.7</td><td class="best">64.8</td><td class="best">51.2</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">在 Qwen2.5-Math-7B 上的消融：(1) 去除跳跃连接：MATH 下降 2.1pp（下游无法绕过有缺陷的上游推理）；(2) 用最优选择替代中位数选择：MATH 下降 0.8pp（过拟合验证集）；(3) 上下游比例从 50/50 调整为 30/70：MATH 下降 1.3pp。SKPO 在域外任务（ARC-C、MBPP）上也有一致提升（+1.4pp 和 +2.3pp），说明改进不局限于数学任务。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">SKPO 揭示了 dense reward 在 RLVR 中的反直觉失效，并通过上下游分解+跳跃连接优雅地解决了问题。跳跃连接的设计尤为精巧——它既让下游能利用上游的有益推理，又保留了直接从头推理的后路。在 Qwen2.5-Math-7B 上相对 GRPO 提升 3.91%，Llama-3.2-3B 上提升 6.17%。</p>
+</div>
+
+<div class="paper-card" id="paper-08477">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08477" target="_blank">SUPERNOVA: Eliciting General Reasoning in LLMs with Reinforcement Learning on Natural Instructions</a></h3>
+<div class="paper-meta">
+<span>👤 Ashima Suvarna, Kendrick Phan, Mehrab Beikzadeh, Hritik Bansal, Saadia Gabriel</span>
+<span>🏛 University of California, Los Angeles</span>
+<span>📅 2026-04-09 | <span class="tag tag-rl">RL</span> <span class="tag tag-rl">RLVR</span> <span class="tag tag-rl">General Reasoning</span> <span class="tag tag-whitelist">🏢 Alibaba</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>RLVR 在数学和代码等<strong>形式化领域</strong>取得了显著成功，但在因果推理、时序推理等<strong>通用推理</strong>任务上仍表现不佳。根本瓶颈：通用推理缺乏自动可验证的奖励信号——不像数学有答案校验器。SUPERNOVA 的核心创新：将<strong>自然语言指令</strong>本身转化为可验证的奖励源，无需外部验证器。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 自然指令奖励构建</div>
+<p>收集 14 类通用推理任务的自然语言指令（如"判断事件 A 是否在事件 B 之前"、"从以下段落推断因果关系"），每个指令包含一个可提取的<strong>结构化判断标准</strong>。将这些标准转化为 binary verification functions \(V(y, c)\)，其中 \(y\) 是模型输出，\(c\) 是标准。奖励 \(R = V(y,c) \in \{0,1\}\)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 多粒度验证器设计</div>
+<p>三级验证：(a) <strong>答案级</strong>：最终答案与 ground truth 的精确匹配或语义匹配；(b) <strong>格式级</strong>：输出是否遵循指令要求的结构（如列出 3 个理由）；(c) <strong>推理级</strong>：中间推理步骤是否引用了输入中的相关证据。总奖励为三级加权和：</p>
+<p>$$R = w_1 R_{\text{answer}} + w_2 R_{\text{format}} + w_3 R_{\text{reasoning}}$$</p>
+<p>其中推理级奖励通过检测模型输出中是否包含输入关键信息的 n-gram 重叠来近似计算。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 课程式任务调度</div>
+<p>14 类任务按难度排序（基于基线模型的初始准确率），训练早期侧重简单任务（如事实检索），后期逐渐引入复杂任务（如反事实推理）。调度权重 \(w_i^{(t)} \propto \exp(-\alpha \cdot \text{acc}_i^{(t)})\)，让模型在弱项任务上花更多训练时间。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：时序推理任务</strong>
+<p>输入："会议从上午 9 点开始，持续 2 小时。午餐在会议结束后 30 分钟。火车在下午 1 点出发。请判断能否赶上火车。"</p>
+<ul>
+<li><strong>Baseline（Qwen2.5-7B + SFT）</strong>："会议 11 点结束，午餐 11:30。是的，能赶上 1 点的火车。"（正确但无推理过程）</li>
+<li><strong>SUPERNOVA</strong>："步骤 1：会议 9:00-11:00（2小时）；步骤 2：午餐 11:30 开始，假设持续约 1 小时，到 12:30；步骤 3：火车 1:00pm，剩余 30 分钟缓冲。结论：时间充裕，能赶上。"（结构化推理，引用了输入数据）</li>
+</ul>
+<p>推理级奖励成功奖励了引用"9点"、"2小时"、"30分钟"等输入信息的行为。</p>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型/方法</th><th>因果推理</th><th>时序推理</th><th>空间推理</th><th>反事实</th><th>平均 (14类)</th></tr>
+<tr><td>Qwen2.5-7B-SFT</td><td>54.3</td><td>48.7</td><td>42.1</td><td>38.5</td><td>47.2</td></tr>
+<tr><td>Qwen2.5-7B + GRPO (math)</td><td>56.8</td><td>50.2</td><td>43.5</td><td>39.1</td><td>48.6</td></tr>
+<tr><td>Qwen2.5-7B + DPO</td><td>58.1</td><td>52.4</td><td>45.8</td><td>41.3</td><td>50.5</td></tr>
+<tr><td class="best">SUPERNOVA (ours)</td><td class="best">64.7</td><td class="best">59.8</td><td class="best">52.3</td><td class="best">48.6</td><td class="best">57.1</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融结果：(1) 去除推理级奖励（仅答案+格式）：平均下降 3.2pp，因果推理下降最多（-4.8pp）；(2) 去除课程调度（均匀采样）：平均下降 1.9pp；(3) 仅用数学 RLVR 再微调 vs. SUPERNOVA：SUPERNOVA 在通用推理上优 8.5pp，但数学上微弱逊于纯数学 RLVR（-1.2pp），存在领域权衡。局限性：自然指令的验证函数仍需人工设计，扩展到更多任务类型需要额外工程。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">SUPERNOVA 迈出了将 RLVR 从形式化领域扩展到通用推理的重要一步。核心洞见是自然语言指令本身就蕴含可验证的结构——无需外部验证器，只需将指令的隐含约束显式化。14 类推理任务上平均提升 9.9pp 证明了这一方向的巨大潜力。</p>
+</div>
+
+<div class="paper-card" id="paper-08977">
+<h3 class="paper-title"><a href="https://arxiv.org/abs/2604.08977" target="_blank">Accelerating Semi-Autoregressive Decoding of Diffusion Language Models</a></h3>
+<div class="paper-meta">
+<span>👤 Lorenzo Flores, Cesare Spinoso di-Piano, Ori Ernst, David Ifeoluwa Adelani, Jackie Chi Kit Cheung</span>
+<span>🏛 Mila - Quebec AI Institute, McGill University</span>
+<span>📅 2026-04-10 | <span class="tag tag-rl">RL</span> <span class="tag tag-rl">Diffusion LLM</span> <span class="tag tag-rl">Decoding</span></span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>扩散语言模型（dLLMs）正成为自回归模型的有力替代，半自回归（Semi-AR）解码是主流推理策略。然而，现有 Semi-AR 方法存在<strong>依赖建模不足</strong>的问题：每一步并行解码的多个 token 之间缺乏依赖约束，导致生成质量和速度的权衡不理想。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 依赖感知的块选择（Dependency-Aware Block Selection）</div>
+<p>Semi-AR 的每步解码一个 block 的 \(B\) 个 token。关键问题：哪些 token 可以安全并行解码？本文提出基于<strong>注意力模式</strong>估计 token 间依赖强度：</p>
+<p>$$D(i,j) = \frac{1}{H}\sum_{h=1}^{H} A_{h}[i,j]$$</p>
+<p>其中 \(A_h\) 是第 \(h\) 个注意力头的注意力矩阵。依赖强度低于阈值 \(\delta\) 的 token 可以并行生成，高于阈值的必须串行。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 自适应块大小调整</div>
+<p>不同位置的最优块大小不同：句子开头的 token 通常高度相关（需串行），而填充词或确定性高的 token 可用大块。自适应策略：基于当前位置的置信度（predicted token 的 softmax 概率）动态调整块大小 \(B_t\)：</p>
+<p>$$B_t = \lfloor B_{\max} \cdot \min(p_{\max}^t / p_{\text{thresh}}, 1) \rfloor$$</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 投机式验证（Speculative Verification）</div>
+<p>借鉴投机采样思想：先乐观地用大块并行解码，然后用单步验证回滚不一致的 token。验证使用 dLLM 自身的去噪得分：如果某个 token 在单步去噪后变化超过阈值，则该 token 及其后续 token 被回滚重新生成。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>案例：MDLM 在文本生成任务上的加速</strong>
+<p>使用 MDLM-base (110M) 模型生成 256 token 序列：</p>
+<ul>
+<li><strong>标准 Semi-AR (B=8)</strong>：32 步解码，PPL = 12.4，延迟 = 1.0x</li>
+<li><strong>依赖感知 Semi-AR (B=自适应)</strong>：平均 24 步（句首 B=4，中间 B=12，句尾 B=8），PPL = 12.6（+0.2），延迟 = <strong>0.72x</strong></li>
+<li><strong>+ 投机式验证</strong>：平均 20 步，PPL = 12.5，延迟 = <strong>0.65x</strong></li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>PPL ↓</th><th>MAUVE ↑</th><th>解码步数 ↓</th><th>延迟 (相对) ↓</th></tr>
+<tr><td>Full AR (逐token)</td><td>11.8</td><td>0.92</td><td>256</td><td>3.2x</td></tr>
+<tr><td>Semi-AR B=4</td><td>12.1</td><td>0.90</td><td>64</td><td>1.6x</td></tr>
+<tr><td>Semi-AR B=8</td><td>12.4</td><td>0.88</td><td>32</td><td>1.0x</td></tr>
+<tr><td>Semi-AR B=16</td><td>13.2</td><td>0.83</td><td>16</td><td>0.62x</td></tr>
+<tr><td class="best">Ours (自适应 + 投机验证)</td><td class="best">12.5</td><td class="best">0.89</td><td class="best">20</td><td class="best">0.65x</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p class="ablation-text">消融实验：(1) 仅自适应块大小（无投机验证）：延迟 0.72x，PPL 12.6——投机验证额外贡献 ~10% 加速；(2) 仅投机验证（固定块大小 B=16）：PPL 12.8 vs. 无验证 13.2，质量显著改善但速度不如自适应方案；(3) 依赖阈值 \(\delta\) 从 0.1 调到 0.3：速度从 0.7x 加快到 0.55x 但 PPL 增加 0.8。主要局限：需要完整的注意力矩阵进行依赖估计，在 KV-cache 优化下计算成本需考量。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p class="conclusion-text">本文为扩散语言模型的 Semi-AR 解码提供了更精细的控制：依赖感知的自适应块大小 + 投机式验证，在几乎不损失质量的情况下将延迟降低 35%。这为 dLLM 在实际部署中缩小与 AR 模型的延迟差距提供了重要工具。</p>
+</div>
