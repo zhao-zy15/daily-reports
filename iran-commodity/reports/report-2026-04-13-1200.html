@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伊朗局势与大宗商品日报 — 2026年4月13日</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg: #0a0a14; --surface: #12121f; --surface2: #1a1a2e;
+            --text: #e8e8f0; --text2: #9898b8; --accent: #ef4444;
+            --gold: #f59e0b; --green: #10b981; --blue: #3b82f6;
+            --border: #2a2a40; --red-glow: rgba(239,68,68,0.15);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.7; }
+        .container { max-width:1100px; margin:0 auto; padding:30px 20px; }
+
+        /* Header */
+        .report-header {
+            text-align:center; padding:40px 30px; margin-bottom:30px;
+            background: linear-gradient(135deg, #1a0505 0%, #12121f 50%, #0a0a14 100%);
+            border:1px solid var(--border); border-radius:16px;
+            position:relative; overflow:hidden;
+        }
+        .report-header::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:3px;
+            background: linear-gradient(90deg, #ef4444, #f97316, #ef4444);
+        }
+        .report-header .day-badge {
+            display:inline-block; padding:6px 18px; border-radius:20px;
+            background: rgba(239,68,68,0.15); color:#ef4444; font-weight:600;
+            font-size:0.9rem; margin-bottom:15px; border:1px solid rgba(239,68,68,0.3);
+        }
+        .report-header h1 { font-size:2.2rem; margin-bottom:10px; background:linear-gradient(135deg,#ef4444,#f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .report-header .meta { color:var(--text2); font-size:0.95rem; }
+        .report-header .meta span { margin:0 10px; }
+
+        /* Alert Banner */
+        .alert-banner {
+            background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(249,115,22,0.08));
+            border:1px solid rgba(239,68,68,0.3); border-radius:12px;
+            padding:20px 25px; margin-bottom:30px; display:flex; align-items:flex-start; gap:15px;
+        }
+        .alert-banner .icon { font-size:2rem; flex-shrink:0; }
+        .alert-banner .content h3 { color:#ef4444; font-size:1.1rem; margin-bottom:6px; }
+        .alert-banner .content p { color:var(--text2); font-size:0.95rem; }
+
+        /* Section */
+        .section { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px; margin-bottom:25px; }
+        .section-title { font-size:1.4rem; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+        .section-title .icon { font-size:1.5rem; }
+
+        /* News Cards */
+        .news-tier { margin-bottom:25px; }
+        .tier-label {
+            font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+            padding:5px 14px; border-radius:6px; display:inline-block; margin-bottom:14px;
+        }
+        .tier-core .tier-label { background:rgba(239,68,68,0.15); color:#ef4444; }
+        .tier-regional .tier-label { background:rgba(249,115,22,0.15); color:#f97316; }
+        .tier-global .tier-label { background:rgba(59,130,246,0.15); color:#3b82f6; }
+
+        .news-item {
+            padding:18px 20px; border-radius:10px; margin-bottom:12px;
+            border-left:4px solid var(--border); transition:all 0.2s;
+        }
+        .news-item:hover { transform:translateX(3px); }
+        .tier-core .news-item { background:rgba(239,68,68,0.06); border-left-color:#ef4444; }
+        .tier-regional .news-item { background:rgba(249,115,22,0.06); border-left-color:#f97316; }
+        .tier-global .news-item { background:rgba(59,130,246,0.06); border-left-color:#3b82f6; }
+
+        .news-item h4 { font-size:1.05rem; margin-bottom:8px; }
+        .news-item .summary { color:var(--text2); font-size:0.93rem; line-height:1.65; }
+        .news-item .source { margin-top:8px; font-size:0.82rem; }
+        .news-item .source a { color:var(--blue); text-decoration:none; }
+        .news-item .source a:hover { text-decoration:underline; }
+
+        /* Price Table */
+        .price-table { width:100%; border-collapse:collapse; margin-top:15px; }
+        .price-table th { text-align:left; padding:12px 16px; background:var(--surface2); color:var(--text2); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }
+        .price-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:0.95rem; }
+        .price-table tr:hover td { background:rgba(255,255,255,0.02); }
+        .price-up { color:#ef4444; font-weight:600; }
+        .price-down { color:#10b981; font-weight:600; }
+        .price-flat { color:var(--text2); }
+
+        /* Charts */
+        .charts-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:15px; }
+        .chart-box {
+            background:var(--surface2); border:1px solid var(--border); border-radius:12px;
+            padding:20px; position:relative;
+        }
+        .chart-box h4 { text-align:center; font-size:0.95rem; margin-bottom:15px; color:var(--text); }
+        .chart-box canvas { max-height:280px; }
+
+        /* Footer */
+        .report-footer { text-align:center; padding:25px; color:var(--text2); font-size:0.85rem; margin-top:20px; }
+        .report-footer a { color:var(--blue); text-decoration:none; }
+
+        .back-link {
+            display:inline-flex; align-items:center; gap:8px;
+            color:var(--accent); text-decoration:none; font-size:0.95rem;
+            margin-bottom:20px; padding:8px 16px;
+            background:var(--surface); border-radius:8px; border:1px solid var(--border);
+        }
+        .back-link:hover { background:var(--accent); color:white; }
+
+        /* Timeline */
+        .timeline-badge {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25);
+            padding:4px 12px; border-radius:20px; font-size:0.82rem; color:#f87171;
+        }
+
+        @media (max-width:768px) {
+            .charts-grid { grid-template-columns:1fr; }
+            .report-header h1 { font-size:1.6rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../" class="back-link">← 返回伊朗局势日报</a>
+
+    <!-- Header -->
+    <div class="report-header">
+        <div class="day-badge">🔥 冲突第45天 · 停火第6天 · 和谈破裂第1天</div>
+        <h1>🌍 伊朗局势与大宗商品日报</h1>
+        <div class="meta">
+            <span>📅 2026年4月13日 周一</span>
+            <span>|</span>
+            <span>⏰ 12:00 CST</span>
+            <span>|</span>
+            <span class="timeline-badge">⚠️ 美军封锁今日生效</span>
+        </div>
+    </div>
+
+    <!-- Alert -->
+    <div class="alert-banner">
+        <div class="icon">🚨</div>
+        <div class="content">
+            <h3>重大升级：美国宣布全面封锁伊朗港口</h3>
+            <p>21小时伊斯兰堡马拉松谈判破裂后，特朗普下令美国海军"立即"封锁霍尔木兹海峡所有进出伊朗港口的船只。CENTCOM宣布封锁将于4月14日上午10:00 ET（伊朗时间17:30）正式生效，油价暴涨8%。两周停火协议（4月21日到期）前途未卜。</p>
+        </div>
+    </div>
+
+    <!-- ============ NEWS ============ -->
+    <div class="section">
+        <div class="section-title"><span class="icon">📰</span> 过去24小时重大新闻</div>
+
+        <!-- CORE -->
+        <div class="news-tier tier-core">
+            <div class="tier-label">🔴 核心焦点</div>
+
+            <div class="news-item">
+                <h4>1️⃣ 伊斯兰堡和谈正式破裂——万斯"最终方案"遭拒</h4>
+                <div class="summary">
+                    在巴基斯坦塞雷纳酒店进行了长达21小时的马拉松谈判后，美国副总统万斯（JD Vance）宣布谈判未能达成协议。核心分歧：美方要求伊朗承诺放弃核武器、停止铀浓缩、拆除主要浓缩设施并交出高浓缩铀；伊方拒绝全部条件，指控美方"极端主义"并在最后关头"改变目标"。伊朗外长阿拉格齐称"离协议仅几英寸时美国搞砸了一切"。巴基斯坦表示将在未来数天内尝试促成新一轮对话。
+                </div>
+                <div class="source">
+                    📎 <a href="https://apnews.com/article/iran-us-israel-trump-lebanon-april-11-2026-2be904aee3f804892336730279e054b9" target="_blank">AP News</a> ·
+                    <a href="https://kashmirlife.net/us-iran-talks-collapse-in-islamabad-no-deal-after-21-hour-marathon-nuclear-dispute-remains-core-sticking-point-432027/" target="_blank">Kashmir Life</a> ·
+                    <a href="https://www.telegraph.co.uk/world-news/2026/04/12/talks-islamabad-vance-iran-donald-trump-deadlock-war-strait/" target="_blank">The Telegraph</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>2️⃣ 特朗普下令全面封锁霍尔木兹海峡——CENTCOM明日执行</h4>
+                <div class="summary">
+                    谈判破裂后数小时内，特朗普在Truth Social发文称"LOCKED AND LOADED"，宣布美国海军"立即"对霍尔木兹海峡实施封锁，禁止所有船只进出伊朗港口。美军中央司令部（CENTCOM）随后明确：封锁将于4月14日上午10:00美东时间正式生效，"公正地针对所有国家的船只"执行。但非伊朗港口之间的船只仍被允许通过海峡——这比特朗普最初威胁的"完全封锁"有所缓和。特朗普还下令拦截任何已向伊朗支付过"通行费"的船只。
+                </div>
+                <div class="source">
+                    📎 <a href="https://apnews.com/article/iran-us-israel-trump-lebanon-blockade-hormuz-april-13-2026-ed7a6cd4bc61dc47f317a2c82afcc1c9" target="_blank">AP News</a> ·
+                    <a href="https://www.cnbc.com/2026/04/12/trump-iran-war-strait-of-hormuz.html" target="_blank">CNBC</a> ·
+                    <a href="https://www.cbsnews.com/news/trump-strait-of-hormuz-blockade-iran/" target="_blank">CBS News</a> ·
+                    <a href="https://www.politico.com/news/2026/04/12/trump-announces-strait-of-hormuz-blockade-after-iran-talks-collapse-00868375" target="_blank">Politico</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>3️⃣ 伊朗强硬回应：海峡将变"毁灭漩涡"</h4>
+                <div class="summary">
+                    伊朗多名高层官员一致发出战争警告。伊朗议长卡利巴夫直接喊话特朗普："如果你战斗，我们就会战斗。"前IRGC司令、军事顾问莫森·雷扎伊称伊朗武装力量有"巨大的未动用杠杆"来反制封锁。IRGC随后声明海峡仍处于伊朗"完全控制"之下，非军事船只可通行，但军事船只将遭到"强力回应"。The National报道称伊朗警告霍尔木兹海峡可能变成"毁灭漩涡"（whirlpool of destruction）。
+                </div>
+                <div class="source">
+                    📎 <a href="https://www.thenationalnews.com/news/mena/2026/04/13/live-us-iran-hormuz-naval-blockade/" target="_blank">The National</a> ·
+                    <a href="https://www.businesstoday.in/world/story/it-would-disastrously-backfire-iran-warns-trump-against-blockade-in-strait-of-hormuz-525262-2026-04-12" target="_blank">Business Today</a> ·
+                    <a href="https://www.salon.com/2026/04/12/locked-and-loaded-trump-orders-hormuz-blockade/" target="_blank">Salon</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>4️⃣ 油价暴涨8%——Brent突破$100，WTI收复失地</h4>
+                <div class="summary">
+                    受美国封锁霍尔木兹海峡消息刺激，国际油价周一暴涨，收回上周因停火而暴跌的全部失地。布伦特原油飙升至$101.88/桶（+7.02%），WTI原油涨至$104.24/桶（+8%）。Trading Economics指出，霍尔木兹海峡自冲突开始以来实际上一直处于关闭状态，但美方正式宣布封锁意味着短期内重开无望，进一步推高了通胀预期和全球增长担忧。
+                </div>
+                <div class="source">
+                    📎 <a href="https://tradingeconomics.com/commodity/brent-crude-oil" target="_blank">Trading Economics</a> ·
+                    <a href="https://www.cnbc.com/2026/04/12/stock-market-today-live-updates.html" target="_blank">CNBC Markets</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>5️⃣ 以色列-黎巴嫩华盛顿谈判明日举行——首次直接外交接触</h4>
+                <div class="summary">
+                    在伊斯兰堡和谈破裂之际，以色列与黎巴嫩定于4月14日（周二）在美国国务院举行首次直接谈判。双方驻美大使已进行了"罕见的直接通话"为谈判预热。以色列称"数天内可达成和平协议"，但内塔尼亚胡坚持停火不含黎巴嫩，将继续打击真主党。美方正施压以色列接受黎巴嫩停火，据报道特朗普与内塔尼亚胡通话"气氛紧张"。
+                </div>
+                <div class="source">
+                    📎 <a href="https://www.timesofisrael.com/direct-israel-lebanon-talks-set-for-tuesday-in-dc-us-said-pressing-israel-for-ceasefire/" target="_blank">Times of Israel</a> ·
+                    <a href="https://www.moneycontrol.com/world/lebanon-israel-hold-rare-direct-call-agree-to-us-mediated-talks-on-april-14-article-13885968.html" target="_blank">MoneyControl</a> ·
+                    <a href="https://www.cbsnews.com/news/lebanon-israel-ceasefire-talks-us-washington/" target="_blank">CBS News</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGIONAL -->
+        <div class="news-tier tier-regional">
+            <div class="tier-label">⚡ 周边冲突与地区动态</div>
+
+            <div class="news-item">
+                <h4>6️⃣ 英国拒绝参与封锁——与法国协调"航行自由"行动</h4>
+                <div class="summary">英国首相斯塔默正式拒绝加入美国的霍尔木兹海峡封锁行动，转而与法国及盟友协调独立的"航行自由"巡逻。伦敦方面担忧参与封锁将推高英国油价并加剧生活成本危机。</div>
+                <div class="source">
+                    📎 <a href="https://www.news18.com/world/uk-wont-join-us-hormuz-blockade-coordinates-with-france-to-protect-freedom-of-navigation-ws-l-10029603.html" target="_blank">News18</a> ·
+                    <a href="https://www.irishnews.com/news/uk/starmer-refuses-to-join-trumps-hormuz-blockade-as-oil-prices-expected-to-rise-VVYRZMM47FLUVF5EVHTDDUBGGQ/" target="_blank">Irish News</a> ·
+                    <a href="https://news.sky.com/story/iran-war-latest-254-people-killed-by-israeli-strikes-in-lebanon-today-says-civil-defence-service-13509565" target="_blank">Sky News</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>7️⃣ 海峡航运再次冻结——停火以来仅40+商船通过</h4>
+                <div class="summary">劳合社情报机构报告称，封锁宣布后本已有限恢复的霍尔木兹海峡航运活动再次停止。自4月7日停火以来，仅约40艘商船成功通过海峡，远低于战前日均100-135艘的通行量。</div>
+                <div class="source">
+                    📎 <a href="https://apnews.com/article/iran-us-israel-trump-lebanon-blockade-hormuz-april-13-2026-ed7a6cd4bc61dc47f317a2c82afcc1c9" target="_blank">AP News</a> ·
+                    <a href="https://gulfnews.com/world/mena/us-begins-naval-blockade-of-iran-after-tehrans-threats-to-commercial-ships-in-hormuz-what-it-means-1.500504830" target="_blank">Gulf News</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>8️⃣ 美股期货暴跌——道指期货跌500点</h4>
+                <div class="summary">CNBC报道，受封锁消息冲击，美股道指期货暴跌约500点，S&P 500期货跌0.54%至6,780点。市场恐慌情绪蔓延，投资者担忧地缘冲突升级将引发全球滞胀。</div>
+                <div class="source">
+                    📎 <a href="https://www.cnbc.com/2026/04/12/stock-market-today-live-updates.html" target="_blank">CNBC</a> ·
+                    <a href="https://tradingeconomics.com/united-states/stock-market" target="_blank">Trading Economics</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- GLOBAL -->
+        <div class="news-tier tier-global">
+            <div class="tier-label">🌍 国际视野与社会反响</div>
+
+            <div class="news-item">
+                <h4>9️⃣ 巴基斯坦斡旋不弃——试图未来数天促成新对话</h4>
+                <div class="summary">尽管伊斯兰堡和谈破裂，巴基斯坦政府声明将在未来数天内继续斡旋，试图促成美伊双方的新一轮对话。停火协议将于4月21日到期，如无突破战争可能全面重启。</div>
+                <div class="source">
+                    📎 <a href="https://apnews.com/article/iran-us-israel-trump-lebanon-blockade-hormuz-april-13-2026-ed7a6cd4bc61dc47f317a2c82afcc1c9" target="_blank">AP News</a>
+                </div>
+            </div>
+
+            <div class="news-item">
+                <h4>🔟 停火后航运恢复缓慢——马士基仍暂不恢复航线</h4>
+                <div class="summary">全球航运巨头马士基此前已表态对霍尔木兹海峡恢复航行持"谨慎态度"，封锁消息后预计将进一步推迟复航计划。全球供应链中断风险持续升级。</div>
+                <div class="source">
+                    📎 <a href="https://www.maersk.com/news/articles/2026/04/08/iran-us-ceasefire-strait-of-hormuz-update-april" target="_blank">Maersk</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PRICE TABLE ============ -->
+    <div class="section">
+        <div class="section-title"><span class="icon">💰</span> 八大核心资产实时价格</div>
+        <table class="price-table">
+            <thead>
+                <tr>
+                    <th>资产</th>
+                    <th>最新价格</th>
+                    <th>日涨跌</th>
+                    <th>数据来源</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>🛢️ Brent 原油</td>
+                    <td><strong>$101.88/桶</strong></td>
+                    <td class="price-up">+7.02% ▲</td>
+                    <td><a href="https://tradingeconomics.com/commodity/brent-crude-oil" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>🛢️ WTI 原油</td>
+                    <td><strong>$104.24/桶</strong></td>
+                    <td class="price-up">+8.00% ▲</td>
+                    <td><a href="https://tradingeconomics.com/commodity/crude-oil" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>🔥 天然气</td>
+                    <td><strong>$2.67/MMBtu</strong></td>
+                    <td class="price-up">+0.98% ▲</td>
+                    <td><a href="https://tradingeconomics.com/commodity/natural-gas" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>🥇 黄金</td>
+                    <td><strong>$4,724.86/盎司</strong></td>
+                    <td class="price-down">-0.56% ▼</td>
+                    <td><a href="https://tradingeconomics.com/commodity/gold" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>🥈 白银</td>
+                    <td><strong>$74.61/盎司</strong></td>
+                    <td class="price-down">-1.41% ▼</td>
+                    <td><a href="https://tradingeconomics.com/commodity/silver" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>📊 S&P 500</td>
+                    <td><strong>6,780 点</strong></td>
+                    <td class="price-down">-0.54% ▼</td>
+                    <td><a href="https://tradingeconomics.com/united-states/stock-market" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+                <tr>
+                    <td>💱 USD/IRR</td>
+                    <td><strong>1,607,500 里亚尔</strong></td>
+                    <td class="price-up">+0.75% ▲</td>
+                    <td><a href="https://alanchand.com/en/currencies-price/usd" target="_blank" style="color:var(--blue);text-decoration:none;">AlanChand</a></td>
+                </tr>
+                <tr>
+                    <td>💱 USD/CNY</td>
+                    <td><strong>6.8255</strong></td>
+                    <td class="price-flat">持平</td>
+                    <td><a href="https://tradingeconomics.com/china/currency" target="_blank" style="color:var(--blue);text-decoration:none;">Trading Economics</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ============ CHARTS ============ -->
+    <div class="section">
+        <div class="section-title"><span class="icon">📈</span> 过去10个交易日价格走势</div>
+        <div class="charts-grid">
+            <div class="chart-box">
+                <h4>🛢️ 原油 (Brent & WTI)</h4>
+                <canvas id="oilChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>🔥 天然气 (Henry Hub)</h4>
+                <canvas id="gasChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>🥇 黄金 (XAU/USD)</h4>
+                <canvas id="goldChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>🥈 白银 (XAG/USD)</h4>
+                <canvas id="silverChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ ANALYSIS ============ -->
+    <div class="section">
+        <div class="section-title"><span class="icon">🔮</span> 形势研判与展望</div>
+        <div style="padding:15px 20px; background:var(--surface2); border-radius:10px; border-left:4px solid var(--gold);">
+            <h4 style="color:var(--gold); margin-bottom:10px;">📋 关键时间节点</h4>
+            <ul style="padding-left:20px; color:var(--text2); line-height:2;">
+                <li><strong style="color:var(--text);">4月14日 10:00 ET</strong> — 美军封锁伊朗港口正式生效</li>
+                <li><strong style="color:var(--text);">4月14日</strong> — 以色列-黎巴嫩华盛顿谈判（美国国务院）</li>
+                <li><strong style="color:var(--text);">4月21日</strong> — 两周停火协议到期（如无突破战争可能重启）</li>
+                <li><strong style="color:var(--text);">未来数天</strong> — 巴基斯坦尝试促成新一轮美伊对话</li>
+            </ul>
+        </div>
+        <div style="margin-top:18px; padding:15px 20px; background:var(--surface2); border-radius:10px; border-left:4px solid var(--accent);">
+            <h4 style="color:var(--accent); margin-bottom:10px;">⚠️ 风险评估</h4>
+            <ul style="padding-left:20px; color:var(--text2); line-height:2;">
+                <li><strong>极高风险：</strong>美军封锁与IRGC"完全控制海峡"的声明正面冲突，海上对峙一触即发</li>
+                <li><strong>通胀螺旋：</strong>油价重回$100+，英国等已警告燃油成本上升将恶化生活成本危机</li>
+                <li><strong>停火崩溃：</strong>4月21日停火到期前若无新谈判进展，全面战争重启概率急升</li>
+                <li><strong>核扩散：</strong>伊朗400+公斤60%浓缩铀问题未解，成为谈判最大障碍</li>
+                <li><strong>黎巴嫩变数：</strong>以色列坚持"停火不含黎巴嫩"，4/14华盛顿谈判是最后窗口</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p>📊 伊朗局势与大宗商品日报 · 2026年4月13日 · 由 WorkBuddy 自动化生成</p>
+        <p style="margin-top:8px;">数据来源：<a href="https://apnews.com" target="_blank">AP News</a> · <a href="https://www.cnn.com" target="_blank">CNN</a> · <a href="https://www.cnbc.com" target="_blank">CNBC</a> · <a href="https://tradingeconomics.com" target="_blank">Trading Economics</a> · <a href="https://alanchand.com" target="_blank">AlanChand</a> · <a href="https://pricegold.net" target="_blank">PriceGold</a></p>
+        <p style="margin-top:8px; font-size:0.8rem; color:#666;">⚠️ 本报告仅供信息参考，不构成投资建议。数据可能存在延迟。</p>
+    </div>
+</div>
+
+<!-- ============ CHART.JS SCRIPTS ============ -->
+<script>
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+        legend: { labels: { color:'#e8e8f0', font:{size:11} } },
+        tooltip: { mode:'index', intersect:false }
+    },
+    scales: {
+        x: { ticks:{color:'#9898b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y: { ticks:{color:'#9898b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.08)'} }
+    }
+};
+
+const labels10d = ['4/2','4/3','4/4','4/5','4/6','4/7','4/8','4/9','4/10','4/11','4/13'];
+
+// Oil Chart — Brent & WTI
+new Chart(document.getElementById('oilChart'), {
+    type:'line',
+    data:{
+        labels: labels10d,
+        datasets:[
+            {
+                label:'Brent ($/桶)',
+                data:[99.79, 109.27, 109.07, 109.07, 111.30, 109.85, 98.01, 97.01, 96.58, 95.20, 101.88],
+                borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.1)',
+                tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'#ef4444', borderWidth:2
+            },
+            {
+                label:'WTI ($/桶)',
+                data:[113.23, 109.27, 109.07, 111.54, 114.01, 114.94, 96.44, 97.21, 96.57, 95.20, 104.24],
+                borderColor:'#f97316', backgroundColor:'rgba(249,115,22,0.1)',
+                tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'#f97316', borderWidth:2
+            }
+        ]
+    },
+    options:{...chartDefaults, plugins:{...chartDefaults.plugins, title:{display:false}}}
+});
+
+// Gas Chart
+new Chart(document.getElementById('gasChart'), {
+    type:'line',
+    data:{
+        labels: labels10d,
+        datasets:[{
+            label:'天然气 ($/MMBtu)',
+            data:[2.84, 2.82, 2.81, 2.80, 2.81, 2.79, 2.74, 2.72, 2.67, 2.65, 2.67],
+            borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)',
+            tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'#f59e0b', borderWidth:2
+        }]
+    },
+    options: chartDefaults
+});
+
+// Gold Chart
+new Chart(document.getElementById('goldChart'), {
+    type:'line',
+    data:{
+        labels: labels10d,
+        datasets:[{
+            label:'黄金 ($/盎司)',
+            data:[4594.74, 4676.40, 4676.40, 4640.87, 4649.81, 4798.77, 4712.34, 4765.83, 4748.72, 4748.72, 4724.86],
+            borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)',
+            tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'#f59e0b', borderWidth:2
+        }]
+    },
+    options: chartDefaults
+});
+
+// Silver Chart
+new Chart(document.getElementById('silverChart'), {
+    type:'line',
+    data:{
+        labels: labels10d,
+        datasets:[{
+            label:'白银 ($/盎司)',
+            data:[72.50, 72.92, 72.99, 72.99, 73.20, 72.90, 77.20, 73.96, 75.68, 75.92, 74.61],
+            borderColor:'#a3a3c2', backgroundColor:'rgba(163,163,194,0.1)',
+            tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'#a3a3c2', borderWidth:2
+        }]
+    },
+    options: chartDefaults
+});
+</script>
+</body>
+</html>
