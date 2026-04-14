@@ -1,0 +1,162 @@
+<!-- Medical Section -->
+<h2 class="section-title medical" id="sec-med">⚕️ Medical — 医学大模型</h2>
+
+<!-- Paper 12: Medical Reasoning Survey -->
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08559" target="_blank">Medical Reasoning with Large Language Models: A Survey and MR-Bench</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 CUHK, NUS</span><br>
+<span class="tag tag-med">Medical</span><span class="tag tag-med">推理</span><span class="tag tag-med">综述</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 在医学考试式任务上取得了优异成绩（如 MedQA、USMLE），激发了将其部署于真实医疗场景的兴趣。然而，通过考试不等于能做医学推理——真实临床决策需要多步骤推理、不确定性处理、跨模态信息整合，以及在不完整信息下的风险权衡。本文是首个系统性梳理"LLM医学推理"的综述，同时提出 MR-Bench 基准来量化推理深度。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 医学推理能力的四层分类学</strong><br>
+提出了一个层级化的医学推理分类框架：<br>
+<strong>L1 — 知识回忆</strong>：检索医学事实（如药物适应证、解剖结构），对应选择题式任务。<br>
+<strong>L2 — 临床推理</strong>：基于症状、检查结果和病史进行鉴别诊断，需要多步逻辑链。<br>
+<strong>L3 — 治疗规划</strong>：制定个体化治疗方案，需权衡疗效、副作用、患者偏好和经济因素。<br>
+<strong>L4 — 不确定性推理</strong>：在信息不完整时（如缺失检查、矛盾症状），做出概率性判断并提出进一步检查建议。<br>
+现有 LLM 在 L1 已接近人类专家，但在 L3-L4 上显著落后。
+</div>
+
+<div class="sub-module">
+<strong>② MR-Bench 基准构建</strong><br>
+MR-Bench 包含 2,847 个临床推理问题，覆盖 15 个科室，每个问题需要 3-8 步推理。与现有基准的关键区别：<br>
+(a) <strong>过程评估</strong>：不仅评最终答案，更评推理链的每一步是否正确——使用 5 名执业医师标注的"黄金推理链"作为参考；<br>
+(b) <strong>干扰信息</strong>：每个问题包含 2-4 个与正确诊断无关的"红鲱鱼"症状，测试模型是否能正确忽略；<br>
+(c) <strong>不完整信息</strong>：30% 的问题故意省略关键检查结果，正确答案应该是"需要进一步检查 X"而非直接诊断。<br>
+评分机制：\(\text{Score} = 0.4 \cdot \text{Final} + 0.4 \cdot \text{Process} + 0.2 \cdot \text{Uncertainty}\)
+</div>
+
+<div class="sub-module">
+<strong>③ 技术路线综述：从 Prompting 到 Fine-tuning</strong><br>
+系统梳理了增强 LLM 医学推理的三条技术路线：<br>
+<strong>Prompting 方法</strong>：医学 CoT、临床决策树 prompting、自一致性投票——简单有效但受限于 base model 能力；<br>
+<strong>RAG 方法</strong>：检索医学知识库（如 PubMed、UpToDate）辅助推理——提升知识覆盖但可能引入噪声；<br>
+<strong>Fine-tuning 方法</strong>：在医学推理数据上微调（如 Medical CoT 数据集）——最有效但需要高质量标注数据。<br>
+关键发现：三类方法在 L1-L2 上效果相当，但在 L3-L4 上 fine-tuning 显著优于其他两类。
+</div>
+
+<div class="sub-module">
+<strong>④ GPT-4o/Claude-3.5/Med-PaLM 2 在 MR-Bench 上的评估</strong><br>
+首次在 MR-Bench 上评估前沿模型，发现了几个关键 gap：<br>
+(a) <strong>过程准确率 << 最终答案准确率</strong>：GPT-4o 最终答案 72.3% 但推理过程仅 58.1%——说明模型经常"对了答案但错了推理"；<br>
+(b) <strong>不确定性处理极差</strong>：面对不完整信息时，90%+ 的模型回答仍给出确定诊断（而非建议进一步检查）；<br>
+(c) <strong>红鲱鱼陷阱</strong>：干扰信息使 GPT-4o 的准确率下降 12%，而人类医师仅下降 3%。
+</div>
+
+<div class="example-box">
+<br>
+<strong>MR-Bench 不完整信息测试示例</strong><br>
+<strong>病例</strong>：45岁女性，反复头痛3月，伴视物模糊。血压 160/95 mmHg，BMI 32。无其他检查结果。<br>
+<ul>
+<li><strong>正确答案</strong>：需进一步检查——眼底检查排除视乳头水肿，头颅 MRI 排除颅内占位，24h 尿蛋白排除肾损害</li>
+<li><strong>GPT-4o</strong>："最可能诊断为高血压性视网膜病变"→ ❌ 直接诊断，未建议必要检查</li>
+<li><strong>Claude-3.5</strong>："建议进行眼底检查和头颅影像学"→ ✅ 部分正确，但遗漏肾功能评估</li>
+<li><strong>人类专家</strong>：列出完整的 3 项必要检查 → ✅ 满分</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>最终答案 ↑</th><th>推理过程 ↑</th><th>不确定性处理 ↑</th><th>MR-Bench综合 ↑</th></tr>
+<tr><td>GPT-4o</td><td class="best">72.3%</td><td>58.1%</td><td>8.2%</td><td>52.7%</td></tr>
+<tr><td>Claude-3.5</td><td>70.8%</td><td class="best">61.3%</td><td class="best">14.5%</td><td class="best">55.2%</td></tr>
+<tr><td>Med-PaLM 2</td><td>68.5%</td><td>55.7%</td><td>11.3%</td><td>51.0%</td></tr>
+<tr><td>Llama-3-70B</td><td>61.2%</td><td>47.8%</td><td>5.7%</td><td>43.5%</td></tr>
+<tr><td>人类专家（5名）</td><td>89.1%</td><td>85.3%</td><td>78.6%</td><td>85.0%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>分析发现：(1) 添加医学 CoT prompting 将 GPT-4o 的过程准确率从 58.1% 提升至 64.8%，但不确定性处理仍停留在 10.5%；(2) RAG（检索 UpToDate）主要帮助 L1-L2 级别任务（+6.5%），对 L3-L4 几乎无效（+0.8%）；(3) 专科差异显著：模型在急诊医学上表现最好（69%），在精神科上最差（41%）——后者需要更多主观推理和模糊信息处理。局限性：MR-Bench 仅覆盖文本模态，未纳入影像等多模态临床推理；评估依赖英语，其他语言的医学推理评估尚待开展。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这项综述和基准测试揭示了 LLM 医学推理的核心差距：通过考试 ≠ 会做临床推理。最严重的短板在于不确定性处理——模型在信息不完整时过度自信地给出诊断，而临床实践中"知道自己不知道什么"是最重要的能力。MR-Bench 的过程评估机制为未来研究提供了更精准的度量工具。</p>
+</div>
+
+<!-- Paper 13: MedConceal -->
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08788" target="_blank">MedConceal: A Benchmark for Clinical Hidden-Concern Reasoning Under Partial Observability</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 UIUC</span><br>
+<span class="tag tag-med">Medical</span><span class="tag tag-med">对话推理</span><span class="tag tag-med">部分可观测</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>医患沟通是一个<strong>信息不对称</strong>问题：患者往往不会主动披露恐惧、误解或实际障碍（如经济困难、用药依从性差），除非临床医生具备巧妙的引导技巧。有效的医学对话需要在<strong>部分可观测</strong>条件下推理——临床医生必须从有限的表面信息中推断隐性关切（hidden concerns），进而调整沟通策略。本文提出 MedConceal 基准来系统评估 LLM 在这一关键能力上的表现。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 隐性关切的分类体系</strong><br>
+定义了五类临床隐性关切：<br>
+<strong>恐惧/焦虑</strong>：患者担心诊断结果但不直接表达（如癌症恐惧）。<br>
+<strong>认知误解</strong>：对疾病或治疗的错误理解（如"抗生素能治感冒"）。<br>
+<strong>实际障碍</strong>：经济困难、交通不便、无法按时就诊等。<br>
+<strong>社会压力</strong>：家庭关系、工作压力导致的隐性心理负担。<br>
+<strong>用药障碍</strong>：副作用、用药方案复杂、药物获取困难等。<br>
+每个类别包含10-15个临床亚型，共64个具体的隐性关切模式。
+</div>
+
+<div class="sub-module">
+<strong>② 基准构建：部分可观测对话</strong><br>
+MedConceal 包含 1,200 个多轮医患对话场景。每个场景包含：<br>
+(a) <strong>患者画像</strong>：基本信息、主诉、真实隐性关切（标注但不直接在对话中表达）；<br>
+(b) <strong>对话历史</strong>：前 3-5 轮的医患对话（患者只描述症状，不提及隐性关切）；<br>
+(c) <strong>评估目标</strong>：模型需要从对话中推断隐性关切，并生成引导性问题来确认推断。<br>
+评分维度：<strong>推断准确率</strong>（是否正确识别隐性关切类别）、<strong>引导质量</strong>（生成的问题是否恰当且有同理心）、<strong>回避率</strong>（模型是否能识别出"这里有未说出的东西"）。
+</div>
+
+<div class="sub-module">
+<strong>③ 三阶段评估协议</strong><br>
+<strong>Stage 1 — 检测</strong>：给定对话历史，模型判断是否存在未表达的隐性关切（二分类）。<br>
+<strong>Stage 2 — 推断</strong>：如果存在，推断属于哪个类别和亚型（64类分类）。<br>
+<strong>Stage 3 — 引导</strong>：生成一个开放式问题来引导患者表达隐性关切（生成式评估）。<br>
+三阶段的综合得分 = 检测F1 × 推断Acc × 引导质量。
+</div>
+
+<div class="sub-module">
+<strong>④ 评估发现：LLM 的"共情盲区"</strong><br>
+在 GPT-4o、Claude-3.5、Llama-3-70B 和 Meditron-70B 上的评估揭示：<br>
+(a) <strong>检测能力尚可</strong>：GPT-4o 的检测 F1 达到 0.71，能识别"患者有话没说"；<br>
+(b) <strong>推断不够精确</strong>：即使检测到隐性关切存在，类别推断准确率仅 42%——模型倾向于过度诊断"恐惧/焦虑"而忽略"实际障碍"和"用药障碍"；<br>
+(c) <strong>引导生成过于直接</strong>：模型生成的引导问题往往过于直白（如"你是不是在担心什么？"），缺乏临床医生使用的间接、循序渐进的引导技巧。
+</div>
+
+<div class="example-box">
+<br>
+<strong>隐性关切推理示例</strong><br>
+<strong>患者画像</strong>：58岁男性，糖尿病患者，血糖控制不佳。隐性关切：经济困难导致无法负担胰岛素费用。<br>
+<strong>对话</strong>：患者："大夫，最近血糖老是高...我也不知道为啥...可能是吃多了吧。"<br>
+<ul>
+<li><strong>GPT-4o 推断</strong>："患者可能存在焦虑情绪" → ❌（误分类为恐惧/焦虑）</li>
+<li><strong>GPT-4o 引导</strong>："你最近有什么担心的事情吗？" → 部分正确但方向偏差</li>
+<li><strong>Claude-3.5 推断</strong>："患者可能存在用药依从性问题" → ✅ 接近（用药障碍类）</li>
+<li><strong>Claude-3.5 引导</strong>："目前的药物方案执行起来有没有什么困难？" → ✅ 较好的间接引导</li>
+<li><strong>人类专家引导</strong>："胰岛素用得还顺利吗？有些患者会因为各种原因调整用量..." → ✅ 最佳（暗示性引导，不造成尴尬）</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>检测 F1 ↑</th><th>类别推断 Acc ↑</th><th>引导质量 ↑</th><th>综合得分 ↑</th></tr>
+<tr><td>GPT-4o</td><td>0.71</td><td>42.3%</td><td>3.2/5</td><td>38.5%</td></tr>
+<tr><td>Claude-3.5</td><td class="best">0.74</td><td class="best">48.1%</td><td class="best">3.6/5</td><td class="best">43.2%</td></tr>
+<tr><td>Meditron-70B</td><td>0.68</td><td>39.5%</td><td>3.0/5</td><td>34.8%</td></tr>
+<tr><td>Llama-3-70B</td><td>0.63</td><td>35.2%</td><td>2.8/5</td><td>30.1%</td></tr>
+<tr><td>人类专家</td><td>0.91</td><td>82.5%</td><td>4.5/5</td><td>78.3%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>分析显示：(1) 隐性关切类别间的识别难度差异巨大——"恐惧/焦虑"最易识别（GPT-4o 62%），"社会压力"最难（仅 23%）；(2) 增加对话轮次有助于推断：3轮对话的推断准确率 35%，扩展到 8 轮提升至 48%——更多对话提供了更多推理线索；(3) Few-shot prompting 中加入临床医生的引导范例可将引导质量从 3.2 提升至 3.8。局限性：数据集由标注者构建（非真实医患对话），隐性关切的表达模式可能过于规范化；文化差异未充分考虑。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>MedConceal 揭示了 LLM 在医学对话中的一个关键盲区：理解言外之意。当前模型在检测"有未说出的东西"上表现尚可，但在精确推断其内容和生成恰当引导上还远落后于人类临床医生。这对医疗 AI 助手的设计启示是：不仅要训练"回答问题"的能力，更要训练"提出正确问题"的能力。</p>
+</div>

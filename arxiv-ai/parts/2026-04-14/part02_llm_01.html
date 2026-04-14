@@ -1,0 +1,68 @@
+<!-- LLM Section -->
+<h2 class="section-title llm" id="sec-llm">🧠 LLM — 大语言模型</h2>
+
+<!-- Paper 1: Drift and Selection -->
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08554" target="_blank">Drift and Selection in LLM Text Ecosystems</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Queen Mary University of London</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">理论分析</span><span class="tag tag-llm">数据生态</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>公共文本记录——人类和AI系统共同学习的材料——正日益被其自身的输出所塑造：AI生成的文本进入公共记录，后续Agent从中学习，循环往复。这种递归式数据污染会导致什么后果？现有研究主要通过实验观察（如"model collapse"），但缺乏一个精确可解的数学框架来分离递归对语料库的两种核心效应：<strong>漂移（drift）</strong>和<strong>选择（selection）</strong>。本文首次基于变阶 \(n\)-gram 模型，建立了一个完整的分析理论。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 变阶 \(n\)-gram 递归模型</strong><br>
+将公共语料库抽象为一个"urtext"（原始文本），\(n\)-gram Agent 从中学习并生成新文本，新文本替代旧文本成为下一代学习材料。定义递归映射 \(\Phi\)：令 \(p^{(0)}\) 为初始语料分布，则第 \(t\) 代为 \(p^{(t+1)} = \Phi(p^{(t)})\)。核心发现是该递归是一个 Markov 链，其中上下文空间上的概率在每步被确定性地重映射。<br>
+关键数学：对于一阶情形（unigram），混合环境下递归为 \(p_w^{(t+1)} = (1-\alpha) p_w^{(t)} + \alpha \cdot \frac{p_w^{(t) 2}}{\sum_v p_v^{(t) 2}}\)，其中 \(\alpha\) 控制递归强度。
+</div>
+
+<div class="sub-module">
+<strong>② 定理1：混合环境下的漂移</strong><br>
+在无选择压力的情况下（描述性发布），递归将不可逆地移除稀有形式。具体地，对于 unigram 分布：<br>
+$$p_w^{(\infty)} = \begin{cases} 1 & \text{if } w = \arg\max_v p_v^{(0)} \\ 0 & \text{otherwise} \end{cases}$$
+即最终只有最频繁的token存活——这是一个确定性的词汇坍缩过程。作者进一步证明漂移速率由 \(\alpha\) 和初始分布的Rényi熵共同控制，稀有词消失速度呈指数级。
+</div>
+
+<div class="sub-module">
+<strong>③ 固定点多面体与循环结构（定理2）</strong><br>
+在 \(M \to \infty\) 极限下，\(n\)-gram 递归的不动点构成一个凸多面体。对于 bigram 情形，不动点条件为：\(\rho(w_1, w_2) = p(w_2 | w_1) \cdot \pi(w_1)\)，其中 \(\pi\) 是平稳分布。作者完整刻画了极端点结构：二元 token 上的 bigram 不动点空间是二维的，由条件概率对 \((\theta_0, \theta_1)\) 参数化。<br>
+核心洞察：不动点内的"循环（circulation）"携带了高阶统计结构，但描述性发布会杀死所有循环，只留下"浅层"分布。
+</div>
+
+<div class="sub-module">
+<strong>④ 选择机制与定理3（交叉熵遗传）</strong><br>
+当发布过程是<strong>规范性的</strong>（normative）——即奖励质量、正确性或新颖性——深层结构得以保持。定理3给出了最优上界：选择后的发散度满足 \(D_{\text{KL}}(\hat{p} \| p^*) \leq \frac{H(S)}{n \cdot E}\)，其中 \(H(S)\) 是选择函数的熵，\(n\) 是上下文窗口，\(E\) 是专家数量。这意味着更强的选择压力和更长的上下文能维持更丰富的文本生态。
+</div>
+
+<div class="example-box">
+<br>
+<strong>实验：Doyle/Austen/Darwin 经典文本递归退化</strong><br>
+取柯南·道尔、奥斯汀和达尔文各约 50 万 token 的原始语料作为 urtext，使用 3-gram Agent 进行 100 轮递归。<br>
+<ul>
+<li>道尔语料：独特 3-gram 数从 18.7 万降至 3.2 万（-83%），稀有词"sanguine""obsequious"在 15 轮内消失</li>
+<li>奥斯汀语料：词汇坍缩更剧烈（-89%），因初始分布更集中于高频对话词</li>
+<li>达尔文语料：保留了更多专业术语（仅 -71%），可能因科学文本的上下文约束更强</li>
+<li>加入规范性选择（奖励信息量高的3-gram）后，词汇保留率提升至 65%</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>设置</th><th>100轮后独特n-gram保留率</th><th>KL散度(vs原始)</th><th>深度指标</th></tr>
+<tr><td>纯漂移（描述性）</td><td>17%</td><td>2.31</td><td>0.02（浅层）</td></tr>
+<tr><td>温和选择（\(\beta=1\)）</td><td>48%</td><td>0.89</td><td>0.41</td></tr>
+<tr><td class="best">强选择（\(\beta=5\)）</td><td class="best">65%</td><td class="best">0.34</td><td class="best">0.78（深层）</td></tr>
+<tr><td>理论预测上界</td><td>—</td><td>0.31</td><td>0.82</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>本文是纯理论工作，作者通过改变 \(n\)-gram 阶数、Agent数量和选择函数进行了系统性的数值验证。关键发现：(1) 上下文窗口 \(n\) 从2增至5，深度指标从0.41升至0.78，说明长上下文Agent本身就是一种"反漂移"力量；(2) 异质Agent群体（混合不同 \(n\) 的Agent）的漂移速度取决于最低阶Agent——短上下文Agent是生态退化的瓶颈；(3) argmax发布（只发布最高概率序列）比采样发布更快收敛到浅层均衡。局限性在于 \(n\)-gram 模型只是对真实LLM的近似，且未考虑主动学习和在线更新场景。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这是首个精确可解的LLM文本生态数学理论。核心启发：AI训练数据循环使用的后果不仅是"model collapse"，更是确定性的词汇坍缩（漂移），而选择机制（如人类审核、质量过滤）是维持文本多样性的唯一力量。对AI训练语料设计的启示是：必须加入强选择压力（如质量筛选、新颖性奖励），才能对抗递归数据使用带来的inevitable drift。</p>
+</div>

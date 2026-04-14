@@ -1,0 +1,70 @@
+<!-- Paper 3: Dynamic Sparsity in Tree-Structured FF -->
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08565" target="_blank">Dynamic Sparsity in Tree-Structured Feed-Forward Layers at Scale</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Graz University of Technology</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">稀疏计算</span><span class="tag tag-llm">效率</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>在典型上下文长度下，Transformer 的前馈 MLP 块占据了大部分计算预算。混合专家（MoE）是主流的稀疏替代方案，但其路由开销和负载均衡问题限制了实际效率。<strong>快速前馈（Fast Feedforward, FFF）层</strong>是另一种路径——使用二叉树结构的条件计算，每个 token 只需沿树的一条路径计算，理论稀疏度可超 99%。然而，FFF 层此前仅在 300M 参数的 BERT 编码器上验证过，能否扩展到十亿参数级别的 GPT 风格自回归模型仍是未知。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 树结构前馈层（FFF）的参数化</strong><br>
+一棵深度为 \(D\) 的完全二叉树，共 \(P = 2^D - 1\) 个内部节点。每个节点 \(j\) 包含：权重向量 \(\mathbf{w}_j \in \mathbb{R}^d\)、偏置 \(b_j\)、以及一个线性投影 \(\mathbf{v}_j \in \mathbb{R}^d\)。<br>
+前向计算：输入 \(\mathbf{x}\) 从根节点开始，在每个节点计算路由决策 \(z_j = \sigma(\mathbf{w}_j^\top \mathbf{x} + b_j)\)，然后选择左子树（\(z_j > 0.5\)）或右子树进入下一层。到达叶节点后输出 \(\mathbf{v}_{\text{leaf}}^\top \mathbf{x}\)。<br>
+每个 token 的计算量：\(O(D \cdot d)\)，而稠密 MLP 为 \(O(d_{\text{ff}} \cdot d)\)。当 \(D = \log_2(d_{\text{ff}})\) 时，<strong>计算量呈对数级缩减</strong>。
+</div>
+
+<div class="sub-module">
+<strong>② 自动剪枝（Auto-Pruning）效应——新发现</strong><br>
+核心发现：训练过程中，硬路由决策与非对称非线性（ReLU）之间的交互会<strong>自发地停用整个树路径</strong>。具体机制：当某个节点的路由 sigmoid 输出在训练后期饱和到 0 或 1，该节点的一个子树永远不会被任何输入激活，其权重有效"死亡"。<br>
+量化结果：在 1.3B 参数模型中，约 <strong>35-48%</strong> 的树节点在训练完成后处于永久休眠状态，将动态（输入依赖）稀疏自动转换为结构性稀疏——<strong>无需显式剪枝标准或辅助正则化</strong>。<br>
+可调控：通过简单的架构选择（如在路由后添加 temperature scaling、调节初始化方差）可以控制 auto-pruning 的强度。
+</div>
+
+<div class="sub-module">
+<strong>③ 从头训练 vs 微调的缩放验证</strong><br>
+系统性验证：从 125M 到 1.3B 参数的 GPT 风格模型，将所有 MLP 块替换为 FFF 层。<br>
+训练策略对比：(a) 从头训练 FFF 模型，(b) 从预训练稠密模型初始化然后微调为 FFF。<br>
+发现：从头训练的 FFF 模型在 1.3B 规模下与稠密基线的 PPL 差距仅 <strong>3.2%</strong>，而微调策略可将差距缩小到 <strong>1.8%</strong>，同时实际 FLOPs 减少 <strong>63%</strong>。
+</div>
+
+<div class="sub-module">
+<strong>④ 与 MoE 的对比分析</strong><br>
+关键架构差异：FFF 是"硬路由+单路径"（每 token 只经过一条路径），而 MoE 是"软路由+top-k 专家"（每 token 激活 k 个完整专家）。<br>
+优势：FFF 无需负载均衡辅助损失、无通信开销、内存访问模式更规则（连续树遍历）。劣势：FFF 每节点容量较小，难以在单节点内编码复杂变换。<br>
+混合策略初探：交替使用 FFF 层和稠密层（每隔一层），可在 PPL 损失 < 1% 的情况下减少 45% 的 FFF 层 FLOPs。
+</div>
+
+<div class="example-box">
+<br>
+<strong>1.3B模型的 Auto-Pruning 可视化</strong><br>
+训练一个 24 层、深度 \(D=14\)（16384 个叶节点）的 FFF-GPT 模型：<br>
+<ul>
+<li>训练初期（0-5K步）：所有节点均活跃，动态稀疏度 ~50%</li>
+<li>训练中期（5K-20K步）：auto-pruning 开始，浅层树节点路由饱和</li>
+<li>训练末期（20K+步）：<strong>42% 的节点永久休眠</strong>，有效稀疏度从 99.1% 提升至 <strong>99.6%</strong></li>
+<li>被剪枝的路径主要集中在树的左侧子树（与 ReLU 的零半平面对齐），而右侧子树保留了 85% 的活跃节点</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>参数量</th><th>活跃FLOPs ↓</th><th>C4 PPL ↓</th><th>LAMBADA Acc ↑</th><th>ARC-Easy ↑</th></tr>
+<tr><td>Dense GPT</td><td>1.3B</td><td>100%</td><td class="best">14.8</td><td class="best">68.2%</td><td class="best">59.1%</td></tr>
+<tr><td>MoE (top-2/8)</td><td>1.3B act.</td><td>~50%</td><td>15.1</td><td>67.5%</td><td>58.3%</td></tr>
+<tr><td>FFF (from scratch)</td><td>1.3B</td><td class="best">37%</td><td>15.3</td><td>66.8%</td><td>57.4%</td></tr>
+<tr><td>FFF (fine-tuned)</td><td>1.3B</td><td class="best">37%</td><td>15.1</td><td>67.3%</td><td>58.0%</td></tr>
+<tr><td>FFF + auto-prune</td><td>1.3B</td><td><strong>34%</strong></td><td>15.4</td><td>66.5%</td><td>57.1%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验验证了：(1) 树深度 \(D\) 从 10 增至 14，PPL 从 16.8 降至 15.3，但 \(D=16\) 时反而升至 15.5，暗示过深的树存在优化困难；(2) 初始化方差影响 auto-pruning 强度——高方差初始化导致更多路由饱和，auto-pruning 率从 35% 升至 55%，但 PPL 也退化 0.3；(3) FFF 层在模型的中间层效果最好，替换最浅层和最深层的效果较差。局限性：当前实现未针对 GPU 硬件优化树遍历，实际延迟改善约 1.4x（远低于理论 2.7x），需要定制 CUDA kernel。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>首次证明树结构稀疏前馈层可扩展到十亿参数级自回归模型，同时发现了 auto-pruning 这一新现象——训练过程自发地将动态稀疏转化为结构稀疏，无需任何显式剪枝。这提供了一条不同于 MoE 的稀疏化路径：利用二叉树的层级路由实现对数级计算缩减，且不需要负载均衡。如果 GPU kernel 优化跟上，FFF 可能成为 MoE 之外的另一种高效推理架构选择。</p>
+</div>

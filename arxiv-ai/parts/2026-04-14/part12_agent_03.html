@@ -1,0 +1,77 @@
+<!-- Paper 11: Task-Aware LLM Routing -->
+<div class="paper-card" id="p11">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09377" target="_blank">Task-Aware LLM Routing with Multi-Level Task-Profile-Guided Data Synthesis for Cold-Start Scenarios</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 HKU</span><br>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">LLM路由</span><span class="tag tag-agent">冷启动</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>不同 LLM 在不同任务上表现差异巨大——没有一个模型在所有任务上都是最优的。LLM 路由系统旨在根据查询自动选择性价比最高的模型。然而，现有路由器存在严重的<strong>冷启动问题</strong>：当引入新模型或面对新任务类型时，缺乏足够的性能数据来训练路由决策。本文提出任务感知路由框架，通过多层级任务画像指导的数据合成来解决冷启动。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 多层级任务画像（Multi-Level Task Profile）</strong><br>
+对每个查询构建三层任务描述：<br>
+<strong>L1 — 粗粒度分类</strong>：任务类别（数学推理/代码生成/创意写作/知识问答/指令遵循等），用分类器提取。<br>
+<strong>L2 — 能力需求向量</strong>：将查询映射到一个 \(d\)-维能力需求空间 \(\mathbf{c} = f_\phi(x) \in \mathbb{R}^d\)，每个维度对应一个基础能力（如"多步推理"、"长文本理解"、"格式遵循"等）。<br>
+<strong>L3 — 难度估计</strong>：预估查询的难度等级 \(\delta \in [0,1]\)，低难度查询可用小模型节省成本，高难度查询需路由到强模型。<br>
+路由决策：\(m^* = \arg\max_{m \in \mathcal{M}} \text{Score}(m, \mathbf{c}, \delta) / \text{Cost}(m)\)，即在满足质量要求下最小化成本。
+</div>
+
+<div class="sub-module">
+<strong>② 任务画像指导的数据合成</strong><br>
+冷启动解决方案的核心：利用少量种子数据 + LLM 生成大量合成路由训练数据。<br>
+三步流程：<br>
+(a) <strong>画像采样</strong>：从已知任务画像空间中采样新的 \((\mathbf{c}, \delta)\) 组合，重点采样覆盖不足的区域；<br>
+(b) <strong>查询生成</strong>：用 LLM 根据采样的画像生成符合该画像的查询——如"生成一个需要3步推理、难度0.7的数学题"；<br>
+(c) <strong>模型评估</strong>：将生成的查询分别发送给所有候选模型，评估其回答质量，得到 \((\text{query}, \text{model}, \text{quality})\) 三元组。<br>
+关键创新：数据合成是<strong>画像指导</strong>的（而非随机的），确保合成数据均匀覆盖任务空间。
+</div>
+
+<div class="sub-module">
+<strong>③ 路由器架构与训练</strong><br>
+路由器采用双塔架构：<br>
+<strong>查询塔</strong>：编码查询文本 + 任务画像 → 查询表示 \(\mathbf{q} = E_Q(x, \mathbf{c}, \delta)\)。<br>
+<strong>模型塔</strong>：编码模型能力描述 → 模型表示 \(\mathbf{m}_i = E_M(\text{desc}_i)\)。<br>
+路由分数：\(\text{Score}(x, m_i) = \mathbf{q}^\top \mathbf{m}_i\)。<br>
+训练损失结合质量预测和成本效率：<br>
+$$\mathcal{L} = \mathcal{L}_{\text{quality}} + \lambda \cdot \mathcal{L}_{\text{cost}} = -\sum_{i} y_i \log \sigma(\mathbf{q}^\top \mathbf{m}_i) + \lambda \sum_{i} \sigma(\mathbf{q}^\top \mathbf{m}_i) \cdot c_i$$
+</div>
+
+<div class="sub-module">
+<strong>④ 主动学习的在线适应</strong><br>
+部署后，路由器通过主动学习持续改进：对于路由器不确定的查询（置信度 < 阈值），将其发送给多个模型评估——产生高信息量的新训练数据。<br>
+这形成了一个"冷启动→合成数据→部署→主动学习→精化"的循环，使路由器在数据积累过程中持续提升，且初始合成数据提供了一个合理的启动点而非随机猜测。
+</div>
+
+<div class="example-box">
+<br>
+<strong>冷启动场景：新增 Qwen-2.5-72B 到路由池</strong><br>
+现有路由池包含 GPT-4o、Claude-3.5、Llama-3-70B，新增 Qwen-2.5-72B（无历史性能数据）：<br>
+<ul>
+<li><strong>无合成数据</strong>：路由器对 Qwen 的选择率 < 5%（几乎不被选中），即使 Qwen 在中文任务上是最优的</li>
+<li><strong>随机合成 1K 查询</strong>：Qwen 选择率提升至 15%，但在其优势领域（中文推理）仍被低估</li>
+<li><strong>画像指导合成 1K 查询</strong>：Qwen 选择率在中文推理任务上提升至 <strong>62%</strong>，在英文任务上保持 18%</li>
+<li>成本节省：画像指导路由 vs 全部使用 GPT-4o，质量下降 < 2% 但成本降低 <strong>57%</strong></li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>路由策略</th><th>MMLU ↑</th><th>GSM8K ↑</th><th>HumanEval ↑</th><th>成本 ↓</th><th>综合效率 ↑</th></tr>
+<tr><td>始终 GPT-4o</td><td class="best">87.2%</td><td class="best">92.1%</td><td class="best">86.5%</td><td>$1.00</td><td>1.00x</td></tr>
+<tr><td>随机路由</td><td>72.3%</td><td>75.6%</td><td>68.9%</td><td>$0.35</td><td>0.85x</td></tr>
+<tr><td>RouteLLM (baseline)</td><td>83.5%</td><td>88.3%</td><td>82.1%</td><td>$0.52</td><td>1.21x</td></tr>
+<tr><td>冷启动 baseline</td><td>78.1%</td><td>80.5%</td><td>74.3%</td><td>$0.41</td><td>1.05x</td></tr>
+<tr><td class="best">Ours (画像合成)</td><td>85.8%</td><td>90.7%</td><td>84.2%</td><td class="best">$0.43</td><td class="best">1.48x</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验显示：(1) 多层级画像中，L2（能力需求向量）贡献最大（移除后综合效率降 18%），L1 次之（降 8%），L3（难度）贡献最小但对成本优化至关重要（降 12% 成本节省效果）；(2) 合成数据量的甜蜜点在 1K-5K 条——超过 5K 后边际收益递减；(3) 在线主动学习在 2 周内将路由准确率再提升 7%。局限性：合成数据的质量依赖于 LLM 对任务画像的理解能力；双塔架构在模型数量 >20 时推理延迟增加。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文提出了一种优雅的冷启动解决方案：通过多层级任务画像指导的数据合成，使 LLM 路由器在零真实数据的情况下就能做出合理的路由决策。核心启示：LLM 路由不仅是"哪个模型更好"的问题，更是"什么任务需要什么能力"的匹配问题——任务画像的引入将路由从黑箱分类提升为可解释的能力匹配。</p>
+</div>

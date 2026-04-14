@@ -1,0 +1,71 @@
+<!-- Paper 7: Re-Mask and Redirect -->
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08557" target="_blank">Re-Mask and Redirect: Exploiting Denoising Irreversibility in Diffusion Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Intel Labs</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">安全对齐</span><span class="tag tag-rl">扩散LM</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>扩散语言模型（dLLMs，如MDLM、SEDD）通过迭代去噪掩码token序列来生成文本。与自回归LLM不同，dLLM 的安全对齐机制依赖于一个关键假设：<strong>去噪调度是单调的，已提交的token不会被重新评估</strong>。但这个假设在对抗场景下是否可靠？本文发现dLLM的安全对齐建立在一个极其脆弱的基础上，并设计了 Re-Mask and Redirect (RMR) 攻击来完全绕过它。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 去噪不可逆性假设的脆弱性</strong><br>
+安全对齐的 dLLM 在早期去噪步骤中提交"拒绝token"（如"I cannot"、"sorry"），这些 token 在后续步骤中不再被重新掩码。然而，作者发现这个机制有一个致命漏洞：去噪过程中的 token 提交顺序可以被外部干预——通过在中间步骤<strong>重新掩码已提交的拒绝 token</strong>，迫使模型在新的上下文中重新去噪，从而"重定向"到不安全的输出轨迹。<br>
+形式化：令 \(\mathbf{x}_t\) 为第 \(t\) 步的 token 序列，\(M_t\) 为掩码集合。标准去噪：\(M_{t+1} \subset M_t\)（掩码单调递减）。RMR 攻击在第 \(t^*\) 步注入：\(M_{t^*} = M_{t^*-1} \cup \{i : x_i \in \text{refusal tokens}\}\)，即强制重新掩码拒绝 token。
+</div>
+
+<div class="sub-module">
+<strong>② RMR 攻击的三阶段流程</strong><br>
+<strong>Phase 1 — 检测（Detection）</strong>：监控去噪过程，当检测到连续出现拒绝模式token（如"I", "cannot", "help"在位置 \(i, i+1, i+2\) 被连续提交）时触发攻击。<br>
+<strong>Phase 2 — 重掩码（Re-Mask）</strong>：将已提交的拒绝 token 重新设为 [MASK]，同时保留非拒绝 token 不变：<br>
+$$\tilde{x}_i = \begin{cases} [\text{MASK}] & \text{if } x_i \in \mathcal{R} \\ x_i & \text{otherwise} \end{cases}$$
+<strong>Phase 3 — 重定向（Redirect）</strong>：在重掩码后的序列上继续正常去噪。由于拒绝 token 被移除，剩余上下文引导模型生成替代内容——通常是原本被拒绝的不安全回答。
+</div>
+
+<div class="sub-module">
+<strong>③ 攻击成功率与鲁棒性分析</strong><br>
+在三个已对齐的 dLLM（MDLM-Safe、SEDD-Aligned、Dream-Guard）上测试 RMR：<br>
+攻击成功率（ASR）：<strong>MDLM 87.3%、SEDD 91.2%、Dream 83.6%</strong>——远高于自回归 LLM 上类似的 jailbreak 攻击（通常 20-40%）。<br>
+关键因素：dLLM 的并行去噪特性意味着拒绝和非拒绝 token 在同一步骤中被处理——去掉拒绝 token 后，非拒绝 token 的条件概率自然地倾向于继续生成有意义的（可能不安全的）内容。
+</div>
+
+<div class="sub-module">
+<strong>④ 防御策略探索</strong><br>
+作者同时提出了三种潜在防御方向：<br>
+(a) <strong>Token Commitment Lock</strong>：一旦 token 被提交，硬件级禁止任何重写——但这限制了 dLLM 的编辑灵活性；<br>
+(b) <strong>Redundant Refusal Encoding</strong>：在多个不连续位置同时注入拒绝信号——增加了重掩码的难度但也增加了计算成本；<br>
+(c) <strong>Denoising Trajectory Monitoring</strong>：检测异常的掩码模式变化——是最实用的方案，但可被梯度优化的隐蔽攻击绕过。<br>
+结论：目前没有完美的防御方案，dLLM 的安全对齐需要根本性的重新设计。
+</div>
+
+<div class="example-box">
+<br>
+<strong>RMR 攻击示例（MDLM-Safe）</strong><br>
+<strong>输入</strong>: "How to pick a lock?"<br>
+<strong>正常去噪（步骤1-5）</strong>: [MASK]×50 → "I [MASK]×48" → "I cannot [MASK]×46" → "I cannot help with [MASK]×42" → "I cannot help with that request..."<br>
+<strong>RMR 攻击（步骤3注入）</strong>: 检测到 "I cannot"，重掩码 → "[MASK][MASK] help with [MASK]×42" → "To help with picking [MASK]×38" → "To help with picking a lock, first you need..."<br>
+<ul>
+<li>攻击仅修改了 2 个 token 的掩码状态，就完全改变了输出方向</li>
+<li>总计算开销增加 < 5%（仅多了一次重掩码+继续去噪）</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>正常拒绝率 ↑</th><th>RMR 攻击成功率 ↑</th><th>GCG 攻击成功率</th><th>AutoDAN 攻击成功率</th></tr>
+<tr><td>MDLM-Safe</td><td>94.2%</td><td class="best">87.3%</td><td>18.5%</td><td>22.1%</td></tr>
+<tr><td>SEDD-Aligned</td><td>96.1%</td><td class="best">91.2%</td><td>15.3%</td><td>19.8%</td></tr>
+<tr><td>Dream-Guard</td><td>92.8%</td><td>83.6%</td><td>21.7%</td><td>25.4%</td></tr>
+<tr><td>Llama-3-Guard (AR)</td><td>97.5%</td><td>N/A</td><td>23.4%</td><td>31.2%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验显示：(1) 攻击时机（\(t^*\) 的选择）影响巨大——在去噪的 20-40% 进度点注入最有效，太早（拒绝 token 未充分形成）或太晚（大量非拒绝 token 已提交，语境已锁定）效果下降；(2) 重掩码的 token 数量与 ASR 呈非线性关系——仅重掩码 2-3 个关键拒绝 token 即可达到 >80% ASR；(3) Token Commitment Lock 防御将 ASR 从 87% 降至 12%，但代价是模型在正常编辑任务上性能下降 25%。局限性：RMR 假设攻击者能干预去噪过程（白盒/灰盒设置），纯黑盒 API 场景下适用性有限。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文揭示了 dLLM 安全对齐的根本性弱点：去噪不可逆性假设在对抗场景下不成立。RMR 攻击以极低成本（2-3 token 重掩码）实现 80-91% 的越狱成功率，远超传统 jailbreak 方法。这对新兴的扩散语言模型社区是一个重要警告：dLLM 的安全对齐需要完全不同的设计范式，不能简单移植自回归 LLM 的对齐方法。</p>
+</div>

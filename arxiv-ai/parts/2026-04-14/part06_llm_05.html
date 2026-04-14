@@ -1,0 +1,68 @@
+<!-- Paper 5: Nexus (ByteDance) -->
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09258" target="_blank">Nexus: Same Pretraining Loss, Better Downstream Generalization via Common Minima</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 ByteDance, Tsinghua University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">预训练</span><span class="tag tag-industry">🏢 Industry Lab</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>预训练是LLM的基石，消耗了绝大部分算力和数据预算。一个令人困惑的现象：<strong>两个具有相同预训练loss的模型，在下游任务上可能表现截然不同</strong>。这意味着预训练loss并非下游性能的充分统计量——loss曲面上的"位置"同样重要。现有工作（如SWA、LAWA）尝试用权重平均来寻找更平坦的极小值，但缺乏系统性理论解释。本文提出"公共极小值（Common Minima）"假说，并基于此设计了 Nexus 框架。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 公共极小值假说</strong><br>
+核心观察：预训练loss曲面上存在无数等价极小值，但其中只有一个子集是"公共极小值"——即在<strong>多个不同数据子集</strong>上都同时是极小值的点。形式化定义：<br>
+$$\theta^* \in \mathcal{M}_{\text{common}} \iff \theta^* \in \bigcap_{i=1}^{K} \arg\min_\theta \mathcal{L}(\theta; \mathcal{D}_i)$$
+其中 \(\mathcal{D}_1, ..., \mathcal{D}_K\) 是训练数据的 \(K\) 个不相交子集。直觉：公共极小值编码了跨数据分布的通用特征，而非某个特定子集的噪声模式——因此在下游任务中泛化更好。
+</div>
+
+<div class="sub-module">
+<strong>② Nexus 组合式预训练策略</strong><br>
+将总训练数据 \(\mathcal{D}\) 分为 \(K\) 份（默认 \(K=4\)），独立训练 \(K\) 个模型 \(\theta_1, ..., \theta_K\)，每个模型只用一份数据训练到相同的loss水平。然后执行 <strong>iterative merging</strong>：<br>
+$$\theta_{\text{merged}}^{(t+1)} = \frac{1}{K} \sum_{i=1}^{K} \theta_i^{(t)} + \eta \sum_{i=1}^{K} \nabla_\theta \mathcal{L}(\theta_i^{(t)}; \mathcal{D}_i)$$
+即先做简单平均，再做一步梯度修正。关键：这个过程不需要额外计算，因为每个模型的训练数据量是原来的 \(1/K\)——总计算量保持不变，但权重空间的探索方向不同。
+</div>
+
+<div class="sub-module">
+<strong>③ 理论分析：平坦度与泛化</strong><br>
+作者证明了 Nexus 的 merging 过程隐式地最小化了损失曲面的 Hessian 迹（平坦度度量）：<br>
+$$\text{Tr}(\nabla^2 \mathcal{L}(\theta_{\text{merged}})) \leq \frac{1}{K} \sum_{i=1}^{K} \text{Tr}(\nabla^2 \mathcal{L}(\theta_i)) - \frac{1}{K} \sum_{i<j} \|\theta_i - \theta_j\|^2 \cdot \lambda_{\min}$$
+第二项是"模型间距离的正则化效应"——越分散的独立训练路径，merge 后越平坦。这连接了 flat minima 理论和 ensemble 理论，给出了为什么"相同loss + 更平坦 = 更好下游"的严格解释。
+</div>
+
+<div class="sub-module">
+<strong>④ 实现细节与效率优化</strong><br>
+实际实现中的关键选择：(a) \(K=4\) 是最优（\(K=2\) 平坦度增益不够，\(K=8\) 每个子模型训练不充分）；(b) 数据分割策略使用 domain-based 分割（如 Web/Book/Code/Scientific），比随机分割效果更好（因为领域间差异提供更强的"模型间距离"）；(c) Merging 频率：每 1000 步 merge 一次，比训练结束才 merge 提升 3%（因为中间 merge 提供了更多的"轨迹修正"机会）；(d) 通信开销：只需传输模型权重差分，实际额外通信 < 2%。
+</div>
+
+<div class="example-box">
+<br>
+<strong>7B 模型对比：相同 loss，不同下游性能</strong><br>
+训练三个 7B 模型到 C4 PPL = 8.2（相同的预训练loss）：<br>
+<ul>
+<li><strong>标准训练</strong>（单模型全数据）：MMLU 65.2%, GSM8K 54.1%, HumanEval 42.3%</li>
+<li><strong>SWA</strong>（训练后权重平均）：MMLU 65.8%, GSM8K 55.3%, HumanEval 43.1%</li>
+<li><strong>Nexus</strong>（K=4 组合预训练）：MMLU <strong>67.4%</strong>, GSM8K <strong>58.7%</strong>, HumanEval <strong>46.5%</strong></li>
+<li>Nexus 在预训练 loss 相同的情况下，下游平均提升 <strong>+3.4%</strong>，相当于"免费"获得的泛化增益</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>预训练PPL</th><th>MMLU ↑</th><th>GSM8K ↑</th><th>HumanEval ↑</th><th>平均 ↑</th></tr>
+<tr><td>标准预训练</td><td>8.2</td><td>65.2%</td><td>54.1%</td><td>42.3%</td><td>53.9%</td></tr>
+<tr><td>SWA (Izmailov 2018)</td><td>8.2</td><td>65.8%</td><td>55.3%</td><td>43.1%</td><td>54.7%</td></tr>
+<tr><td>LAWA</td><td>8.2</td><td>66.1%</td><td>56.0%</td><td>43.8%</td><td>55.3%</td></tr>
+<tr><td class="best">Nexus (K=4)</td><td class="best">8.2</td><td class="best">67.4%</td><td class="best">58.7%</td><td class="best">46.5%</td><td class="best">57.5%</td></tr>
+<tr><td>Nexus (K=2)</td><td>8.2</td><td>66.5%</td><td>56.9%</td><td>44.7%</td><td>56.0%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验表明：(1) 数据分割策略对结果影响显著——domain-based 分割比随机分割提升 1.8%，因为不同 domain 训练的模型在权重空间中更分散；(2) Merging 频率的甜蜜点在每 500-1000 步，过频（每 100 步）导致子模型无法充分分化，过疏（仅末尾 merge）则错过中间修正机会；(3) Hessian 迹分析证实 Nexus 模型的极小值确实更平坦（Tr(H) 降低 30-45%）。局限性：目前仅验证到 7B 规模，更大模型（>30B）的多模型并行训练在工程上具有挑战；分割策略对数据分布敏感，需要领域知识。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>Nexus 揭示了一个被忽视的预训练维度：在相同 loss 水平下，通过寻找"公共极小值"可以获得显著的下游泛化增益，代价仅为训练流程的重新组织（数据分割 + 周期性 merge），无需额外计算。这对大规模预训练实践的启示是：与其一味追求更低的预训练 loss，不如关注 loss 曲面上的位置——公共极小值是"性价比"最高的着陆点。</p>
+</div>

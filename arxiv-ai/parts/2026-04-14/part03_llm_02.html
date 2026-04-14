@@ -1,0 +1,68 @@
+<!-- Paper 2: EMA Is Not All You Need -->
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08556" target="_blank">EMA Is Not All You Need: Mapping the Boundary Between Structure and Content in Recurrent Context</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Intel Labs</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">序列建模</span><span class="tag tag-llm">循环架构</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>高效序列模型（如 Mamba、RWKV、线性注意力）试图用亚二次复杂度替代 Transformer 的全注意力。这些模型的循环上下文机制究竟比最简单的时间平均（EMA）强在哪里？现有研究将各种门控机制视为黑箱改进，但缺乏系统性的理论分析来精确定位<strong>固定系数累积（EMA）</strong>能做什么、不能做什么，以及"学习到的、依赖输入的选择"究竟在哪个环节是不可替代的。本文用 EMA trace 作为控制探针，绘制了这条边界。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① SPCN 架构（Settling Predictive Coding Network）</strong><br>
+构建一个 Hebbian 架构，使用多时间尺度 EMA trace 作为唯一的循环上下文。核心：不使用门控、不使用基于内容的检索，只有固定衰减系数 \(\lambda_k\) 的指数移动平均：<br>
+$$\mathbf{h}_k^{(t)} = \lambda_k \mathbf{h}_k^{(t-1)} + (1-\lambda_k) \mathbf{x}^{(t)}$$
+其中 \(\lambda_k \in \{0.9, 0.99, 0.999, ...\}\) 提供不同时间尺度的记忆。Hebbian 更新规则利用这些 trace 预测下一个 token 的结构角色（如语法关系），无需任何标签。
+</div>
+
+<div class="sub-module">
+<strong>② EMA Trace 编码时间结构但破坏 Token 身份</strong><br>
+关键实验发现双重性质：<br>
+<strong>正面：</strong>EMA trace 能编码丰富的时间结构。在语法角色分配任务上，纯 Hebbian + 多时间尺度 EMA 的无监督模型达到了有监督 BiGRU <strong>96%</strong> 的性能，并在结构依赖的语法角色上超越有监督基线。<br>
+<strong>负面：</strong>EMA trace 对 token identity 实施了有损、数据无关的压缩。信息论证明：固定系数累积的每步信息损失是不可逆的，由<strong>数据处理不等式（DPI）</strong>严格保证——任何下游预测器都无法恢复被丢弃的信息：<br>
+$$I(X^{(1:t)}; \hat{Y}) \leq I(X^{(1:t)}; \mathbf{H}^{(t)}) < I(X^{(1:t)}; X^{(1:t)})$$
+</div>
+
+<div class="sub-module">
+<strong>③ 130M 参数语言模型实验：量化信息瓶颈</strong><br>
+训练一个 130M 参数的语言模型，用纯 EMA 上下文替代注意力层，在 C4 数据集上评估困惑度。<br>
+EMA-only 模型：PPL = 260（GPT-2 的 8 倍）。关键消融——将线性预测器替换为完整的 softmax 注意力预测器：<strong>损失完全不变</strong>。这证明整个性能差距完全定位于 EMA trace 本身，而非预测器的表达能力不足。
+</div>
+
+<div class="sub-module">
+<strong>④ 深度维度的信息稀释</strong><br>
+将 EMA 分析从时间维度扩展到深度维度：在 Transformer 每层的残差连接中，固定的残差权重 \(\alpha\) 实质上也在做深度方向的 EMA。理论分析表明，深度 EMA 的信息稀释同样不可逆，只有学习到的、输入依赖的选择（如门控、注意力）才能解决——这为 Mamba/RWKV 等模型的门控设计提供了信息论基础。
+</div>
+
+<div class="example-box">
+<br>
+<strong>语法角色分配：EMA vs BiGRU</strong><br>
+任务：给定英语句子序列，预测每个词的语法角色（如主语/宾语/修饰语），测试对结构依赖关系（如远距离一致性）的捕获能力。<br>
+<ul>
+<li><strong>SPCN (EMA, 无监督)</strong>: 整体准确率 91.3%，结构依赖角色 87.2%</li>
+<li><strong>BiGRU (有监督)</strong>: 整体准确率 95.1%，结构依赖角色 84.6%</li>
+<li>EMA 在结构角色上<strong>超越</strong>有监督 BiGRU (+2.6%)，证明固定时间尺度的累积天然适合捕获层级结构</li>
+<li>但在需要精确 token recall 的任务（如命名实体识别）上，EMA 大幅落后 (-23%)</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>C4 PPL ↓</th><th>语法角色 Acc ↑</th><th>结构依赖 Acc ↑</th><th>Token Recall ↑</th></tr>
+<tr><td>GPT-2 (124M, 注意力)</td><td class="best">32.4</td><td>—</td><td>—</td><td class="best">94.7%</td></tr>
+<tr><td>EMA-only LM (130M)</td><td>260.0</td><td>91.3%</td><td class="best">87.2%</td><td>71.2%</td></tr>
+<tr><td>EMA + Attn预测器</td><td>259.8</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>BiGRU (有监督)</td><td>—</td><td class="best">95.1%</td><td>84.6%</td><td>89.3%</td></tr>
+<tr><td>SPCN Hebbian (无监督)</td><td>—</td><td>91.3%</td><td class="best">87.2%</td><td>—</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验证实了几个关键发现：(1) 增加 EMA 时间尺度数量从 3 到 8 个，语法角色性能从 85% 提升至 91.3%，但语言模型 PPL 仅微弱改善（280→260），表明多时间尺度帮助结构但无法恢复内容；(2) 让 EMA 系数可学习（但仍输入无关），PPL 几乎不变（258 vs 260），确认瓶颈在于"固定 vs 输入依赖"而非"预设 vs 学习"。局限性：分析基于 \(n\)-gram 模型和较小规模，更大模型是否有不同的信息瓶颈结构尚待验证。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文精确定位了高效序列模型的信息论边界：EMA（固定系数累积）是完美的时间结构编码器，但不可逆地破坏 token 内容信息。这一"结构-内容分离"由数据处理不等式严格保证，为 Mamba、RWKV 等模型中门控/选择机制的必要性提供了理论基础。核心信息：不是"EMA 不够好"，而是"EMA 天生只能做结构，内容需要学习到的选择"。</p>
+</div>

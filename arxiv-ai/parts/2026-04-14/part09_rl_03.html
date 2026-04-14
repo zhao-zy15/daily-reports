@@ -1,0 +1,78 @@
+<!-- Paper 8: Efficient Unlearning -->
+<div class="paper-card" id="p8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09391" target="_blank">Efficient Unlearning through Maximizing Relearning Convergence Delay</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Sungkyunkwan University</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">机器遗忘</span><span class="tag tag-rl">隐私</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>随着GDPR和AI法案赋予用户"被遗忘权"，机器遗忘（Machine Unlearning）成为关键挑战：如何从已训练的模型中移除特定数据的影响？现有方法主要关注模型预测层面的遗忘（输出不再包含被遗忘数据的信息），但忽略了权重空间的持久记忆——即使输出看似遗忘了，模型权重中可能仍保留了快速重学习的"捷径"。本文提出了<strong>重学习收敛延迟（Relearning Convergence Delay）</strong>这一新度量，关注遗忘后模型重新学习被遗忘数据的速度。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 重学习收敛延迟度量</strong><br>
+传统遗忘度量只检查遗忘后的即时输出。新度量定义：给定遗忘后的模型 \(\theta_u\) 和被遗忘数据集 \(\mathcal{D}_f\)，在 \(\theta_u\) 上重新训练 \(\mathcal{D}_f\)，测量模型重新达到原始性能所需的<strong>梯度步数</strong> \(\tau\)：<br>
+$$\tau(\theta_u, \mathcal{D}_f) = \min\{t : \mathcal{L}(\theta_u^{(t)}; \mathcal{D}_f) \leq \mathcal{L}(\theta^*; \mathcal{D}_f) + \epsilon\}$$
+直觉：如果 \(\tau\) 很小，说明遗忘是"表面的"——权重中仍保留了通向被遗忘数据的快速路径。真正有效的遗忘应使 \(\tau\) 尽可能大（接近从随机初始化开始的训练步数）。
+</div>
+
+<div class="sub-module">
+<strong>② IEU 框架：影响消除遗忘</strong><br>
+提出 Influence Eliminating Unlearning (IEU) 框架，包含两个组件的交替优化：<br>
+<strong>梯度上升（GA）</strong>：在遗忘集上执行梯度上升，显式增加遗忘数据的损失：<br>
+$$\theta \leftarrow \theta + \eta_f \nabla_\theta \mathcal{L}(\theta; \mathcal{D}_f)$$
+使用较小的步长 \(\eta_f = c \cdot \eta_r\)（\(c \in [0,1)\)）来控制稳定性。<br>
+<strong>梯度下降（GD）</strong>：同时在保留集上执行标准梯度下降，维持模型在非遗忘数据上的性能：<br>
+$$\theta \leftarrow \theta - \eta_r \nabla_\theta \mathcal{L}(\theta; \mathcal{D}_r)$$
+</div>
+
+<div class="sub-module">
+<strong>③ 噪声正则化（Noisy Regularization）</strong><br>
+GA 仅增加遗忘数据的损失，但可能保留权重空间中的"结构记忆"。关键创新——<strong>迭代重初始化过程</strong>：<br>
+$$\theta^{(t+1)} = (1-\alpha) \theta^{(t)} + \alpha \theta_{\text{rand}}$$
+其中 \(\theta_{\text{rand}} \sim \mathcal{N}(0, 2/d)\)（Kaiming 初始化），\(\alpha \in [0,1]\) 控制噪声强度。<br>
+理论保证：该过程最大化权重的条件数（condition number），使得从 \(\theta_u\) 重新学习 \(\mathcal{D}_f\) 的收敛速度<strong>指数级减慢</strong>。作者证明了在凸设定下 \(\tau \geq \Omega(e^{C/\alpha})\)。
+</div>
+
+<div class="sub-module">
+<strong>④ 收敛保证与指数延迟</strong><br>
+在满足PL不等式的条件下，作者证明了IEU+NR的重学习延迟满足：<br>
+$$\tau(\theta_u) \geq \frac{1}{\mu} \log\left(\frac{\kappa(\theta_u)}{\epsilon}\right)$$
+其中 \(\mu\) 是PL常数，\(\kappa(\theta_u)\) 是遗忘后权重的条件数。噪声正则化通过增大 \(\kappa\) 来延长 \(\tau\)。<br>
+实际效果：IEU+NR 的重学习延迟比标准 GA 大 <strong>5-15 倍</strong>，接近从随机初始化训练的步数。
+</div>
+
+<div class="example-box">
+<br>
+<strong>CIFAR-10 遗忘类别实验</strong><br>
+在 ResNet-18 上遗忘"汽车"类别（10%的训练数据）：<br>
+<ul>
+<li><strong>标准微调遗忘</strong>：遗忘后重学习 \(\tau = 120\) 步（从头训练需 2000 步），重学习比 = 6%</li>
+<li><strong>GA 遗忘</strong>：\(\tau = 340\) 步，重学习比 = 17%</li>
+<li><strong>IEU (GA + GD)</strong>：\(\tau = 850\) 步，重学习比 = 43%</li>
+<li><strong>IEU + NR</strong>：\(\tau = \mathbf{1750}\) 步，重学习比 = <strong>88%</strong>（接近从头训练！）</li>
+<li>保留集准确率：标准 94.2% → IEU+NR 93.8%（仅下降 0.4%）</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>遗忘集Acc ↓</th><th>保留集Acc ↑</th><th>重学习延迟τ ↑</th><th>MIA Acc ↓</th></tr>
+<tr><td>原始模型</td><td>95.1%</td><td>94.2%</td><td>0</td><td>89.3%</td></tr>
+<tr><td>Fine-tune</td><td>12.3%</td><td>93.5%</td><td>120</td><td>67.2%</td></tr>
+<tr><td>GA</td><td>8.7%</td><td>93.1%</td><td>340</td><td>58.4%</td></tr>
+<tr><td>SCRUB</td><td>10.1%</td><td>93.8%</td><td>510</td><td>55.1%</td></tr>
+<tr><td>IEU (GA+GD)</td><td>7.2%</td><td>93.6%</td><td>850</td><td>52.3%</td></tr>
+<tr><td class="best">IEU + NR</td><td class="best">5.8%</td><td class="best">93.8%</td><td class="best">1750</td><td class="best">49.1%</td></tr>
+<tr><td>从头重训（理想）</td><td>9.8%</td><td>94.2%</td><td>2000</td><td>50.0%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验验证了：(1) \(\alpha\)（噪声强度）的最优值在 0.1-0.3 之间——太小则噪声正则化不足，太大则保留集性能严重退化；(2) GA 的步长比 \(c = \eta_f/\eta_r\) 需要精心调节——过大的 GA 步长导致权重发散；(3) IEU+NR 在 LLM 遗忘任务上也有效（Llama-7B 上遗忘 TOFU 数据集，重学习延迟提升 8 倍），但计算开销比 GA 增加约 40%。局限性：噪声正则化的最优 \(\alpha\) 对任务和模型规模敏感，缺乏自适应选择机制；理论分析假设PL条件，对非凸深度网络的适用性需要更多验证。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文提出了"重学习收敛延迟"这一新颖的遗忘度量，捕获了传统度量忽略的权重空间记忆。IEU+NR 框架通过梯度上升 + 噪声正则化的组合，实现了接近从头重训的遗忘效果，同时保持了保留集性能。核心启示：有效的机器遗忘不仅要改变输出，更要破坏权重中的"学习捷径"，使重学习变得和首次学习一样困难。</p>
+</div>

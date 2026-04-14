@@ -1,0 +1,155 @@
+<!-- Multimodal Section -->
+<h2 class="section-title multimodal" id="sec-multi">🌐 Multimodal — 多模态大模型</h2>
+
+<!-- Paper 14: EXAONE 4.5 -->
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08644" target="_blank">EXAONE 4.5 Technical Report: LG's First Open-Weight Vision-Language Model</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 LG AI Research</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">VLM</span><span class="tag tag-multimodal">开源</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>EXAONE 系列是 LG AI Research 持续开发的基础模型，此前的 EXAONE 3.0 和 4.0 均为纯文本模型。EXAONE 4.5 是该系列<strong>首个视觉语言模型（VLM）</strong>，也是 LG 发布的首个开源权重 VLM，旨在为工业智能应用提供多模态理解能力。其架构将专用视觉编码器集成到现有 EXAONE 4.0 框架中，实现了原生多模态预训练。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 架构设计：视觉编码器集成</strong><br>
+EXAONE 4.5 采用"视觉编码器 + 连接器 + LLM"的三段式架构：<br>
+<strong>视觉编码器</strong>：基于 SigLIP-SO400M，输入分辨率 384×384，输出 729 个视觉 token（每 token 对应 14×14 patch）。<br>
+<strong>连接器</strong>：两层 MLP + 下采样，将 729 个视觉 token 压缩为 256 个，并投影到 LLM 的 embedding 空间。<br>
+<strong>LLM 骨架</strong>：EXAONE 4.0（7.8B 参数），不冻结——视觉 token 和文本 token 在同一 attention 层中处理。<br>
+关键设计选择：不使用动态分辨率（固定 384×384），通过图像分块（tiling）处理高分辨率图像——最多 9 块 tiles。
+</div>
+
+<div class="sub-module">
+<strong>② 三阶段训练流程</strong><br>
+<strong>Stage 1 — 视觉-语言对齐预训练</strong>：在 50M 图文对上训练连接器（冻结视觉编码器和 LLM），学习视觉→语言的映射。<br>
+<strong>Stage 2 — 多模态联合预训练</strong>：解冻全部参数，在混合数据（图文对 + 纯文本 + OCR + 文档理解 + 图表理解）上联合预训练。纯文本数据占比 40%，防止语言能力退化。<br>
+<strong>Stage 3 — 后训练</strong>：包含 SFT（多模态指令微调）、DPO（视觉偏好对齐）和 RLHF 三个子阶段。
+</div>
+
+<div class="sub-module">
+<strong>③ 工业场景优化</strong><br>
+针对 LG 的工业应用需求（如家电维修、制造质检、零售分析），EXAONE 4.5 在后训练中加入了大量工业场景数据：<br>
+(a) <strong>文档/表格理解</strong>：技术手册、检测报告、工单等结构化文档的信息提取；<br>
+(b) <strong>物体检测+描述</strong>：工业产品的缺陷识别和分类；<br>
+(c) <strong>多图对比</strong>：同一产品不同状态（正常/异常）的对比分析。<br>
+这些工业化需求驱动了 tile-based 高分辨率处理（需要看清小缺陷）和结构化输出能力。
+</div>
+
+<div class="sub-module">
+<strong>④ 开源策略与许可</strong><br>
+EXAONE 4.5 采用 CC BY-NC-ND 4.0 许可证——允许学术使用和非商业研究，但商业部署需要额外许可。发布三个版本：<br>
+<strong>EXAONE-4.5-VL-7.8B</strong>：完整版，视觉+语言全能力。<br>
+<strong>EXAONE-4.5-VL-2.4B</strong>：小模型版，适用于边缘设备。<br>
+<strong>EXAONE-4.5-VL-Instruct</strong>：指令微调版，直接可用于对话。
+</div>
+
+<div class="example-box">
+<br>
+<strong>工业场景应用：家电维修辅助</strong><br>
+输入：一张洗衣机内部的照片 + 用户描述"洗衣机发出异常噪音"<br>
+<ul>
+<li>EXAONE 4.5 识别出："图中可见排水泵位置有异物（疑似硬币/纽扣），导致转子不平衡"</li>
+<li>进一步输出："建议步骤：(1) 断电；(2) 打开排水泵盖板；(3) 清除异物；(4) 测试运行"</li>
+<li>对比 GPT-4o：能识别"洗衣机内部"但未定位到排水泵位置的异物</li>
+<li>EXAONE 在工业场景的细粒度识别上有优势，得益于工业数据的后训练</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>Benchmark</th><th>EXAONE-4.5-7.8B</th><th>Qwen2-VL-7B</th><th>InternVL-2-8B</th><th>LLaVA-Next-8B</th></tr>
+<tr><td>MMBench</td><td class="best">78.5</td><td>77.2</td><td>76.8</td><td>72.1</td></tr>
+<tr><td>MMMU</td><td>47.3</td><td class="best">49.1</td><td>46.5</td><td>41.8</td></tr>
+<tr><td>MathVista</td><td>58.2</td><td class="best">61.5</td><td>55.3</td><td>49.7</td></tr>
+<tr><td>OCRBench</td><td class="best">82.1</td><td>80.5</td><td>78.2</td><td>68.4</td></tr>
+<tr><td>DocVQA</td><td class="best">87.3</td><td>85.1</td><td>83.6</td><td>75.2</td></tr>
+<tr><td>RealWorldQA</td><td class="best">66.8</td><td>64.2</td><td>63.1</td><td>58.5</td></tr>
+<tr><td>纯语言(MMLU)</td><td>71.2</td><td class="best">73.8</td><td>70.5</td><td>67.1</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>技术报告详细分析了：(1) 视觉编码器选择——SigLIP 优于 CLIP（MMBench +2.1）和 EVA-02（+3.5），主要因为 SigLIP 的 sigmoid loss 对细粒度特征更友好；(2) Tile 数量从 1→9 可提升 OCRBench +8.3 和 DocVQA +11.2，但对通用 VQA 影响较小（+1.5）；(3) 纯文本数据在 Stage 2 中的占比从 20%→40% 可将 MMLU 从 68.5 提升至 71.2，但过高（60%）反而降低视觉性能。局限性：CC BY-NC-ND 许可证限制了商业社区的使用；7.8B 模型在需要深度推理的 MMMU 上仍显著落后于闭源大模型。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>EXAONE 4.5 的核心贡献在于证明了垂直领域（工业智能）的VLM开发路径：在通用视觉能力的基础上，通过工业场景数据的后训练，可以在文档/OCR/缺陷检测等工业任务上达到甚至超越通用VLM。对工业AI实践者的启示是：定制化后训练比更大的模型规模更有效。</p>
+</div>
+
+<!-- Paper 15: ECHO -->
+<div class="paper-card" id="p15">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09450" target="_blank">ECHO: Efficient Chest X-ray Report Generation with One-step Block Diffusion</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Midea AIRC, Beijing Jiaotong University, Dalian University of Technology</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">医学影像</span><span class="tag tag-multimodal">扩散模型</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>胸片报告生成（CXR-RG）是缓解放射科医生工作负担的关键应用。然而，传统自回归 VLM 的逐 token 解码导致推理延迟过高（通常 >2秒/报告），难以满足高通量临床需求。扩散语言模型（dLLM）可以并行生成所有 token，但直接应用 dLLM 生成医学报告面临两个挑战：(1) 多步去噪仍较慢；(2) 医学文本的幻觉问题在扩散生成中更严重。本文提出 ECHO，一个<strong>单步</strong>块扩散 VLM，兼顾效率和临床准确性。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 从自回归到扩散：AR-to-Diffusion 转化</strong><br>
+ECHO 的训练分两步：先训练一个自回归基线模型 ECHO-AR，然后将其转化为扩散模型 ECHO。<br>
+转化方法：利用 ECHO-AR 生成的 (图像, 报告) 对作为教师数据，训练一个 Block Diffusion 模型来学习"给定图像，一步生成完整报告"的映射。<br>
+Block Diffusion 的核心：将报告 token 序列分为 \(B\) 个块（每块 32 token），每个块内部做离散扩散（掩码→去噪），块之间通过因果注意力连接：<br>
+$$p(\mathbf{x}_1, ..., \mathbf{x}_B | \mathbf{v}) = \prod_{b=1}^{B} p_\theta(\mathbf{x}_b | \mathbf{x}_{<b}, \mathbf{v})$$
+</div>
+
+<div class="sub-module">
+<strong>② 直接条件蒸馏（DCD）</strong><br>
+关键创新：通过蒸馏将多步扩散压缩为<strong>单步生成</strong>。DCD 包含三个组件：<br>
+<strong>Step-wise Token Reweighting (SW)</strong>：在蒸馏过程中，对不同时间步的 token 分配不同权重——早期时间步（噪声大）给低权重，晚期时间步（接近完成）给高权重；<br>
+<strong>Cross-Entropy Loss on EOS (CE)</strong>：对结束标记 \<eos\> 单独施加交叉熵损失，确保模型学会在正确位置终止生成；<br>
+<strong>Reverse KL Divergence (RKL)</strong>：用反向 KL 散度对齐学生（单步）和教师（多步）的输出分布：<br>
+$$\mathcal{L}_{\text{RKL}} = \sum_{i} p_\text{student}(x_i) \log \frac{p_\text{student}(x_i)}{p_\text{teacher}(x_i)}$$
+反向 KL 鼓励学生模型的输出分布更集中（mode-seeking），减少幻觉。
+</div>
+
+<div class="sub-module">
+<strong>③ 幻觉缓解策略</strong><br>
+医学报告中的幻觉（生成不存在的病变描述）是核心安全问题。ECHO 采用两种策略：<br>
+<strong>Report-Aware Distillation (RAD)</strong>：在蒸馏数据中加入"负样本"——将真实报告与不匹配的图像配对，训练模型识别不一致。<br>
+<strong>Fused Block KV Cache</strong>：在推理时，将视觉 KV cache 与文本 KV cache 融合，确保每个生成块都"看到"完整的视觉信息——防止纯扩散生成中因并行解码导致的视觉信息遗漏。
+</div>
+
+<div class="sub-module">
+<strong>④ 推理效率分析</strong><br>
+ECHO 的单步推理流程：输入胸片 → 视觉编码（一次）→ 扩散单步去噪（一次，并行生成所有 token）→ 输出报告。<br>
+时间对比：自回归 VLM 需要 ~200 次 forward pass（报告 ~200 token），ECHO 仅需 <strong>1 次</strong> forward pass + KV cache 融合。<br>
+实际加速：在 A100 GPU 上，ECHO 的推理速度是自回归基线的 <strong>16.5x</strong>，延迟从 2.3 秒降至 <strong>0.14 秒/报告</strong>。
+</div>
+
+<div class="example-box">
+<br>
+<strong>CheXpert-Plus 数据集上的生成对比</strong><br>
+胸片：右下肺可见片状致密影，心影增大<br>
+<ul>
+<li><strong>真实报告</strong>："心影增大。右下肺可见斑片状浸润影，考虑肺炎可能。双侧肋膈角清晰。"</li>
+<li><strong>ECHO-AR (自回归)</strong>："心脏轮廓增大。右下肺区域可见不透明影，提示肺炎或肺不张。肋膈角锐利。"（延迟 2.3s）</li>
+<li><strong>ECHO (单步扩散)</strong>："心影明显增大。右下肺可见斑片状阴影，符合肺炎表现。无胸腔积液征象。"（延迟 <strong>0.14s</strong>）</li>
+<li>ECHO 单步生成的报告质量与自回归版本相当，但速度提升 16.5x</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>CIDEr ↑</th><th>ROUGE-L ↑</th><th>RateScore ↑</th><th>SemScore ↑</th><th>延迟 ↓</th></tr>
+<tr><td>R2Gen (AR)</td><td>3.12</td><td>49.8</td><td>50.2</td><td>41.3</td><td>1.8s</td></tr>
+<tr><td>CheXagent (AR)</td><td>3.45</td><td>52.1</td><td>53.8</td><td>44.5</td><td>2.5s</td></tr>
+<tr><td>ECHO-AR</td><td class="best">4.20</td><td class="best">56.1</td><td>57.4</td><td class="best">49.6</td><td>2.3s</td></tr>
+<tr><td class="best">ECHO (1-step)</td><td>3.72</td><td>53.3</td><td class="best">57.3</td><td>47.1</td><td class="best">0.14s</td></tr>
+<tr><td>ECHO (4-step)</td><td>4.05</td><td>55.0</td><td>57.2</td><td>48.3</td><td>0.42s</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>DCD 消融显示：(1) SW（Step-wise Reweighting）单独使用降低 PPL 但提升有限；(2) CE（EOS 损失）是关键组件——没有它，模型无法正确终止生成，产生大量重复文本；(3) SW+CE 的组合效果最好（CIDEr 从 3.61 提升至 4.20），而加入 RKL 反而略有下降（可能因为 RKL 的 mode-seeking 特性限制了文本多样性）。RAD 数据规模从 5K→50K 持续提升 RateScore（+4.8），说明负样本学习对减少幻觉至关重要。局限性：单步生成在 ROUGE-L 上比多步略低（53.3 vs 55.0），表明极致压缩仍有少量质量损失；仅在英文胸片报告上验证。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>ECHO 证明了"高临床准确性 + 极致解码效率"可以同时实现。通过 AR→Diffusion 转化 + DCD 蒸馏，ECHO 在 0.14 秒内生成质量与自回归模型相当的胸片报告，实现 16.5 倍加速。对医学 AI 部署的启示是：扩散语言模型在医学报告生成中有独特优势——并行解码天然适合高通量场景。</p>
+</div>

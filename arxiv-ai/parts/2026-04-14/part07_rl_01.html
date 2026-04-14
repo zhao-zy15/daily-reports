@@ -1,0 +1,80 @@
+<!-- RL Section -->
+<h2 class="section-title rl" id="sec-rl">🎯 RL — 强化学习与对齐</h2>
+
+<!-- Paper 6: Decomposing the Delta -->
+<div class="paper-card" id="p6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.08723" target="_blank">Decomposing the Delta: What Do Models Actually Learn from Preference Pairs?</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 IBM Research</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">DPO</span><span class="tag tag-rl">偏好学习</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>DPO、KTO 等偏好优化方法被广泛用于LLM对齐，但关于"偏好数据中到底是什么在驱动下游推理能力的提升"，我们几乎一无所知。偏好对 \((y^+, y^-)\) 包含多种信号：内容差异、格式差异、推理链长度差异、错误类型差异等。哪些因素是关键的？本文首次系统性地<strong>分解偏好对中的学习信号</strong>，将模糊的"偏好数据质量"问题转化为可量化的组件分析。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 两种 Delta 定义</strong><br>
+将偏好对 \((y^+, y^-)\) 的"差异"分解为两个正交维度：<br>
+<strong>Content Delta</strong>：\(\delta_C = \text{sem}(y^+) - \text{sem}(y^-)\)，即两个回答在语义空间中的距离，衡量"说了什么不同"。<br>
+<strong>Style Delta</strong>：\(\delta_S = \text{style}(y^+) - \text{style}(y^-)\)，包括格式（如是否使用列表/代码块）、长度、语气等表面特征的差异。<br>
+核心假设：模型从偏好对学到的东西 = \(f(\delta_C, \delta_S)\)，可以独立操控和测量。
+</div>
+
+<div class="sub-module">
+<strong>② 样本级 Delta 测量</strong><br>
+对于每个偏好对，定义三个量化指标：<br>
+(a) <strong>推理链 Delta</strong>：用 CoT 解析器提取 \(y^+\) 和 \(y^-\) 中的推理步骤数和逻辑跳跃，计算 \(\delta_R = |R^+ - R^-|\)；<br>
+(b) <strong>答案正确性 Delta</strong>：\(\delta_A = \mathbb{1}[y^+ \text{ correct}] - \mathbb{1}[y^- \text{ correct}]\)；<br>
+(c) <strong>表面形式 Delta</strong>：使用 token-level 编辑距离归一化：\(\delta_F = \text{EditDist}(y^+, y^-) / \max(|y^+|, |y^-|)\)。<br>
+关键发现：推理 Delta \(\delta_R\) 与下游推理任务增益的相关性为 <strong>\(r = 0.73\)</strong>，远高于答案正确性 Delta（\(r = 0.31\)）和表面形式 Delta（\(r = 0.12\)）。
+</div>
+
+<div class="sub-module">
+<strong>③ 控制实验：合成偏好数据</strong><br>
+为了因果验证（而非仅相关分析），合成三种偏好数据集：<br>
+(a) <strong>仅推理 Delta</strong>：\(y^+\) 和 \(y^-\) 有相同答案和格式，只有推理链的详细程度不同；<br>
+(b) <strong>仅答案 Delta</strong>：推理链长度相同，只有最终答案的正确性不同；<br>
+(c) <strong>仅格式 Delta</strong>：内容完全相同，只有 Markdown 格式/列表/代码块使用不同。<br>
+分别用 DPO 训练相同的 base model，在数学推理任务上评估。
+</div>
+
+<div class="sub-module">
+<strong>④ 主要发现与启示</strong><br>
+实验揭示了三个反直觉的结论：<br>
+(a) <strong>推理过程比正确答案更重要</strong>：仅推理 Delta 的 DPO 训练提升了 GSM8K +8.3%，而仅答案 Delta 仅提升 +2.1%；<br>
+(b) <strong>格式 Delta 是噪声</strong>：仅格式 Delta 的 DPO 训练对推理任务几乎无效（+0.5%），但会导致输出风格的过度拟合；<br>
+(c) <strong>大 Delta 不等于好</strong>：当 \(\delta_F > 0.8\)（即两个回答几乎完全不同），DPO 训练效果反而下降——模型无法从差异过大的对中提取有用信号。最佳 \(\delta_F \in [0.3, 0.6]\)。
+</div>
+
+<div class="example-box">
+<br>
+<strong>GSM8K 推理任务的 Delta 消融</strong><br>
+Base model: Llama-3-8B-Instruct, 训练数据: 10K 偏好对<br>
+<ul>
+<li><strong>Full Delta (推理+答案+格式)</strong>: GSM8K 72.1% → 79.8% (+7.7%)</li>
+<li><strong>仅推理 Delta</strong>: 72.1% → 80.4% (<strong>+8.3%</strong>, 最佳！)</li>
+<li><strong>仅答案 Delta</strong>: 72.1% → 74.2% (+2.1%)</li>
+<li><strong>仅格式 Delta</strong>: 72.1% → 72.6% (+0.5%)</li>
+<li>结论：推理过程的精细度差异是偏好学习的核心驱动力</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>偏好数据类型</th><th>GSM8K ↑</th><th>MATH ↑</th><th>ARC-C ↑</th><th>推理Delta相关性</th></tr>
+<tr><td>Base (无DPO)</td><td>72.1%</td><td>38.5%</td><td>55.2%</td><td>—</td></tr>
+<tr><td>完整偏好对</td><td>79.8%</td><td>44.3%</td><td>59.1%</td><td>0.73</td></tr>
+<tr><td class="best">仅推理 Delta</td><td class="best">80.4%</td><td class="best">45.1%</td><td class="best">59.8%</td><td class="best">0.73</td></tr>
+<tr><td>仅答案 Delta</td><td>74.2%</td><td>40.1%</td><td>56.3%</td><td>0.31</td></tr>
+<tr><td>仅格式 Delta</td><td>72.6%</td><td>38.8%</td><td>55.4%</td><td>0.12</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>进一步消融发现：(1) 在混合 Delta 实验中，随机丢弃 50% 的格式差异信号，DPO 效果反而提升 0.8%，证实格式 Delta 是负面噪声；(2) 推理 Delta 的效果对 base model 规模鲁棒——从 1B 到 70B 均观察到类似模式；(3) KTO 和 IPO 也展现相同的 Delta 分解模式，说明这不是 DPO 特有的。局限性：合成偏好数据可能过度简化了真实偏好的复杂性；当前分析主要针对数学推理，其他领域（如创意写作）的 Delta 分解模式可能不同。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文首次将偏好学习的"黑箱"分解为可量化的组件，揭示了一个关键洞察：推理过程的精细度差异是偏好对中最有价值的信号，而格式差异和答案正确性差异的贡献远小于预期。对偏好数据构建的实践启示：应该优先标注推理质量（步骤完整性、逻辑连贯性），而非仅关注最终答案是否正确。</p>
+</div>

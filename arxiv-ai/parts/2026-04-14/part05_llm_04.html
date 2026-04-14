@@ -1,0 +1,70 @@
+<!-- Paper 4: MoE Scaling Laws -->
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09175" target="_blank">Generalization and Scaling Laws for Mixture-of-Experts Transformers</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-10</span><br>
+<span>🏛 Amazon</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">MoE</span><span class="tag tag-llm">缩放律</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>MoE Transformer 通过稀疏路由大幅扩展模型容量，但其泛化理论远落后于稠密模型。现有 MoE 缩放律（如 Kaplan 等人的经验拟合）缺乏严格的理论基础：为什么 MoE 的泛化误差随参数增长的速率与稠密模型不同？路由组合爆炸对泛化有何影响？最优专家数量如何随数据和模型规模变化？本文首次建立了 MoE Transformer 的完整泛化理论，将<strong>活跃参数容量</strong>与<strong>路由组合开销</strong>干净地分离。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 条件路由覆盖数界（定理3.4）</strong><br>
+核心技术创新：将 MoE 路由视为对假设类的划分，在固定路由模式上条件化，再对所有可能的路由模式做 union bound。<br>
+推导 sup-norm 覆盖数界：<br>
+$$\log \mathcal{N}(\mathcal{F}_{\text{MoE}}, \epsilon, \|\cdot\|_\infty) \leq \underbrace{P_{\text{active}} \cdot \log(1/\epsilon)}_{\text{活跃参数容量}} + \underbrace{n \cdot E \cdot \log \binom{E}{k}}_{\text{MoE路由开销}}$$
+其中 \(P_{\text{active}}\) 是每个 token 的活跃参数数（top-\(k\) 专家的参数总和），\(E\) 是专家数，\(k\) 是每 token 激活的专家数。关键洞察：泛化误差由活跃参数决定，而非总参数——路由开销仅是对数级的。
+</div>
+
+<div class="sub-module">
+<strong>② 流形数据模型下的逼近-估计权衡（定理3.2）</strong><br>
+假设数据分布支撑在 \(d_0\) 维流形上，目标函数为 \(C^\beta\) 光滑。结合覆盖数界和标准 ERM 分析，推导出 MoE 的泛化界：<br>
+$$\text{Risk} \lesssim \underbrace{P_{\text{active}}^{-2\beta/d_0}}_{\text{逼近误差}} + \underbrace{\frac{P_{\text{active}} + nE\log\binom{E}{k}}{N}}_{\text{估计误差}}$$
+其中 \(N\) 是训练样本数。这意味着 MoE 的缩放律指数仅取决于活跃参数和数据流形维度，与总参数无关——理论上证实了"MoE 的泛化像一个与其活跃参数同等大小的稠密模型"。
+</div>
+
+<div class="sub-module">
+<strong>③ 最优专家数量定理</strong><br>
+由泛化界最小化得到最优专家数 \(E^*\) 作为 \(N\) 和 \(k\) 的函数：<br>
+$$E^* \propto \left(\frac{N}{n \cdot k}\right)^{d_0 / (2\beta + d_0)}$$
+关键预测：(a) 数据越多，最优专家数越多（更多数据支撑更大的路由空间）；(b) top-\(k\) 增加时最优 \(E\) 减少（每个 token 用更多专家，减少了路由多样性需求）；(c) 存在一个"compute-optimal frontier"——给定计算预算 \(C\)，最优 \(E^*\) 和 \(P_{\text{active}}^*\) 可联合求解。
+</div>
+
+<div class="sub-module">
+<strong>④ 实验验证：与先验 MoE 缩放律的一致性</strong><br>
+在最多 5B 参数的 MoE Transformer 上系统验证理论预测，覆盖 \(E \in \{2, 4, 8, 16, 32, 64\}\) 和 \(k \in \{1, 2, 4\}\)。<br>
+发现：(a) 实验拟合的缩放指数 \(\alpha_C = 0.52 \pm 0.03\)，与理论预测的 \(2\beta/(2\beta + d_0) = 0.55\)（取 \(\beta=1, d_0=3.6\)）高度吻合；(b) 最优 \(E^*\) 随 \(N\) 的增长斜率也与理论一致；(c) 路由开销项在实际规模下确实是对数级的，不是泛化的主要瓶颈。
+</div>
+
+<div class="example-box">
+<br>
+<strong>Compute-Optimal Frontier 实验</strong><br>
+固定总训练 FLOPs = 10^19，扫描所有 (模型大小, 数据量, 专家数) 组合：<br>
+<ul>
+<li>稠密基线最优配置：1.3B 参数 + 30B tokens → PPL = 15.2</li>
+<li>MoE 最优配置：1.3B 活跃 + 8 专家 top-2 + 45B tokens → <strong>PPL = 13.8</strong>（-9.2%）</li>
+<li>理论预测的最优 \(E^* = 7.3\)，实测 \(E^* = 8\)，高度一致</li>
+<li>继续增加到 32 专家：PPL = 14.1，路由开销开始抵消容量增益</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>配置</th><th>活跃参数</th><th>总参数</th><th>C4 PPL ↓</th><th>理论预测 PPL</th><th>缩放指数 α</th></tr>
+<tr><td>Dense 1.3B</td><td>1.3B</td><td>1.3B</td><td>15.2</td><td>15.0</td><td>0.51</td></tr>
+<tr><td>MoE 1.3B (E=4, k=2)</td><td>1.3B</td><td>3.9B</td><td>14.3</td><td>14.1</td><td>0.53</td></tr>
+<tr><td class="best">MoE 1.3B (E=8, k=2)</td><td>1.3B</td><td class="best">6.5B</td><td class="best">13.8</td><td class="best">13.6</td><td class="best">0.55</td></tr>
+<tr><td>MoE 1.3B (E=32, k=2)</td><td>1.3B</td><td>20.8B</td><td>14.1</td><td>14.4</td><td>0.52</td></tr>
+<tr><td>MoE 5B (E=8, k=2)</td><td>5B</td><td>25B</td><td>11.2</td><td>11.0</td><td>0.54</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融验证了理论的关键预测：(1) 固定活跃参数，增加 \(E\) 的效果符合 "先降后升" 的 U 型曲线（对应路由开销的影响）；(2) \(\beta\) 的拟合值在不同数据集间稳定（C4: 1.0, Pile: 1.1, RedPajama: 0.95），暗示自然语言有一个相对固定的"光滑度"；(3) 理论在小规模（<500M）时误差较大（±15%），但在 1B+ 规模时精确度极高（±3%）。局限性：理论假设了 ERM 学习规则和 squared loss，真实的 cross-entropy 训练可能引入额外因素；未考虑 expert parallelism 的通信开销。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这是首个干净分离活跃容量与路由开销的 MoE 泛化理论。核心信息：MoE 的泛化性能取决于活跃参数而非总参数，路由组合爆炸的代价仅是对数级的。这为 MoE 架构设计提供了理论指导：给定计算预算，可以用理论公式直接计算最优专家数和激活策略，而不需要大规模超参搜索。</p>
+</div>
