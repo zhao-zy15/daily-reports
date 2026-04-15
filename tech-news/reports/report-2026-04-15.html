@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-04-15</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0c0;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --gold: #fbbf24;
+            --red: #ef4444;
+            --green: #22c55e;
+            --purple: #a78bfa;
+            --border: #2d2d54;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+
+        /* Header */
+        .report-header {
+            text-align: center;
+            padding: 40px 30px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #38bdf8, #a78bfa, #f472b6, #fbbf24);
+        }
+        .report-header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .report-header .date { color: var(--gold); font-size: 1.1rem; font-weight: 600; }
+        .report-header .subtitle { color: var(--text-secondary); margin-top: 8px; }
+
+        .back-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--accent); text-decoration: none; font-size: 0.9rem;
+            margin-bottom: 20px; padding: 8px 16px;
+            background: var(--bg-secondary); border-radius: 8px;
+            border: 1px solid var(--border); transition: all 0.3s;
+        }
+        .back-link:hover { background: var(--accent); color: white; }
+
+        /* TOC */
+        .toc {
+            background: var(--bg-secondary); border-radius: 16px;
+            padding: 25px 30px; margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+        .toc h2 { font-size: 1.2rem; margin-bottom: 15px; color: var(--gold); }
+        .toc ul { list-style: none; }
+        .toc li { padding: 6px 0; }
+        .toc a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+        .toc a:hover { color: var(--gold); }
+
+        /* Section */
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+        }
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        /* News card */
+        .news-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 22px 25px;
+            margin-bottom: 18px;
+            border-left: 4px solid var(--accent);
+            transition: transform 0.2s;
+        }
+        .news-card:hover { transform: translateX(5px); }
+        .news-card.top { border-left-color: var(--gold); }
+        .news-card h3 {
+            font-size: 1.15rem;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        .news-card h3 .badge {
+            display: inline-block;
+            background: var(--gold);
+            color: #000;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 8px;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+        .news-card .meta {
+            display: flex; flex-wrap: wrap; gap: 12px;
+            margin-bottom: 12px; font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .news-card .meta span { display: flex; align-items: center; gap: 4px; }
+        .news-card .content { color: var(--text-secondary); line-height: 1.9; }
+        .news-card .content p { margin-bottom: 10px; }
+        .news-card .content strong { color: var(--text-primary); }
+        .news-card .source-link {
+            display: inline-flex; align-items: center; gap: 4px;
+            color: var(--accent); text-decoration: none;
+            font-size: 0.85rem; margin-top: 8px;
+            padding: 4px 10px; background: rgba(56, 189, 248, 0.1);
+            border-radius: 6px; transition: all 0.2s;
+        }
+        .news-card .source-link:hover { background: rgba(56, 189, 248, 0.2); }
+
+        /* Quick news */
+        .quick-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--purple);
+            transition: transform 0.2s;
+        }
+        .quick-card:hover { transform: translateX(3px); }
+        .quick-card h4 { font-size: 1rem; margin-bottom: 6px; }
+        .quick-card .desc { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.7; }
+        .quick-card .source-link {
+            display: inline-flex; align-items: center; gap: 4px;
+            color: var(--accent); text-decoration: none;
+            font-size: 0.82rem; margin-top: 6px;
+        }
+
+        /* Category tag */
+        .cat-tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .cat-llm { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+        .cat-bio { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+        .cat-robot { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .cat-video { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .cat-auto { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .cat-bigtech { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .cat-vc { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+
+        .stats-bar {
+            display: flex; flex-wrap: wrap; gap: 15px;
+            justify-content: center; margin: 20px 0;
+        }
+        .stat-item {
+            background: var(--bg-card);
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-item .num { font-size: 1.5rem; font-weight: 700; color: var(--gold); }
+        .stat-item .label { font-size: 0.8rem; color: var(--text-secondary); }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .report-header h1 { font-size: 1.5rem; }
+            .section { padding: 20px; }
+            .news-card { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../" class="back-link">← 返回科技动态首页</a>
+
+    <div class="report-header">
+        <h1>🤖 科技与财经每日动态</h1>
+        <div class="date">📅 2026年4月15日 · 星期三</div>
+        <div class="subtitle">覆盖七大垂直赛道 · 22条深度追踪</div>
+        <div class="stats-bar">
+            <div class="stat-item"><div class="num">22</div><div class="label">新闻总数</div></div>
+            <div class="stat-item"><div class="num">5</div><div class="label">核心焦点</div></div>
+            <div class="stat-item"><div class="num">7</div><div class="label">覆盖领域</div></div>
+        </div>
+    </div>
+
+    <!-- TOC -->
+    <div class="toc">
+        <h2>📑 目录导航</h2>
+        <ul>
+            <li><a href="#top5">🌟 核心焦点 — Top 5 深度解析</a></li>
+            <li><a href="#llm">🧠 大模型与基础AI</a></li>
+            <li><a href="#bio">🧬 脑机接口与生物科技</a></li>
+            <li><a href="#robot">🤖 具身智能与机器人</a></li>
+            <li><a href="#video">🎬 视频与多模态生成</a></li>
+            <li><a href="#auto">🚗 自动驾驶与出行</a></li>
+            <li><a href="#bigtech">🏢 科技巨头与财报</a></li>
+            <li><a href="#vc">💰 创投与融资</a></li>
+        </ul>
+    </div>
+
+    <!-- ========== TOP 5 ========== -->
+    <div class="section" id="top5">
+        <h2 class="section-title">🌟 核心焦点 — Top 5 深度解析</h2>
+
+        <!-- TOP 1 -->
+        <div class="news-card top">
+            <h3><span class="badge">TOP 1</span> Amazon 斥资$116亿收购Globalstar，太空卫星大战全面升级</h3>
+            <div class="meta">
+                <span><span class="cat-tag cat-bigtech">科技巨头</span></span>
+                <span>📅 2026-04-14</span>
+                <span>🏢 Amazon / Globalstar / Apple</span>
+            </div>
+            <div class="content">
+                <p><strong>事件核心：</strong>Amazon于4月14日宣布以约<strong>$116亿</strong>收购卫星通讯运营商Globalstar，这是继Project Kuiper之后，贝索斯帝国在太空互联网领域最重大的布局。此举直接对标马斯克的Starlink。</p>
+                <p><strong>关键细节：</strong>Amazon与Apple签署长期协议，收购完成后Amazon Leo卫星网络将为支持的iPhone和Apple Watch机型提供卫星通信服务（包括紧急SOS、短信等），预计2027年完成交易。这意味着Apple在卫星直连服务上从SpaceX转向Amazon阵营。</p>
+                <p><strong>产业影响：</strong>太空卫星互联网进入"三国杀"时代——SpaceX Starlink、Amazon Leo、以及中国的千帆计划。此交易标志着科技巨头从地面AI基础设施竞赛延伸至太空通讯基础设施。AMZN股价收涨3.8%。</p>
+            </div>
+            <a href="https://www.cnbc.com/2026/04/14/amazon-globalstar-satellite-leo-internet.html" class="source-link" target="_blank">📰 CNBC 原文 →</a>
+        </div>
+
+        <!-- TOP 2 -->
+        <div class="news-card top">
+            <h3><span class="badge">TOP 2</span> Google DeepMind发布Gemini Robotics-ER 1.6，机器人空间推理能力飞跃</h3>
+            <div class="meta">
+                <span><span class="cat-tag cat-robot">具身智能</span></span>
+                <span>📅 2026-04-14</span>
+                <span>🏢 Google DeepMind / Boston Dynamics</span>
+            </div>
+            <div class="content">
+                <p><strong>事件核心：</strong>Google DeepMind发布<strong>Gemini Robotics-ER 1.6</strong>，这是专为机器人设计的"具身推理"大模型的重大升级。该模型作为机器人的"认知大脑"，不直接控制肢体，而负责空间理解、任务规划和环境推理。</p>
+                <p><strong>三大突破：</strong>① <strong>仪表读取</strong>：与Boston Dynamics Spot合作，机器人可自主巡检工厂、读取仪表盘，成功率从ER 1.5的23%飙升至<strong>93%</strong>（结合代理视觉）；② <strong>精确指向</strong>：像素级空间指认，大幅减少物体识别"幻觉"；③ <strong>多视角推理</strong>：融合多个摄像头视角，在遮挡和动态环境中做出正确判断。</p>
+                <p><strong>产业影响：</strong>该模型意味着机器人从实验室"抓取任务"向真实工业巡检场景迈进了关键一步。Google正在构建"推理层+执行层"分离的机器人AI架构，与NVIDIA的物理AI形成双雄格局。</p>
+            </div>
+            <a href="https://deepmind.google/blog/gemini-robotics-er-1-6/" class="source-link" target="_blank">📰 Google DeepMind 博客 →</a>
+        </div>
+
+        <!-- TOP 3 -->
+        <div class="news-card top">
+            <h3><span class="badge">TOP 3</span> ASML Q1财报超预期：AI需求拉动上调全年指引，光刻机龙头稳如磐石</h3>
+            <div class="meta">
+                <span><span class="cat-tag cat-bigtech">科技巨头</span></span>
+                <span>📅 2026-04-15</span>
+                <span>🏢 ASML</span>
+            </div>
+            <div class="content">
+                <p><strong>事件核心：</strong>全球光刻机垄断巨头ASML于4月15日发布Q1 2026财报：净销售额<strong>€88亿</strong>（预期€85亿），净利润<strong>€28亿</strong>（预期€25亿），双双超分析师预期。更重要的是，公司将2026年全年净销售预测从€340-390亿<strong>上调至€360-400亿</strong>。</p>
+                <p><strong>上调原因：</strong>AI芯片需求持续爆发，台积电、三星、Intel等大客户的先进制程扩产计划维持强劲，EUV光刻机订单饱满。据Stanford 2026 AI Index报告，全球AI算力容量自2021年以来增长30倍，NVIDIA占据60%以上份额——这些算力背后都需要ASML的光刻机。</p>
+                <p><strong>产业影响：</strong>ASML作为AI基础设施的"卖水人"，其财报是整个半导体产业链的晴雨表。全年指引上调表明AI CapEx周期远未见顶，利好整个芯片产业链。</p>
+            </div>
+            <a href="https://www.asml.com/en/investors/financial-results/q1-2026" class="source-link" target="_blank">📰 ASML 投资者关系 →</a>
+        </div>
+
+        <!-- TOP 4 -->
+        <div class="news-card top">
+            <h3><span class="badge">TOP 4</span> AGIBOT G2实现消费电子精密制造产线部署，具身智能首次规模化落地</h3>
+            <div class="meta">
+                <span><span class="cat-tag cat-robot">具身智能</span></span>
+                <span>📅 2026-04-15</span>
+                <span>🏢 AGIBOT（智元机器人）/ Longcheer（龙旗科技）</span>
+            </div>
+            <div class="content">
+                <p><strong>事件核心：</strong>智元机器人（AGIBOT）4月15日宣布，其AGIBOT G2人形机器人已成功部署到龙旗科技（Longcheer）位于南昌的<strong>平板电脑生产线</strong>，成为全球首个在消费电子精密制造核心工序中规模化运行的具身智能系统。</p>
+                <p><strong>惊人数据：</strong>从创新到生产仅用<strong>4个月</strong>；吞吐量高达每小时310台（UPH）；每操作周期19-20秒；连续运行成功率超<strong>99.9%</strong>；36小时完成产线整合；已累计连续运行超140小时。不需定制工装，支持混线生产。</p>
+                <p><strong>产业影响：</strong>这是继AGIBOT上月第10,000台机器人下线后的又一里程碑，标志着人形机器人从实验室/展会正式进入"真金白银"的量产制造环境。AGIBOT计划Q3将部署扩展至100台，并向汽车、半导体、能源行业拓展。TrendForce预测2026年中国人形机器人产量将激增94%。</p>
+            </div>
+            <a href="https://www.prnewswire.com/news-releases/agibot-and-longcheer-technology-achieve-worlds-first-embodied-ai-deployment-in-consumer-electronics-precision-manufacturing-mass-production-line-302742853.html" class="source-link" target="_blank">📰 PR Newswire 原文 →</a>
+        </div>
+
+        <!-- TOP 5 -->
+        <div class="news-card top">
+            <h3><span class="badge">TOP 5</span> Snap大裁员+Perplexity $4亿交易告吹：社交媒体AI转型阵痛</h3>
+            <div class="meta">
+                <span><span class="cat-tag cat-bigtech">科技巨头</span></span>
+                <span>📅 2026-04-15</span>
+                <span>🏢 Snap / Perplexity AI</span>
+            </div>
+            <div class="content">
+                <p><strong>事件核心：</strong>据The Verge的Alex Heath爆料，Snap与AI搜索独角兽Perplexity之间价值<strong>$4亿</strong>（现金+股票）的搜索合作协议已经破裂。Snap预计将在周三宣布<strong>大规模裁员</strong>，部分团队裁员幅度高达50%。</p>
+                <p><strong>背景分析：</strong>Snap近年来在AI化方面进展缓慢，试图通过接入Perplexity的AI搜索能力提升Snapchat的搜索体验。但交易告吹意味着Snap需要另寻出路。唯一亮点是：Snap子公司Specs（AR眼镜）将在此轮调整中获得更多资源，其发布节奏将对标Apple Vision Pro。</p>
+                <p><strong>产业影响：</strong>这是AI时代社交媒体"不转型就淘汰"的典型案例。Meta全面拥抱AI（WhatsApp+扎克伯格AI分身），而Snap却在裁员。AI搜索合作模式的失败也为Perplexity的商业化前景蒙上阴影。</p>
+            </div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme / The Verge →</a>
+        </div>
+    </div>
+
+    <!-- ========== 前沿快讯 ========== -->
+
+    <!-- 大模型与基础AI -->
+    <div class="section" id="llm">
+        <h2 class="section-title">🧠 大模型与基础AI</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-llm">大模型</span> Anthropic即将发布Claude Opus 4.7及AI网站/演示设计工具</h4>
+            <div class="desc">消息人士透露，Anthropic正准备本周内发布新一代旗舰模型Claude Opus 4.7，以及一款专门用于设计网站和演示文稿的AI工具。这将是继Opus 4.6发布仅数月后的又一次重大升级，同时Anthropic有用户指其悄悄降低现有模型性能以管理算力容量，公司员工对此予以否认。</div>
+            <a href="https://www.techmeme.com/260414/p34" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-llm">大模型</span> OpenAI发布GPT-5.4-Cyber：首个专攻防御性网络安全的受限模型</h4>
+            <div class="desc">OpenAI推出GPT-5.4-Cyber模型，专门针对防御性网络安全用例微调，目前仅向"Trusted Access for Cyber"（TAC）计划的特定参与者开放。该模型降低了拒绝限制，支持二进制逆向工程等高级防御工作流，被视为与Anthropic Mythos在网络安全领域的正面对抗。</div>
+            <a href="https://aitoolly.com/ai-news/2026-04-15" class="source-link" target="_blank">📰 AIToolly →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-llm">大模型</span> Anthropic发布Claude Code Routines：开发者自动化工作流新功能</h4>
+            <div class="desc">Anthropic发布Claude Code桌面版重大更新，增加侧边栏管理多会话、拖放布局、集成终端和文件编辑器。同时推出"Routines"功能，允许开发者安排并自动执行重复性软件开发任务，任务在云端运行，无需保持电脑开启，标志着AI编程工具从"辅助"向"自主执行"演进。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-llm">大模型</span> 斯坦福AI Index 2026重磅发布：中美AI差距缩至2.7%，全球投资$5810亿</h4>
+            <div class="desc">斯坦福大学发布423页《AI Index 2026》报告：2025年全球AI投资达创纪录的$5810亿（翻倍增长），美国超$3440亿；中国在工业机器人部署领先（29.5万台 vs 日本4.45万台）；前沿模型碳排放巨大（Grok 4训练产生7.2万吨CO₂）；AI基准测试性能飙升，但简单任务（如读模拟时钟）仍表现糟糕。</div>
+            <a href="https://spectrum.ieee.org/state-of-ai-index-2026" class="source-link" target="_blank">📰 IEEE Spectrum →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-llm">大模型</span> Claude Enterprise定价重大调整：从固定订阅改为"$20/月+Token消耗"</h4>
+            <div class="desc">Anthropic调整企业版定价模式，从此前的固定订阅制改为"$20/月/用户 + 按Token消耗量计费"的混合模式。这意味着重度使用AI的企业用户成本将显著上升，轻度用户则可能降低。此举反映了AI服务商在高速增长期开始关注单位经济效益。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+    </div>
+
+    <!-- 脑机接口与生物科技 -->
+    <div class="section" id="bio">
+        <h2 class="section-title">🧬 脑机接口与生物科技</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bio">脑机接口</span> 36氪深度：2026脑机接口风口能飞多高？三次脉冲式上涨复盘</h4>
+            <div class="desc">36氪发布深度报道，复盘中国脑机接口产业在2025年8月、2026年1月和3月三次脉冲式上涨。七部门联合印发《关于推动脑机接口产业创新发展的实施意见》推动政策利好，叠加BCI新国标发布、CorTec获FDA突破性认定等里程碑事件，中国BCI产业正从实验室加速走向临床试验。</div>
+            <a href="https://www.36kr.com/p/3766512444703233" class="source-link" target="_blank">📰 36氪 →</a>
+        </div>
+    </div>
+
+    <!-- 具身智能与机器人 -->
+    <div class="section" id="robot">
+        <h2 class="section-title">🤖 具身智能与机器人</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-robot">具身智能</span> 中国南昌四台人形机器人完成8小时产线直播班：新华社报道</h4>
+            <div class="desc">新华社报道，在南昌一家平板电脑制造车间，四台人形机器人成功完成了8小时直播生产班。这是继AGIBOT今日官宣消费电子产线部署后，又一个中国人形机器人进入真实工业场景的标志性事件，"具身AGI时代"正式从口号变为现实。</div>
+            <a href="https://english.news.cn/20260414/5b2a807212414d68a59b55911bb54427/c.html" class="source-link" target="_blank">📰 新华社 →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-robot">具身智能</span> PIA Automation成立具身AI与人形机器人新业务部</h4>
+            <div class="desc">德国工业自动化巨头PIA Automation于4月14日宣布成立全新业务部门——"Embodied AI & Humanoid Robotics"，将人工智能、机器人技术与制造自动化深度结合。这标志着欧洲老牌工业自动化企业正式入局具身智能赛道，产业从中美双雄格局向多极化发展。</div>
+            <a href="https://www.newsdirectory3.com/pia-automation-launches-embodied-ai-and-humanoid-robotics-segment/" class="source-link" target="_blank">📰 NewsDirectory →</a>
+        </div>
+    </div>
+
+    <!-- 视频与多模态生成 -->
+    <div class="section" id="video">
+        <h2 class="section-title">🎬 视频与多模态生成</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-video">视频生成</span> 生数科技发布Vidu Q3 Reference-to-Video：参考图生成视频新范式</h4>
+            <div class="desc">新加坡AI公司生数科技（ShengShu Technology）于4月13日全球发布Vidu Q3 Reference-to-Video功能，支持从参考图像生成视频，同时扩展视觉和音频能力。Vidu Q3此前已在Artificial Analysis视频竞技场获得1241分排名全球前列，此次新功能进一步巩固其在AI视频生成领域的领先地位。</div>
+            <a href="https://www.morningstar.com/news/pr-newswire/20260413cn32592/shengshu-launches-vidu-q3-reference-to-video-with-expanded-visual-and-audio-capabilities" class="source-link" target="_blank">📰 Morningstar / PR Newswire →</a>
+        </div>
+    </div>
+
+    <!-- 自动驾驶与出行 -->
+    <div class="section" id="auto">
+        <h2 class="section-title">🚗 自动驾驶与出行</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-auto">自动驾驶</span> Tesla FSD欧洲扩张进行时：荷兰首批获准后持续发酵</h4>
+            <div class="desc">荷兰RDW于4月10日正式批准Tesla FSD（Supervised）的类型认证，成为欧盟首个允许该功能的国家。时隔数日该话题持续发酵——有媒体欢呼"FSD终于进入欧洲"，也有安全组织表示"该决定令人深感不安"。经过18个月、160万公里的审查测试，这一批准可能为其他欧洲国家开启先例。</div>
+            <a href="https://www.whichev.net/2026/04/15/teslas-full-self-driving-supervised-edges-closer-to-europe-as-netherlands-grants-first-approval/" class="source-link" target="_blank">📰 WhichEV →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-auto">自动驾驶</span> Pony.ai PonyWorld 2.0持续获关注：自进化物理AI引擎</h4>
+            <div class="desc">小马智行（Pony.ai）推出的PonyWorld 2.0自进化世界模型持续获得业界关注。该引擎能让自动驾驶系统在虚拟环境中"自我进化"，加速开发和部署流程，被视为继端到端大模型后自动驾驶领域的又一技术范式突破。</div>
+            <a href="https://futurecio.tech/pony-ai-unveils-self-improving-physical-ai-engine-for-autonomous-driving/" class="source-link" target="_blank">📰 FutureCIO →</a>
+        </div>
+    </div>
+
+    <!-- 科技巨头与财报 -->
+    <div class="section" id="bigtech">
+        <h2 class="section-title">🏢 科技巨头与财报</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> Nvidia股价暴涨18%：黄仁勋宣布GPU订单超$1万亿，需求到2027年</h4>
+            <div class="desc">Nvidia CEO黄仁勋宣布公司已获得超过<strong>$1万亿</strong>的GPU订单，需求将持续到2027年，主要由大型科技公司的AI基础设施投资推动。消息推动NVDA股价单日暴涨18%，再次证明AI算力"军备竞赛"仍在加速。</div>
+            <a href="https://aitoolly.com/ai-news/2026-04-15" class="source-link" target="_blank">📰 AIToolly →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> Meta与Broadcom扩大AI芯片合作至2029年：MTIA定制芯片升级</h4>
+            <div class="desc">Meta与Broadcom宣布将AI芯片合作伙伴关系延长至2029年，共同开发多代Meta的定制AI芯片（MTIA）。Meta承诺大规模采用Broadcom技术支持其AI基础设施。同时，Broadcom CEO Hock Tan将不再连任Meta董事会成员，避免利益冲突。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> Uber CTO：AI编码工具使用激增，2026年AI预算几个月就花光</h4>
+            <div class="desc">Uber CTO透露，由于Anthropic Claude Code等AI编码工具在工程团队中爆发式使用，Uber在2026年刚开始几个月就用完了全年的AI预算。这一"甜蜜的烦恼"折射出AI工具在企业内部渗透速度远超预期，也为AI服务商的定价策略敲响警钟。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> Google为Chrome推出"Skills"功能：将AI提示词变为一键工具</h4>
+            <div class="desc">Google为Chrome浏览器推出"Skills"新功能，允许用户保存和重用自定义AI提示词与工作流，通过键盘快捷键一键运行。同时Google还推出了Windows桌面应用，提供类似macOS Spotlight的搜索框，支持网络搜索、本地文件和Google Drive文件搜索。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> 苹果曾致信参议员：因色情深伪内容威胁下架马斯克Grok</h4>
+            <div class="desc">据报道，苹果今年1月曾致信参议员，透露因Grok能够生成色情深度伪造内容，曾正式通知X（原Twitter）该应用可能违反App Store指南并面临下架。此事再次凸显AI生成内容监管的紧迫性，以及平台分发商对AI应用的生杀大权。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> Lumen Technologies以$57.5亿将消费者光纤业务出售给AT&T</h4>
+            <div class="desc">Lumen Technologies宣布以$57.5亿价格将消费者光纤业务出售给AT&T，其中$48亿用于偿还债务。该交易反映出传统电信公司正加速剥离非核心资产，将资源聚焦于企业级AI基础设施和网络服务。</div>
+            <a href="https://aitoolly.com/ai-news/2026-04-15" class="source-link" target="_blank">📰 AIToolly →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-bigtech">科技巨头</span> 微软扩展挪威AI基础设施：与Nscale合作部署3万块Nvidia芯片</h4>
+            <div class="desc">微软通过与Nscale的合作，将在挪威部署30,000块Nvidia芯片，这是其此前$62亿北欧AI基础设施承诺的延续。北欧地区凭借丰富的绿色能源和凉爽气候，正成为全球AI数据中心的热门选址地。</div>
+            <a href="https://aitoolly.com/ai-news/2026-04-15" class="source-link" target="_blank">📰 AIToolly →</a>
+        </div>
+    </div>
+
+    <!-- 创投与融资 -->
+    <div class="section" id="vc">
+        <h2 class="section-title">💰 创投与融资</h2>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-vc">创投</span> Fluidstack寻求$10亿融资/$180亿估值：Anthropic $500亿数据中心合作伙伴</h4>
+            <div class="desc">云计算创业公司Fluidstack在与Anthropic达成$500亿数据中心建设协议后，正寻求$10亿新融资，估值高达$180亿。Fluidstack此前还放弃了法国$115亿数据中心项目，转向美国扩张。AI算力基础设施公司正在成为风投新宠，估值增速甚至超过AI模型公司。</div>
+            <a href="https://aitoolly.com/ai-news/2026-04-15" class="source-link" target="_blank">📰 AIToolly →</a>
+        </div>
+
+        <div class="quick-card">
+            <h4><span class="cat-tag cat-vc">创投</span> Mintlify获$4500万B轮：AI文档生成领域新独角兽胚子，a16z领投</h4>
+            <div class="desc">AI文档生成公司Mintlify宣布完成$4500万B轮融资，估值达$5亿，由a16z和Salesforce Ventures领投。Mintlify通过AI自动生成和维护技术文档，在开发者工具赛道中脱颖而出，是"AI for Developer Tools"细分领域的代表性公司。</div>
+            <a href="https://www.techmeme.com/260415/p1" class="source-link" target="_blank">📰 Techmeme →</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>📊 本报告由 WorkBuddy AI 自动生成 · 数据来源截至 2026-04-15 17:30 CST</p>
+        <p>覆盖 22 条新闻 · 7 大赛道 · 信源均为过去 24 小时内可公开访问链接</p>
+        <p><a href="../">← 返回科技动态首页</a> · <a href="../../">返回报告中心</a></p>
+    </footer>
+</div>
+</body>
+</html>
