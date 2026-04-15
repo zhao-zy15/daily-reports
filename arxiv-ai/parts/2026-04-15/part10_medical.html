@@ -1,0 +1,58 @@
+<h2 class="section-title medical">⚕️ Medical — 医学大模型</h2>
+
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11547">Eliciting Medical Reasoning with Knowledge-enhanced Data Synthesis: A Semi-Supervised Reinforcement Learning Approach</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Wenzhou Medical University, Shanghai AI Laboratory</span><br>
+<span class="tag tag-med">Medical</span><span class="tag tag-rl">RL</span><span class="tag tag-med">Reasoning</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>医学推理要求模型不仅要给出正确答案，还要展示可解释的临床推理过程。然而，高质量医学推理数据稀缺且标注成本极高。本文提出结合知识增强的数据合成与半监督 RL 来激发小型 LLM 的医学推理能力，无需大规模人工标注。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 知识增强的推理数据合成</strong><br>从医学知识图谱（UMLS、PrimeKG）中提取疾病-症状-检查-治疗的关系链，用强模型（GPT-4）将关系链扩展为完整的临床推理 CoT。合成管道：症状 → 鉴别诊断 → 排除检查 → 确诊依据 → 治疗方案。每个 CoT 步骤锚定在知识图谱实体上，确保医学事实准确性。</div>
+<div class="sub-module"><strong>② 半监督推理标签传播</strong><br>对无标签的临床问答对，使用知识图谱对齐来自动推断推理路径：$$\text{Path}(q) = \text{ShortestPath}_{KG}(\text{entities}(q), \text{entities}(a))$$ 将图路径转化为推理步骤作为弱监督信号，再用一致性过滤保留质量较高的样本。</div>
+<div class="sub-module"><strong>③ 可验证医学奖励</strong><br>RL 奖励函数结合三个维度：(1) 答案正确性（与标准答案比对）；(2) 推理一致性（每步结论是否与最终答案一致）；(3) 知识准确性（提到的医学实体和关系是否在知识图谱中有据可查）：$$R = \alpha R_{\text{correct}} + \beta R_{\text{consist}} + \gamma R_{\text{knowledge}}$$</div>
+<div class="sub-module"><strong>④ 防止标签崩溃的正则化</strong><br>发现纯 RL 训练容易导致模型"捷径推理"（跳过诊断步骤直接给答案）。引入推理长度正则化：当推理步骤数低于阈值时施加惩罚：$$R_{\text{reg}} = -\max(0, \tau - |\text{steps}(r)|)$$</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>MedQA 临床推理案例</strong><br><br><strong>问题</strong>：65岁男性，持续咳嗽3个月，体重下降10kg，胸片见右肺门肿块。最可能的诊断？<br><strong>模型推理</strong>：<br>Step 1: 65岁男性+慢性咳嗽+体重下降 → 恶性肿瘤高度怀疑 [KG: age>60 + weight_loss → malignancy risk ↑]<br>Step 2: 右肺门肿块 → 中央型肺癌（鳞癌或小细胞癌）[KG: hilar_mass → central_lung_cancer]<br>Step 3: 排除结核（无发热盗汗）、结节病（无双侧肺门淋巴结肿大）<br>Step 4: 确诊：<strong>肺鳞状细胞癌</strong> ✅<br><em>推理链中每步都与知识图谱实体对齐（标注为 [KG:...]）</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MedQA</th><th>PubMedQA</th><th>推理质量↑</th></tr>
+<tr><td>Qwen2.5-7B (SFT only)</td><td>58.4</td><td>72.1</td><td>2.8/5</td></tr>
+<tr><td>+ 知识增强合成数据</td><td>63.7</td><td>76.3</td><td>3.5/5</td></tr>
+<tr><td class="best">+ 半监督 RL</td><td class="best">67.2</td><td class="best">79.8</td><td class="best">4.1/5</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>知识图谱锚定的数据合成比纯 LLM 合成在 MedQA 上高 3.8 分，说明医学事实准确性至关重要。推理长度正则化防止了约 23% 的样本退化为"捷径推理"。局限在于知识图谱的覆盖有限（UMLS 对罕见病覆盖不足），且中文医学知识图谱质量待提升。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>知识图谱 + 数据合成 + RL 的三段式框架为低资源医学推理提供了一个可扩展方案，核心在于用结构化知识约束推理过程的事实准确性。</p>
+</div>
+
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09596">DERM-3R: A Resource-Efficient Multimodal Agents Framework for Dermatologic Diagnosis and Treatment in Real-World Clinical Settings</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 Guangzhou University of Chinese Medicine</span><br>
+<span class="tag tag-med">Medical</span><span class="tag tag-agent">Agent</span><span class="tag tag-med">Dermatology</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>皮肤病是全球最常见的疾病之一，影响数十亿人。现代疗法能快速控制急性症状，但长期疗效受限于单靶点范式。中医通过辨证论治提供互补的整体方案，但实践受限于专家经验。本文提出 DERM-3R，一个资源高效的多模态 Agent 框架，融合中西医皮肤科诊疗知识。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 三阶段推理框架（3R: Recognize-Reason-Recommend）</strong><br>Recognize: 多模态输入（皮损图像+症状描述+病史）→ 皮损分类和严重度评估。Reason: 结合西医鉴别诊断和中医辨证分析，给出综合诊断。Recommend: 输出中西医结合的个性化治疗方案。</div>
+<div class="sub-module"><strong>② 轻量化视觉编码器</strong><br>采用知识蒸馏将大型皮肤科视觉模型（DermNet-CLIP-ViT-L）压缩到 MobileNetV3 级别，参数减少 85%，推理速度提升 4x，在 198 种皮肤病分类上准确率仅降 2.1%。</div>
+<div class="sub-module"><strong>③ 中医知识图谱集成</strong><br>构建了包含 5000+ 中医皮肤病证型的知识图谱，将症状映射到中医证型（如"血热风燥证"），并检索对应方剂和外用药。Agent 在推理阶段同时调用西医和中医两条知识链路。</div>
+<div class="sub-module"><strong>④ 真实临床场景优化</strong><br>针对基层诊所的资源限制设计：模型可在 8GB GPU 上运行；支持手机拍摄的非标准光照图片；对话式问诊以补充关键信息（如病程、用药史）。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>银屑病中西医结合诊疗</strong><br><br><strong>输入</strong>：[皮损图片] 全身散在红色斑块，银白色鳞屑，冬重夏轻<br><strong>Recognize</strong>：银屑病（寻常型），PASI评分约 12（中重度）<br><strong>Reason-西医</strong>：中重度银屑病，建议生物制剂（IL-17抑制剂）或甲氨蝶呤<br><strong>Reason-中医</strong>：辨证为「血热风燥证」，兼有「气滞血瘀」<br><strong>Recommend</strong>：西医方案（甲氨蝶呤 10mg/周 + 卡泊三醇软膏）+ 中医方案（凉血地黄汤加减 + 润肤止痒膏外用）</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>评估维度</th><th>GPT-4V</th><th>Med-PaLM 2</th><th>DERM-3R (7B)</th></tr>
+<tr><td>皮损分类 Top-3 Acc</td><td>78.4</td><td>82.1</td><td class="best">84.7</td></tr>
+<tr><td>诊断合理性（医生评分）</td><td>3.8/5</td><td>4.0/5</td><td class="best">4.2/5</td></tr>
+<tr><td>治疗方案完整度</td><td>3.5/5</td><td>3.7/5</td><td class="best">4.4/5</td></tr>
+<tr><td>GPU 需求</td><td>80GB+</td><td>云API</td><td class="best">8GB</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>中医知识图谱的集成使治疗方案完整度从 3.7 提升到 4.4（医生最看重中西医结合的全面性）。轻量化视觉编码器在 Top-3 准确率上仅降 2.1% 但推理速度提升 4x。30 位皮肤科医生的盲评显示 DERM-3R 在治疗方案实用性上优于 GPT-4V。局限在于中医辨证的主观性和跨地域适应问题。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>DERM-3R 展示了领域专用 Agent 的巨大潜力：通过专业知识集成，7B 模型可以在特定领域超越通用大模型。中西医融合的诊疗框架在国内基层医疗场景有实际应用前景。</p>
+</div>

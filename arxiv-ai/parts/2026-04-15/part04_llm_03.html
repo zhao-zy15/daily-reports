@@ -1,0 +1,78 @@
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10135">Think in Sentences: Explicit Sentence Boundaries Enhance Language Model's Capabilities</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span>
+<span>🏛 SUSTech (南方科技大学)</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Architecture</span><span class="tag tag-llm">Sentence-Level</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>标准 Transformer 语言模型以 token 为粒度进行自回归生成，每一步预测都在 token 级别进行。然而，人类思维更倾向于以<strong>句子</strong>为单位组织信息——我们先构思一个完整的想法，再将其表达为语句。现有模型缺乏对句子边界的显式建模，导致在长程推理、段落连贯性和结构化输出等任务上表现不佳。本文探索了一个简单但有效的假设：通过显式引入句子边界表示，能否增强 LM 的能力？</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 句子边界 Token 注入</strong><br>
+在训练语料的每个句子末尾注入一个特殊的 <code>[SB]</code>（Sentence Boundary）token。与标准的句号不同，<code>[SB]</code> 被赋予专门的嵌入向量，且参与注意力计算。句子化后的序列为：
+$$\mathbf{x} = [t_1, ..., t_{n_1}, \text{[SB]}_1, t_{n_1+1}, ..., t_{n_2}, \text{[SB]}_2, ...]$$
+关键设计：<code>[SB]</code> token 的嵌入在训练过程中与其他 token 一起端到端学习，不需要任何额外标注。
+</div>
+
+<div class="sub-module">
+<strong>② 句子级注意力聚合</strong><br>
+在 Transformer 的自注意力层中，每个 <code>[SB]</code> token 作为其所在句子的<strong>聚合节点</strong>。作者引入了一种<strong>分层注意力</strong>机制：
+<ul>
+<li><strong>句内注意力</strong>：句子内的 token 之间正常进行全注意力</li>
+<li><strong>句间注意力</strong>：跨句子的 token 优先通过 <code>[SB]</code> token 进行信息传递</li>
+</ul>
+实现上，在注意力权重中引入句子边界偏置项：
+$$\text{Attn}'(Q, K) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}} + \lambda \cdot \mathbf{B}_{\text{sb}}\right)$$
+其中 \(\mathbf{B}_{\text{sb}}\) 是一个学习的偏置矩阵，鼓励跨句注意力流过 <code>[SB]</code> 节点。\(\lambda\) 控制句子边界效应的强度。
+</div>
+
+<div class="sub-module">
+<strong>③ 句子级表示用于下游任务</strong><br>
+<code>[SB]</code> token 的隐状态天然形成句子级表示，可直接用于：
+<ul>
+<li><strong>文档摘要</strong>：用 <code>[SB]</code> 表示的余弦相似度进行句子重要性排序</li>
+<li><strong>推理链分析</strong>：追踪 <code>[SB]</code> 表示的信息流动路径</li>
+<li><strong>段落连贯性评估</strong>：相邻 <code>[SB]</code> 表示的平滑度作为连贯性指标</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>④ 训练策略：渐进式句子边界引入</strong><br>
+为避免突然引入 <code>[SB]</code> token 对预训练模型造成冲击，采用渐进式策略：
+<ol>
+<li>Phase 1：在继续预训练初期，<code>[SB]</code> 的注意力权重用残差连接衰减（\(\alpha=0.1\)）</li>
+<li>Phase 2：逐步增大 \(\alpha\) 至 1.0，让模型适应句子边界信号</li>
+<li>Phase 3：全强度训练，<code>[SB]</code> token 完全参与所有注意力计算</li>
+</ol>
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>GSM8K 数学推理案例</strong><br><br>
+<strong>问题</strong>：「Sally earns $12 per hour. She worked 8 hours on Monday and 6 hours on Tuesday. How much did she earn?」<br><br>
+<strong>标准模型</strong>（token级）：<br>
+「Monday: 12 × 8 = 96. Tuesday: 12 × 6 = 72. Total = 96 + 72 = <strong>158</strong>」→ ❌ (计算错误)<br><br>
+<strong>Think-in-Sentences 模型</strong>（句子级）：<br>
+「[SB₁] Sally worked 8h on Monday earning $12×8=$96. [SB₂] She worked 6h on Tuesday earning $12×6=$72. [SB₃] Total earnings = $96+$72 = <strong>$168</strong>.」→ ✅<br>
+<em>句子边界迫使模型在每个推理步骤后"暂停"并整合信息，减少中间步骤的错误传播</em>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型/任务</th><th>GSM8K</th><th>MATH</th><th>SummEval</th><th>HellaSwag</th></tr>
+<tr><td>LLaMA-3-8B (baseline)</td><td>56.2</td><td>23.1</td><td>31.4</td><td>79.1</td></tr>
+<tr><td>+ 句子边界训练 (100B tokens)</td><td class="best">61.8</td><td class="best">27.4</td><td class="best">35.2</td><td class="best">81.3</td></tr>
+<tr><td>改进</td><td>+5.6</td><td>+4.3</td><td>+3.8</td><td>+2.2</td></tr>
+</table>
+<p>句子边界机制在数学推理（GSM8K +5.6、MATH +4.3）和摘要生成（SummEval +3.8）上提升最为显著，在常识推理上也有 2+ 分提升。额外的 <code>[SB]</code> token 仅增加约 3% 的序列长度。</p>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验显示，句子级注意力偏置 \(\lambda\) 的最优值约为 0.3-0.5，过大会限制灵活的跨句直接注意力。渐进式训练相比直接引入 <code>[SB]</code> 提升约 2 分。有趣的发现：可视化 <code>[SB]</code> 表示的注意力模式显示，模型确实学会了在句子边界处进行"思考暂停"——<code>[SB]</code> token 的注意力权重分布比普通 token 更加分散，表明它在聚合全局信息。局限性在于句子检测需要额外预处理，且在代码、表格等非自然语言场景中句子边界定义不明确。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这项工作表明，一个简单的结构先验——显式的句子边界——就能显著增强 LM 的推理和连贯性能力。句子作为人类思维的基本单位，在 LM 中引入对应的计算结构具有天然的合理性。这为"如何让 LM 以更接近人类的粒度思考"提供了一个轻量但有效的方向。</p>
+</div>

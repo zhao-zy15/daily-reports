@@ -1,0 +1,86 @@
+<h2 class="section-title agent">🤖 Agent — 智能体与工具使用</h2>
+
+<div class="paper-card" id="p9">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11003">🏢 Sanity Checks for Agentic Data Science</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Microsoft Research, OpenAI</span><br>
+<span class="tag tag-agent">Agent</span><span class="tag tag-industry">Industry Lab</span><span class="tag tag-agent">Data Science</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM-based data science agents（如 OpenAI Codex、Data Interpreter）在自动化数据分析中展现出巨大潜力。然而，这些 Agent 的输出缺乏可靠的质量保证——它们可能生成看似合理但实际错误的分析结论。本文来自 Microsoft Research 和 OpenAI 的联合研究，提出了一套针对 Agentic Data Science 的<strong>完整性检验（Sanity Checks）</strong>框架，系统地识别 agent 输出中常见的错误模式。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 错误分类法（Error Taxonomy）</strong><br>通过分析 1000+ 个 agent 数据分析案例，总结 5 类系统性错误：(1) <strong>数据泄漏</strong>：特征工程中无意使用目标变量信息；(2) <strong>分布假设违反</strong>：在非正态数据上使用参数检验；(3) <strong>因果混淆</strong>：将相关性描述为因果关系；(4) <strong>粒度不匹配</strong>：聚合层级与分析问题不一致；(5) <strong>结果幻觉</strong>：agent 描述了代码未实际产生的结论。</div>
+<div class="sub-module"><strong>② 自动化检验管道</strong><br>设计 12 种自动化检验器，每种针对特定错误类型。例如：<ul><li><strong>LeakageChecker</strong>：检查特征矩阵与目标变量的相关性是否在合理范围</li><li><strong>DistributionChecker</strong>：在统计检验前自动进行正态性/方差齐性检验</li><li><strong>CausalLanguageChecker</strong>：NLI 模型检测结论中是否使用了因果语言</li></ul></div>
+<div class="sub-module"><strong>③ 代码-结论一致性验证</strong><br>最关键的检验：agent 生成的代码实际输出是否与其自然语言结论一致。方法是重新执行代码，提取数值结果，与结论中的陈述进行事实核查：$$\text{Consistency}(c, r) = \text{NLI}(\text{code\_output}(c), \text{claims}(r))$$ 发现约 <strong>18%</strong> 的 agent 输出存在代码-结论不一致。</div>
+<div class="sub-module"><strong>④ 人机协作修正循环</strong><br>当检验器检测到问题时，生成结构化反馈并送回 agent 进行修正。实验显示平均需要 1.8 轮修正即可消除 90%+ 的检测到的错误。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>数据泄漏检测案例</strong><br><br><strong>Agent 任务</strong>：「预测房价，构建回归模型」<br><strong>Agent 操作</strong>：用 pandas 创建特征，包括 'price_per_sqft' = price / sqft<br><strong>LeakageChecker 告警</strong>：⚠️ 特征 'price_per_sqft' 与目标 'price' 的 Pearson r = 0.97，疑似数据泄漏<br><strong>Agent 修正</strong>：移除该特征，模型 R² 从 0.99 降至合理的 0.74<br><em>无检验时 agent 会报告"模型 R²=0.99 表现优异"，实际是严重泄漏</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>Agent</th><th>无检验错误率</th><th>检验后错误率</th><th>降低</th></tr>
+<tr><td>GPT-4o Agent</td><td>34.2%</td><td>7.1%</td><td>-79%</td></tr>
+<tr><td>Claude-3.5 Agent</td><td>28.7%</td><td>5.8%</td><td>-80%</td></tr>
+<tr><td>Codex Agent</td><td>31.5%</td><td class="best">4.9%</td><td class="best">-84%</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>最常见的错误类型是"结果幻觉"(31%)和"数据泄漏"(24%)。有趣的是，更强的模型(GPT-4o)在泄漏检测后获益最大，因为它更擅长利用反馈修正。检验器本身的误报率约 8%，误报主要出现在 CausalLanguageChecker。局限在于无法检测所有类型的统计错误，且检验器的设计依赖领域专家知识。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>来自 MSR+OpenAI 的重要警示：当前最强的 data science agents 仍有 30%+ 的输出存在严重错误。自动化 Sanity Checks 是将 agent 从"看起来能用"提升到"真正可靠"的关键一步。</p>
+</div>
+
+<div class="paper-card" id="p10">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09813">Controllable and Verifiable Tool-Use Data Synthesis for Agentic Reinforcement Learning</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 Amazon, Georgia Institute of Technology</span><br>
+<span class="tag tag-agent">Agent</span><span class="tag tag-rl">RL</span><span class="tag tag-agent">Tool Use</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>Agent RL 训练需要大量工具使用数据，但现有合成方法(如 ToolBench)生成的数据质量参差不齐，难以控制工具调用的复杂度和多样性。本文提出一个可控且可验证的工具使用数据合成框架：通过参数化的任务生成器控制数据分布，并用自动化验证器确保数据正确性。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 参数化任务模板</strong><br>设计任务模板图 \(G = (V, E)\)，节点为工具调用，边为数据依赖。通过控制图的深度 \(d\)（推理步数）、宽度 \(w\)（并行工具数）和分支因子 \(b\) 来精确控制任务复杂度。</div>
+<div class="sub-module"><strong>② 沙箱执行验证</strong><br>每个合成的工具调用序列在沙箱环境中实际执行，验证：(1) 工具参数格式正确；(2) 返回值与预期一致；(3) 任务最终答案正确。验证通过率从未过滤的 43% 提升到 92%。</div>
+<div class="sub-module"><strong>③ 难度自适应课程</strong><br>RL 训练采用课程学习：从简单任务(d=1, w=1)逐渐增加到复杂任务(d=5, w=3)。每个难度级别训练直到 agent 在该级别达到 80%+ 成功率后升级。</div>
+<div class="sub-module"><strong>④ 可验证奖励设计</strong><br>奖励函数由沙箱执行结果直接提供：正确完成 +1，部分正确按步骤比例给分，格式错误 -0.5。这种可验证奖励避免了 reward hacking。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>复杂工具链任务 (d=3, w=2)</strong><br><br><strong>任务</strong>：「查找纽约明天的天气，如果温度 > 20°C 则搜索户外餐厅推荐」<br><strong>Agent 执行链</strong>：<br>1. weather_api(city="NYC", date="tomorrow") → {temp: 24, condition: "sunny"}<br>2. if temp > 20: search_api(query="outdoor restaurants NYC") → [results...]<br>3. summarize(results) → 最终回答<br><strong>沙箱验证</strong>：✅ 所有工具调用格式正确，条件判断逻辑正确，最终答案与参考一致</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>简单任务</th><th>中等任务</th><th>困难任务</th><th>数据质量</th></tr>
+<tr><td>ToolBench 数据 + SFT</td><td>78.3</td><td>52.1</td><td>31.4</td><td>43%</td></tr>
+<tr><td>Ours 数据 + SFT</td><td>84.7</td><td>64.8</td><td>42.6</td><td>92%</td></tr>
+<tr><td class="best">Ours 数据 + RL</td><td class="best">89.2</td><td class="best">71.3</td><td class="best">51.8</td><td>92%</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>合成数据质量(92% vs 43%)是最大贡献因素，RL 训练在其基础上再提升约 7-9 分。课程学习比直接混合训练在困难任务上高 6.2 分。局限在于当前仅支持文本输入输出的工具，不支持需要交互式 UI 操作的场景。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>"数据质量决定上限，训练方法决定离上限多远"——高质量可验证的合成数据 + RL 课程学习是 agent 工具使用能力提升的关键组合。</p>
+</div>
+
+<div class="paper-card" id="p11">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10261">The Amazing Agent Race: Strong Tool Users, Weak Navigators</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 University of Minnesota, Google DeepMind</span><br>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Evaluation</span><span class="tag tag-agent">Navigation</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM Agent 在工具使用基准上表现越来越好，但这是否意味着它们已经是合格的"智能体"？本文来自 UMN 和 Google DeepMind，通过一个全新的评估范式——<strong>Amazing Agent Race</strong>——揭示了当前 agent 的一个关键盲区：它们是<strong>强工具使用者但弱导航者</strong>。导航能力（确定何时使用什么工具、以什么顺序）比工具执行能力更加薄弱。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 分离式评估设计</strong><br>将 agent 能力分解为两个正交维度：<strong>Tool Execution</strong>（给定正确工具，能否正确执行）和 <strong>Navigation</strong>（给定目标，能否选择正确的工具序列）。通过提供/不提供 oracle 工具计划来分离这两种能力。</div>
+<div class="sub-module"><strong>② Amazing Race 基准</strong><br>设计了 200 个多步骤任务，每个任务需要 3-8 步工具调用。任务分为 4 个难度等级：单工具、顺序多工具、条件分支、动态规划。每个任务都有 oracle 执行路径作为参考。</div>
+<div class="sub-module"><strong>③ 导航错误分析框架</strong><br>将导航错误细分为：(a) 遗漏必要工具 (Missing)；(b) 插入冗余工具 (Redundant)；(c) 工具顺序错误 (Order)；(d) 条件判断错误 (Branching)。使用编辑距离度量与 oracle 路径的偏差。</div>
+<div class="sub-module"><strong>④ 能力差距量化</strong><br>定义 Navigation Gap = Tool Execution Score - End-to-End Score。该指标直接量化了"如果 agent 知道该做什么，它能做多好"与"它实际做到多好"之间的差距。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>条件分支任务</strong><br><br><strong>任务</strong>：「检查用户订单状态，如果已发货则追踪物流，如果有问题则生成退款工单」<br><strong>Oracle 路径</strong>: check_order → [if shipped] track_shipment → summarize | [if problem] create_refund → notify_user<br><strong>GPT-4o Agent</strong>: check_order → track_shipment → create_refund → summarize<br>&nbsp;&nbsp;→ ❌ 无条件执行了两个分支，浪费资源且给用户发送了混乱信息<br><strong>Tool Execution Score</strong>: 95% (每个工具单独都执行正确)<br><strong>Navigation Score</strong>: 40% (路径规划完全错误)</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>Tool Exec</th><th>Navigation</th><th>End-to-End</th><th>Nav Gap</th></tr>
+<tr><td>GPT-4o</td><td>92.3</td><td>61.4</td><td>58.7</td><td class="best">33.6</td></tr>
+<tr><td>Claude-3.5</td><td>89.7</td><td>58.2</td><td>55.1</td><td>34.6</td></tr>
+<tr><td>Gemini-1.5 Pro</td><td>87.4</td><td>54.8</td><td>51.3</td><td>36.1</td></tr>
+<tr><td>LLaMA-3-70B</td><td>81.2</td><td>42.6</td><td>38.9</td><td>42.3</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>所有模型的 Navigation Gap 都在 30-42% 之间，说明导航是普遍瓶颈。错误类型分布：遗漏(35%)>顺序(28%)>冗余(22%)>分支(15%)。有趣的是，模型规模对工具执行影响大但对导航影响小，暗示导航能力可能需要不同的训练范式。在困难任务（动态规划）上，最强模型的导航得分也仅 38%。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>本文揭示了 agent 能力的结构性失衡：工具执行强而导航弱。这意味着未来 agent 研究的重心应从"如何正确使用工具"转向"如何规划工具使用策略"。Navigation 是通往真正自主 agent 的核心能力瓶颈。</p>
+</div>

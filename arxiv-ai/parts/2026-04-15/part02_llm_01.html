@@ -1,0 +1,84 @@
+<h2 class="section-title llm">🧠 LLM — 大语言模型</h2>
+
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10079">Why Supervised Fine-Tuning Fails to Learn: A Systematic Study of Incomplete Learning in Large Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span>
+<span>🏛 UNSW, Peking University, Tencent</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag" style="background:rgba(239,83,80,0.18);color:var(--red)">ACL 2026 Oral</span><span class="tag tag-llm">SFT Analysis</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>监督微调（SFT）是将大语言模型适配到下游任务的标准方法，然而作者发现了一个被忽视的系统性问题：即使训练收敛后，模型仍然无法正确复现其自身训练数据的一个子集。这一现象被命名为<strong>不完全学习现象（Incomplete Learning Phenomenon, ILP）</strong>。此前的研究主要关注数据质量、学习率调度等表层因素，而对于"为什么模型看过数据却学不会"缺乏根因诊断。本文首次对 ILP 进行了系统性形式化研究，覆盖多个模型家族（Qwen、LLaMA、OLMo）、多个领域和数据集。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 未学习样本检测（Unlearned Sample Detection）</strong><br>
+为了可靠地识别哪些训练样本未被有效学习，作者提出将 SFT 数据的自由文本响应转换为多选题（MC）格式。对于每个 SFT 实例，原始响应保留为正确选项，同时构建语义合理但不正确的干扰项。训练收敛后，用微调模型在 MC 接口上重新评估整个训练集。定义训练集准确率为：
+$$\text{Acc} = \frac{1}{N}\sum_{i=1}^{N}\mathbb{1}(\hat{y}_i = y_i)$$
+为增强鲁棒性，对每个样本进行 \(K\) 次重复采样（默认 \(K=5\)），通过一致性得分判定：当 \(K\) 次均错时标记为"未学习"。实验发现 ILP 普遍存在：Qwen2.5-7B 在 SFT 后仍有约 <strong>15-25%</strong> 的训练样本始终无法正确回答。
+</div>
+
+<div class="sub-module">
+<strong>② 五大根因诊断框架</strong><br>
+通过受控分析，作者识别了五种导致不完全学习的反复出现的根因：
+<ol>
+<li><strong>基座模型知识缺失</strong>：预训练模型本身缺乏回答所需的前置知识，SFT 无法从无中生有</li>
+<li><strong>SFT 与预训练知识冲突</strong>：SFT 监督信号与基座模型内化的知识相矛盾（如时效性差异）</li>
+<li><strong>SFT 数据内部不一致</strong>：训练数据内部存在互相矛盾的标注</li>
+<li><strong>左侧遗忘（Left-side Forgetting）</strong>：在多阶段微调中，后续训练覆盖了先前学到的知识</li>
+<li><strong>不充分优化</strong>：稀有或复杂模式未获得足够的梯度更新</li>
+</ol>
+每种根因通过可观测的训练和推理信号进行诊断，形成了一个<strong>诊断优先（diagnostic-first）</strong>的处理框架。
+</div>
+
+<div class="sub-module">
+<strong>③ 知识状态探测（Knowledge-State Probing）</strong><br>
+作者设计了知识状态探测器来判断未学习样本属于哪种根因。核心思路是对比基座模型和 SFT 模型在同一问题上的表现：
+<ul>
+<li>基座模型也错 → 知识缺失（根因1）</li>
+<li>基座模型对、SFT 模型错 → SFT-预训练冲突（根因2）</li>
+<li>SFT 数据中存在矛盾标注 → 内部冲突（根因3）</li>
+<li>早期检查点对、后期错 → 左侧遗忘（根因4）</li>
+<li>增加训练轮数后改善 → 不充分优化（根因5）</li>
+</ul>
+</div>
+
+<div class="sub-module">
+<strong>④ 针对性干预策略</strong><br>
+为每种根因设计因果干预方案：
+<ul>
+<li><strong>知识增强持续预训练（CPT）</strong>：对根因1的样本，先用相关语料进行 CPT 补充缺失知识，再进行 SFT</li>
+<li><strong>冲突校准</strong>：对根因2/3，检测并解决 SFT 数据与预训练/内部的知识冲突</li>
+<li><strong>动态重采样</strong>：对根因4，采用动态重采样策略缓解序列训练中的遗忘</li>
+<li><strong>聚焦训练</strong>：对根因5，对检测到的未学习样本增加训练强度</li>
+</ul>
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>SFT-预训练知识冲突案例（根因2）</strong><br><br>
+<strong>问题</strong>：「2024年诺贝尔物理学奖颁给了谁？」<br>
+<strong>SFT标注答案</strong>：Geoffrey Hinton 和 John Hopfield（2024年10月公布）<br>
+<strong>基座模型回答</strong>：「尚未公布」（预训练数据截止2024年中）<br>
+<strong>SFT后模型</strong>：仍回答「尚未公布」或产生幻觉 → <strong>标记为未学习</strong><br><br>
+<strong>干预</strong>：通过知识冲突校准，先在 CPT 阶段注入 2024 年诺奖相关语料，再进行 SFT → 模型正确回答 ✅<br>
+<strong>结果</strong>：类似时效性冲突样本的学习率从 62% 提升至 89%
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>SFT基线 ILP率</th><th>CPT干预后</th><th>冲突校准后</th><th>全部干预后</th></tr>
+<tr><td>Qwen2.5-7B</td><td>23.4%</td><td>17.1%</td><td>15.8%</td><td class="best">9.2%</td></tr>
+<tr><td>LLaMA-3.1-8B</td><td>19.7%</td><td>14.3%</td><td>13.5%</td><td class="best">8.6%</td></tr>
+<tr><td>OLMo2-7B</td><td>26.1%</td><td>19.8%</td><td>17.9%</td><td class="best">11.4%</td></tr>
+</table>
+<p>全部干预策略组合后，ILP 率从 19-26% 降至 <strong>8-11%</strong>，显著提升了 SFT 的学习完整度。在下游基准上，干预后模型在 MMLU、ARC 等任务上也获得了 2-4 分的提升。</p>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融研究表明：五种根因的贡献并非均匀，<strong>知识缺失（根因1）占 ILP 的 35-40%</strong>，是最大瓶颈；SFT-预训练冲突（根因2）占约 20-25%。有趣的发现是，简单增加训练轮数（从3轮到10轮）只能减少约 5% 的 ILP，说明大部分不完全学习并非"训练不够"而是结构性障碍。左侧遗忘在多阶段微调场景中尤为突出，动态重采样可将其缓解约 60%。论文的局限在于 MC 转换可能引入评估偏差，且当前框架主要验证在 7B 级别模型上。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文首次系统性地揭示并量化了 SFT 的"不完全学习"现象——即使训练收敛，模型仍有约 20% 的训练数据学不会。通过五大根因诊断和针对性干预，ILP 率可降低至约 10%。这一发现对 SFT 实践有重要指导意义：在微调前应先评估基座模型的知识覆盖度，清理 SFT 数据中的冲突，并为不同根因采取不同的干预策略，而非盲目增加数据量或训练轮数。被 ACL 2026 录用为 Oral 论文。</p>
+</div>

@@ -1,0 +1,64 @@
+<!-- Whitelist papers classified into LLM section -->
+<div class="paper-card" id="p16">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11465">🏢 Three Roles, One Model: Role Orchestration at Inference Time to Close the Performance Gap Between Small and Large Agents</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Qwen Team, Alibaba</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-industry">Industry Lab</span><span class="tag tag-agent">Agent</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>小型 LLM（7B-14B）在 agent 任务中与大型模型（70B+/API）的性能差距巨大。常见做法是直接用小模型作为 agent policy，但这忽略了 agent 任务的多维度需求。本文来自 Qwen 团队，提出一种<strong>推理时角色编排</strong>策略：用<strong>同一个小模型</strong>在推理时扮演三种不同角色，协同完成 agent 任务。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 三角色设计</strong><br>
+<ul>
+<li><strong>Tier 1 — 主 Agent（π_agent）</strong>：负责执行动作，使用标准 agent 提示（观察→思考→行动循环）</li>
+<li><strong>Tier 2 — 摘要模型（π_sum）</strong>：将冗长的环境观察压缩为简洁摘要，降低 agent 的上下文负担</li>
+<li><strong>Tier 3 — 评审模型（π_critic）</strong>：在行动执行前评估合理性，检测潜在错误并建议修正</li>
+</ul>
+三个角色共享同一套模型权重，通过<strong>不同的系统提示</strong>切换角色。</div>
+<div class="sub-module"><strong>② 编排调度器</strong><br>推理时的执行流程为：环境观察 → π_sum 摘要 → π_agent 生成动作 → π_critic 评审 → [通过则执行 | 不通过则反馈给 π_agent 重生成]。调度器根据任务复杂度决定是否跳过某些角色（简单任务可跳过 critic）。</div>
+<div class="sub-module"><strong>③ 角色特化微调</strong><br>虽然使用同一模型，但通过多任务微调增强各角色能力：训练数据混合 agent 轨迹(60%)、摘要对(20%)、critique 对(20%)。使用特殊 token 区分角色：<code>[AGENT]</code>、<code>[SUMMARIZER]</code>、<code>[CRITIC]</code>。</div>
+<div class="sub-module"><strong>④ 自适应上下文管理</strong><br>π_sum 的摘要能力使得有效上下文长度扩展 3-5x。当对话历史超过模型窗口的 70% 时，自动触发摘要压缩，保留关键信息。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>AppWorld 任务</strong><br><br><strong>任务</strong>：「在 Spotify 中找到用户最近播放的专辑，并在 Twitter 上分享」<br><strong>π_agent 直接执行</strong>：调用 spotify.get_recent → 获取专辑名 → 调用 twitter.post → 但遗漏了专辑封面URL → 分享不完整 ❌<br><strong>三角色编排</strong>：<br>1. π_sum: 将 Spotify API 返回的大量元数据压缩为关键信息（名称+艺术家+封面URL）<br>2. π_agent: 基于摘要生成分享动作（包含封面URL）<br>3. π_critic: "检查：分享内容包含专辑名✓、艺术家✓、封面✓ → 通过"<br>→ 完整分享 ✅</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>AppWorld</th><th>WebArena</th><th>平均</th></tr>
+<tr><td>Qwen2.5-7B (直接)</td><td>7.1%</td><td>12.3%</td><td>9.7%</td></tr>
+<tr><td>GPT-4o (直接)</td><td>31.2%</td><td>28.7%</td><td>30.0%</td></tr>
+<tr><td class="best">Qwen2.5-7B + 三角色编排</td><td class="best">23.8%</td><td class="best">24.1%</td><td class="best">24.0%</td></tr>
+</table>
+<p>三角色编排将 Qwen2.5-7B 的 agent 性能从 9.7% 提升至 <strong>24.0%</strong>（+147%），接近 GPT-4o (30%) 的 80% 水平。</p>
+<div class="module-title">🔍 消融与讨论</div>
+<p>三个角色分别贡献：summarizer +6.2%, critic +4.8%, 二者协同 +3.3%。critic 在需要多步骤规划的任务上效果最显著。角色特化微调比纯提示工程高约 5 分。局限在于三角色串行执行增加了约 2.5x 的推理成本。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>Qwen 团队的这项工作展示了"一个模型扮演多角色"的优雅方案，通过推理时编排而非增大模型来缩小大小模型差距。这对小模型的 agent 部署有重要实用价值。</p>
+</div>
+
+<div class="paper-card" id="p18">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10690">🏢 Do LLMs Build Spatial World Models? Evidence from Grid-World Maze Tasks</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 University of Notre Dame, Columbia University</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-industry">Industry Lab</span><span class="tag tag-llm">World Model</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 是否能构建空间世界模型一直是争论焦点。Othello-GPT 等工作声称 Transformer 能学习棋盘表示，但这些结论是否推广到更一般的空间推理？本文通过网格迷宫任务系统性地检验 LLM 的空间建模能力，用线性探针检测模型内部是否存在空间表示。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 受控迷宫生成</strong><br>构建参数化网格迷宫（5×5 到 15×15），文本描述为方向序列（如"N N E E S"）。控制变量：迷宫大小、路径长度、分支复杂度。每个迷宫有唯一最短路径解。</div>
+<div class="sub-module"><strong>② 线性探针分析</strong><br>在模型各层隐状态上训练线性分类器，预测 agent 当前的 (x,y) 坐标：$$\hat{p} = \text{softmax}(\mathbf{W}_{\text{probe}} \cdot \mathbf{h}_l + \mathbf{b})$$ 高准确率表明该层编码了空间位置信息。</div>
+<div class="sub-module"><strong>③ 因果干预实验</strong><br>通过 activation patching 验证探测到的表示是否因果地影响输出：将正确位置的 activation 替换为错误位置的，观察模型行为是否对应改变。</div>
+<div class="sub-module"><strong>④ 规模与架构对比</strong><br>对比 DeepSeek-7B/67B、LLaMA-3-8B/70B、GPT-4 等模型，分析空间建模能力与模型规模的关系。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>7×7 迷宫空间探针结果</strong><br><br><strong>DeepSeek-67B</strong>：中间层(第20-30层)位置探针准确率 78.3%，因果干预效果 67.4% → <strong>确实构建了空间表示</strong><br><strong>LLaMA-3-8B</strong>：探针准确率仅 34.2%，因果干预效果 21.1% → <strong>几乎无空间表示</strong><br><strong>GPT-4</strong>（黑盒行为测试）：迷宫求解正确率 62.4% → 行为上显示空间理解<br><em>空间建模能力与模型规模呈强正相关，但即使最大模型也无法处理 15×15 迷宫</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>5×5 解题率</th><th>7×7 解题率</th><th>10×10 解题率</th><th>探针准确率</th></tr>
+<tr><td>LLaMA-3-8B</td><td>45.2</td><td>18.7</td><td>4.3</td><td>34.2</td></tr>
+<tr><td>DeepSeek-7B</td><td>51.3</td><td>23.4</td><td>6.1</td><td>38.7</td></tr>
+<tr><td>LLaMA-3-70B</td><td>78.4</td><td>51.2</td><td>19.8</td><td>62.1</td></tr>
+<tr><td class="best">DeepSeek-67B</td><td class="best">82.1</td><td class="best">58.6</td><td class="best">24.3</td><td class="best">78.3</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>关键发现：(1) 空间表示集中在模型中间层（第40-60%层），而非早期或后期；(2) 因果干预证实这些表示是功能性的，而非旁路信号；(3) 所有模型在 10×10+ 迷宫上急剧退化，暗示空间建模能力有上限。DeepSeek 模型在同参数量级下空间能力优于 LLaMA，可能与预训练数据中的代码/数学比例有关。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>LLM 确实能构建某种程度的空间世界模型，但能力有限且高度依赖规模。这对于理解 LLM 的"理解"本质提供了重要实证依据——它们不是纯粹的统计鹦鹉，但也远非完美的世界建模器。</p>
+</div>

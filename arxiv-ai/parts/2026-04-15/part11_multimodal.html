@@ -1,0 +1,60 @@
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态大模型</h2>
+
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10219">Cognitive Pivot Points and Visual Anchoring: Unveiling and Rectifying Hallucinations in Multimodal Reasoning Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 South China University of Technology, South China Agricultural University</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">Hallucination</span><span class="tag tag-multimodal">Reasoning</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>多模态推理模型（如 GPT-4o、Gemini）在进行视觉推理时频繁产生幻觉——生成与图像不符的描述或推理。现有方法大多从输出端修正（如 RLHF 后处理），但<strong>幻觉在推理链的哪个环节产生？能否在源头阻止？</strong>本文提出"认知枢纽点（Cognitive Pivot Points）"理论：幻觉通常在推理链的特定转折点产生，通过在这些枢纽点注入"视觉锚定"可以有效修正。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 认知枢纽点检测</strong><br>分析 VLM 推理过程中每一步的视觉注意力权重分布。定义枢纽点为注意力从视觉 token 急剧转向语言 token 的步骤：$$\text{PivotScore}(t) = \frac{A_{\text{visual}}(t-1) - A_{\text{visual}}(t)}{A_{\text{visual}}(t-1)}$$ 当 PivotScore > θ 时，模型在该步"脱离"了视觉信息，进入纯语言推理模式——这正是幻觉最容易产生的时刻。</div>
+<div class="sub-module"><strong>② 视觉锚定注入</strong><br>在检测到的枢纽点处，强制将注意力权重的一部分重新分配回视觉 token：$$A'_{\text{visual}}(t) = (1-\beta) A_{\text{visual}}(t) + \beta \cdot A_{\text{visual}}(t-1)$$ 其中 β 是锚定强度（默认 0.3）。这相当于在模型即将"脱离视觉"时拉回它的注意力。</div>
+<div class="sub-module"><strong>③ 推理链一致性校验</strong><br>在每个枢纽点后，对当前推理步骤进行视觉一致性验证：提取该步中提到的视觉属性（颜色、位置、数量等），与图像中实际属性进行对比。不一致的步骤被标记并触发<strong>局部重推理</strong>（仅重新生成该步，不回滚整条链）。</div>
+<div class="sub-module"><strong>④ 轻量级在线部署</strong><br>枢纽点检测和视觉锚定都在注意力层内实现，无需额外模型或后处理步骤。推理延迟增加仅 5-8%。可作为插件应用到任何 Transformer-based VLM 上。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>MathVista 视觉数学推理</strong><br><br><strong>图像</strong>：一张饼图，显示红色25%，蓝色35%，绿色40%<br><strong>问题</strong>：「红色和蓝色区域总共占多少？」<br><strong>无锚定推理</strong>：「红色占30%，蓝色占30%，总共60%」→ ❌ (在Step2发生认知枢纽偏移，模型"编造"了30%)<br><strong>有锚定推理</strong>：<br>Step1: 识别图表类型：饼图 (PivotScore=0.12, 正常)<br>Step2: 读取红色占比 (PivotScore=<strong>0.67</strong>, 触发锚定!) → 锚定后重新关注图像 → 红色 25%<br>Step3: 读取蓝色占比 → 35%<br>Step4: 计算 25% + 35% = <strong>60%</strong> → ✅ (结果碰巧相同，但中间推理正确)</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>POPE Acc↑</th><th>MME Score↑</th><th>MathVista↑</th><th>延迟增加</th></tr>
+<tr><td>LLaVA-1.5-13B</td><td>86.1</td><td>1531</td><td>26.1</td><td>—</td></tr>
+<tr><td>+ Cognitive Pivot</td><td class="best">91.3</td><td class="best">1612</td><td class="best">31.4</td><td>+6%</td></tr>
+<tr><td>InternVL2-26B</td><td>89.7</td><td>1721</td><td>38.2</td><td>—</td></tr>
+<tr><td>+ Cognitive Pivot</td><td class="best">93.4</td><td class="best">1789</td><td class="best">42.8</td><td>+5%</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>视觉锚定在 POPE（对象存在判断）上提升最大（+3.7-5.2分），因为该任务最依赖持续的视觉关注。锚定强度 β=0.3 是最优值；β=0.5 开始干扰正常的语言推理。约 15-20% 的推理步骤被检测为枢纽点，说明幻觉源头相对集中。局限在于对视频理解（时序信息）的枢纽点检测需要进一步扩展。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>提出了幻觉产生的"认知枢纽点"机制解释，并将其转化为实用的注意力锚定技术。在不增加模型参数的前提下，通过6%的延迟代价换取4-5分的幻觉减少，是一个极佳的精度-效率权衡。</p>
+</div>
+
+<div class="paper-card" id="p15">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11626">RationalRewards: Reasoning Rewards Scale Visual Generation Both Training and Test Time</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 University of Waterloo, Alibaba</span><br>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-rl">RL</span><span class="tag tag-multimodal">Visual Generation</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>视觉生成（文生图/视频）的奖励模型大多基于简单的美学评分或 CLIP 对齐分数，无法捕捉生成内容的<strong>逻辑一致性</strong>（如"一只猫坐在红色椅子上"中猫和椅子的空间关系是否正确）。本文提出用<strong>推理型奖励</strong>来扩展视觉生成——不仅评分"好看"，还评分"合理"。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 推理型视觉奖励模型</strong><br>将 VLM（如 InternVL）改造为推理奖励模型。给定生成图像和文本提示，模型输出结构化评分：$$R = [R_{\text{aesthetic}}, R_{\text{align}}, R_{\text{spatial}}, R_{\text{count}}, R_{\text{attr}}]$$ 每个维度都伴随 CoT 推理解释（如"图中有2只猫，但提示要求3只 → 数量不匹配 → R_count=0.3"）。</div>
+<div class="sub-module"><strong>② 训练时 RL 优化</strong><br>将推理奖励作为 diffusion model 的 RL 信号：$$\mathcal{L}_{\text{RL}} = -\mathbb{E}_{z \sim p_\theta}\left[\sum_d w_d \cdot R_d(x_{\text{gen}}, \text{prompt})\right]$$ 其中 \(w_d\) 是各维度权重。相比单一 CLIP 分数，多维推理奖励可以针对性地优化薄弱维度（如空间关系）。</div>
+<div class="sub-module"><strong>③ 测试时 Best-of-N 推理缩放</strong><br>生成 N 张图像，用推理奖励模型选出最优：$$x^* = \arg\max_{x_i} \sum_d w_d \cdot R_d(x_i, \text{prompt})$$ 关键发现：随着 N 的增加，推理奖励的选择质量对数增长——\(N=16\) 时效果接近 \(N=64\)。</div>
+<div class="sub-module"><strong>④ 奖励维度的自适应权重</strong><br>不同提示需要不同的评分权重。例如，"3只猫在桌上"侧重数量和空间；"一幅梵高风格画"侧重美学。根据提示的语义分析自动调整 \(w_d\)。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>T2I-CompBench 组合生成</strong><br><br><strong>提示</strong>：「A red cat sitting on a blue chair, with a green ball on the floor」<br><strong>CLIP 评分 Top-1</strong>：红色猫在蓝色沙发上，球在椅子上 → CLIP=0.31 ✓美学 ✗空间<br><strong>推理奖励 Top-1</strong>：<br>&nbsp;&nbsp;R_aesthetic=0.82, R_align=0.91, R_spatial=<strong>0.95</strong>, R_count=1.0, R_attr=<strong>0.93</strong><br>&nbsp;&nbsp;CoT: "猫(红色✓)坐在椅子(蓝色✓)上，球(绿色✓)在地板上 → 全部属性和空间关系正确"<br><em>推理奖励成功区分了"好看但错误"和"好看且正确"的生成</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>T2I-CompBench↑</th><th>GenEval↑</th><th>美学(HPS)↑</th></tr>
+<tr><td>SDXL (baseline)</td><td>0.41</td><td>0.53</td><td>27.1</td></tr>
+<tr><td>+ CLIP RL</td><td>0.46</td><td>0.57</td><td>27.8</td></tr>
+<tr><td>+ ImageReward RL</td><td>0.48</td><td>0.59</td><td>28.2</td></tr>
+<tr><td class="best">+ RationalRewards RL</td><td class="best">0.56</td><td class="best">0.67</td><td class="best">28.5</td></tr>
+<tr><td class="best">+ RationalRewards RL + BoN(16)</td><td class="best">0.63</td><td class="best">0.74</td><td class="best">29.1</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>推理奖励在组合生成任务（T2I-CompBench）上优势最明显（+0.10-0.15），因为这些任务需要理解属性绑定和空间关系。自适应权重比固定权重提升约 0.04。BoN(16) 在训练后推理缩放上额外提供 0.07 提升。局限在于推理奖励模型的推理成本较高（每张图约 0.5s），不适用于实时生成场景。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>从"美学评分"到"推理评分"是视觉生成奖励建模的重要升级。推理奖励能捕捉 CLIP 无法理解的逻辑关系，尤其在复杂组合提示下效果显著。</p>
+</div>

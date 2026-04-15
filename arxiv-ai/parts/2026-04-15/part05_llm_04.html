@@ -1,0 +1,76 @@
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10152">SpecMoE: A Fast and Efficient Mixture-of-Experts Inference via Self-Assisted Speculative Decoding</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span>
+<span>🏛 DeepSeek</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">MoE</span><span class="tag tag-llm">Inference</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>Mixture-of-Experts (MoE) 模型以其高效的参数利用成为大模型的主流架构（如 DeepSeek-V3、Mixtral）。然而，MoE 的推理瓶颈在于：每一步需要动态路由并激活不同专家，导致<strong>专家加载</strong>成为延迟主要来源，尤其在 offloading（专家卸载到 CPU/SSD）场景下。推测解码（Speculative Decoding）是加速自回归推理的有效技术，但传统方法需要单独的小模型作为 drafter，增加了系统复杂度。本文提出 SpecMoE，一种<strong>自辅助推测解码</strong>方法，利用 MoE 模型自身的子集专家作为高效 drafter。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 专家子集作为 Draft 模型</strong><br>
+MoE 模型的路由机制天然将输入分配到 \(K\)（通常 2-4）个活跃专家。SpecMoE 的核心洞察是：<strong>仅使用最活跃的 1 个专家</strong>即可作为轻量 drafter，生成候选 token 序列：
+$$\hat{y}_{t+1:t+\gamma} = \text{AutoReg}(\mathbf{x}_{:t}; \theta_{\text{top-1}})$$
+其中 \(\gamma\) 是推测长度，\(\theta_{\text{top-1}}\) 表示仅激活 top-1 专家的模型子集。Top-1 专家推理的 FLOPs 约为完整 top-\(K\) 推理的 \(1/K\)。
+</div>
+
+<div class="sub-module">
+<strong>② 自适应推测长度</strong><br>
+固定推测长度 \(\gamma\) 在不同 token 位置的接受率差异很大。SpecMoE 引入自适应机制：
+$$\gamma^* = \arg\max_{\gamma} \left\{ \gamma \mid \prod_{i=1}^{\gamma} p_{\text{accept}}(\hat{y}_{t+i}) > \tau \right\}$$
+其中接受概率由 top-1 专家和 top-\(K\) 专家输出分布的 KL 散度估算：
+$$p_{\text{accept}}(\hat{y}) \approx \exp(-D_{\text{KL}}(p_{\text{top-1}}(\cdot) \| p_{\text{top-K}}(\cdot)))$$
+当 top-1 和 top-K 输出高度一致时（KL 散度小），推测更长的序列；当分歧大时提前截断。
+</div>
+
+<div class="sub-module">
+<strong>③ 专家预取流水线</strong><br>
+SpecMoE 利用推测阶段的计算时间来<strong>预取</strong>验证阶段所需的专家权重：
+<ol>
+<li>Draft 阶段使用 top-1 专家生成候选</li>
+<li>同时异步预取其余 \(K-1\) 个专家权重到 GPU</li>
+<li>验证阶段直接使用已预取的全部 \(K\) 个专家</li>
+</ol>
+这种流水线设计将专家加载延迟与 draft 计算重叠，实现了"零等待"的专家就绪。在 offloading 场景下，这是性能增益的最大来源。
+</div>
+
+<div class="sub-module">
+<strong>④ 无损验证与修正</strong><br>
+验证步骤确保输出与原始 MoE 模型完全等价。对于 draft 生成的每个 token \(\hat{y}_i\)，使用标准的推测解码拒绝采样：
+$$\alpha_i = \min\left(1, \frac{p_{\text{full}}(\hat{y}_i | \mathbf{x}_{:t+i-1})}{p_{\text{draft}}(\hat{y}_i | \mathbf{x}_{:t+i-1})}\right)$$
+以概率 \(\alpha_i\) 接受 draft token，否则从修正分布 \(p_{\text{full}} - p_{\text{draft}}\) 中重采样。这保证了输出分布与原始模型数学上等价。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>DeepSeek-V3 (671B) Offloading 场景</strong><br><br>
+<strong>设置</strong>：256 个专家中 top-8 激活，GPU 显存仅能容纳 64 个专家，其余在 CPU 内存<br>
+<strong>原始推理</strong>：每 token 平均需等待 3.2ms 加载缺失专家 → 吞吐 18 tok/s<br>
+<strong>SpecMoE</strong>：<br>
+&nbsp;&nbsp;- Draft (top-1): 生成 5 个候选 token，耗时 4.1ms<br>
+&nbsp;&nbsp;- 同时预取 7 个专家权重，耗时 3.8ms（被 draft 计算掩盖）<br>
+&nbsp;&nbsp;- Verify: 5 个 token 中 4 个被接受<br>
+&nbsp;&nbsp;- 有效吞吐: <strong>52 tok/s (2.9x 加速)</strong><br>
+<em>加速主要来自专家加载延迟的流水线掩盖</em>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>场景</th><th>原始吞吐</th><th>SpecMoE吞吐</th><th>加速比</th></tr>
+<tr><td>Mixtral-8x7B</td><td>全GPU</td><td>42 tok/s</td><td>68 tok/s</td><td>1.62x</td></tr>
+<tr><td>Mixtral-8x7B</td><td>Offloading</td><td>15 tok/s</td><td>38 tok/s</td><td class="best">2.53x</td></tr>
+<tr><td>DeepSeek-V3-671B</td><td>Offloading</td><td>18 tok/s</td><td>52 tok/s</td><td class="best">2.89x</td></tr>
+<tr><td>Qwen-MoE-57B</td><td>Offloading</td><td>21 tok/s</td><td>49 tok/s</td><td>2.33x</td></tr>
+</table>
+<p>SpecMoE 在 offloading 场景下实现 <strong>2.3-2.9x 加速</strong>，全 GPU 场景下也有 1.6x 提升。推测接受率在 70-85% 之间。输出质量与原始模型完全等价（无损保证）。</p>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融显示，自适应推测长度相比固定 \(\gamma=5\) 提升约 15% 吞吐。在全 GPU 场景下，加速主要来自减少的 KV cache 计算；在 offloading 场景下，专家预取流水线贡献了约 70% 的加速。当专家数量较少（如 Mixtral 的 8 个）时，top-1 drafter 的接受率较低（约 65%）；当专家数量多（DeepSeek-V3 的 256 个）时，接受率提升至约 85%，因为路由更专化。局限在于需要 MoE 架构，不适用于 dense 模型。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>SpecMoE 巧妙地利用了 MoE 架构的天然特性——"部分专家激活"——作为自辅助推测解码的 drafter。这种"自己给自己当 drafter"的范式无需额外小模型，且通过专家预取流水线在 offloading 场景下实现了近 3x 的加速，为大型 MoE 模型的高效部署提供了一个即插即用的解决方案。</p>
+</div>

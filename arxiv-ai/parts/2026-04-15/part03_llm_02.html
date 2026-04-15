@@ -1,0 +1,77 @@
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.09624">Self-Calibrating Language Models via Test-Time Discriminative Distillation</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span>
+<span>🏛 University of Hamburg</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Calibration</span><span class="tag tag-llm">Test-Time</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>大语言模型普遍存在<strong>系统性过度自信</strong>的问题：即使在经常回答错误的问题上，模型也表达高度确定性。现有校准方法要么需要标注验证集、要么在分布偏移下退化、要么推理成本过高。近期研究发现，LLM 内部其实已包含了一个比其外显输出更好校准的信号——当被问"这个答案正确吗？"时，"True"的 token 概率比直接生成的置信度更加可靠。但这个判别信号如何高效地反哺给生成分布，一直未被解决。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 判别置信度提取（Discriminative Confidence Extraction）</strong><br>
+给定问题 \(q\) 和模型生成的候选答案 \(a\)，构造验证提示：「Is the following answer to the question correct? Q: \(q\), A: \(a\). Answer True or False.」<br>
+判别置信度定义为：
+$$p_{\text{disc}}(a|q) = P(\text{True} \mid q, a)$$
+作者验证了在多个模型（LLaMA-3-70B、Qwen2.5-72B、Mistral-Large）上，\(p_{\text{disc}}\) 的 ECE（期望校准误差）比生成概率 \(p_{\text{gen}}\) 低 40-60%，证实了判别信号的校准优势。
+</div>
+
+<div class="sub-module">
+<strong>② 测试时判别蒸馏（Test-Time Discriminative Distillation, TTDD）</strong><br>
+核心创新在于在<strong>推理时</strong>（无需额外训练）将判别置信度蒸馏回生成分布。对于每个测试样本：
+<ol>
+<li>先用模型以温度 \(T\) 采样生成 \(K\) 个候选答案 \(\{a_1, ..., a_K\}\)</li>
+<li>对每个候选计算判别置信度 \(p_{\text{disc}}(a_k|q)\)</li>
+<li>用归一化后的判别置信度作为软标签，对生成分布进行 KL 散度最小化：</li>
+</ol>
+$$\mathcal{L}_{\text{TTDD}} = D_{\text{KL}}\left(\tilde{p}_{\text{disc}}(\cdot|q) \| p_\theta(\cdot|q)\right)$$
+其中 \(\tilde{p}_{\text{disc}}\) 是在候选集上归一化的判别置信度。这等价于在测试时将判别模型的校准知识转移给生成模型。
+</div>
+
+<div class="sub-module">
+<strong>③ 高效近似：无训练版本</strong><br>
+为避免测试时反向传播，作者提出了一种<strong>无训练近似</strong>：直接用判别置信度对候选答案进行加权投票，而非更新模型参数：
+$$\hat{a} = \arg\max_{a \in \mathcal{A}} \sum_{k=1}^{K} \tilde{p}_{\text{disc}}(a_k|q) \cdot \mathbb{1}(a_k = a)$$
+这种方法只需 \(K\) 次额外前向传播（验证步），计算开销比完整 TTDD 低 90% 以上，且在大多数场景下性能接近。
+</div>
+
+<div class="sub-module">
+<strong>④ 自适应温度选择</strong><br>
+采样温度 \(T\) 直接影响候选多样性。过低的 \(T\) 导致候选重复，过高导致质量下降。作者提出自适应策略：根据模型在问题上的初始不确定性（用生成 entropy 度量）动态选择 \(T\)：
+$$T^* = T_{\text{base}} \cdot \left(1 + \alpha \cdot H(p_\theta(\cdot|q))\right)$$
+当模型不确定性高时提高温度以增加候选多样性，反之降低温度保证质量。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>TriviaQA 示例</strong><br><br>
+<strong>问题</strong>：「Which planet has the most moons?」<br>
+<strong>直接生成</strong>：「Jupiter」（生成置信度: 0.92） → <strong>错误</strong>（Saturn 现有 146 颗已确认卫星）<br>
+<strong>TTDD 候选</strong>：<br>
+&nbsp;&nbsp;- Jupiter (生成prob: 0.72, 判别prob: 0.31)<br>
+&nbsp;&nbsp;- Saturn (生成prob: 0.21, 判别prob: <strong>0.64</strong>)<br>
+&nbsp;&nbsp;- Uranus (生成prob: 0.07, 判别prob: 0.05)<br>
+<strong>TTDD 输出</strong>：「Saturn」（校准后置信度: 0.64） → <strong>正确</strong> ✅<br>
+<em>判别信号成功捕捉到了模型的过时知识并校正了输出</em>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>TriviaQA Acc</th><th>TriviaQA ECE↓</th><th>MMLU Acc</th><th>MMLU ECE↓</th></tr>
+<tr><td>Greedy Decoding</td><td>71.2%</td><td>18.3%</td><td>79.4%</td><td>14.7%</td></tr>
+<tr><td>Verbalized Confidence</td><td>71.2%</td><td>15.1%</td><td>79.4%</td><td>12.8%</td></tr>
+<tr><td>Self-Consistency (K=10)</td><td>73.8%</td><td>12.4%</td><td>80.1%</td><td>11.2%</td></tr>
+<tr><td>TTDD (K=10)</td><td class="best">76.1%</td><td class="best">6.8%</td><td class="best">81.3%</td><td class="best">5.9%</td></tr>
+<tr><td>TTDD-Lite (无训练)</td><td>75.4%</td><td>7.3%</td><td>80.9%</td><td>6.4%</td></tr>
+</table>
+<p>TTDD 在准确率和校准误差两个维度同时大幅提升：ECE 从 14-18% 降至 <strong>5-7%</strong>，准确率提升 4-5 个百分点。无训练版本 TTDD-Lite 性能接近完整版但推理成本大幅降低。</p>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融显示候选数量 \(K\) 的效果呈对数增长：\(K=5\) 即可获得约 80% 的收益，\(K=20\) 后边际收益很小。自适应温度相比固定温度提升约 1.5% 准确率。在分布外测试集（ARC-Challenge、CommonsenseQA）上，TTDD 的校准优势更加明显（ECE 改善 2-3x），表明判别信号具有良好的分布泛化性。主要局限是推理延迟增加（\(K\) 倍验证成本），以及对极长生成任务（如文章写作）不适用。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>TTDD 揭示了一个重要洞察：LLM 内部已经拥有比其生成输出更好的校准信号，关键在于如何在推理时将这个判别信号高效地反哺给生成过程。这种"自我蒸馏"范式无需额外训练数据或标注，为 LLM 的可信度提升提供了一条优雅的路径。</p>
+</div>

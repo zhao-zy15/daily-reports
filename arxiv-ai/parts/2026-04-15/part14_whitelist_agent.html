@@ -1,0 +1,29 @@
+<!-- Whitelist Agent paper -->
+<div class="paper-card" id="p20">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11188">🏢 MathAgent: Adversarial Evolution of Constraint Graphs for Mathematical Reasoning Data Synthesis</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Huawei, Tsinghua University, Harbin Institute of Technology</span><br>
+<span class="tag tag-agent">Agent</span><span class="tag tag-industry">Industry Lab</span><span class="tag tag-rl">Data Synthesis</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>数学推理数据的质量和多样性是 LLM 数学能力的瓶颈。人工标注成本高、覆盖有限；LLM 自合成容易陷入模式坍缩（mode collapse），生成大量相似的简单题目。本文来自华为+清华+哈工大团队，提出 MathAgent：通过<strong>对抗演化约束图</strong>来合成结构多样、难度可控的高质量数学推理数据。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 约束图表示</strong><br>将数学题目抽象为约束图 \(G = (V, E, C)\)：节点 \(V\) 为数学变量，边 \(E\) 为变量间关系，约束 \(C\) 为等式/不等式条件。例如"鸡兔同笼"：节点={鸡数, 兔数, 总头数, 总脚数}，边={头数=鸡+兔, 脚数=2鸡+4兔}，约束={头数=35, 脚数=94}。</div>
+<div class="sub-module"><strong>② 对抗演化机制</strong><br>由两个 Agent 协作：<strong>Proposer（𝒜_P）</strong> 生成约束图变异（添加节点/边/约束），<strong>Critic（𝒜_C）</strong> 评估变异后题目的质量和求解唯一性。演化目标函数：$$\max_{\mathcal{A}_P} \min_{\mathcal{A}_C} \mathbb{E}_{G' \sim \mathcal{A}_P(G)}[\text{Quality}(G') + \lambda \cdot \text{Diversity}(G', \mathcal{D})]$$ Proposer 追求最大化质量+多样性，Critic 负责淘汰不合格的变异。</div>
+<div class="sub-module"><strong>③ 难度控制</strong><br>约束图的拓扑特征直接映射到题目难度：图深度 → 推理步数，图宽度 → 并行子问题数，环结构 → 需要方程组求解。通过控制图的拓扑参数精确控制合成题目的难度分布。</div>
+<div class="sub-module"><strong>④ 解耦设计：蓝图与语言化分离</strong><br>先生成约束图蓝图（纯结构），再由 LLM 将蓝图包装为自然语言题目。这种解耦确保了结构多样性不受语言表达风格的限制。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>约束图演化实例</strong><br><br><strong>种子题</strong>：「甲乙两人各走一段路，甲速度5km/h，乙速度3km/h，同时出发，甲比乙早到30分钟。求路程。」<br><strong>约束图</strong>：V={d, v₁=5, v₂=3, Δt=0.5h}, E={d=v₁t₁, d=v₂t₂, t₂-t₁=Δt}<br><strong>Proposer 变异</strong>：添加"中途休息"节点 + "速度变化"边 → 新约束图<br><strong>变异后题目</strong>：「甲乙两人从A到B，甲先以5km/h走了一半路程后加速到7km/h，乙全程3km/h但在中点休息了10分钟。甲比乙早到45分钟。求A到B的距离。」<br><strong>Critic 验证</strong>：✅ 有唯一解(d=21km)，难度增加1级，结构新颖</div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>训练数据</th><th>GSM8K</th><th>MATH-500</th><th>数据多样性↑</th></tr>
+<tr><td>GSM8K-train (原始人工)</td><td>76.2</td><td>42.8</td><td>baseline</td></tr>
+<tr><td>GPT-4 自合成 (等量)</td><td>74.8</td><td>44.1</td><td>0.62</td></tr>
+<tr><td>WizardMath 合成</td><td>78.4</td><td>46.3</td><td>0.71</td></tr>
+<tr><td class="best">MathAgent 合成</td><td class="best">81.7</td><td class="best">51.2</td><td class="best">0.89</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>对抗演化比简单 LLM 重写在 MATH-500 上高 7.1 分，主要归功于更高的结构多样性（0.89 vs 0.62）。解耦设计比端到端生成高 3.2 分。难度控制实现了从小学到竞赛级别的均匀覆盖。局限在于当前主要面向算术和代数，几何题的约束图表示还需扩展。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>MathAgent 的核心贡献是将数学题合成从"语言空间"提升到"结构空间"——先设计数学结构再包装语言，从根本上避免了模式坍缩。华为+清华+哈工大的这项工作为高质量数学数据的规模化生产提供了系统化方案。</p>
+</div>

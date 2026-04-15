@@ -1,0 +1,56 @@
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11510">Policy Split: Incentivizing Dual-Mode Exploration in LLM Reinforcement Learning with Dual-Mode Entropy Regularization</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Harbin Institute of Technology, Zhejiang University, ByteDance</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Exploration</span><span class="tag tag-rl">Entropy</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM 的 RL 训练（如 GRPO、PPO）中，探索-利用权衡是核心挑战。现有方法使用单一熵正则化：高熵鼓励探索但降低生成质量；低熵保证质量但容易陷入局部最优。本文提出 Policy Split：将策略显式拆分为<strong>探索模式</strong>和<strong>利用模式</strong>，分别使用不同的熵正则化强度。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 策略双模式分裂</strong><br>将策略 \(\pi_\theta\) 拆分为两个模式，由二项伯努利变量 \(z \sim \text{Bernoulli}(\epsilon)\) 控制：$$\pi_{\theta}(y|x) = \epsilon \cdot \pi_{\theta}^{\text{explore}}(y|x) + (1-\epsilon) \cdot \pi_{\theta}^{\text{exploit}}(y|x)$$探索模式使用高温度 \(T_{\text{exp}}\)，利用模式使用低温度 \(T_{\text{base}}\)。两个模式共享参数但温度不同。</div>
+<div class="sub-module"><strong>② 双模式熵正则化</strong><br>对两种模式分别施加不同的熵约束：$$\mathcal{L}_{\text{entropy}} = -\lambda_{\text{exp}} H(\pi^{\text{explore}}) - \lambda_{\text{base}} H(\pi^{\text{exploit}})$$ 其中 \(\lambda_{\text{exp}} \gg \lambda_{\text{base}}\)。探索模式被强制保持高熵以发现新策略，利用模式被鼓励低熵以优化已知好策略。</div>
+<div class="sub-module"><strong>③ 模式切换的自适应调度</strong><br>训练初期探索比例 \(\epsilon\) 较高（0.3-0.5），随训练进行按余弦退火降至 0.05-0.1：$$\epsilon_t = \epsilon_{\min} + \frac{1}{2}(\epsilon_{\max} - \epsilon_{\min})(1 + \cos(\pi t / T))$$</div>
+<div class="sub-module"><strong>④ 探索经验的选择性蒸馏</strong><br>探索模式生成的高回报样本被筛选后注入利用模式的训练集：只有回报高于利用模式当前均值 1σ 的探索样本才被保留，确保"好的探索结果被利用"。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>MATH-500 RL 训练过程</strong><br><br><strong>Epoch 1 (ε=0.4)</strong>: 探索模式发现新的解题路径（利用因式分解代替配方法），正确率 +3.2%<br><strong>Epoch 5 (ε=0.2)</strong>: 利用模式吸收了因式分解策略，稳定正确率提升 +7.8%<br><strong>Epoch 10 (ε=0.1)</strong>: 探索模式继续发现辅助线构造技巧，利用模式累计 +12.1%<br><em>对比单一策略(无 split): Epoch 10 仅 +8.4%</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MATH-500</th><th>GSM8K</th><th>AIME 2024</th><th>训练稳定性</th></tr>
+<tr><td>GRPO (baseline)</td><td>71.4</td><td>89.2</td><td>26.7</td><td>中</td></tr>
+<tr><td>GRPO + 高熵</td><td>69.8</td><td>87.6</td><td>30.0</td><td>低</td></tr>
+<tr><td>GRPO + 低熵</td><td>73.1</td><td>90.1</td><td>23.3</td><td>高</td></tr>
+<tr><td class="best">Policy Split</td><td class="best">76.2</td><td class="best">91.8</td><td class="best">33.3</td><td class="best">高</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融显示双模式分裂比单一温度策略在 MATH 上提升 3-5 分。选择性蒸馏贡献约 2 分提升。在 AIME 这类需要创造性推理的困难任务上，Policy Split 的优势最为明显（33.3 vs 26.7）。余弦退火调度比线性退火好约 1.5 分。局限在于额外的探索模式增加约 30% 的训练 token 消耗。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>Policy Split 通过显式的"双人格"策略设计（大胆探索者 + 稳健利用者）优雅地解决了 LLM RL 的探索困境。核心思想可以泛化到其他需要探索-利用平衡的场景。</p>
+</div>
+
+<div class="paper-card" id="p8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.11446">Low-rank Optimization Trajectories Modeling for LLM RLVR Acceleration</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-12</span><span>🏛 Renmin University of China, China University of Mining and Technology</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Acceleration</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>RLVR（RL with Verifiable Rewards）已成为提升 LLM 推理能力的关键技术（如 DeepSeek-R1），但训练成本极高。本文发现 RLVR 训练过程中，模型参数的变化轨迹存在显著的<strong>低秩结构</strong>：参数更新的有效维度远低于参数总维度。基于此观察，提出通过建模低秩优化轨迹来加速 RLVR 训练。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 优化轨迹的低秩分解</strong><br>RLVR 训练 \(T\) 步后的参数增量 \(\Delta\mathbf{W}_T = \mathbf{W}_T - \mathbf{W}_0\) 可分解为：$$\Delta\mathbf{W}_T \approx \mathbf{U}_r \mathbf{\Sigma}_r \mathbf{V}_r^T$$ 其中秩 \(r \ll \min(d_1, d_2)\)。实验发现，RLVR 训练 1000 步后，前 8 个奇异值捕获了 95%+ 的参数变化量。</div>
+<div class="sub-module"><strong>② 轨迹预测加速</strong><br>基于低秩假设，用前 \(T_0\) 步的真实轨迹拟合低秩子空间 \((\mathbf{U}_r, \mathbf{V}_r)\)，然后在该子空间内<strong>外推</strong>后续步骤：$$\Delta\mathbf{W}_{T_0 + t} \approx \mathbf{U}_r \cdot f(t) \cdot \mathbf{V}_r^T$$ 其中 \(f(t)\) 是在低秩子空间中训练的轻量预测网络（2层 MLP）。</div>
+<div class="sub-module"><strong>③ 子空间内的高效 RL 更新</strong><br>将 RL 梯度投影到低秩子空间内进行更新，每步只需更新 \(r \times (d_1 + d_2)\) 个参数而非 \(d_1 \times d_2\)：$$\nabla_{\mathbf{U}} \mathcal{L} = \nabla_{\mathbf{W}} \mathcal{L} \cdot \mathbf{V}_r, \quad \nabla_{\mathbf{V}} \mathcal{L} = \mathbf{U}_r^T \cdot \nabla_{\mathbf{W}} \mathcal{L}$$ 当 \(r=8\)，7B 模型每步训练的梯度内存降低约 98%。</div>
+<div class="sub-module"><strong>④ 混合训练策略</strong><br>前 \(T_0\) 步（约总步数的 20%）使用全参数 RL 训练以建立子空间，之后切换到子空间投影训练。每隔 \(\Delta T\) 步重新拟合子空间基以适应优化方向的渐变。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>Qwen2.5-7B RLVR 训练加速</strong><br><br><strong>标准 GRPO (5000步)</strong>: MATH-500 71.4 → 78.2 (+6.8), 耗时 48 GPU·h<br><strong>低秩加速 (1000全参+4000子空间, r=8)</strong>: MATH-500 71.4 → <strong>77.6</strong> (+6.2), 耗时 <strong>21 GPU·h (2.3x 加速)</strong><br><em>精度损失仅 0.6 分，训练时间减少 56%</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>设置</th><th>MATH-500</th><th>GSM8K</th><th>训练时间</th><th>加速比</th></tr>
+<tr><td>Full GRPO (5K steps)</td><td>78.2</td><td>91.4</td><td>48h</td><td>1.0x</td></tr>
+<tr><td>LoRA GRPO (r=16)</td><td>75.1</td><td>89.2</td><td>28h</td><td>1.7x</td></tr>
+<tr><td class="best">Low-rank Trajectory (r=8)</td><td class="best">77.6</td><td class="best">91.0</td><td class="best">21h</td><td class="best">2.3x</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>低秩轨迹方法比 LoRA GRPO 高 2.5 分，因为它在全参数空间中识别了最优子空间而非使用固定的 LoRA 结构。秩 \(r=8\) 是最优权衡点；\(r=4\) 精度损失 1.5 分，\(r=16\) 加速收益减小。子空间重拟合间隔 \(\Delta T=200\) 步效果最佳。局限在于前期全参数训练阶段仍需完整内存。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>揭示了 RLVR 优化轨迹的低秩性质并将其转化为实用加速方案。对于 RLVR 的大规模应用（如 DeepSeek-R1 级别的训练）具有重要的成本节约意义。</p>
+</div>

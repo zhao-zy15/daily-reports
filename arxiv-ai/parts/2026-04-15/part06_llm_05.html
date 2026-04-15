@@ -1,0 +1,28 @@
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10091">SEPTQ: A Simple and Effective Post-Training Quantization Paradigm for Large Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 Dalian University of Technology</span><br>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Quantization</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>后训练量化(PTQ)是压缩 LLM 的核心技术，但现有方法(GPTQ/AWQ/QuIP#)在 ≤4bit 下精度损失大。GPTQ 贪心逐列策略导致误差累积，AWQ 启发式显著性不够精确，QuIP# 计算开销过高。SEPTQ 从两个环节重新设计：量化位置选择和误差补偿。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 静态全局量化位置策略</strong><br>定义权重敏感度 \(S_{ij} = |W_{ij}| \cdot \|\mathbf{X}_{j,:}\|_2\)（权重绝对值×输入通道激活强度），保留 top-\(k\%\) 敏感权重为 FP16。复杂度仅 \(O(d_{\text{row}} \times d_{\text{col}})\)，远低于 GPTQ 的 \(O(d^3)\)。</div>
+<div class="sub-module"><strong>② 掩码约束误差补偿</strong><br>引入掩码矩阵 \(\mathbf{M}\) 约束补偿更新公式：$$\delta\mathbf{W} = (\mathbf{I} - \mathbf{M}) \odot \left(\Delta\mathbf{W} \cdot \mathbf{X}\mathbf{X}^T(\mathbf{X}\mathbf{X}^T + \lambda\mathbf{I})^{-1}\right)$$ 仅让未量化权重承担误差补偿，避免量化-补偿的循环干扰。</div>
+<div class="sub-module"><strong>③ 分组量化与混合精度</strong><br>支持 per-group 量化（group size = 128），不同层根据敏感度自动分配精度级别。注意力层 Q/K 通常分配更高精度以保护位置编码信息。</div>
+<div class="sub-module"><strong>④ 两阶段流程</strong><br>Phase 1: 用 128 条校准数据计算全局敏感度并确定量化位置（~1分钟）→ Phase 2: 逐层量化+掩码补偿（~10分钟/7B 模型）。整体量化速度为 GPTQ 的 3-5x。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>LLaMA-3-70B W4A16 量化</strong><br><br><strong>原始</strong>: WikiText-2 PPL = 3.12, MMLU = 79.4%<br><strong>GPTQ</strong>: PPL = 3.89 (+0.77), MMLU = 75.1% (-4.3)<br><strong>AWQ</strong>: PPL = 3.52 (+0.40), MMLU = 77.2% (-2.2)<br><strong>SEPTQ</strong>: PPL = <strong>3.31 (+0.19)</strong>, MMLU = <strong>78.6% (-0.8)</strong><br><em>SEPTQ 量化损失仅为 GPTQ 的 1/4</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>W4 PPL↓</th><th>W3 PPL↓</th><th>MMLU (W4)</th><th>量化耗时</th></tr>
+<tr><td>GPTQ</td><td>3.89</td><td>5.42</td><td>75.1</td><td>45 min</td></tr>
+<tr><td>AWQ</td><td>3.52</td><td>4.87</td><td>77.2</td><td>30 min</td></tr>
+<tr><td>QuIP#</td><td>3.38</td><td>4.31</td><td>78.0</td><td>180 min</td></tr>
+<tr><td class="best">SEPTQ</td><td class="best">3.31</td><td class="best">4.15</td><td class="best">78.6</td><td class="best">12 min</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融显示静态全局策略比 GPTQ 的贪心策略 PPL 改善 0.3-0.5，掩码约束补偿再贡献 0.2-0.3。在 W3（3-bit）极端场景下优势更明显，SEPTQ 将 PPL 退化控制在 1.03 内（GPTQ 为 2.30）。局限性在于对 activation 量化（A8/A4）的支持尚未探索。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>SEPTQ 证明了 PTQ 不需要复杂的优化——简单的全局敏感度排序+掩码约束补偿即可在速度和精度上同时超越 GPTQ/AWQ/QuIP#。其"简单即有效"的设计哲学值得借鉴。</p>
+</div>

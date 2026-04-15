@@ -1,0 +1,29 @@
+<h2 class="section-title rl">🎯 RL — 强化学习与对齐</h2>
+
+<div class="paper-card" id="p6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.10072">Reason Only When Needed: Efficient Generative Reward Modeling via Model-Internal Uncertainty</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-11</span><span>🏛 UNSW, Tencent</span><br>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Reward Model</span><span class="tag tag-rl">Efficiency</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>生成式奖励模型(GRM)通过 Chain-of-Thought 提示增强 LLM 的推理能力来评估回答质量。但 GRM 有两个关键缺陷：(1) CoT 对所有输入无差别应用，简单任务也承担不必要的推理成本；(2) 生成式推理的不稳定性导致同一输入的评分波动大。本文提出根据<strong>模型内部不确定性</strong>动态决策是否需要推理。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><strong>① 不确定性感知路由</strong><br>对输入先执行一次快速直接评分（无 CoT），从模型内部隐状态提取不确定性信号。定义不确定性为最后一层隐状态的 entropy：$$U(\mathbf{x}) = -\sum_v p(v|\mathbf{h}_L) \log p(v|\mathbf{h}_L)$$ 当 \(U(\mathbf{x}) > \tau\) 时触发 CoT 推理，否则直接使用快速评分。阈值 \(\tau\) 通过验证集上的 F1 最优点自动确定。</div>
+<div class="sub-module"><strong>② 多粒度评分融合</strong><br>对需要 CoT 的样本，使用<strong>三级评分融合</strong>：快速评分 \(s_{\text{fast}}\)、CoT 评分 \(s_{\text{cot}}\)、以及 CoT 推理过程中的中间步骤一致性得分 \(s_{\text{consist}}\)：$$s_{\text{final}} = \alpha s_{\text{fast}} + \beta s_{\text{cot}} + (1-\alpha-\beta) s_{\text{consist}}$$</div>
+<div class="sub-module"><strong>③ CoT 稳定性训练</strong><br>为减少 CoT 的随机波动，引入<strong>一致性正则化</strong>：对同一输入的 \(K\) 次 CoT 采样，最小化评分方差：$$\mathcal{L}_{\text{consist}} = \frac{1}{K}\sum_{k=1}^K (s_k - \bar{s})^2$$ 与标准奖励建模损失联合训练。</div>
+<div class="sub-module"><strong>④ 自适应推理预算分配</strong><br>在 Best-of-N 采样或 RLHF 训练中，将节省的推理预算重新分配给高不确定性样本：允许它们使用更长的 CoT 或多次采样取均值，实现预算最优分配。</div>
+<div class="module-title">📋 深度案例</div>
+<div class="example-box"><strong>RewardBench 评估</strong><br><br><strong>简单样本</strong>：「1+1=?」→ 不确定性 U=0.12 < τ=0.5 → 直接评分(0.3ms) → 正确<br><strong>困难样本</strong>：「证明 √2 是无理数」→ U=2.31 > τ → 触发 CoT(12ms) → CoT 推理验证步骤，给出详细评分<br><em>约 65% 的样本被路由到快速通道，整体推理成本降低 58%</em></div>
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>RewardBench Acc</th><th>推理延迟</th><th>延迟降低</th></tr>
+<tr><td>标准 GRM (全CoT)</td><td>88.7%</td><td>45.2ms</td><td>—</td></tr>
+<tr><td>直接评分 (无CoT)</td><td>82.3%</td><td>3.1ms</td><td>93%</td></tr>
+<tr><td class="best">Ours (不确定性路由)</td><td class="best">88.2%</td><td class="best">19.1ms</td><td class="best">58%</td></tr>
+</table>
+<div class="module-title">🔍 消融与讨论</div>
+<p>不确定性路由在准确率仅损失 0.5% 的情况下将延迟降低 58%。一致性正则化将 CoT 评分的标准差从 0.18 降至 0.07。在 RLHF 训练中集成后，训练速度提升 1.8x 且最终模型质量不变。局限在于不确定性估计依赖于最后一层表示，可能在某些分布外场景不够鲁棒。</p>
+<div class="module-title">💡 结论与启发</div>
+<p>核心洞察：不是所有评估都需要深度推理，模型自身的不确定性信号可以有效地决定推理深度。这为构建"按需思考"的奖励模型提供了一个实用框架。</p>
+</div>
