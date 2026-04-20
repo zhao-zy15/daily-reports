@@ -1,0 +1,119 @@
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态大模型</h2>
+
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15804" target="_blank">Qwen3.5-Omni Technical Report</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Alibaba Group / Qwen Team</span>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">Omni</span><span class="tag tag-industry">🏢 Qwen/Alibaba</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>全模态(Omni)模型是通往AGI的关键路径——人类与世界的交互天然涉及视觉、听觉和语言的融合。现有全模态模型在实时交互、长上下文处理和多语言支持方面仍有显著差距。Qwen3.5-Omni是通义千问最新一代全模态模型，支持文本、图像、音频、视频的输入理解和文本/语音的双模态输出，在215个音频及视听基准上达到SOTA。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① Thinker-Talker 架构升级</strong><br>
+继承Qwen2.5-Omni的双模块设计：<em>Thinker</em>（思考者）负责文本生成和多模态理解，<em>Talker</em>（表达者）负责流式语音生成。Qwen3.5-Omni的关键升级：两者均采用<strong>混合注意力MoE (Hybrid-Attention MoE)</strong>架构，Thinker支持256K上下文，可处理超过10小时音频或400秒720P视频。Talker采用RVQ多codebook语音表示，实现单帧即时合成。
+</div>
+<div class="sub-module">
+<strong>② ARIA (Adaptive Rate Interleave Alignment)</strong><br>
+针对流式语音合成中文本和语音token化效率不一致导致的跳字、误读、数字模糊等问题，提出ARIA机制：
+$$\text{约束：} \forall t, \frac{|\text{speech tokens}_{\leq t}|}{|\text{text tokens}_{\leq t}|} \leq r_{\text{global}}(t)$$
+其中 \(r_{\text{global}}\) 是全局的语音-文本token比率。ARIA在每个解码步骤自适应调整文本和语音单元的交错比例，确保对齐。与固定交错率或MFA强制对齐不同，ARIA支持跨语言的灵活对齐（不同语言编码效率差异大），且自然支持任意文本前缀后接语音续写。
+</div>
+<div class="sub-module">
+<strong>③ 音视频时间感知与全模态Agent能力</strong><br>
+采用时间戳文本注入策略：在音频/视频序列中每160ms插入格式化时间戳字符串，替代纯位置编码的时间感知。这解决了长序列中位置ID过于稀疏的问题，提供更精确的时间定位。新增能力：(1) 自主WebSearch和FunctionCall调用；(2) 音视频结构化字幕（自动场景分割+时间标注）；(3) <strong>Audio-Visual Vibe Coding</strong>——涌现能力，直接从音视频指令生成可执行代码。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>Audio-Visual Vibe Coding（涌现能力）：</strong><br>
+用户通过<strong>语音</strong>描述："帮我写一个网页，左边显示一个蓝色的按钮，点击后右边弹出一个动画效果"<br>
+同时<strong>屏幕共享</strong>展示了一个参考网页的布局<br><br>
+<strong>Qwen3.5-Omni 输出：</strong><br>
+<ul>
+<li>理解语音指令中的功能需求</li>
+<li>识别视频中的布局参考</li>
+<li>生成完整的HTML/CSS/JavaScript代码</li>
+<li>通过语音同步解释代码结构</li>
+</ul>
+<strong>关键点：</strong>这是模型自然涌现的能力，未经专门训练
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>基准</th><th>Qwen3-Omni</th><th>Gemini-3.1 Pro</th><th class="best">Qwen3.5-Omni-Plus</th></tr>
+<tr><td>音频理解 (综合)</td><td>72.4</td><td>78.6</td><td class="best">81.3</td></tr>
+<tr><td>音视频理解 (综合)</td><td>68.1</td><td>82.4</td><td class="best">82.1</td></tr>
+<tr><td>多语言ASR (36语言)</td><td>—</td><td>8.2 WER</td><td class="best">6.8 WER</td></tr>
+<tr><td>语音合成自然度 MOS</td><td>3.8</td><td>4.1</td><td class="best">4.3</td></tr>
+<tr><td>实时交互延迟 (ms)</td><td>850</td><td>1200</td><td class="best">320</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>ARIA vs 固定交错率：跳字率从4.2%降至0.3%，数字误读率从12%降至1.5%。MoE架构 vs Dense：相同活跃参数量下推理速度提升2.3x。时间戳注入 vs 纯位置编码：长视频(>5min)的时间定位准确率从61%提升至84%。音频编码器升级（40M小时数据训练）：多语言ASR WER从9.5降至6.8。关键限制：Plus版本参数规模大（百亿级MoE），部署成本高。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>Qwen3.5-Omni在全模态理解和交互方面实现重大突破：ARIA解决了流式语音合成的核心难题，Audio-Visual Vibe Coding展示了涌现的跨模态代码生成能力。在215个音频/视听基准上的SOTA表现和320ms的超低延迟，使其成为目前最接近"自然对话"的全模态AI系统。</p>
+</div>
+
+<div class="paper-card" id="p15">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.16256" target="_blank">Do Vision-Language Models Truly Perform Vision Reasoning? A Rigorous Study of the Modality Gap</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Nanyang Technological University, Alibaba</span>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">VLM</span><span class="tag tag-multimodal">Reasoning</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>视觉语言模型(VLM)在视觉推理基准上的分数不断攀升，但一个根本性问题被忽视：这些模型是否真正利用了视觉信息来推理？还是主要依赖文本先验（如问题中的语言线索、训练数据中的统计偏差）来"投机取巧"？本文设计了严格的消融实验来定量测量VLM的"模态差距"。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 模态差距的严格定义</strong><br>
+定义三个对比条件：(1) <em>完整输入</em>：图像+文本问题；(2) <em>仅文本</em>：移除图像，仅保留文本问题和选项；(3) <em>扰动图像</em>：将图像替换为无关图像/噪声/纯黑。模态差距(Modality Gap)定义为：
+$$\text{MG} = \text{Acc}_{\text{full}} - \text{Acc}_{\text{text-only}}$$
+真正的视觉推理应表现为大的MG（移除图像后性能显著下降）。
+</div>
+<div class="sub-module">
+<strong>② 多维度探针设计</strong><br>
+在六类视觉推理任务上进行系统评估：空间关系、计数、属性识别、动作理解、因果推理、对比推理。对每类任务设计三组对照：<em>原始问题</em>、<em>语言偏差剥离问题</em>（重写问题消除文本线索）、<em>反事实图像</em>（图像内容与正确答案矛盾）。如果模型在反事实图像条件下仍给出原始答案，说明其依赖文本偏差而非视觉信息。
+</div>
+<div class="sub-module">
+<strong>③ 视觉依赖度指标（Visual Reliance Score）</strong><br>
+综合三个维度构建视觉依赖度得分：
+$$\text{VRS} = \frac{1}{3}\left(\text{MG}_{\text{removal}} + \text{MG}_{\text{perturbation}} + (1 - \text{Acc}_{\text{counterfactual}})\right)$$
+VRS越高，说明模型越真正依赖视觉信息。理想VRS应接近1.0。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>计数任务的模态差距分析：</strong><br>
+<strong>问题：</strong>"图片中有几只猫？" 选项: A.1 B.2 C.3 D.4（图中有3只猫）<br><br>
+<strong>GPT-4o：</strong><br>
+<ul>
+<li>完整输入: 正确选C (85%)</li>
+<li>仅文本: 仍选C (42%) — 因为训练数据中"几只猫"的答案分布偏向2-3</li>
+<li>反事实图像(图中1只猫): 仍选C (38%) — <strong>严重的文本偏差</strong></li>
+</ul>
+<strong>实际MG = 85% - 42% = 43%</strong>（看似合理但反事实实验揭示了大量"虚假"的视觉推理）
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>原始Acc%</th><th>Text-only Acc%</th><th>MG%↑</th><th>VRS↑</th></tr>
+<tr><td>LLaVA-1.5-13B</td><td>62.4</td><td>38.2</td><td>24.2</td><td>0.35</td></tr>
+<tr><td>InternVL2-26B</td><td>71.8</td><td>42.5</td><td>29.3</td><td>0.42</td></tr>
+<tr><td>Qwen2-VL-72B</td><td>78.3</td><td>48.1</td><td>30.2</td><td>0.46</td></tr>
+<tr><td class="best">GPT-4o</td><td class="best">82.1</td><td class="best">45.7</td><td class="best">36.4</td><td class="best">0.52</td></tr>
+<tr><td>理想模型</td><td>—</td><td>~25%</td><td>—</td><td>1.00</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>任务类型分析：空间关系的VRS最高(0.61)——确实需要视觉信息；而属性识别的VRS最低(0.28)——LLM可通过常识猜测颜色等属性。模型规模效应：更大的模型VRS反而略高（0.46→0.52），但提升远不如准确率的提升（说明大模型在文本偏差和视觉推理两方面同时增强）。关键发现：即使最强的GPT-4o，VRS也仅0.52，意味着约一半的"正确回答"可能并非基于真正的视觉推理。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文的核心发现令人警醒：当前VLM的视觉推理能力被严重高估。即使最先进的GPT-4o，其VRS仅0.52——意味着移除或扰动视觉输入后，约48%的准确率通过文本先验保持。这呼吁社区重新审视VLM基准设计（需消除文本偏差）和模型评估方法（需纳入反事实测试）。</p>
+</div>

@@ -1,0 +1,53 @@
+<h2 class="section-title medical">⚕️ Medical — 医学大模型</h2>
+
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15646" target="_blank">FD-NL2SQL: Feedback-Driven Clinical NL2SQL that Improves with Use</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Johns Hopkins University</span>
+<span class="tag tag-med">Medical</span><span class="tag tag-med">NL2SQL</span><span class="tag tag-med">Clinical</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>临床环境中，医生和研究人员频繁需要从电子病历(EHR)数据库中查询信息，但SQL编写门槛极高。现有NL2SQL系统在医学领域表现不佳——医学术语复杂、数据库schema专业性强、且同一临床概念有多种表达方式。更重要的是，这些系统通常是静态的，无法从使用反馈中持续改进。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 反馈驱动的自我改进循环</strong><br>
+设计三阶段闭环：(1) NL2SQL生成——LLM将自然语言问题转为SQL查询；(2) 执行与反馈——SQL在数据库上执行，临床用户对结果提供简单反馈（正确/不正确+修正提示）；(3) 经验库更新——成功的query-SQL对和修正反馈存入经验库。后续相似问题时，检索相关经验作为few-shot示例，实现"越用越准"。
+</div>
+<div class="sub-module">
+<strong>② 医学Schema增强的提示工程</strong><br>
+为每个数据库表和列生成自然语言描述，包含：(1) 列的临床语义（如"lab_value"→"实验室检测数值，单位因检测项目而异"）；(2) 典型值范围（如"血红蛋白正常范围12-17 g/dL"）；(3) 常见关联查询模式。这些描述与用户问题一同送入LLM，弥合自然语言和SQL之间的语义鸿沟。
+$$\text{Prompt} = [\text{Schema描述}; \text{检索的相似经验}; \text{用户问题}]$$
+</div>
+<div class="sub-module">
+<strong>③ 临床语义相似度检索</strong><br>
+经验库检索使用混合策略：(1) 文本嵌入相似度（SapBERT医学嵌入模型）；(2) SQL结构相似度（共享的表、JOIN模式）；(3) 临床概念匹配（通过UMLS概念映射）。三路得分加权融合后选择top-k经验。这确保了检索的经验在语义和结构上都与当前问题相关。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>MIMIC-IV 查询示例：</strong><br>
+<strong>问题：</strong>"过去一年内，ICU住院超过7天且使用了机械通气的患者中，院内死亡率是多少？"<br><br>
+<strong>基线NL2SQL：</strong> 生成的SQL缺少对"机械通气"的正确编码（使用了错误的procedure_code）<br>
+<strong>FD-NL2SQL（第1次）：</strong> 同样生成错误SQL → 临床用户反馈"机械通气应查ventilator_settings表"<br>
+<strong>FD-NL2SQL（经验积累后）：</strong> 检索到相关经验，正确生成 JOIN ventilator_settings 的SQL → 准确返回死亡率<strong>23.4%</strong>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>MIMIC-IV EX↑</th><th>eICU EX↑</th><th>迭代后 EX↑</th></tr>
+<tr><td>GPT-4 (zero-shot)</td><td>42.3</td><td>38.7</td><td>—</td></tr>
+<tr><td>DIN-SQL</td><td>48.6</td><td>44.2</td><td>—</td></tr>
+<tr><td>DAIL-SQL</td><td>51.2</td><td>47.5</td><td>—</td></tr>
+<tr><td>FD-NL2SQL (初始)</td><td>53.8</td><td>49.1</td><td>—</td></tr>
+<tr><td class="best">FD-NL2SQL (50次反馈后)</td><td class="best">68.4</td><td class="best">62.7</td><td class="best">+14.6 / +13.6</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>经验库大小消融：10/25/50/100条经验分别对应56.2/61.8/68.4/69.1%——50条经验后收益明显饱和。检索策略消融：仅文本64.2%、+SQL结构66.8%、+UMLS概念68.4%，三路融合最优。Schema描述的贡献约+4%。局限：依赖临床用户的及时反馈，且对极复杂的多步查询（如涉及时间序列分析）仍有挑战。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>FD-NL2SQL将"持续改进"的理念引入临床NL2SQL，50次反馈即可将准确率提升15%。核心启发：在专业领域，与其追求完美的zero-shot能力，不如设计让系统从使用中学习的闭环机制。这一模式可推广到其他专业领域的自然语言接口。</p>
+</div>

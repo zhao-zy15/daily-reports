@@ -1,0 +1,61 @@
+<h2 class="section-title llm">🧠 LLM — 大语言模型</h2>
+
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15574" target="_blank">Why Fine-Tuning Encourages Hallucinations and How to Fix It</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-16</span>
+<span>🏛 Hebrew University of Jerusalem, UIUC, Technion, USC</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Hallucination</span><span class="tag tag-llm">Continual Learning</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>大语言模型在监督微调(SFT)过程中容易产生事实性幻觉——当模型学习新的事实知识时，会"忘记"预训练阶段已掌握的知识。这一现象严重影响了SFT在实际应用中的可靠性。现有方法缺乏对SFT诱导幻觉底层机制的系统性理解，更缺乏从持续学习视角出发的有效缓解策略。本文将SFT幻觉重新定义为"事实遗忘"问题，借鉴持续学习领域的工具来解决。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① SLiCK 事实知识分类与实验框架</strong><br>
+采用 SLiCK (Stochastic LLM in-Context Knowledge) 方法，通过20次随机少样本提示评估将问题分为 HighlyKnown、MaybeKnown、WeaklyKnown 和 Unknown 四级。构建三个数据集：\(\mathcal{D}_{\text{Known}}\)（已知事实，用于任务学习）、\(\mathcal{D}_{\text{Unk}}\)（未知事实，测试事实可塑性）、\(\mathcal{D}_{\text{Held}}\)（保留已知事实，测试事实稳定性）。这一框架将任务学习与事实学习完全解耦。
+</div>
+<div class="sub-module">
+<strong>② 参数冻结：降低事实可塑性</strong><br>
+基于不同参数组在事实存储中的角色差异，选择性冻结FFN层（事实存储的主要载体）而仅更新注意力层。实验表明仅更新注意力层时：\(\mathcal{D}_{\text{Unk}}\) 准确率仅0.010（几乎不学新事实），但 \(\mathcal{D}_{\text{Held}}\) 保持0.931（事实稳定性极高），相比标准SFT的0.780大幅提升。这揭示了事实可塑性-稳定性权衡的参数定位。
+</div>
+<div class="sub-module">
+<strong>③ 自蒸馏正则化</strong><br>
+在SFT损失中加入自蒸馏项，约束模型输出分布不偏离原始分布：
+$$\mathcal{L}_{\text{SD}} = \mathcal{L}_{\text{SFT}}(\theta) + \lambda \cdot D_{\text{KL}}\big(P_{\theta_0}(\cdot|x) \,\|\, P_\theta(\cdot|x)\big)$$
+其中 \(\theta_0\) 为SFT前的模型参数。自蒸馏允许模型同时进行任务学习和新事实获取，同时将事实遗忘从约15%降至约3%，实现了可塑性与稳定性的平衡。
+</div>
+<div class="sub-module">
+<strong>④ 机制分析：语义表征干扰假说</strong><br>
+通过对比"名字型"实体（如虚构城市名 Bergadena）和"UUID型"实体（如 Loc_fcfb42），发现名字型实体因与真实实体共享语义表征邻域而导致严重遗忘，而UUID型实体即使学习100万条新事实也几乎不引起遗忘。这证明幻觉的根因是局部表征干扰而非全局容量不足或行为克隆。自蒸馏的成功恰恰在于防止了这种表征漂移。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>实验设置：</strong> 用 Qwen 2.5-1.5B 在 EntityQuestions 上进行SFT，训练集包含8000已知事实 + 8000未知事实<br><br>
+<strong>名字型 vs UUID型对比：</strong><br>
+<ul>
+<li>学习 1000 条"Bergadena 在希腊"类新事实后，模型开始对"Milan在哪个国家"等已知事实产生幻觉（遗忘率~15%）</li>
+<li>学习 1,000,000 条 "Loc_fcfb42 在希腊"类UUID新事实后，已知事实遗忘率接近0%</li>
+<li>结论：<strong>语义相似性是遗忘的决定因素</strong>，而非信息量或容量</li>
+</ul>
+<strong>自蒸馏效果：</strong> 事实遗忘率从15%降至3%，同时新事实获取率仅从94.6%降至约90%
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>\(\mathcal{D}_{\text{Unk}}\) (可塑性)</th><th>\(\mathcal{D}_{\text{Known}}\) ↑</th><th>\(\mathcal{D}_{\text{Held}}\) ↑ (稳定性)</th></tr>
+<tr><td>标准 SFT</td><td>0.946</td><td>0.990</td><td>0.780</td></tr>
+<tr><td>仅冻结 Attention</td><td>0.941</td><td>0.997</td><td>0.782</td></tr>
+<tr><td>仅冻结 FFN</td><td>0.010</td><td>0.946</td><td>0.931</td></tr>
+<tr><td>Only Known (无新事实)</td><td>—</td><td>0.999</td><td>0.958</td></tr>
+<tr><td class="best">自蒸馏 SFT</td><td class="best">~0.90</td><td class="best">0.995</td><td class="best">0.958</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>三个候选假说的对比消融：(1) 容量限制假说——被UUID实验否定，UUID型100万新事实不导致遗忘；(2) 行为克隆假说——SFT格式导致模型"猜测"回答，但只有包含未知事实时遗忘才出现；(3) 局部干扰假说——被名字型vs UUID型实验强力支持。自蒸馏的表征分析进一步证实，正则化有效防止了held-out事实在表征空间中的漂移。局限性：实验主要在实体关系类QA上进行，更复杂的事实结构（如因果链）的适用性待验证。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文提供了理解SFT幻觉的全新视角：幻觉本质是持续学习中的事实遗忘，由语义相似表征间的干扰驱动。自蒸馏是在需要获取新知识场景下的最优策略（遗忘15%→3%），参数冻结则适用于无需新知识场景（如对齐微调）。这对LLM的安全对齐和领域适应有直接指导意义——在对齐微调中冻结FFN可最大限度保留事实准确性。</p>
+</div>

@@ -1,0 +1,61 @@
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15701" target="_blank">Improving Reasoning Capabilities in Small Models through Mixture-of-Layers Distillation with Stepwise Attention on Key Information</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Institute of Information Engineering, CAS</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Distillation</span><span class="tag tag-llm">Reasoning</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>CoT蒸馏是将大模型的推理能力迁移到小模型的重要方法，但现有方法主要关注教师模型生成的推理链文本，忽略了教师在推理过程中对关键信息（如数值token）的动态注意力变化。作者发现，语言模型在逐步推理时会对关键信息展现出渐进式注意力聚焦（Progressive Attention Shift），这种隐含的注意力模式携带了推理的关键线索，但未被现有蒸馏方法利用。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 逐步注意力（Stepwise Attention）发现</strong><br>
+通过分析教师模型各层的注意力分布，发现数值token在推理步骤推进过程中获得的注意力比例逐步上升。形式化定义逐步注意力：对推理步骤 \(s_t\) 中的token \(x_j\)，在教师模型第 \(l\) 层的注意力为：
+$$A^{(l)}_{s_t \to x_j} = \frac{1}{|s_t|} \sum_{i \in s_t} \alpha^{(l)}_{i,j}$$
+其中 \(\alpha^{(l)}_{i,j}\) 是注意力权重。关键信息token的注意力呈单调递增趋势。
+</div>
+<div class="sub-module">
+<strong>② Mixture-of-Layers (MoL) 动态层对齐</strong><br>
+教师和学生模型层数不同导致直接层对齐困难。提出MoL模块：学生第 \(l_s\) 层的注意力通过教师多层的加权混合来对齐：
+$$\hat{A}^{(l_s)} = \sum_{l_t=1}^{L_T} w_{l_s, l_t} \cdot A^{(l_t)}_T$$
+其中门控权重 \(w_{l_s, l_t} = \text{softmax}(g(h^{(l_s)}))\) 由学生层的隐藏状态动态计算。这允许每个学生层自适应地从教师的不同层学习注意力模式。
+</div>
+<div class="sub-module">
+<strong>③ 逐步注意力蒸馏损失</strong><br>
+总损失包含三部分：
+$$\mathcal{L} = \mathcal{L}_{\text{CoT}} + \alpha \cdot \mathcal{L}_{\text{SA}} + \beta \cdot \mathcal{L}_{\text{MoL}}$$
+\(\mathcal{L}_{\text{SA}}\) 是逐步注意力对齐损失，使用 KL 散度衡量学生和教师在关键token上的注意力分布差异；\(\mathcal{L}_{\text{MoL}}\) 是辅助正则化损失，防止门控权重退化为单一层映射。关键信息token的识别通过 TF-IDF 变体自动完成。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>SVAMP 数学推理任务示例：</strong><br>
+问题："Paul had 42 pens. He gave 19 to his friend and then bought 12 more."<br><br>
+<strong>教师模型（Llama3-8B）注意力演变：</strong><br>
+<ul>
+<li>Step 1: 注意力均匀分布在所有数值(42, 19, 12)和非数值token上</li>
+<li>Step 2: 数值"42"和"19"的相对注意力升至62%</li>
+<li>Step 3: "42-19=23"完成后，"12"的注意力显著上升至45%</li>
+<li>Step 4: 最终"23+12=35"，注意力集中在计算关键数值上</li>
+</ul>
+<strong>标准蒸馏学生：</strong> 在Step 2 即丢失对"12"的关注 → 最终答案错误<br>
+<strong>SA蒸馏学生：</strong> 复现教师的渐进式注意力聚焦 → 正确得出35
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>GSM8K</th><th>SVAMP</th><th>MultiArith</th><th>StrategyQA</th></tr>
+<tr><td>Standard CoT Distill</td><td>46.2</td><td>58.4</td><td>74.3</td><td>65.1</td></tr>
+<tr><td>Distilling Step-by-Step</td><td>47.8</td><td>60.1</td><td>76.5</td><td>66.3</td></tr>
+<tr><td>MCC-KD</td><td>48.5</td><td>61.2</td><td>77.1</td><td>67.0</td></tr>
+<tr><td class="best">Ours (SA + MoL)</td><td class="best">51.3</td><td class="best">64.7</td><td class="best">80.2</td><td class="best">69.5</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>消融实验显示：(1) 仅逐步注意力对齐(无MoL)带来+2.5%平均提升；(2) 加入MoL动态层对齐额外提升+1.8%；(3) 固定层映射vs动态MoL差距约1.2%，证明动态对齐的必要性。关键信息识别的消融中，TF-IDF自动选择 vs 人工标注数值token效果差距<0.5%，表明自动方法足够可靠。局限性：方法需要获取教师模型的中间层注意力权重，对API-only模型不适用。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>本文首次揭示并利用LLM推理过程中的"逐步注意力聚焦"现象进行蒸馏。MoL模块优雅地解决了跨不同大小模型的层对齐问题。在数学和常识推理上的一致提升证明了注意力模式蕴含的推理线索的价值。这启发我们：蒸馏不仅应关注"教师说了什么"，更应关注"教师看了什么"。</p>
+</div>

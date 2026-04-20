@@ -1,0 +1,117 @@
+<h2 class="section-title rl">🎯 RL — 强化学习与对齐</h2>
+
+<div class="paper-card" id="p6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15602" target="_blank">GroupDPO: Memory Efficient Group-wise Direct Preference Optimization</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 CMU, Google DeepMind</span>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">DPO</span><span class="tag tag-industry">🏢 Google DeepMind</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>DPO等偏好优化方法通常仅使用单个正-负样本对训练，丢弃了偏好数据集中多个候选回复的丰富排序信息。组级(group-wise)偏好优化可利用更多监督信号，但由于反向传播时需要跨样本的梯度耦合，导致GPU内存随组大小指数增长，实际训练中只能用很小的组。本文提出一种内存高效的代理实现，使组级DPO的内存开销几乎与组大小无关。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 组级偏好优化的统一框架</strong><br>
+将多种组级目标（PRO、LiPO、MPO等）统一为：给定prompt \(x\) 和 \(K\) 个回复 \(\{y_1, \dots, y_K\}\)，损失函数形式为：
+$$\mathcal{L}_{\text{group}} = -\sum_{i=1}^{K} c_i(\boldsymbol{\pi}) \cdot \log \frac{\pi_\theta(y_i|x)}{\pi_{\text{ref}}(y_i|x)}$$
+其中 \(c_i(\boldsymbol{\pi})\) 是依赖所有样本log概率的组级系数。正是这种跨样本依赖导致了梯度耦合和内存爆炸。
+</div>
+<div class="sub-module">
+<strong>② 内存高效代理损失（Memory-Efficient Surrogate）</strong><br>
+核心思想：在no-gradient前向传播中预计算系数 \(\hat{c}_i\)，然后用这些固定系数构建独立的样本级代理损失：
+$$\hat{\mathcal{L}} = -\sum_{i=1}^{K} \hat{c}_i \cdot \log \pi_\theta(y_i|x)$$
+定理证明：\(\nabla_\theta \hat{\mathcal{L}} = \nabla_\theta \mathcal{L}_{\text{group}}\)（一阶梯度完全等价）。由于每个样本的反向传播独立进行，峰值内存从 \(O(K \cdot M)\) 降至 \(O(M)\)（M为单样本内存），与组大小K解耦。
+</div>
+<div class="sub-module">
+<strong>③ 正样本NLL正则化的关键作用</strong><br>
+实验发现组级训练容易不稳定（训练崩溃），加入正样本的负对数似然(NLL)正则项是关键：
+$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{group}} + \alpha \cdot \mathcal{L}_{\text{NLL}}(y^+)$$
+NLL项防止模型仅通过降低所有回复概率来优化偏好目标，确保正样本的绝对质量。\(\alpha = 0.1\) 在多数设置中最优。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>内存效率对比 (Llama-3-8B, K=8组大小)：</strong><br>
+<ul>
+<li><strong>原生实现：</strong> 峰值GPU内存 72GB → 需要4×A100，训练时OOM崩溃频繁</li>
+<li><strong>Surrogate实现：</strong> 峰值GPU内存 28GB → 单张A100即可训练，K=16甚至K=32都稳定运行</li>
+<li><strong>梯度精度：</strong> surrogate梯度与原生梯度的余弦相似度 > 0.9999（数值验证一阶等价）</li>
+</ul>
+<strong>训练效果 (AlpacaEval 2.0 LC Win Rate)：</strong><br>
+标准DPO(K=2): 28.4% → GroupDPO(K=4): 31.2% → GroupDPO(K=8): <strong>33.7%</strong>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>组大小K</th><th>AlpacaEval 2.0 LC%</th><th>MT-Bench</th><th>峰值内存(GB)</th></tr>
+<tr><td>DPO (pairwise)</td><td>2</td><td>28.4</td><td>7.82</td><td>18</td></tr>
+<tr><td>MPO (naive)</td><td>4</td><td>30.1</td><td>7.95</td><td>45</td></tr>
+<tr><td>GroupDPO (surrogate)</td><td>4</td><td>31.2</td><td>8.05</td><td>20</td></tr>
+<tr><td>GroupDPO (surrogate)</td><td>8</td><td>33.1</td><td>8.18</td><td>24</td></tr>
+<tr><td class="best">GroupDPO + NLL (surrogate)</td><td class="best">8</td><td class="best">33.7</td><td class="best">8.24</td><td class="best">24</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>组大小消融：K=2→4→8→16分别对应28.4/31.2/33.7/34.0%，表明收益递减但持续存在。无NLL的GroupDPO在K=8时崩溃（win rate降至15%），证实NLL正则化对稳定性至关重要。Online vs Offline设置中，online GroupDPO（每轮采样新回复）进一步提升1-2%。局限性：surrogate方法的no-gradient前向传播引入约20%额外训练时间。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>GroupDPO通过巧妙的一阶梯度等价代理，突破了组级偏好优化的内存瓶颈。核心洞察：偏好数据中被丢弃的排序信息确实有价值——从K=2提升到K=8可带来5%+的win rate提升。NLL正则化的必要性揭示了组级训练的脆弱性。这为大规模RLHF训练提供了实用的扩展路径。</p>
+</div>
+
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15847" target="_blank">CiPO: Counterfactual Unlearning for Large Reasoning Models through Iterative Preference Optimization</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 HKUST (Guangzhou), CUHK</span>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Unlearning</span><span class="tag tag-rl">Preference</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>机器遗忘(machine unlearning)旨在从LLM中选择性删除隐私或版权信息。但大推理模型(LRM)的出现带来新挑战：LRM的长链推理(CoT)过程本身就是数据泄露载体——即使最终答案被遗忘，推理链中仍可能暴露敏感信息。现有方法要么粗暴拒绝（引入隐私泄露风险）、要么破坏推理能力。本文提出CiPO，从因果视角将遗忘重新定义为推理路径的"反事实干预"。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 反事实推理链生成</strong><br>
+对需遗忘的知识(如"X的生日是Y")，CiPO指导LRM生成一条逻辑自洽的反事实推理链，将目标答案替换为合理但错误的替代(如另一个日期)。关键约束：反事实链必须保持推理步骤的逻辑连贯性，仅替换事实核心。
+</div>
+<div class="sub-module">
+<strong>② 迭代在线偏好优化</strong><br>
+在每次迭代中：(1) 从当前模型采样关于遗忘目标的CoT推理和答案；(2) 构建偏好对——反事实链为preferred，原始（含敏感信息的）采样链为dispreferred；(3) 使用DPO目标优化：
+$$\mathcal{L}_{\text{CiPO}} = -\log \sigma\left(\beta \log \frac{\pi_\theta(y^+_{\text{cf}}|x)}{\pi_{\text{ref}}(y^+_{\text{cf}}|x)} - \beta \log \frac{\pi_\theta(y^-_{\text{orig}}|x)}{\pi_{\text{ref}}(y^-_{\text{orig}}|x)}\right)$$
+在线更新确保偏好数据与模型的当前分布对齐，避免分布漂移。
+</div>
+<div class="sub-module">
+<strong>③ 迭代增量机制</strong><br>
+每轮迭代后，重新从更新后的模型采样新的dispreferred样本，使反事实链与当前模型输出的差异逐步增大。定义差异度量：
+$$\Delta_t = D_{\text{KL}}(\pi_{\theta_t}(\cdot|x) \| \pi_{\theta_0}(\cdot|x))$$
+迭代持续直至 \(\Delta_t\) 超过阈值或遗忘评估指标达标。通常3-5轮即可完成有效遗忘。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>R-TOFU 遗忘基准测试：</strong><br>
+目标遗忘："著名物理学家X的生日是1921年3月14日"<br><br>
+<strong>基线方法（ReasonedIDK）输出：</strong><br>
+"我无法回答关于这位物理学家的问题" — <em>问题：统一拒绝暴露了数据曾被训练的事实</em><br><br>
+<strong>CiPO输出：</strong><br>
+"让我回忆一下...这位物理学家出生于1921年...根据我的知识，他的生日应该是<strong>6月15日</strong>" — <em>优势：生成合理但错误的答案，不暴露遗忘意图</em><br><br>
+<strong>CoT泄露检测：</strong> 基线方法60%的推理链仍含敏感信息片段；CiPO仅3%
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>遗忘率↑</th><th>CoT泄露率↓</th><th>推理保留率↑</th><th>隐私风险↓</th></tr>
+<tr><td>Gradient Ascent</td><td>72%</td><td>45%</td><td>61%</td><td>38%</td></tr>
+<tr><td>ReasonedIDK</td><td>95%</td><td>60%</td><td>78%</td><td>52%</td></tr>
+<tr><td>R²MU</td><td>88%</td><td>25%</td><td>55%</td><td>15%</td></tr>
+<tr><td class="best">CiPO (Ours)</td><td class="best">97%</td><td class="best">3%</td><td class="best">92%</td><td class="best">5%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>迭代次数消融：1轮遗忘率82%，3轮95%，5轮97%——迭代机制的边际收益递减。反事实质量评估：GPT-4评判约89%的反事实链"逻辑自洽且合理"。在R-TOFU和真实世界数据上，CiPO的推理能力保留率(92%)远超R²MU(55%)，证明因果干预方法不破坏推理链的通用结构。局限：反事实链的质量依赖于LRM的生成能力，对极低资源模型效果有限。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>CiPO开创性地将LRM遗忘问题转化为推理路径的因果干预，通过迭代在线偏好优化实现"深度遗忘"（不仅答案，推理链中的知识痕迹也被清除）。核心启发：对于LRM安全，传统的"输出层遗忘"已不够——必须在推理过程层面进行干预。这对LLM合规（GDPR"被遗忘权"）有直接实用价值。</p>
+</div>

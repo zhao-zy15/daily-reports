@@ -1,0 +1,164 @@
+<h2 class="section-title agent">🤖 Agent — 智能体与工具使用</h2>
+
+<div class="paper-card" id="p10">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15840" target="_blank">CoEvolve: Training LLM Agents via Agent-Data Mutual Evolution</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 AMAP, Alibaba Group</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">RL Training</span><span class="tag tag-industry">🏢 Alibaba</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>当前LLM Agent的RL训练严重依赖静态数据集——无论是人工标注的专家轨迹还是LLM合成的固定数据。这导致两个根本问题：(1) 数据无法覆盖复杂环境交互的长尾变体；(2) 静态数据不能适应智能体进化过程中不断变化的能力边界。CoEvolve提出让智能体和训练数据"协同进化"——智能体的弱点驱动数据生成，新数据推动智能体成长。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 训练与信号提取（Stage 1）</strong><br>
+用GRPO在当前任务集 \(\mathcal{D}_t\) 上训练Agent。关键创新：从rollout轨迹中提取两类弱点信号。<em>遗忘信号</em>：识别Agent曾经掌握但后来退化的交互模式（通过对比不同checkpoint的成功率）。<em>不确定性信号</em>：识别Agent在多次采样中结果高度不一致的场景。这些信号精确定位了Agent当前的能力边界。
+</div>
+<div class="sub-module">
+<strong>② 信号引导的重新探索（Stage 2）</strong><br>
+将弱点信号作为条件提示(prompt)送入LLM环境探索器，引导其在环境中发现与弱点相关的新交互模式。形式化：给定弱点描述 \(f\)（如"Agent在连续API调用中参数传递失败"），LLM探索器在环境中寻找新的触发该弱点的任务配置。与无引导的随机探索不同，这种信号驱动的探索能精准命中Agent的盲区。
+</div>
+<div class="sub-module">
+<strong>③ 任务验证与数据进化（Stage 3）</strong><br>
+将探索发现的交互模式抽象为可执行任务，在真实环境中验证其可执行性和正确性。通过验证的新任务被注入训练集 \(\mathcal{D}_{t+1} = \mathcal{D}_t \cup \mathcal{D}_{\text{new}}\)。整个流程形成闭环：Agent训练 → 弱点检测 → 针对性数据生成 → 数据验证 → Agent再训练，无需人工干预。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>AppWorld 个人助理环境：</strong><br>
+<strong>初始状态：</strong> Qwen2.5-7B在初始100个任务上准确率43%<br><br>
+<strong>CoEvolve 第1轮：</strong><br>
+<ul>
+<li>弱点检测：发现"跨App数据传递"（如日历→邮件）失败率82%</li>
+<li>LLM探索器生成15个新的跨App任务</li>
+<li>验证后12个可执行，加入训练集</li>
+<li>训练后跨App成功率提升至51%，整体准确率提升至53%</li>
+</ul>
+<strong>CoEvolve 第3轮：</strong> 累计合成47个新任务，整体准确率 <strong>62.4%</strong>（+19.4%绝对提升）
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型 / 方法</th><th>AppWorld↑</th><th>BFCL↑</th><th>Δ vs 基线</th></tr>
+<tr><td>Qwen2.5-7B (基线)</td><td>43.0</td><td>72.1</td><td>—</td></tr>
+<tr><td>Qwen2.5-7B + Static Synthetic</td><td>51.2</td><td>78.4</td><td>+7.3</td></tr>
+<tr><td class="best">Qwen2.5-7B + CoEvolve</td><td class="best">62.4</td><td class="best">85.6</td><td class="best">+19.4 / +13.5</td></tr>
+<tr><td>Qwen3-4B + CoEvolve</td><td>58.1</td><td>83.2</td><td>+15.6</td></tr>
+<tr><td>Qwen3-30B-A3B + CoEvolve</td><td>65.7</td><td>88.3</td><td>+18.1</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>信号消融：仅遗忘信号 vs 仅不确定性信号 vs 两者结合分别带来+11.2 / +9.8 / +19.4%提升，两类信号高度互补。无引导探索 vs 信号引导探索：+8.1 vs +19.4%，信号引导的价值显著。进化轮数消融：3轮后收益趋于饱和（第4轮仅+0.8%）。跨模型泛化：Qwen3-4B, Qwen3-30B-A3B上也有大幅提升，证明框架的模型无关性。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>CoEvolve实现了Agent训练的"自适应数据飞轮"——Agent越强，它暴露的弱点越精细，合成的数据越有针对性，形成正向循环。核心洞察：静态数据集是Agent训练的瓶颈，而闭环的数据-Agent协同进化是突破这一瓶颈的关键。Alibaba的这项工作为实用Agent训练提供了可扩展的范式。</p>
+</div>
+
+<div class="paper-card" id="p11">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15505" target="_blank">PolicyBank: Evolving Policy Understanding for LLM Agents</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-16</span>
+<span>🏛 University of Wisconsin-Madison, Google Cloud</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Policy Compliance</span><span class="tag tag-industry">🏢 Google Cloud</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM Agent在企业场景中必须遵守自然语言编写的组织政策，但这些政策规范往往存在歧义、逻辑空隙和语义缺失。现有Agent将政策视为不可变的真理——当规范与实际需求存在偏差时，Agent会"合规但错误"地执行，且现有记忆机制反而会强化这种错误行为。PolicyBank让Agent通过交互反馈自主进化其对政策的理解。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 策略空隙(Policy Gap)的形式化</strong><br>
+定义"规范策略" \(\pi_{\text{spec}}\)（文本所述）和"需求策略" \(\pi_{\text{req}}\)（实际期望）之间的差距。PolicyBank的目标是从 \(\pi_{\text{spec}}\) 出发，通过累积的交互经验，逐步逼近 \(\pi_{\text{req}}\)。策略空隙可分为：遗漏条件、歧义表述、逻辑矛盾三类。
+</div>
+<div class="sub-module">
+<strong>② PolicyBank 记忆结构</strong><br>
+为每个工具(Tool)维护一组结构化的"策略洞察"(Policy Insight)，格式为 \(\langle\text{Tool}, \text{Precondition}, \text{Action}, \text{Confidence}\rangle\)。例如：\(\langle\text{modify\_flight}, \text{delay > 2h AND customer\_request}, \text{offer\_\$50\_compensation}, 0.92\rangle\)。这些洞察是对原始自然语言政策的精确化解读。
+</div>
+<div class="sub-module">
+<strong>③ 策略智能体(Policy Agent)与迭代精炼</strong><br>
+专用的Policy Agent分析任务执行轨迹和开发者反馈，推理出政策空隙的根因并更新Policy Insight。流程：(1) Agent执行任务 → (2) 开发者标记不符预期的行为 → (3) Policy Agent对比规范文本与反馈，生成/修改Insight → (4) 更新后的Insight指导后续任务执行。关键设计：Policy Agent可以质疑规范本身而非仅改进执行，这是与现有记忆机制的根本区别。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>航空客服场景：</strong><br>
+<strong>原始政策：</strong>"如果航班延误且客户请求修改，提供$50补偿"<br>
+<strong>策略空隙：</strong>客户仅报告延误但未请求修改时，政策未覆盖 → Agent拒绝补偿<br><br>
+<strong>现有Agent（无PolicyBank）：</strong> 严格按文本执行，拒绝补偿 ❌<br>
+<strong>传统记忆Agent：</strong> 记住"该场景应拒绝"，强化错误行为 ❌❌<br>
+<strong>PolicyBank Agent：</strong> 开发者反馈后，Policy Agent生成新Insight："delay > 2h → offer compensation, regardless of modification request"。后续所有延误客户均获得补偿 ✓
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>标准场景成功率</th><th>策略空隙场景成功率</th><th>Gap Closure%</th></tr>
+<tr><td>Standard Agent</td><td>78%</td><td>0%</td><td>0%</td></tr>
+<tr><td>Synapse (记忆)</td><td>82%</td><td>3%</td><td>3%</td></tr>
+<tr><td>Agent Workflow Memory</td><td>84%</td><td>5%</td><td>5%</td></tr>
+<tr><td class="best">PolicyBank</td><td class="best">87%</td><td class="best">82%</td><td class="best">82%</td></tr>
+<tr><td>Human Oracle</td><td>92%</td><td>100%</td><td>100%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>在τ-Bench扩展测试集上，PolicyBank在5轮反馈后即可闭合大部分策略空隙（第1轮45%，第3轮72%，第5轮82%）。策略Insight的质量评估显示，85%被GPT-4判定为"准确且有用"。对比实验中，即使不提供开发者反馈（仅用Agent自检），也能闭合38%的空隙。局限性：需要可信的反馈来源（开发者或QA），且对高度模糊的政策（如"合理时间内"）效果有限。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>PolicyBank揭示了一个被忽视的Agent失败模式——"合规但错误"。当政策文本不完美时（几乎总是如此），Agent需要的不仅是更好的执行能力，更是质疑和修正规范本身的能力。这一思路对企业级Agent部署有重大实用价值：与其追求完美的政策文档，不如让Agent在部署前通过交互自主完善其理解。</p>
+</div>
+
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.16022" target="_blank">SocialGrid: A Benchmark for Planning and Social Reasoning in Embodied Multi-Agent Settings</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 TU Darmstadt, Hessian.AI</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Social Reasoning</span><span class="tag tag-agent">Multi-Agent</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>随着LLM Agent从单一文本任务扩展到具身多智能体环境，评估其社会推理能力变得关键。社会推理要求Agent理解其他Agent的意图、偏好和能力，并据此规划协作或竞争策略。现有评估缺乏系统性的具身社会推理基准，SocialGrid填补了这一空白。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 网格世界环境设计</strong><br>
+SocialGrid构建在可控的2D网格世界中，多个Agent同时行动。环境包含：资源采集、领土控制、协作建造、竞争博弈等任务类型。每个Agent有独立的观察空间（部分可观测）和行动空间，关键特性是Agent之间可以通过行为互相影响但不能直接通信。
+</div>
+<div class="sub-module">
+<strong>② 社会推理维度分类</strong><br>
+定义六大社会推理维度：(1) <em>心智理论(ToM)</em>——推断他人目标和信念；(2) <em>策略预测</em>——预测他人未来行动；(3) <em>协作规划</em>——与他人分工合作；(4) <em>竞争推理</em>——在资源争夺中最大化自身利益；(5) <em>规范遵循</em>——遵守隐含的社会规则；(6) <em>公平性</em>——在分配场景中权衡效率与公平。每个维度有专门设计的评估场景。
+</div>
+<div class="sub-module">
+<strong>③ 评估框架与基线</strong><br>
+对每个场景，LLM Agent接收环境观察的文本描述并输出动作。评估指标包括：任务完成率、社会效率(Pareto最优率)、公平性指数(Gini系数)、以及与最优社会策略的一致性得分。测试了GPT-4o、Claude-3.5、Llama-3.1-70B等模型。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>协作建造场景：</strong><br>
+两个Agent需要合作搬运重物到目标位置，但每个Agent只能看到自己周围3×3区域<br><br>
+<strong>GPT-4o表现：</strong><br>
+<ul>
+<li>ToM推理：能推断对方Agent可能也在寻找重物 → 正确率72%</li>
+<li>协作规划：在62%的场景中成功分工（一个搬运、一个开路）</li>
+<li>但在竞争场景中表现差：仅38%采用最优策略（过度倾向"合作"而非竞争）</li>
+</ul>
+<strong>关键发现：</strong> LLM在合作场景表现尚可，但在需要策略性竞争的场景中系统性偏弱
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>模型</th><th>ToM</th><th>协作</th><th>竞争</th><th>规范</th><th>公平</th><th>总分</th></tr>
+<tr><td>Llama-3.1-70B</td><td>55</td><td>48</td><td>32</td><td>41</td><td>45</td><td>44.2</td></tr>
+<tr><td>Claude-3.5-Sonnet</td><td>68</td><td>61</td><td>35</td><td>52</td><td>58</td><td>54.8</td></tr>
+<tr><td class="best">GPT-4o</td><td class="best">72</td><td class="best">62</td><td class="best">38</td><td class="best">55</td><td class="best">61</td><td class="best">57.6</td></tr>
+<tr><td>Random Policy</td><td>25</td><td>15</td><td>25</td><td>20</td><td>33</td><td>23.6</td></tr>
+<tr><td>Optimal Oracle</td><td>100</td><td>100</td><td>100</td><td>100</td><td>100</td><td>100</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>观察范围消融（3×3 vs 5×5 vs 全局）：GPT-4o总分从57.6提升至62.1再到68.4，信息不完整是主要瓶颈。多轮交互（1轮 vs 3轮 vs 10轮）：竞争场景的得分从38提升至45再到51，表明LLM能通过经验学习策略。但即使最强模型在竞争场景也远未达到最优。局限性：网格世界简化了真实社会交互的复杂性。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>SocialGrid揭示了LLM Agent在社会推理方面的系统性短板：(1) 合作 > 竞争（LLM天然偏向合作）；(2) 部分可观测环境严重降低表现；(3) 即使GPT-4o在最佳情况下也仅达到57.6%。这为Agent社会智能的研究指明了方向——需要专门训练竞争推理和不确定环境下的决策能力。</p>
+</div>

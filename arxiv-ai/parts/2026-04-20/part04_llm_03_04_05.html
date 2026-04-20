@@ -1,0 +1,167 @@
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.16029" target="_blank">Cut Your Losses! Learning to Prune Paths Early for Efficient Parallel Reasoning</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 CUHK-Shenzhen, USTB, DualityRL</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Reasoning</span><span class="tag tag-llm">Efficiency</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>并行推理（如Best-of-N采样）通过生成多条推理路径并聚合来提升准确率，但代价极高——单query推理成本可达$6。研究表明大量计算被浪费在早期即出错的"无效路径"上。现有路径剪枝方法碎片化、缺乏统一框架，且"可学习内部信号"这一最有潜力的方向尚未被探索。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 路径剪枝统一分类法</strong><br>
+首次提出二维分类框架：按<em>信号来源</em>分为内部信号（模型自身生成）vs 外部信号（额外模型评估）；按<em>可学习性</em>分为可学习（训练的信号）vs 非可学习（启发式信号）。这揭示了"可学习内部方法"的研究空白——兼具无额外开销和任务适应性的优势。
+</div>
+<div class="sub-module">
+<strong>② STOP (Super Token for Pruning)</strong><br>
+在LRM中训练一个特殊的"超级token" \(\langle \text{stop} \rangle\)，在推理前缀末尾插入，其隐藏状态通过线性探针预测路径正确概率：
+$$s_i = \sigma(W \cdot h_{\langle\text{stop}\rangle}^{(L)} + b)$$
+训练信号来自推理轨迹的最终正确性标签。关键设计：超级token在所有训练中与正常推理解码联合训练，不需要额外的奖励模型或外部评分器。保留比例 \(k\) 控制剪枝强度。
+</div>
+<div class="sub-module">
+<strong>③ 计算预算下的最优剪枝配置</strong><br>
+给定固定计算预算 \(C = N \times T\)（路径数×平均token数），引入剪枝后的等效公式：
+$$C_{\text{prune}} = N \times L_{\text{prefix}} + k \times N \times (T - L_{\text{prefix}})$$
+通过大量实验建立了经验指南：对AIME25，最优配置为 \(L_{\text{prefix}} = 1024\), \(k = 0.3\)，在固定预算下将准确率从84%提升至近90%。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>GPT-OSS-20B on AIME25:</strong><br>
+<ul>
+<li><strong>基线：</strong> N=128条路径，无剪枝，准确率 84%，总消耗 128×8192 tokens</li>
+<li><strong>STOP剪枝：</strong> N=128条路径，在prefix=1024处评估，保留top-30%（38条）完成推理</li>
+<li><strong>等效计算：</strong> 128×1024 + 38×7168 ≈ 40%的原始计算量</li>
+<li><strong>结果：</strong> 准确率提升至 <strong>89.7%</strong>（+5.7%），因为剪掉了污染投票池的错误路径</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>类型</th><th>AIME25 (20B)</th><th>MATH-500 (7B)</th><th>相对计算量</th></tr>
+<tr><td>Majority Vote (无剪枝)</td><td>—</td><td>84.0%</td><td>91.2%</td><td>100%</td></tr>
+<tr><td>Confidence (非学习内部)</td><td>内/非学</td><td>85.3%</td><td>92.0%</td><td>40%</td></tr>
+<tr><td>PRM (外部可学习)</td><td>外/学</td><td>87.1%</td><td>93.5%</td><td>55%</td></tr>
+<tr><td>Semantic Dedup (外部非学)</td><td>外/非学</td><td>84.8%</td><td>91.6%</td><td>50%</td></tr>
+<tr><td class="best">STOP (内部可学习)</td><td class="best">内/学</td><td class="best">89.7%</td><td class="best">94.3%</td><td class="best">40%</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>Prefix长度消融：512/1024/2048 tokens对AIME25分别给出86.2/89.7/88.4%，表明过短的prefix信息不足、过长则剪枝收益降低。模型规模可扩展性：1.5B/7B/14B/20B上STOP均优于所有基线，且大模型上优势更明显（大模型更容易从短前缀判断正确性）。局限性：STOP需要对每个目标LRM进行轻量训练（约1-2小时on 8xA100），不能直接跨模型迁移。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>STOP是首个"可学习内部信号"路径剪枝方法，在AIME25上实现+5.7%准确率的同时节省60%计算。核心启发：并行推理中的"候选质量"比"候选数量"更重要——剪掉错误路径不仅省算力，还能净化投票池提升最终准确率。这为test-time scaling提供了更实用的思路。</p>
+</div>
+
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.15706" target="_blank">Target-Oriented Pretraining Data Selection via Neuron-Activated Graph</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Renmin University of China</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Pretraining</span><span class="tag tag-llm">Data Selection</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>高质量预训练数据选择对LLM性能至关重要，但现有方法（如数据影响函数、嵌入相似度）要么计算成本过高，要么只能捕捉表面语义相似性。一个被忽视的视角是：不同数据如何影响模型的内部神经元激活模式。本文提出利用神经元激活图来识别对目标任务最有价值的预训练数据。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 神经元激活图（Neuron-Activated Graph, NAG）构建</strong><br>
+对每条数据 \(d\)，记录其在模型各层FFN中激活的神经元集合 \(N(d) = \{n_j : |h_j(d)| > \tau\}\)。构建二部图 \(G = (V_D \cup V_N, E)\)，其中 \(V_D\) 为数据节点、\(V_N\) 为神经元节点，边权重为激活强度。目标任务数据同样映射到该图中。
+</div>
+<div class="sub-module">
+<strong>② 图传播与数据评分</strong><br>
+在NAG上执行目标导向的信息传播：从目标任务数据节点出发，通过共享神经元激活路径传播重要性分数：
+$$\text{score}(d) = \sum_{n \in N(d) \cap N_{\text{target}}} w(d,n) \cdot \text{imp}(n)$$
+其中 \(\text{imp}(n)\) 是神经元 \(n\) 对目标任务的重要性（通过梯度或Fisher信息估计）。
+</div>
+<div class="sub-module">
+<strong>③ 高效实现：稀疏激活与分块处理</strong><br>
+利用LLM的稀疏激活特性（通常仅5-15%神经元被显著激活），NAG的构建和传播均在稀疏矩阵上进行。对大规模语料（百万级），采用分块构建策略，每块独立计算后合并。总计算开销仅需一次模型前向传播 + 稀疏图传播，远低于数据影响函数方法。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>代码生成任务的数据选择：</strong><br>
+<ul>
+<li><strong>目标：</strong>从100万条预训练语料中选择10万条最有价值的数据来提升代码生成能力</li>
+<li><strong>NAG发现：</strong>数学推理文本与代码数据共享大量FFN神经元激活模式（67%重叠），而新闻文本仅12%重叠</li>
+<li><strong>选择结果：</strong>NAG选出的数据中42%为数学/逻辑类、35%为代码类、23%为结构化文本</li>
+<li><strong>效果：</strong>相比随机选择，HumanEval +8.3%；相比嵌入相似度选择，+4.1%</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>数据选择方法</th><th>MATH</th><th>HumanEval</th><th>MMLU</th><th>选择耗时</th></tr>
+<tr><td>Random</td><td>32.1</td><td>41.5</td><td>58.2</td><td>—</td></tr>
+<tr><td>Embedding Similarity</td><td>35.4</td><td>45.7</td><td>59.8</td><td>4h</td></tr>
+<tr><td>Influence Function</td><td>36.8</td><td>47.2</td><td>60.5</td><td>48h</td></tr>
+<tr><td class="best">NAG (Ours)</td><td class="best">38.9</td><td class="best">49.8</td><td class="best">61.3</td><td class="best">6h</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>激活阈值 \(\tau\) 的消融显示最优值在top-10%，过低(5%)引入噪声、过高(20%)信息不足。层选择实验中，中间层(12-20层 for 32层模型)的神经元最具判别力。与数据影响函数的Spearman相关为0.72，说明NAG捕捉了相似但非完全相同的信息。局限：需要目标任务的少量种子数据（约100条）来初始化传播。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>NAG开辟了从"神经元视角"理解数据价值的新方向：数据的价值不在于表面语义相似，而在于它是否激活了与目标任务相同的内部计算路径。这一洞察对数据飞轮、课程学习和持续预训练策略都有重要启示。</p>
+</div>
+
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.16158" target="_blank">AtManRL: Towards Faithful Reasoning via Differentiable Attention Saliency</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-17</span>
+<span>🏛 Aleph Alpha Research, TU Darmstadt, Hessian.AI</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Reasoning</span><span class="tag tag-llm">Faithfulness</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLM的思维链(CoT)推理虽然提升了表现，但"推理过程"是否真正反映了模型的内部决策过程（即忠实性）尚不确定——模型可能生成看似合理但不忠实的推理链。现有忠实性优化方法主要依赖外部监督，缺乏直接利用模型内部注意力信号的端到端方法。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<strong>① 注意力显著图（Attention Saliency Map）计算</strong><br>
+对推理链中每个token \(t_i\)，计算其对最终答案的注意力贡献度。使用可微的注意力掩码：
+$$S_i = \frac{\partial \log P(y | \text{CoT})}{\partial \alpha_i}$$
+其中 \(\alpha_i\) 是token \(t_i\) 的注意力门控参数。高显著性的token被认为对最终答案有实际因果贡献。
+</div>
+<div class="sub-module">
+<strong>② 忠实性奖励设计</strong><br>
+定义忠实性得分为：推理链中"语义相关"token 的显著性之和 vs "无关"token的显著性之和：
+$$R_{\text{faith}} = \frac{\sum_{i \in \text{relevant}} S_i}{\sum_{i \in \text{relevant}} S_i + \sum_{j \in \text{irrelevant}} S_j}$$
+相关性通过简单的语义匹配（与问题/答案的overlap）确定。高忠实性意味着模型真正"看了"推理链中的关键步骤来得出答案。
+</div>
+<div class="sub-module">
+<strong>③ RL优化流程</strong><br>
+将忠实性奖励结合正确性奖励进行PPO训练：
+$$R_{\text{total}} = R_{\text{correct}} + \lambda \cdot R_{\text{faith}}$$
+关键技巧：在训练中交替使用"正确但不忠实"的负样本（模型凑巧答对但推理链不相关）来增强忠实性信号。训练后模型不仅准确率提升，推理链的可解释性也显著增强。
+</div>
+
+<div class="module-title">📋 深度案例</div>
+<div class="example-box">
+<strong>GSM8K 数学推理中的忠实性对比：</strong><br>
+<strong>不忠实推理（基线模型）：</strong><br>
+"题目说有5个苹果减去2个...所以答案是3" — 注意力显著图显示模型实际上主要关注了"5"和"3"的直接模式匹配，跳过了中间推理<br><br>
+<strong>忠实推理（AtManRL训练后）：</strong><br>
+"题目说有5个苹果减去2个...首先5-2=3...所以剩余3个" — 显著图确认模型在生成"3"时注意力确实经过了"5-2"这一中间步骤<br><br>
+<strong>定量：</strong> 忠实性得分从0.42提升至0.71，同时准确率+2.1%
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>GSM8K Acc</th><th>忠实性得分</th><th>MATH Acc</th></tr>
+<tr><td>Standard CoT</td><td>78.3</td><td>0.42</td><td>45.6</td></tr>
+<tr><td>CoT + Verification</td><td>79.1</td><td>0.48</td><td>46.2</td></tr>
+<tr><td>Process Reward Model</td><td>80.2</td><td>0.55</td><td>47.8</td></tr>
+<tr><td class="best">AtManRL</td><td class="best">81.4</td><td class="best">0.71</td><td class="best">49.3</td></tr>
+</table>
+
+<div class="module-title">🔍 消融与讨论</div>
+<p>\(\lambda\) 权衡实验显示0.3-0.5为最优区间，过大则牺牲准确率。注意力层选择上，最后4层的显著图最具判别力。与TRACE等后验检测方法不同，AtManRL是训练时优化，具有更强的预防效果。局限：显著图计算增加约30%训练时间；对于极长CoT（>2K tokens），显著图的噪声增加。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>AtManRL首次将注意力显著图作为可微奖励信号引入RL训练，实现了"忠实性"的端到端优化。核心启发：忠实的推理不仅更可解释，还能带来准确率提升——强制模型"真正使用"推理步骤比仅仅"生成"推理步骤更有效。这为构建可信AI推理系统提供了新范式。</p>
+</div>
