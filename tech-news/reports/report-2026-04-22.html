@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-04-22</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a14; --surface: #12121f; --surface2: #1a1a2e;
+            --border: #2a2a44; --text: #e8e8f0; --text2: #9898b8;
+            --accent: #38bdf8; --accent2: #818cf8; --gold: #f59e0b;
+            --red: #ef4444; --green: #22c55e; --purple: #a78bfa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+        /* Header */
+        .report-header {
+            text-align: center; padding: 40px 30px; margin-bottom: 32px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 20px; border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+        .report-header::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .report-header h1 {
+            font-size: 2.2rem; margin-bottom: 8px; position: relative;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .report-header .date { font-size: 1.1rem; color: var(--text2); position: relative; }
+        .report-header .stats {
+            display: flex; justify-content: center; gap: 24px; margin-top: 16px;
+            font-size: 0.9rem; color: var(--text2); position: relative;
+        }
+        .report-header .stats span { background: rgba(56,189,248,0.1); padding: 4px 14px; border-radius: 20px; }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--accent); text-decoration: none; font-size: 0.9rem;
+            margin-bottom: 20px; padding: 8px 16px;
+            background: var(--surface); border-radius: 8px; border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .back-link:hover { background: var(--accent); color: white; }
+
+        /* Section */
+        .section { margin-bottom: 36px; }
+        .section-title {
+            font-size: 1.5rem; font-weight: 700; margin-bottom: 20px;
+            padding-bottom: 12px; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title .icon { font-size: 1.6rem; }
+
+        /* News Card */
+        .news-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 24px; margin-bottom: 18px;
+            transition: all 0.3s; position: relative;
+        }
+        .news-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56,189,248,0.08); }
+        .news-card.top5 { border-left: 4px solid var(--gold); }
+        .news-card h3 { font-size: 1.15rem; margin-bottom: 10px; color: #fff; }
+        .news-card h3 .rank {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 8px; margin-right: 8px;
+            font-size: 0.85rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), #d97706); color: #000;
+        }
+        .news-card .meta {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 0.82rem;
+        }
+        .news-card .tag {
+            padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 500;
+        }
+        .tag-ai { background: rgba(56,189,248,0.15); color: var(--accent); }
+        .tag-bio { background: rgba(34,197,94,0.15); color: var(--green); }
+        .tag-robot { background: rgba(167,139,250,0.15); color: var(--purple); }
+        .tag-video { background: rgba(236,72,153,0.15); color: #ec4899; }
+        .tag-drive { background: rgba(245,158,11,0.15); color: var(--gold); }
+        .tag-bigtech { background: rgba(239,68,68,0.15); color: var(--red); }
+        .tag-vc { background: rgba(20,184,166,0.15); color: #14b8a6; }
+        .news-card .body { color: var(--text2); font-size: 0.95rem; line-height: 1.75; }
+        .news-card .body p { margin-bottom: 10px; }
+        .news-card .body strong { color: var(--text); }
+        .news-card .source {
+            display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
+            font-size: 0.82rem; color: var(--accent); text-decoration: none;
+            padding: 4px 12px; background: rgba(56,189,248,0.08); border-radius: 8px;
+        }
+        .news-card .source:hover { background: rgba(56,189,248,0.15); }
+
+        /* Quick News */
+        .quick-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+        .quick-card:hover { border-color: var(--accent); }
+        .quick-card h4 { font-size: 1rem; margin-bottom: 6px; color: #fff; }
+        .quick-card .desc { color: var(--text2); font-size: 0.9rem; line-height: 1.6; margin-bottom: 8px; }
+        .quick-card .source {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.78rem; color: var(--accent); text-decoration: none;
+            padding: 2px 10px; background: rgba(56,189,248,0.08); border-radius: 6px;
+        }
+
+        /* TOC */
+        .toc {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 24px; margin-bottom: 32px;
+        }
+        .toc h2 { font-size: 1.2rem; margin-bottom: 14px; color: var(--accent); }
+        .toc ul { list-style: none; }
+        .toc li { margin-bottom: 6px; }
+        .toc a { color: var(--text2); text-decoration: none; font-size: 0.92rem; transition: color 0.2s; }
+        .toc a:hover { color: var(--accent); }
+        .toc .count { color: var(--text2); font-size: 0.8rem; opacity: 0.7; }
+
+        /* Footer */
+        footer {
+            text-align: center; padding: 30px; margin-top: 40px;
+            color: var(--text2); font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            .report-header h1 { font-size: 1.6rem; }
+            .report-header .stats { flex-direction: column; align-items: center; gap: 8px; }
+            .news-card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../" class="back-link">← 返回科技动态</a>
+
+    <div class="report-header">
+        <h1>🤖 科技与财经每日动态</h1>
+        <div class="date">2026年4月22日 · 星期三 · 17:30</div>
+        <div class="stats">
+            <span>📰 24 条追踪</span>
+            <span>🏷️ 7 大赛道</span>
+            <span>⏱️ 过去 24h</span>
+        </div>
+    </div>
+
+    <!-- TOC -->
+    <div class="toc">
+        <h2>📋 目录</h2>
+        <ul>
+            <li><a href="#top5">🌟 核心焦点 Top 5 深度解析</a></li>
+            <li><a href="#ai">🧠 大模型与基础AI</a> <span class="count">(4)</span></li>
+            <li><a href="#bio">🧬 脑机接口与生物科技</a> <span class="count">(2)</span></li>
+            <li><a href="#robot">🤖 具身智能与机器人</a> <span class="count">(2)</span></li>
+            <li><a href="#video">🎬 视频与多模态生成</a> <span class="count">(1)</span></li>
+            <li><a href="#drive">🚗 自动驾驶与出行</a> <span class="count">(2)</span></li>
+            <li><a href="#bigtech">🏢 科技巨头与财报</a> <span class="count">(5)</span></li>
+            <li><a href="#vc">💰 创投与融资</a> <span class="count">(3)</span></li>
+        </ul>
+    </div>
+
+    <!-- ==================== TOP 5 ==================== -->
+    <div class="section" id="top5">
+        <div class="section-title"><span class="icon">🌟</span> 核心焦点 Top 5 深度解析</div>
+
+        <!-- #1 SpaceX收购Cursor -->
+        <div class="news-card top5">
+            <h3><span class="rank">1</span>SpaceX 斥资 600 亿美元拿下 AI 编程公司 Cursor 收购权</h3>
+            <div class="meta">
+                <span class="tag tag-bigtech">科技巨头</span>
+                <span class="tag tag-vc">创投</span>
+                <span class="tag tag-ai">AI</span>
+            </div>
+            <div class="body">
+                <p>4月21日，SpaceX 宣布已达成协议，可在今年晚些时候以 <strong>600 亿美元</strong> 收购 AI 编程初创公司 Cursor。如果收购未完成，SpaceX 将支付 <strong>100 亿美元</strong> 分手费。此举旨在利用 SpaceX 庞大的算力资源，扩大 Cursor 的模型研发，补强 Musk 旗下公司（SpaceX + xAI）的 AI 工具套件。</p>
+                <p><strong>产业影响：</strong>Cursor 此前在今年初以 $500 亿估值进行谈判融资，SpaceX 的 $600 亿报价溢价 20%。这笔交易将是历史上最大的 AI 创业公司收购案之一，为 SpaceX 即将到来的 IPO 夯实了 AI 业务叙事。Cursor 2025 年底 ARR 已超 $60 亿，增速堪比巅峰期的 Slack。此举或将重塑 AI 编程工具的竞争格局，直接威胁 GitHub Copilot 和 Claude Code 的市场地位。</p>
+            </div>
+            <a class="source" href="https://www.nbd.com.cn/articles/2026-04-22/4351021.html" target="_blank">📎 每日经济新闻</a>
+        </div>
+
+        <!-- #2 Tim Cook 卸任 Apple CEO -->
+        <div class="news-card top5">
+            <h3><span class="rank">2</span>Tim Cook 宣布卸任，John Ternus 将于 9 月接任 Apple CEO</h3>
+            <div class="meta">
+                <span class="tag tag-bigtech">科技巨头</span>
+            </div>
+            <div class="body">
+                <p>4月20日，Apple 官方宣布：Tim Cook 将转任董事会 Executive Chairman，硬件工程高级副总裁 <strong>John Ternus</strong> 将于 <strong>2026年9月1日</strong> 正式接任 CEO。Cook 自 2011 年接替 Steve Jobs 以来执掌 Apple 近 15 年，带领公司市值从约 $3000 亿增长至超 $3.6 万亿。</p>
+                <p><strong>产业影响：</strong>Ternus 是硬件工程出身，此前主导了 M 系列芯片、Apple Vision Pro 和 iPhone 硬件创新。他面临的最大挑战是 Apple 在 AI 领域的明显落后——Apple Intelligence 上线以来反响平平，Siri 重构多次延期。市场最关注的是 Ternus 能否在保持硬件利润率的同时加速 AI 追赶。消息公布后 AAPL 盘后微跌 1.2%，但分析师普遍认为这是有序交接。</p>
+            </div>
+            <a class="source" href="https://www.apple.com.cn/newsroom/2026/04/tim-cook-to-become-apple-executive-chairman-john-ternus-to-become-apple-ceo/" target="_blank">📎 Apple Newsroom</a>
+        </div>
+
+        <!-- #3 OpenAI ChatGPT Images 2.0 -->
+        <div class="news-card top5">
+            <h3><span class="rank">3</span>OpenAI 发布 ChatGPT Images 2.0：AI 图像进入「思考」时代</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型</span>
+                <span class="tag tag-video">多模态</span>
+            </div>
+            <div class="body">
+                <p>4月21日，OpenAI 正式发布 <strong>ChatGPT Images 2.0</strong>（底层模型 gpt-image-2），面向所有 ChatGPT 和 Codex 用户。核心升级包括：<strong>推理能力</strong>（生成前先"思考"）、<strong>网络搜索集成</strong>、单提示词<strong>多图像生成</strong>、<strong>中文/非拉丁文字零偏差渲染</strong>、最高 <strong>2K 分辨率</strong>输出。目前 ChatGPT 每周图像产出超 <strong>10 亿张</strong>。</p>
+                <p><strong>产业影响：</strong>OpenAI 在关停 Sora 视频工具后，将 AI 图像明确定为核心视觉方向，直接对标 Midjourney、Stable Diffusion 和 Adobe Firefly。新版在文字渲染、信息图、海报等实用场景能力大幅提升，可能加速 AI 图像生成从"玩具"到"生产力工具"的转变。付费用户可解锁"深度思考"增强模式，进一步拉开订阅分层。</p>
+            </div>
+            <a class="source" href="https://venturebeat.com/technology/openais-chatgpt-images-2-0-is-here-and-it-does-multilingual-text-full-infographics-slides-maps-even-manga-seemingly-flawlessly" target="_blank">📎 VentureBeat</a>
+        </div>
+
+        <!-- #4 国务院力挺大模型采购 -->
+        <div class="news-card top5">
+            <h3><span class="rank">4</span>国务院首次明确支持采购大模型、智能体服务</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型</span>
+                <span class="tag tag-bigtech">政策</span>
+            </div>
+            <div class="body">
+                <p>4月21日，国务院印发《关于推进服务业扩能提质的意见》（国发〔2026〕7号），明确提出<strong>"深入实施'人工智能+'行动，加快智能编程工具研发使用，支持采购大模型、智能体服务"</strong>。到 2030 年服务业总规模迈上 <strong>100 万亿元</strong>台阶。</p>
+                <p><strong>产业影响：</strong>这是国务院层面<strong>首次</strong>在正式文件中将"大模型"和"智能体"列入采购支持清单，标志着中国 AI 产业从"鼓励探索"进入"纳入采购"的新阶段。受益标的包括百度文心、阿里通义、讯飞星火等国产大模型厂商。财新评论指出，这为地方政府和国企采购 AI 服务提供了顶层政策依据，预计将催生一波 ToG/ToB 大模型订单。</p>
+            </div>
+            <a class="source" href="https://finance.sina.com.cn/roll/2026-04-21/doc-inhvfyta6274420.shtml" target="_blank">📎 新浪财经 / 每经AI快讯</a>
+        </div>
+
+        <!-- #5 宁德时代超级科技日 -->
+        <div class="news-card top5">
+            <h3><span class="rank">5</span>宁德时代超级科技日：钠电 + 凝聚态 + 6 分钟满电五大新品齐发</h3>
+            <div class="meta">
+                <span class="tag tag-bigtech">科技巨头</span>
+                <span class="tag tag-drive">新能源</span>
+            </div>
+            <div class="body">
+                <p>4月21日晚，宁德时代在北京举办<strong>"极域之约"超级科技日</strong>，被定义为成立以来"技术密度最高"的发布会。一口气发布五大新品：<strong>第三代神行超充电池</strong>（等效 10C / 峰值 15C，6 分钟满电）、<strong>第三代麒麟电池</strong>、<strong>麒麟凝聚态电池</strong>、<strong>第二代骁遥超级增混电池</strong>、<strong>钠新电池</strong>，并公布超换一体全场景补能网络计划。</p>
+                <p><strong>产业影响：</strong>CTO 吴凯首次系统阐释磷酸铁锂、三元锂、钠离子、凝聚态四大材料体系的边界与互补关系。6 分钟满电的神行三代直接挑战燃油车加油体验，钠新电池瞄准 A00 级微型车和两轮车市场。宁德时代 Q1 营收 ¥1291 亿（+52% YoY），净利 ¥207 亿首次单季破 200 亿，发布会当天 A 股新能源板块逆势冲高。</p>
+            </div>
+            <a class="source" href="https://www.xinhuanet.com/fortune/20260421/6f8b371cfb8a45c6b7d1c71a263cbf8f/c.html" target="_blank">📎 新华网</a>
+        </div>
+    </div>
+
+    <!-- ==================== 大模型与基础AI ==================== -->
+    <div class="section" id="ai">
+        <div class="section-title"><span class="icon">🧠</span> 大模型与基础AI</div>
+
+        <div class="quick-card">
+            <h4>Anthropic 从 $20 Pro 订阅中移除 Claude Code</h4>
+            <div class="desc">Anthropic 悄然将 Claude Code 编程工具从 $20/月 Pro 计划中移除，访问权限现从 $100/月的 Max 5x 起步。官方称这只是面向 2% 新注册用户的"测试"，但定价页面和文档已同步更改。开发者社区反应强烈，认为这是持续"静默削弱"（silent nerf）策略的又一步。</div>
+            <a class="source" href="https://www.theregister.com/2026/04/22/anthropic_removes_claude_code_pro/" target="_blank">📎 The Register</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Forbes 发布 2026 AI 50 榜单：OpenAI + Anthropic 占 80% 融资额</h4>
+            <div class="desc">福布斯第八届 AI 50 榜单揭晓，50 家上榜企业累计融资 $3056 亿，其中 OpenAI 和 Anthropic 两家合计 $2426 亿，占比约 80%。今年新增 20 家企业，涵盖机器人、开源模型和药物研发等新兴赛道。</div>
+            <a class="source" href="https://www.ithome.com/0/941/759.htm" target="_blank">📎 IT之家</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>DeepSeek V4 进入发布倒计时：万亿参数 MoE + 全链路华为昇腾适配</h4>
+            <div class="desc">据多方消息，DeepSeek V4 预计本周内正式发布。核心突破包括万亿参数 MoE 架构（推理激活约 370 亿参数）、推理速度提升 35 倍、全链路"去 CUDA 化"华为昇腾 950 Pro 适配，以及百万 Token 上下文窗口。</div>
+            <a class="source" href="https://www.msn.cn/zh-cn/news/other/deepseek-v4%E5%85%A8%E9%87%8F%E5%8F%91%E5%B8%83%E5%B7%B2%E8%BF%9B%E5%85%A5%E6%9C%80%E5%90%8E%E5%80%92%E8%AE%A1%E6%97%B6/ar-AA20LwL2" target="_blank">📎 MSN / 多家科技媒体</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Google Research 推出 ReasoningBank：让 AI Agent 从经验中学习</h4>
+            <div class="desc">Google Research 发布 ReasoningBank 框架，允许 AI 智能体存储并检索过往推理路径，实现动态优化。这标志着 Agent 从"单次推理"迈向"经验累积学习"，有望提升复杂任务中的逻辑推理能力。</div>
+            <a class="source" href="https://aitoolly.com/zh/ai-news/article/2026-04-22-reasoningbank-google-research-explores-new-methods-for-enabling-ai-agents-to-learn-from-experience" target="_blank">📎 AIToolly</a>
+        </div>
+    </div>
+
+    <!-- ==================== 脑机接口与生物科技 ==================== -->
+    <div class="section" id="bio">
+        <div class="section-title"><span class="icon">🧬</span> 脑机接口与生物科技</div>
+
+        <div class="quick-card">
+            <h4>Amazon One Medical 推出 GLP-1 减重项目：$25/月起步搅动医药市场</h4>
+            <div class="desc">Amazon 旗下 One Medical 于 4 月 21 日推出 GLP-1 减重管理项目，整合线上问诊 + Amazon Pharmacy 配送，Wegovy、Zepbound 等药物价格低至 $25/月（含保险）。计划 2026 年底覆盖 4500 座城市，直接挑战 Hims&Hers 和传统药房渠道。</div>
+            <a class="source" href="https://www.cnbc.com/2026/04/21/amazon-glp-1-weight-loss-program.html" target="_blank">📎 CNBC</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Nature Biotechnology 报道：中国脑芯片获批治疗瘫痪 — 全球首个商用 BCI</h4>
+            <div class="desc">Nature Biotechnology 4 月刊详细报道了上海博睿康（Neuracle）脑芯片获中国 NMPA 批准的里程碑。该 BCI 帮助严重瘫痪患者通过脑信号控制软体机械手，是全球首个获批的商用脑机接口产品。</div>
+            <a class="source" href="https://www.nature.com/articles/s41587-026-03101-8" target="_blank">📎 Nature Biotechnology</a>
+        </div>
+    </div>
+
+    <!-- ==================== 具身智能与机器人 ==================== -->
+    <div class="section" id="robot">
+        <div class="section-title"><span class="icon">🤖</span> 具身智能与机器人</div>
+
+        <div class="quick-card">
+            <h4>MIT Technology Review："仿人数据"成为 2026 AI 十大趋势之首</h4>
+            <div class="desc">MIT 科技评论发布"2026 年 AI 最重要的 10 件事"，将"仿人数据"（Humanoid Data）列为首位。大规模训练中心和海外远程操控的"提线木偶"机器人正为人形机器人生成海量运动训练数据，尽管成功与否尚存疑问。</div>
+            <a class="source" href="https://www.technologyreview.com/2026/04/21/1135643/10-ai-artificial-intelligence-trends-technologies-research-2026/" target="_blank">📎 MIT Technology Review</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Pony.ai × Toyota bZ4X Robotaxi 量产超千台，1000+ 辆已下线</h4>
+            <div class="desc">小马智行与丰田联合量产的 bZ4X Robotaxi 已超 1000 辆下线（广汽丰田广州工厂生产），在全国多城投入自动驾驶运营。这是全球首款由传统车企与自动驾驶公司联合量产的专用 Robotaxi 车型。</div>
+            <a class="source" href="https://www.iaa-mobility.com/en/newsroom/news/automotive/toyota-pony-ai-begin-mass-production-bz4x-robotaxi-china" target="_blank">📎 IAA Mobility</a>
+        </div>
+    </div>
+
+    <!-- ==================== 视频与多模态生成 ==================== -->
+    <div class="section" id="video">
+        <div class="section-title"><span class="icon">🎬</span> 视频与多模态生成</div>
+
+        <div class="quick-card">
+            <h4>DeepSeek-AI 开源 DeepGEMM：高性能 FP8 矩阵乘法库加速 LLM 推理</h4>
+            <div class="desc">DeepSeek-AI 发布开源 DeepGEMM 库，专为大语言模型优化 FP8 矩阵乘法运算，利用细粒度缩放技术为现代 AI 模型提供统一的高性能核心。此举持续巩固 DeepSeek 在开源基础设施领域的影响力。</div>
+            <a class="source" href="https://aitoolly.com/ai-news/2026-04-22" target="_blank">📎 AIToolly</a>
+        </div>
+    </div>
+
+    <!-- ==================== 自动驾驶与出行 ==================== -->
+    <div class="section" id="drive">
+        <div class="section-title"><span class="icon">🚗</span> 自动驾驶与出行</div>
+
+        <div class="quick-card">
+            <h4>Tesla Q1 2026 财报今日盘后发布：$219 亿营收 / $0.36 EPS 预期</h4>
+            <div class="desc">Tesla 将于美东时间 4/22 17:30 发布 Q1 财报。华尔街预期营收 ~$219 亿（+14% YoY）、EPS $0.36。但 Q1 交付仅 35.8 万辆（低于预期 7000 辆），储能部署 8.8GWh 环比骤降 38%，库存积压约 5 万辆。投资者最关注汽车毛利率能否守住 17% 以及 Robotaxi 扩展节奏。</div>
+            <a class="source" href="https://electrek.co/2026/04/21/tesla-tsla-q1-2026-earnings-preview-wall-street-expects-growth/" target="_blank">📎 Electrek</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Tesla Robotaxi 已扩展至达拉斯 + 休斯顿：573 辆无监督运营</h4>
+            <div class="desc">Tesla 于 4 月 18 日将 Robotaxi 服务扩展到达拉斯和休斯顿，前排无安全员，共部署约 573 辆车。不过 Electrek 指出其地理围栏仅约 25 平方英里，远小于 Waymo 在同一市场的运营范围。</div>
+            <a class="source" href="https://electrek.co/2026/04/18/tesla-robotaxi-launches-dallas-houston-small-geofences/" target="_blank">📎 Electrek</a>
+        </div>
+    </div>
+
+    <!-- ==================== 科技巨头与财报 ==================== -->
+    <div class="section" id="bigtech">
+        <div class="section-title"><span class="icon">🏢</span> 科技巨头与财报</div>
+
+        <div class="quick-card">
+            <h4>Adobe 宣布 $250 亿股票回购计划：AI 冲击下的自信信号</h4>
+            <div class="desc">Adobe 于 4/21 宣布新的 $250 亿股票回购计划（有效期至 2030 年）。Adobe 股价今年已累跌约 29%（两年累跌近 60%），主要受 Anthropic AI 设计工具、CEO 卸任等冲击。此次回购是对市场悲观情绪的反击，配合 Adobe Summit 上发布的 AI 智能体与生态布局。</div>
+            <a class="source" href="https://www.cnbctv18.com/market/adobe-announces-25-billion-stock-buyback-amid-ai-disruption-fears-ws-l-19890928.htm" target="_blank">📎 CNBC TV18</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Meta 遭集体诉讼：日均 150 亿条高风险广告，10% 营收涉诈</h4>
+            <div class="desc">美国消费者联盟（CFA）于 4/21 对 Meta 提起集体诉讼，指控其靠诈骗广告牟利。内部文件显示 2024 年 Meta 日均推送约 150 亿条高风险诈骗广告，相关年收入约 $160 亿（占总营收 ~10%）。Wired、Reuters 等媒体跟进报道。</div>
+            <a class="source" href="https://www.wired.com/story/meta-is-sued-over-scam-ads-on-facebook-and-instagram/" target="_blank">📎 Wired</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Meta 用员工鼠标 + 点击数据训练 AI 模型</h4>
+            <div class="desc">Meta 宣布实施内部工具，记录员工鼠标移动和点击操作并转化为训练数据，用于优化 AI 模型。这标志着企业开始将"内部操作数据"作为机器学习训练的新型资源。Caixin Global 跟进报道引发就业安全讨论。</div>
+            <a class="source" href="https://www.caixinglobal.com/live/" target="_blank">📎 Caixin Global</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>FAIC 2026 上海闭幕：400+ 学者共议 AI 研究进入"深水区"</h4>
+            <div class="desc">第二届人工智能基础大会（FAIC 2026）4/18-19 在上海财经大学举行，北大、清华、港中文等 400+ 学者共议共识：大模型性能竞赛加速的同时，必须深入探索基础理论问题，AI 研究正从"经验驱动"转向"理论并重"。</div>
+            <a class="source" href="https://www.sh.chinanews.com.cn/kjjy/2026-04-21/146094.shtml" target="_blank">📎 中新网上海</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>MIT Technology Review 发布 2026 年 AI 十大趋势</h4>
+            <div class="desc">MIT 科技评论发布年度"AI 最重要的 10 件事"：仿人数据、LLM+ 进阶、AI 超级诈骗、世界模型、新作战室、武器化深度伪造、智能体编排、中国开源赌注、AI 科学家、公众抵抗运动。全面勾勒 2026 AI 全景图。</div>
+            <a class="source" href="https://www.technologyreview.com/2026/04/21/1135643/10-ai-artificial-intelligence-trends-technologies-research-2026/" target="_blank">📎 MIT Technology Review</a>
+        </div>
+    </div>
+
+    <!-- ==================== 创投与融资 ==================== -->
+    <div class="section" id="vc">
+        <div class="section-title"><span class="icon">💰</span> 创投与融资</div>
+
+        <div class="quick-card">
+            <h4>NeoCognition 出隐完成 $4000 万种子轮：打造类人学习 AI Agent</h4>
+            <div class="desc">由俄勒冈州立大学研究员创立的 AI 实验室 NeoCognition 从隐身模式出击，筹集 $4000 万种子轮（Cambium Capital + Walden Catalyst 领投），目标是开发能够模拟人类学习过程、跨领域的通用 AI Agent。</div>
+            <a class="source" href="https://techcrunch.com/2026/04/21/ai-research-lab-neocognition-lands-40m-seed-to-build-agents-that-learn-like-humans/" target="_blank">📎 TechCrunch</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Thunderbird 推出 Thunderbolt：去中心化 AI 框架，反对供应商锁定</h4>
+            <div class="desc">Thunderbird 邮件客户端团队发布 Thunderbolt 开源 AI 框架，三大核心：用户自选 AI 模型、个人数据完全所有权、消除供应商锁定。在 AI 工具日益闭源化的趋势下，这代表了一种去中心化的反向运动。</div>
+            <a class="source" href="https://aitoolly.com/ai-news/2026-04-22" target="_blank">📎 AIToolly</a>
+        </div>
+
+        <div class="quick-card">
+            <h4>Anthropic 调查 Mythos 网络安全工具遭未经授权访问</h4>
+            <div class="desc">Anthropic 正在调查一起涉及其内部网络安全工具"Mythos"被未经授权组织访问的指控。尽管目前没有证据表明内部系统受损，但事件再次引发对前沿 AI 工具安全防护的关注。此前 Mythos 因过强被暂时限制访问。</div>
+            <a class="source" href="https://aitoolly.com/ai-news/2026-04-22" target="_blank">📎 AIToolly</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>📊 本报告由 WorkBuddy 自动生成 · 2026-04-22 17:30</p>
+        <p>所有新闻均来自过去 24 小时公开信源，附原始链接可追溯</p>
+    </footer>
+</div>
+</body>
+</html>
