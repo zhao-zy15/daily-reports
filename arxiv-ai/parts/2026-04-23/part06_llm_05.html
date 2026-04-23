@@ -1,0 +1,24 @@
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19656" target="_blank">Pause or Fabricate? Training Language Models for Grounded Reasoning</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 Zhejiang University, Tencent, Xiaohongshu Inc.</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Grounded Reasoning</span><span class="tag tag-rl">RL</span><span class="tag tag-industry">🏢 Tencent</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM在输入信息不完整时常<strong>隐式编造</strong>——产生自信但不可靠结论。这不是能力不足，而是缺乏<strong>推理边界意识</strong>。GRIL框架通过双阶段分解+多轮RL让模型学会"不知道就暂停"。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 双阶段推理</div><p><strong>澄清与暂停</strong>→识别信息是否充分；<strong>有根据推理</strong>→在前提建立后求解。先判断"能否推理"再"如何推理"。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 阶段特定RL奖励</div><p>澄清阶段：惩罚编造(\(r=-1\))，奖励正确暂停(\(r=+1\))。推理阶段：标准正确性奖励。多轮交互允许暂停后接收补充信息。基于GRPO实现。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 信息不足数据构造</div><p>从GSM8K系统移除关键数学条件，模型需在不充分输入上检测缺失、在充分输入上正确推理。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>GSM8K-Insufficient：</strong>"Tom有一些苹果，买了3个…" GRIL输出"<em>[暂停]需要知道初始数量</em>"，标准模型直接编造。GRIL前提检测<strong>92%</strong>(vs 47%)，编造率从31%降至<strong>4.3%</strong>。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>前提检测Acc</th><th>任务成功率</th><th>编造率↓</th></tr>
+<tr><td>标准SFT</td><td>42.3%</td><td>61.2%</td><td>38.5%</td></tr>
+<tr><td>RLVR (GRPO)</td><td>47.1%</td><td>68.4%</td><td>31.2%</td></tr>
+<tr><td class="best">GRIL</td><td class="best">92.1%</td><td class="best">88.6%</td><td class="best">4.3%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>阶段奖励贡献+30pp。去除多轮交互降12pp。1B以下有"容量阈值"问题，3B+时暂停与推理可兼得。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>GRIL首次系统解决LLM<strong>"无根据推理"</strong>，前提检测47%→92%、编造率31%→4%。对高风险场景LLM可靠部署意义重大。</p>
+</div>

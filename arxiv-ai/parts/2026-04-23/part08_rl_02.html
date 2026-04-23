@@ -1,0 +1,26 @@
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19295" target="_blank">TEMPO: Scaling Test-time Training for Large Reasoning Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 Tianjin University, Tongyi Lab (Alibaba Group), CUHK, Shanghai AI Lab</span>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Test-time Training</span><span class="tag tag-industry">🏢 Alibaba/Tongyi</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>Test-time training(TTT)在推理时调整参数，可持续扩展能力。但现有TTT方法快速饱和——核心问题：无外部校准时，自生成奖励信号随策略进化而漂移。TEMPO用双策略架构解决。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 双策略架构</div><p>维护<strong>参考策略</strong>（冻结）和<strong>进化策略</strong>（可训练）。参考策略作为稳定奖励锚点，防止漂移。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 相对奖励校准</div><p>奖励设计为相对提升：\(r = \text{Acc}(\pi_{\text{evolve}}) - \text{Acc}(\pi_{\text{ref}})\)。即使绝对奖励不可靠，相对提升仍有意义。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 自适应终止</div><p>进化策略相对提升达阈值时停止TTT，防止过拟合。简单问题少训，困难问题多训。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>AIME 2024：</strong>OLMO3-7B基线avg@16=33.0%，标准TTT饱和~37%。<strong>TEMPO持续提升至51.1%</strong>(+18.1pp)。Qwen3-14B从42.3%到<strong>55.7%</strong>(+13.4pp)。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>模型</th><th>方法</th><th>AIME avg@16</th><th>GPQA pass@8</th></tr>
+<tr><td>OLMO3-7B</td><td>Base</td><td>33.0</td><td>26.3</td></tr>
+<tr><td>OLMO3-7B</td><td>Std TTT</td><td>37.2</td><td>28.1</td></tr>
+<tr><td class="best">OLMO3-7B</td><td class="best">TEMPO</td><td class="best">51.1</td><td class="best">37.0</td></tr>
+<tr><td>Qwen3-14B</td><td>Base</td><td>42.3</td><td>33.5</td></tr>
+<tr><td class="best">Qwen3-14B</td><td class="best">TEMPO</td><td class="best">55.7</td><td class="best">42.8</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>去除参考策略性能退化至38.5%（比标准TTT还差）。相对奖励vs绝对奖励+5.2pp。ZebraLogic逻辑推理+8.3pp。来自Alibaba Tongyi Lab。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>TEMPO证明<strong>TTT可以scaling</strong>——关键是用参考策略稳定奖励。AIME +18pp极其显著，TTT是未被充分利用的test-time scaling维度。</p>
+</div>

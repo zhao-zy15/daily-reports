@@ -1,0 +1,78 @@
+<h2 class="section-title medical">⚕️ Medical — 医学大模型</h2>
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19060" target="_blank">Reinforcement Learning Improves LLM Accuracy and Reasoning in Disease Classification from Radiology Reports</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 Weill Cornell Medicine, RSNA, Medical College of Wisconsin</span>
+<span class="tag tag-med">Medical</span><span class="tag tag-rl">RL</span><span class="tag tag-med">Radiology</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>从放射学报告中准确分类疾病对临床至关重要。SFT微调轻量LLM可提升准确率但可能损害推理能力。本文探索<strong>RL（强化学习）</strong>用于放射报告疾病分类，通过规则奖励函数同时验证分类准确性和推理质量。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 规则奖励函数</div><p>设计两部分奖励：<strong>分类正确性</strong>（预测标签vs金标准，\(r_{\text{cls}}\in\{-1,+1\}\)）和<strong>推理质量</strong>（检查推理链是否包含关键医学发现的文本匹配，\(r_{\text{reason}}\in[0,1]\)）。总奖励\(r = r_{\text{cls}} + \alpha \cdot r_{\text{reason}}\)。</p></div>
+<div class="sub-module"><div class="sub-module-title">② SFT→RL两阶段</div><p>先用SFT建立基本的报告理解和格式化输出能力，再用RL（GRPO）在规则奖励下进一步优化。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 多数据集评估</div><p>在MIMIC-CXR（胸片，14类）和MIDRC（COVID相关，3类）两个数据集上系统评估，包括域内和跨域泛化。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>MIMIC-CXR胸片报告分类：</strong>LLaMA-3-8B基线准确率68.2%。SFT提升至82.4%但推理链质量下降（推理召回率从71%降至54%——模型学会"跳过推理直接输出答案"）。SFT+RL达<strong>85.1%准确率</strong>且推理召回率恢复至<strong>76%</strong>。RL不仅提升分类更恢复了推理能力。LLaMA最终准确率接近GPT-4o的86.3%。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>MIMIC-CXR Acc</th><th>MIDRC Acc</th><th>推理召回率</th></tr>
+<tr><td>Base (LLaMA-3-8B)</td><td>68.2</td><td>71.5</td><td>71%</td></tr>
+<tr><td>SFT</td><td>82.4</td><td>79.5</td><td>54%</td></tr>
+<tr><td class="best">SFT + RL</td><td class="best">85.1</td><td class="best">83.2</td><td class="best">76%</td></tr>
+<tr><td>GPT-4o (参考)</td><td>86.3</td><td>84.1</td><td>82%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>推理奖励对保持推理质量至关重要：仅分类奖励时推理召回率60%。RL在MIDRC跨域数据上提升更显著（+8pp vs 域内+2.7pp），表明RL改善了泛化。规则奖励比学习奖励模型更稳定。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>RL在放射报告分类中<strong>同时提升准确率和推理质量</strong>——解决了SFT"跳过推理直接答题"的退化问题。规则奖励函数在医学NLP中简单有效，8B模型接近GPT-4o水平。</p>
+</div>
+
+<h2 class="section-title multimodal">🌐 Multimodal — 多模态大模型</h2>
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19544" target="_blank">DT2IT-MRM: Debiased Preference Construction and Iterative Training for Multimodal Reward Modeling</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 USTC</span>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-rl">Reward Model</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>多模态奖励模型(MRM)对齐MLLM至关重要，但现有偏好数据集面临三个问题：偏好强度缺粒度、文本风格偏差、不可靠偏好信号。DT2IT-MRM通过去偏好构造和迭代训练解决这些问题。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 去偏好偏好数据构造</div><p>用GPT-5.2对K个候选回复打分，通过分数差异构造细粒度偏好对。引入文本风格去偏——生成"同义改写"版本消除长度/格式偏差。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 迭代训练</div><p>多轮迭代：每轮用当前MRM筛选高质量偏好数据，重新训练下一轮MRM。逐步过滤噪声标签。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 多任务MRM架构</div><p>同时训练偏好排序和评分回归任务，增强MRM对偏好强度的感知。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>RewardBench-Vision：</strong>在Short子集上达<strong>100%准确率</strong>（满分），Overall准确率<strong>80.5%</strong>，比前SOTA提升约9%。核心贡献来自去偏好构造（消除"选更长回复"的表面偏差）和迭代训练（3轮后噪声标签减少40%）。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>Overall</th><th>Short</th><th>Long</th><th>Chat</th></tr>
+<tr><td>Previous SOTA</td><td>71.5</td><td>85.2</td><td>63.8</td><td>65.4</td></tr>
+<tr><td class="best">DT2IT-MRM</td><td class="best">80.5</td><td class="best">100.0</td><td class="best">72.1</td><td class="best">69.4</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>去偏好构造+5%，迭代训练+3%，多任务+1.5%。3轮迭代最优，4轮增益饱和。Short子集满分表明简单偏好已完全解决。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>DT2IT-MRM以<strong>80.5%新SOTA</strong>证明了偏好数据质量对多模态奖励模型的决定性影响。去风格偏差+迭代过滤是关键。</p>
+</div>
+
+<div class="paper-card" id="p15">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18892" target="_blank">Prioritizing the Best: Incentivizing Reliable Multimodal Reasoning by Rewarding Beyond Answer Correctness</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span><span>🏛 University of Notre Dame</span>
+<span class="tag tag-multimodal">Multimodal</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Trajectory Reward</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>RLVR通过可验证最终答案奖励改善多模态推理。但答案正确的轨迹仍可能依赖不完整推导——这种<strong>推理-答案不一致性</strong>是RLVR的根本盲区。本文系统比较轨迹监督方法并提出Groupwise Ranking Reward。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 推理-答案不一致性量化</div><p>定义不一致率(IncR)：轨迹推理结论与最终答案不匹配的比例。发现RLVR训练中IncR持续上升——模型学会"猜对答案但推理错误"。</p></div>
+<div class="sub-module"><div class="sub-module-title">② Groupwise Ranking Reward</div><p>对同一prompt通过验证器的多条轨迹在一次评估中<strong>组内排名</strong>，根据相对质量重新分配奖励。比逐条打分的GR更稳定、比PRM更灵活。排名使更强与更弱的正确轨迹获得差异化奖励信号。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 可靠性条件准确率(RC-Acc)</div><p>定义RC-Acc = Acc - CBIR（移除答案正确但推理不一致的案例），作为更严格的主要指标。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>MathVision数学推理：</strong>Qwen2.5-VL-7B-IT在RLVR训练后，答案准确率从49.0%提升至53.6%，但IncR从3.5%上升至11.9%。加入Groupwise Ranking Reward后，准确率进一步到<strong>55.9%</strong>，IncR降至<strong>2.4%</strong>。RC-Acc从47.4%提升至<strong>54.7%</strong>（+7.3pp）。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>RC-Acc Avg</th><th>Acc Avg</th><th>MathVista</th><th>MMMU</th></tr>
+<tr><td>Qwen2.5-VL-7B-IT</td><td>47.3</td><td>49.0</td><td>67.2</td><td>52.6</td></tr>
+<tr><td>RLVR</td><td>47.4</td><td>53.6</td><td>70.8</td><td>48.2</td></tr>
+<tr><td>w/ PRM</td><td>46.8</td><td>49.1</td><td>66.4</td><td>50.0</td></tr>
+<tr><td>w/ Pointwise GR</td><td>52.3</td><td>53.8</td><td>71.0</td><td>56.6</td></tr>
+<tr><td class="best">w/ Groupwise Ranking</td><td class="best">54.7</td><td class="best">55.9</td><td class="best">74.8</td><td class="best">57.8</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>RLVR加剧不一致性（IncR 3.5%→11.9%），但Groupwise抑制至2.4%。PRM在策略分布漂移后失效。Groupwise比Pointwise GR开销低3x但效果更好。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>揭示RLVR的<strong>推理-答案不一致性</strong>盲区：答案对了推理不一定对。Groupwise Ranking Reward以低开销实现最佳轨迹质量控制，RC-Acc提升7.3pp。</p>
+</div>

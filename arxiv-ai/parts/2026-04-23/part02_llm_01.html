@@ -1,0 +1,58 @@
+<h2 class="section-title llm">🧠 LLM — 大语言模型</h2>
+
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18839" target="_blank">One Step Forward and K Steps Back: Better Reasoning with Denoising Recursion Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span>
+<span>🏛 Huawei Technologies, University of Toronto, University of Waterloo</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Recursion</span><span class="tag tag-llm">Diffusion</span><span class="tag tag-llm">ARC-AGI</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>循环Transformer（Looped Transformers）通过反复应用共享权重层来扩展计算深度，TRM（Tiny Recursion Model）仅用7M参数就在ARC-AGI上超越了o3-high等百亿参数LLM。但其"反向训练"（从噪声到目标）方式面临长轨迹优化难题——类似RL中的稀疏奖励问题。标准扩散模型可提供渐进式课程学习，但其单步去噪目标与多步推理测试行为存在严重不匹配。本文提出<strong>去噪递归模型（DRM）</strong>，融合两者优势。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① 前向腐蚀 + 多步递归窗口</div>
+<p>DRM的核心创新是将扩散的"快进"能力与递归的多步精炼结合：先从前向过程采样腐蚀状态 \(\tilde{Y}_\tau \sim q_\tau(\cdot|Y)\)，然后在该状态上运行<strong>k步递归窗口</strong>恢复目标。损失函数为：
+$$\mathcal{L}_{\text{DRM}}(\theta) = \mathbb{E}_\tau \left[-\log P_\theta(Y \mid H_k)\right]$$
+其中 \(H_0 = \text{Embed}(\tilde{Y}_\tau)\)，\(H_t = \Phi_\theta(H_{t-1}, X)\)。不同于标准扩散的单步去噪，DRM通过k步反向传播保留了递归模型的"前瞻规划"归纳偏置。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 训练-测试对齐的课程学习</div>
+<p>标准扩散训练时在噪声目标上单步去噪，测试时却需要多步迭代——这种不匹配导致误差复合。DRM通过在<strong>同一个递归窗口内</strong>既采样噪声又执行多步精炼，完美对齐了训练与测试行为。噪声水平 \(\tau \sim U(0,1)\) 提供了从简单到困难的自然课程，而余弦噪声调度 \(\bar{\alpha}_\tau = \cos^2(\pi\tau/2)\) 确保信息平滑递减。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 状态扰动递归模型（SPRM）</div>
+<p>作为补充方法，SPRM在TRM的截断反向传播边界注入高斯噪声：\(H_{\text{next}} = \sqrt{1-\beta_\tau}H_{\text{prev}} + \sqrt{\beta_\tau}\epsilon\)，其中 \(\epsilon \sim \mathcal{N}(\mu(H), \Sigma(H))\)。这增加了中间状态多样性，使模型对测试时的分布外状态更鲁棒。SPRM在小数据场景表现更好，但在大数据场景不如DRM。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">④ 离散掩码扩散实例化</div>
+<p>在ARC-AGI的网格任务中，前向过程实例化为离散掩码调度：根据余弦调度随机选择比例为 \(r(\tau)=1-\bar{\alpha}_\tau\) 的位置替换为MASK token。推理时从全掩码初始化，迭代"预测+重新掩码"直至完成。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>ARC-AGI 推理过程：</strong>给定一个30×30颜色网格的变换模式推理任务。TRM从纯噪声出发需要长达数百步的轨迹才能收敛，而<strong>DRM在噪声水平τ=0.6处初始化</strong>（约60%位置被掩码），仅需k=4步递归窗口即可恢复完整网格。在ARC2-Eval上，7M参数的DRM达到<strong>14.2%</strong> Pass@2准确率，对比TRM的11.7%提升了2.5个百分点。在更大的14M参数设置下，DRM达到<strong>17.5%</strong>，对比TRM 12.5%提升了5个百分点。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>方法</th><th>参数量</th><th>ARC-Easy</th><th>ARC2-Eval（+reARC预训练）</th><th>ARC2-Eval（+NVARC预训练）</th></tr>
+<tr><td>Transformer</td><td>7M</td><td>10.9</td><td>—</td><td>—</td></tr>
+<tr><td>Transformer</td><td>70M</td><td>25.5</td><td>—</td><td>—</td></tr>
+<tr><td>Masked Diffusion</td><td>7M</td><td>0.0</td><td>—</td><td>—</td></tr>
+<tr><td>TRM</td><td>7M</td><td>45.5</td><td>8.3</td><td>11.7</td></tr>
+<tr><td>SPRM（本文）</td><td>7M</td><td>46.6</td><td>9.2</td><td>12.5</td></tr>
+<tr><td class="best">DRM（本文）</td><td>7M</td><td class="best">47.9</td><td class="best">10.8</td><td class="best">14.2*</td></tr>
+<tr><td>TRM</td><td>14M</td><td>49.3</td><td>—</td><td>12.5</td></tr>
+<tr><td class="best">DRM</td><td class="best">14M</td><td class="best">53.2</td><td>—</td><td class="best">17.5*</td></tr>
+<tr><td>NVARC（SOTA LLM）</td><td>4B</td><td>—</td><td>—</td><td>15.0</td></tr>
+</table>
+
+<div class="module-title">🧪 消融与讨论</div>
+<p>关键发现：(1) 标准掩码扩散（无递归）在ARC上几乎完全失败（0%），证明<strong>递归归纳偏置</strong>是必要条件；(2) DRM在大数据（NVARC 47k任务）下优于SPRM，而SPRM在小数据下更有优势——这表明数据丰富时内在多样性已足够；(3) 14M DRM的17.5%超过了4B参数NVARC LLM的15.0%，以<strong>285倍更少参数</strong>胜出。余弦调度比线性调度快约20%收敛。去除递归窗口内的深度监督信号后性能下降3.3pp。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p>DRM证明了将扩散的课程学习与递归的多步精炼结合的巨大潜力：<strong>14M参数即可超越4B参数LLM</strong>在难度极高的ARC-AGI-2上的表现。这暗示对于需要搜索式计算的推理任务，正确的训练目标设计可能比盲目扩展参数更重要。DRM的思想——"在已知难度处初始化，然后多步精炼"——可能对LLM推理训练有深远启发。</p>
+</div>

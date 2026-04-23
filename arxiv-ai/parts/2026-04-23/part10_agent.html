@@ -1,0 +1,76 @@
+<h2 class="section-title agent">🤖 Agent — 智能体</h2>
+<div class="paper-card" id="p10">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18779" target="_blank">Mango: Multi-Agent Web Navigation via Global-View Optimization</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span><span>🏛 Zhejiang University, Alibaba Group</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Web Navigation</span><span class="tag tag-agent">Multi-Agent</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>Web导航Agent需要在复杂网站上执行多步操作完成用户任务。单Agent方法面临短视决策和搜索空间爆炸。Mango引入<strong>多Agent全局视角优化</strong>：多个Agent并行探索不同路径，通过全局协调选择最优。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 并行多Agent探索</div><p>N个Agent从同一起点出发，各自独立探索不同导航策略。每个Agent维护自己的行动轨迹和观察历史。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 全局视角评分器</div><p>全局评分器在每轮结束后评估所有Agent的进展，选择最有前景的K条轨迹继续。评分综合考虑：任务相关性、导航进度、信息完整性。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 轨迹剪枝与回溯</div><p>当Agent陷入死胡同时，全局视角可以识别并回溯到更早的有效状态，避免浪费计算在无效探索上。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>WebWalkerQA：</strong>用户问"MacBook Pro M4的最低价格？"。单Agent直接搜索得到过时结果。Mango的4个Agent分别探索Apple官网、Best Buy、Amazon、价格比较网站。全局评分器识别Amazon Agent找到的$1599为最新最低价，<strong>成功率55.0%</strong>（vs单Agent WebWalker 25.7%）。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>WebWalkerQA SR</th><th>Mind2Web SR</th></tr>
+<tr><td>WebWalker</td><td>25.7%</td><td>32.1%</td></tr>
+<tr><td>ReAct</td><td>31.2%</td><td>35.8%</td></tr>
+<tr><td>SteP</td><td>38.4%</td><td>41.3%</td></tr>
+<tr><td class="best">Mango</td><td class="best">55.0%</td><td class="best">52.7%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>全局视角评分贡献最大（+12pp SR）。4个Agent最优，8个Agent增益饱和。Mango-Greedy（无回溯）比完整版低4pp。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>多Agent并行探索+全局协调的范式在Web导航上<strong>翻倍了成功率</strong>（25.7%→55.0%）。全局视角是突破单Agent短视决策的关键。</p>
+</div>
+
+<div class="paper-card" id="p11">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19548" target="_blank">Taming Actor-Observer Asymmetry in Agents via Dialectical Alignment</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 NUS, Sichuan University, University of Minnesota, HIT-Shenzhen, Oxford</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Cognitive Bias</span><span class="tag tag-agent">Multi-Agent</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>多Agent框架中，Agent扮演"行动者"（执行任务时自我反思）和"观察者"（审计其他Agent）角色。本文发现LLM Agent存在与人类相同的<strong>行动者-观察者不对称</strong>（AOA）认知偏差：行动者归因于外部因素，观察者归因于内部错误。简单交换视角就在20%+的案例中触发AOA效应。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 模糊失败基准</div><p>构建Ambiguous Failure Benchmark，每个场景允许外部和内部归因，量化AOA偏差。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 辩证对齐(ReTAS)</div><p>Reasoning via <strong>Thesis-Antithesis-Synthesis</strong>：强制模型先生成两种对立归因（正题+反题），再通过综合推理得出结论。用辩证CoT训练实现视角不变推理。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ DPO辩证对齐</div><p>偏好数据中，辩证推理轨迹为正例，单一视角归因为负例，通过DPO训练。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>FinQA金融分析：</strong>Agent分析错误时，作为行动者归因于"数据不完整"（外部），作为观察者归因于"推理错误"（内部）。ReTAS通过辩证推理识别真实原因为"数据缺失+推理步骤遗漏"的复合问题。FinQA-TAS上<strong>归因准确率从62%提升至78%</strong>。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>FinQA-TAS</th><th>Spider-TAS</th><th>AOA偏差↓</th></tr>
+<tr><td>Standard CoT</td><td>62.1%</td><td>58.3%</td><td>22.4%</td></tr>
+<tr><td>Self-Refine</td><td>66.8%</td><td>62.1%</td><td>18.7%</td></tr>
+<tr><td class="best">ReTAS</td><td class="best">78.2%</td><td class="best">73.5%</td><td class="best">6.3%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>辩证CoT是核心（+10pp），DPO额外+6pp。AOA效应在GPT-4o中也存在（15%案例），ReTAS对各模型均有效。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>首次揭示LLM Agent的<strong>行动者-观察者认知偏差</strong>并用辩证推理解决。多Agent系统的可靠性需要关注这类系统性偏差。</p>
+</div>
+
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19572" target="_blank">A Self-Evolving Framework for Efficient Terminal Agents via Observational Context Compression</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 University of Manchester, Salesforce AI Research</span>
+<span class="tag tag-agent">Agent</span><span class="tag tag-agent">Terminal</span><span class="tag tag-agent">Context Compression</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>终端Agent在长时域多轮任务中，原始环境反馈（命令输出、日志等）快速膨胀上下文。现有方法简单截断导致信息丢失。本文提出<strong>观察上下文压缩</strong>框架，自进化地学习哪些环境信息重要。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 自适应压缩器</div><p>轻量模型学习将冗长环境输出压缩为关键信息摘要，保留任务相关细节（错误码、文件路径、状态变化）。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 自进化训练</div><p>用Agent自身的成功/失败轨迹训练压缩器——成功轨迹中保留的信息为正例，失败时遗漏的关键信息为负例。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 即插即用</div><p>压缩器独立于Agent骨干模型，可插入任何终端Agent框架。压缩后token预算降低60-70%。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>TerminalBench：</strong>50步终端任务中，原始上下文膨胀至~32K tokens。压缩器将每步观察从~400 tokens压缩至~120 tokens，总上下文控制在~8K。在相同token预算下，准确率提升<strong>2-3%</strong>；在相同准确率下，token使用降低<strong>65%</strong>。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>TB 1.0</th><th>TB 2.0</th><th>Avg Steps</th><th>Token节省</th></tr>
+<tr><td>Raw Context</td><td>67.2%</td><td>43.8%</td><td>12.4</td><td>0%</td></tr>
+<tr><td>Truncation</td><td>64.8%</td><td>41.2%</td><td>13.1</td><td>50%</td></tr>
+<tr><td class="best">Self-Evolving Compress</td><td class="best">69.5%</td><td class="best">46.1%</td><td class="best">11.8</td><td class="best">65%</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>自进化训练比固定规则压缩+2.5%。跨骨干模型泛化良好（GPT-4o, Claude, Llama上均有提升）。压缩比超过75%时开始降质。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>终端Agent的<strong>上下文压缩</strong>不仅节省token，还提升准确率——因为减少了无关信息对决策的干扰。自进化范式让压缩器越用越好。</p>
+</div>

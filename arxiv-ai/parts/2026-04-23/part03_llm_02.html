@@ -1,0 +1,47 @@
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18738" target="_blank">Remask, Don't Replace: Token-to-Mask Refinement in Masked Diffusion Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span>
+<span>🏛 Shanghai Jiao Tong University, Zhongguancun Academy</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">Diffusion LM</span><span class="tag tag-llm">Error Correction</span>
+</div>
+
+<div class="module-title">📌 背景与动机</div>
+<p>LLaDA2.1等掩码扩散语言模型（dLLM）在每步去噪后使用Token-to-Token（T2T）编辑修正错误：当某个替代token的置信度超过阈值时替换已承诺的token。本文识别出T2T的三个结构性失败模式：(1) <strong>修正惰性</strong>——后验多模态时无候选超过阈值；(2) <strong>上下文污染</strong>——在含错误的上下文下计算替换导致错误传播；(3) <strong>训练-推理噪声失配</strong>——训练用均匀随机扰动，实际错误却是语义连贯的。</p>
+
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module">
+<div class="sub-module-title">① Token-to-Mask（T2M）重掩码机制</div>
+<p>核心思想极其简洁：当检测器标记一个可疑token时，不是替换为另一个token，而是<strong>重置为[MASK]</strong>。下一步M2T去噪在清洁上下文下重新预测该位置。掩码是语义中性的——它不引入方向性偏差，也不污染依赖它的其他位置。当多个位置同时重掩码时，M2T步骤在移除了错误token的上下文下<strong>联合重预测</strong>所有位置。方法是training-free的，仅修改编辑规则。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">② 三种检测启发式</div>
+<p><strong>LOWPROB</strong>：当 \(p_\theta(x_i|z) < \tau_{lp}\) 时重掩码；<strong>T2T-REMASK</strong>：原T2T规则触发时改为重掩码而非替换；<strong>LOGITDIFF</strong>：当 \(\max_v \log p_\theta(v|z) - \log p_\theta(x_i|z) > \delta\) 时触发。每种启发式的计算开销与原T2T相同——零额外前向传播。</p>
+</div>
+<div class="sub-module">
+<div class="sub-module-title">③ 上下文信号层级理论</div>
+<p>建立三级上下文信号层级：<strong>对齐信号 > 空信号（mask）≫ 对抗信号（错误token）</strong>。理论证明存在一个"卡住集"（stuck set），在该集合上T2T规则永远无法触发修正（因为没有单一替代候选超过阈值），而LOWPROB始终可以。这从根本上解释了为什么mask比错误token是更好的条件信号。</p>
+</div>
+
+<div class="module-title">💡 深度案例</div>
+<div class="example-box">
+<strong>CMATH"最后一英里腐蚀"修复：</strong>手动审计LLaDA2.1-mini在CMATH上的所有baseline错误，发现<strong>79.9%并非推理错误</strong>，而是"正确推理后答案被污染"。例如：模型正确推导出857但T2T将"8"替换为"6"输出657。T2M改为将"8"重掩码为[MASK]，在"5"和"7"已确认的上下文下重新预测出"8"。T2M修复了<strong>41.3%</strong>的腐蚀案例，CMATH准确率提升<strong>+5.92</strong>点。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<tr><th>Benchmark</th><th>LLaDA2.1 T2T</th><th>+T2M (LOWPROB)</th><th>Δ</th></tr>
+<tr><td class="best">CMATH</td><td>83.1</td><td class="best">89.0</td><td class="best">+5.92</td></tr>
+<tr><td>GSM8K</td><td>85.2</td><td>86.8</td><td>+1.6</td></tr>
+<tr><td>MATH-500</td><td>52.4</td><td>53.8</td><td>+1.4</td></tr>
+<tr><td>DROP</td><td>41.7</td><td>43.2</td><td>+1.5</td></tr>
+<tr><td>IFEval</td><td>71.8</td><td>72.5</td><td>+0.7</td></tr>
+<tr><td>MMLU</td><td>62.1</td><td>62.0</td><td>−0.1</td></tr>
+</table>
+
+<div class="module-title">🧪 消融与讨论</div>
+<p>增益集中在需要精确token输出的任务（CMATH +5.92，GSM8K +1.6），选择题（MMLU）几乎无影响——符合"最后一英里腐蚀"假说。LOWPROB τ=0.3时93%准确率仅需69.2次重掩码/样本；T2T-REMASK τ=0.9时87%准确率仅需1.7次重掩码/样本。方法无训练、无参数。</p>
+
+<div class="module-title">🎯 结论与启发</div>
+<p>T2M揭示了dLLM错误修正的核心设计原则：<strong>检测与修正应解耦</strong>——检测可疑token后应重置为中性mask信号而非贪心替换。79.9%的CMATH错误为"最后一英里腐蚀"的发现暗示dLLM的推理能力被低估。方法training-free，可直接叠加到任何dLLM上。</p>
+</div>

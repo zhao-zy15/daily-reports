@@ -1,0 +1,49 @@
+<div class="paper-card" id="p8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19485" target="_blank">EVPO: Explained Variance Policy Optimization for Adaptive Critic Utilization in LLM Post-Training</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 Peking University, Fudan University, Shanghai AI Lab</span>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">PPO</span><span class="tag tag-rl">GRPO</span><span class="tag tag-rl">Critic</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>LLM后训练RL面临基本设计选择：用critic(PPO)还是不用(GRPO)？经典理论偏好critic降方差，但GRPO因简单却竞争力强。EVPO揭示：在稀疏奖励下，critic并非总有益——关键在于"critic解释了多少奖励方差"。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① Explained Variance(EV)诊断</div><p>\(\text{EV} = 1 - \frac{\text{Var}(R - V)}{\text{Var}(R)}\)。EV>0：critic有益（用PPO）；EV≤0：critic引入噪声超过信号（用GRPO）。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 自适应切换</div><p>按批次粒度动态监控EV，在PPO和GRPO间切换。训练中可多次切换。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 理论分析</div><p>证明稀疏奖励下critic优势取决于拟合质量与稀疏度的比值。训练早期critic往往EV<0。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>MATH训练动态：</strong>开始时EV=-0.3(critic有害)→EVPO用GRPO。第200步EV转正0.15→切换至PPO。最终MATH <strong>52.8%</strong>(vs PPO固定48.1%, GRPO固定50.3%)。洞察："早期GRPO、后期PPO"是最优策略。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>MATH</th><th>GSM8K</th><th>Code</th><th>NQ</th></tr>
+<tr><td>PPO</td><td>48.1</td><td>78.3</td><td>54.2</td><td>31.7</td></tr>
+<tr><td>GRPO</td><td>50.3</td><td>80.1</td><td>52.8</td><td>33.2</td></tr>
+<tr><td class="best">EVPO</td><td class="best">52.8</td><td class="best">82.4</td><td class="best">56.1</td><td class="best">34.8</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>EVPO在四个任务上一致优于PPO和GRPO。EV转正时间因任务而异：MATH~200步、GSM8K~100步、Code~350步。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>EVPO揭示<strong>"何时用critic"</strong>的答案：用EV动态判断。简单而深刻地统一了PPO和GRPO两个看似对立的范式。</p>
+</div>
+
+<div class="paper-card" id="p9">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18946" target="_blank">Reasoning Structure Matters for Safety Alignment of Reasoning Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span><span>🏛 KAIST</span>
+<span class="tag tag-rl">RL</span><span class="tag tag-rl">Safety</span><span class="tag tag-rl">Alignment</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>推理模型（o1、DeepSeek-R1）在thinking过程中可能生成有害内容然后"反思"拒绝，但这种浅层安全易被攻击。本文系统研究<strong>推理结构</strong>如何影响安全对齐鲁棒性。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 三种推理结构</div><p><strong>Safety-first</strong>（先评安全再推理）、<strong>Reasoning-then-judge</strong>（先推理后判安全）、<strong>Interleaved</strong>（交替）。通过SFT数据的推理链格式诱导不同结构。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 结构感知对齐</div><p>DPO中明确奖励Safety-first结构——偏好数据的推理链第一步就识别危害意图，而非先生成危害内容再回退。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 鲁棒性评估</div><p>综合评估ASR（攻击成功率）、ORR（过度拒绝率）和推理能力(MATH/GSM8K)三维度，测试多种越狱攻击。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>越狱攻击对比：</strong>Reasoning-then-judge模型在thinking中生成"如何制作炸弹"详细步骤后才拒绝→攻击者可提取thinking内容。Safety-first模型第一步识别危害意图→<strong>ASR从12.3%降至2.1%</strong>。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>推理结构</th><th>ASR↓</th><th>ORR↓</th><th>MATH</th><th>GSM8K</th></tr>
+<tr><td>Reasoning-then-judge</td><td>12.3%</td><td>8.2%</td><td>71.5</td><td>88.2</td></tr>
+<tr><td>Interleaved</td><td>7.8%</td><td>11.5%</td><td>69.8</td><td>86.7</td></tr>
+<tr><td class="best">Safety-first</td><td class="best">2.1%</td><td class="best">5.3%</td><td class="best">70.9</td><td class="best">87.8</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>Safety-first在ASR和ORR上同时最优且推理能力保持最好。Interleaved过度拒绝率最高（频繁安全检查干扰正常推理）。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p><strong>推理结构决定安全对齐效果</strong>——"先安全后推理"比"先推理后判断"鲁棒得多。对推理模型的安全部署有直接指导意义。</p>
+</div>

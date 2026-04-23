@@ -1,0 +1,25 @@
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19351" target="_blank">DASH-KV: Accelerating Long-Context LLM Inference via Asymmetric KV Cache Hashing</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span><span>🏛 UESTC, Hong Kong PolyU, Kyung Hee University</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV Cache</span><span class="tag tag-llm">Hashing</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>标准注意力的二次复杂度是LLM长上下文推理的瓶颈。现有KV缓存压缩（量化、淘汰、共享）或损失信息或仍在浮点框架内。DASH-KV将注意力重构为<strong>近似最近邻搜索</strong>，用深度哈希将浮点相似度替换为<strong>Hamming距离</strong>。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 非对称深度哈希</div><p>Query用MLP哈希网络 \(h_Q = \text{sign}(\text{MLP}(Q))\) 最大化语义保持；Key用线性投影 \(h_K = \text{sign}(W_K \cdot K)\) 快速编码。注意力近似为Hamming距离。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 动态混合精度</div><p>轻量重要性预测器识别关键token（~15%）用全精度注意力，其余85%用位运算。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 端到端联合训练</div><p>\(\mathcal{L} = \mathcal{L}_{\text{LM}} + \lambda_1 \mathcal{L}_{\text{hash}} + \lambda_2 \mathcal{L}_{\text{quant}}\)，整体复杂度从 \(O(N^2)\) 降至 \(O(N)\)。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>LongBench 32K文档问答(Qwen2-7B)：</strong>Full Attention ~2.1秒，SnapKV 1.4秒F1降2.3%。<strong>DASH-KV 0.8秒</strong>（2.6x加速），F1仅降0.3%。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>方法</th><th>Qwen2-7B F1</th><th>LLaMA3-8B F1</th><th>复杂度</th><th>加速</th></tr>
+<tr><td>Full Attention</td><td>72.8</td><td>68.4</td><td>O(N²)</td><td>1.0x</td></tr>
+<tr><td>H2O</td><td>69.2</td><td>64.8</td><td>O(N)</td><td>1.8x</td></tr>
+<tr><td>SnapKV</td><td>70.5</td><td>66.1</td><td>O(N)</td><td>1.5x</td></tr>
+<tr><td class="best">DASH-KV</td><td class="best">72.5</td><td class="best">68.1</td><td class="best">O(N)</td><td class="best">2.6x</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>非对称设计+1.2 F1，混合精度+0.8 F1。64-bit哈希码最优。序列8K→128K时加速比1.8x→4.2x。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>首次将深度哈希集成到Transformer注意力，用<strong>Hamming距离替代浮点乘法</strong>实现线性复杂度。长上下文场景优势随序列长度增长。</p>
+</div>

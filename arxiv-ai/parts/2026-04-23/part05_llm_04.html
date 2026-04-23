@@ -1,0 +1,24 @@
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.18788" target="_blank">Efficient Mixture-of-Experts LLM Inference with Apple Silicon NPUs</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-20</span><span>🏛 University of Virginia</span>
+<span class="tag tag-llm">LLM</span><span class="tag tag-llm">MoE</span><span class="tag tag-llm">NPU</span><span class="tag tag-llm">Edge</span>
+</div>
+<div class="module-title">📌 背景与动机</div>
+<p>MoE模型因稀疏激活而高效，但专家路由的动态性导致内存访问不规则。Apple Silicon NPU专为矩阵运算优化但缺乏灵活控制流。本文首次系统研究<strong>Apple Silicon NPU部署MoE LLM</strong>。</p>
+<div class="module-title">🔬 核心方法详解</div>
+<div class="sub-module"><div class="sub-module-title">① 专家分组与批量化</div><p>将路由到同一专家的token聚合为连续批次，转化为NPU擅长的规则矩阵乘法。专家亲和性调度器预分析路由分布，减少跨核通信。</p></div>
+<div class="sub-module"><div class="sub-module-title">② 异构CPU-NPU-GPU流水线</div><p>三阶段重叠：CPU路由决策→NPU专家FFN（90%+ FLOPs）→GPU注意力。NPU利用率从35%提升至<strong>78%</strong>。</p></div>
+<div class="sub-module"><div class="sub-module-title">③ 自适应专家卸载</div><p>滑动窗口内专家激活频率预测，预加载高频专家至NPU内存，预测准确率92%+。</p></div>
+<div class="module-title">💡 深度案例</div>
+<div class="example-box"><strong>M4 Max上Mixtral-8x7B：</strong>CPU 3.2 tok/s，GPU 8.7 tok/s，<strong>NPU Pipeline 14.1 tok/s</strong>（1.62x/4.4x加速），内存从47GB压缩至32GB。</div>
+<div class="module-title">📊 实验结果</div>
+<table><tr><th>模型</th><th>设备</th><th>CPU</th><th>GPU</th><th>NPU Pipeline</th><th>加速</th></tr>
+<tr><td>Mixtral-8x7B</td><td>M4 Max</td><td>3.2</td><td>8.7</td><td class="best">14.1</td><td class="best">1.62x</td></tr>
+<tr><td>DeepSeek-MoE-16B</td><td>M4 Max</td><td>5.1</td><td>12.3</td><td class="best">19.8</td><td class="best">1.61x</td></tr>
+<tr><td>Mixtral-8x7B</td><td>M3 Pro</td><td>1.8</td><td>4.9</td><td class="best">7.6</td><td class="best">1.55x</td></tr></table>
+<div class="module-title">🧪 消融与讨论</div>
+<p>专家分组+42% NPU利用率，流水线+18%，卸载+8%。准确率差异<0.1%。</p>
+<div class="module-title">🎯 结论与启发</div>
+<p>首次证明<strong>Apple NPU可有效加速MoE LLM</strong>达1.6x+ GPU加速比，为端侧大模型部署开辟新路。</p>
+</div>
