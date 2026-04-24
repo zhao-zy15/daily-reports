@@ -1,0 +1,96 @@
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20090" target="_blank">② Less Languages, Less Tokens：跨语言 CoT 的统一逻辑空间与动态剪枝</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 HIT, SJTU</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-llm">Multilingual</span>
+<span class="tag tag-llm">Test-time Scaling</span>
+<span class="tag tag-llm">Efficiency</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>跨语言思维链（XCoT）+ self-consistency 能显著提升多语言推理，但传统方法存在两个低效：(1) <strong>全语言采样</strong>——不管 query 是什么都要在 18 个语言上都走一遍；(2) <strong>全轨迹推理</strong>——每种语言的 CoT 都要完整生成。这导致推理成本随语言数线性增长，且产生大量冗余 token。更棘手的是：不同语言的表征分布差异很大，无法直接做跨语言特征比较和剪枝。<strong>本文要回答：能否只采样最相关的几种语言，且在解码过程中动态剪掉低质量轨迹，从而大幅节省 token？</strong></p>
+
+<div class="module-title">核心方法详解（UL-XCoT 框架）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Unified Logic Mechanism（ULM）：统一逻辑空间</div>
+<p>对每种语言 $\ell$，在验证集 $X_{\text{val}}$ 上计算层 $m$ 的"语言中心"：$\mu_\ell^{(m)}=\frac{1}{|X_{\text{val}}|}\sum_{x_\ell^i\in X_{\text{val}}} H_m(x_\ell^i)$。把所有语言中心堆成矩阵 $M^{(m)}\in\mathbb{R}^{d\times|L|}$，做 SVD：</p>
+<p>$$M^{(m)}=U^{(m)}\Sigma^{(m)}V^{(m)\top}$$</p>
+<p>取前 $r$ 个左奇异向量 $B_{\text{lang}}^{(m)}=U_{:,1:r}^{(m)}$ 作为"语言变化子空间"基。<strong>其正交补</strong>就是跨语言共享的"逻辑子空间"，投影算子为：</p>
+<p>$$P_{\text{shared}}^{(m)}=I-\lambda B_{\text{lang}}^{(m)} B_{\text{lang}}^{(m)\top}$$</p>
+<p>任何输入的统一逻辑表征 $\tilde{H}_m(x_\ell)=P_{\text{shared}}^{(m)} h^{(m)}(x_\ell)$。设计直觉：剥掉语言表面差异，保留推理相关的共性结构。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Candidate Language Selection（CLS）："少语言"</div>
+<p>定义 <strong>Understanding Similarity Score</strong>：</p>
+<p>$$\mathrm{USS}(x_\ell, x_{\ell'})=\frac{\langle\tilde{H}_a(x_\ell), \tilde{H}_a(x_{\ell'})\rangle}{\|\tilde{H}_a(x_\ell)\|\cdot\|\tilde{H}_a(x_{\ell'})\|}$$</p>
+<p>对每个 query 先取 top-$k$ 个最相关语言：$L_{\text{par}}(x_\ell)=\mathrm{Top}\text{-}k_{\ell'\in L}\,\mathrm{USS}(x_\ell, x_{\ell'})$。这一步<strong>无需生成任何 token</strong>，仅靠投影后的 last-token 隐态做预筛。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Dynamic CoT Pruning（DCP）："少 token"</div>
+<p>为避免过早截断，先有 warm-up 阶段 $T_{\text{warm}}=10$ tokens 不做剪枝。之后在长度 $\tau=3$c 的滑动窗口内算 Logical Quality Score：</p>
+<p>$$\mathrm{LQS}(S_t\mid x_\ell,\ell')=\int_{t=t_0}^{t_0+\tau}\mathrm{score}(S_t\mid x_\ell,\ell')$$</p>
+<p>窗口结束后保留 top-$k'$ 条（$k'$ 由剪枝比例 $\rho\in[20\%,60\%]$ 决定），其余轨迹立即早停。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 最终投票聚合</div>
+<p>$\hat{a}=\mathcal{V}(\{a_\ell:\ell\in\mathcal{S}(x)\})$——在存活轨迹上做多数投票。整体节省来自三个层次：语言数少、每条轨迹短、单次 forward 即可决策。</p>
+</div>
+
+<div class="example-box">
+<strong>相同数学题的跨语言并行推理剪枝</strong>
+<ol>
+<li><strong>Query（德语）：</strong>"Ein Bleistift kostet 2 Dollar, und ein Notizbuch kostet 5 Dollar. Wenn du 3 Bleistifte und 2 Notizbücher kaufst, wie viel musst du insgesamt bezahlen?"</li>
+<li><strong>传统 XCoT：</strong>在全部 18 种语言上各跑完整 CoT，总耗 <strong>6623 tokens / 43s</strong>。</li>
+<li><strong>UL-XCoT：</strong>
+<ul>
+<li>CLS 阶段：USS 投影后发现 {en, zh, ja, ko, fr, es, de, ru, th} 9 种语言与该 query 逻辑最接近，其余 9 种被裁剪。</li>
+<li>DCP 阶段：warm-up 10 token 后，Thai 轨迹的 LQS 在滑窗内持续偏低，被提前剪掉。</li>
+<li>存活轨迹（如 en/de/zh）完成解码后投票，得 <strong>3824 tokens / 28s</strong>——省 42% token、35% 延迟。</li>
+</ul></li>
+<li><strong>结论：</strong>同样答对，但所耗 token 远少于 AUTOCAP / SC。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Backbone: <strong>DeepSeek-R1-Distill-Qwen-7B</strong>。基准：PolyMath（18 语言，4 难度）+ MMLU-ProX-Lite（29 语言）。</p>
+
+<table>
+<thead><tr><th>方法</th><th>PolyMath-Low AVG</th><th>PolyMath-Medium</th><th>PolyMath-High</th><th>PolyMath-Top</th><th>Token Reduction</th></tr></thead>
+<tbody>
+<tr><td>CoT (single)</td><td>54.0</td><td>16.4</td><td>7.2</td><td>5.1</td><td>baseline</td></tr>
+<tr><td>SC (Self-Consistency)</td><td>66.8</td><td>25.5</td><td>11.2</td><td>8.2</td><td>0% (most expensive)</td></tr>
+<tr><td>CLSP</td><td>81.4</td><td>30.4</td><td>14.8</td><td>9.6</td><td>—</td></tr>
+<tr><td>AUTOCAP</td><td>80.9</td><td>29.4</td><td>14.2</td><td>9.1</td><td>—</td></tr>
+<tr><td>ST-BoN</td><td>63.5</td><td>18.4</td><td>8.7</td><td>8.1</td><td>—</td></tr>
+<tr><td>UL-CoT (monolingual ctrl)</td><td>65.5</td><td>26.3</td><td>12.3</td><td>9.4</td><td>—</td></tr>
+<tr><td class="best">UL-XCoT（本文）</td><td class="best">83.8</td><td class="best">31.1</td><td>13.6</td><td class="best">10.6</td><td class="best">−50% vs AUTOCAP, −65% vs SC</td></tr>
+</tbody>
+</table>
+
+<p>MMLU-ProX-Lite 上，UL-XCoT 把 29 语言平均准确率从 CLSP 的 40.5 → <strong>43.6</strong>，且平均 token 从 27679 → <strong>10543</strong>（−62%），延迟 134.2s → 93.7s。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>Table 2 消融（PolyMath-Low 上）：</p>
+
+<table>
+<thead><tr><th>变体</th><th>ACC</th><th>Latency</th><th>Tokens</th></tr></thead>
+<tbody>
+<tr><td>w/o CLS</td><td>84.4</td><td>36.2s</td><td>5560</td></tr>
+<tr><td>w/o DCP</td><td>81.4</td><td>30.7s</td><td>3893</td></tr>
+<tr><td>w/o ULM</td><td>79.8</td><td>25.4s</td><td>3098</td></tr>
+<tr><td>w/o all（退化为全语言+全轨迹）</td><td class="best">85.2</td><td>35.9s</td><td>7518</td></tr>
+<tr><td>UL-XCoT（完整）</td><td>83.8</td><td class="best">24.6s</td><td class="best">3092</td></tr>
+</tbody>
+</table>
+
+<p>关键发现：<strong>去掉 ULM 后准确率从 83.8 → 79.8（-4 点）而 token 几乎不变</strong>——说明 ULM 不是靠多花算力刷分，而是真正的算法增益。CLS 主要贡献在效率（去掉后 token 从 3092 → 5560），DCP 兼顾精度和效率。低资源语言子集上（CoT/SC 双低于均值的语言），UL-XCoT 稳定性显著优于基线。<strong>局限：</strong>投影矩阵需要覆盖 $L$ 的多语言校准集；对于超长推理（PolyMath-Top）剪枝反而有轻微损失（10.6 vs CLSP 9.6 差距缩小）。</p>
+
+<div class="module-title">结论与启发</div>
+<p>这是首个用<strong>线性代数工具（SVD + 正交投影）</strong>把跨语言表征对齐为公共逻辑空间的 XCoT 工作。核心启示：<em>self-consistency 的代价大头是"对不适合该问题的语言还强制采样"</em>——与其均匀投入，不如让模型先评估"哪种语言最适合推理该问题"。这对多语言产品部署（例如搜索、客服）极具实用价值：可用 1 个多语言 7B 模型达到 18 语言 SC 的水平，而算力只需 1/3。未来可扩展到跨模态（视觉-语言共享逻辑空间）。</p>
+</div>

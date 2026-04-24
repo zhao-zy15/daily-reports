@@ -1,0 +1,113 @@
+<h2 class="section-title medical">⚕️ Medical · 医学大模型</h2>
+
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20441" target="_blank">⑫ MedSkillAudit：医学研究 Agent Skill 部署前审计框架</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Fudan University</span><br>
+<span class="tag tag-med">Medical</span>
+<span class="tag tag-med">Agent Skills</span>
+<span class="tag tag-med">Governance</span>
+<span class="tag tag-med">Reliability</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>Agent Skill（如 Claude Skills, 自定义 skill 包）正成为 AI agent 系统的"模块化能力单元"——每个 skill 包含 SKILL.md 规范 + 可选脚本/API 集成。医学研究 skill 对质量和安全的要求远超一般领域：<strong>科学完整性、方法学有效性、可复现性、边界安全</strong>。一个 skill 看似结构完整，却可能产出无依据的 claim、错误的分析选择、不可复现的结果。现有医学 AI 评估框架（USMLE 分数、MedAgentBench 等）只评"模型能做什么"，<strong>不评估 skill artifact 本身是否适合部署</strong>。本文填补这个空白：如何对 skill 做结构化的部署前审计？</p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 双层审计架构（Structural + Domain-Specific）</div>
+<p>框架核心是两道 Veto Gate + 两个评分层：</p>
+<p><strong>结构审计（Veto Gate 1）</strong>——4 维硬门禁：
+<ul>
+<li><strong>T1 Operational Stability</strong>：crash rate ≤ 20%，无依赖冲突</li>
+<li><strong>T2 Structural Consistency</strong>：SKILL.md schema 合规，必填 name/description</li>
+<li><strong>T3 Result Determinism</strong>：相同输入能复现输出</li>
+<li><strong>T4 System Security</strong>：无注入风险、无明文凭证</li>
+</ul>
+上层基于 ISO/IEC 25010 × 25 criteria × 8 维度计算静态分 $S_{\text{static}}$。</p>
+<p><strong>领域审计（Veto Gate 2）</strong>——4 维医学维度：
+<ul>
+<li><strong>M1 Scientific Integrity</strong>：是否隐瞒 mock 数据、无来源引用？</li>
+<li><strong>M2 Practice Boundaries</strong>：是否越界建议临床决策、错误药物剂量？</li>
+<li><strong>M3 Methodological Baseline</strong>：统计方法是否合规（p-hacking, 未校正多重检验）？</li>
+<li><strong>M4 Code Usability</strong>：函数 API 是否正确、物种注释是否一致？</li>
+</ul>
+动态执行测试后计算 $\bar{D}$（Layer 1 通用 40 pts + Layer 2 类别特定 60 pts）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 综合评分公式</div>
+<p>$$\text{Final Score}=0.4\cdot S_{\text{static}}+0.6\cdot\bar{D}$$</p>
+<p>领域动态分权重更大（60%）——因为医学 skill 的科学 integrity 比代码美观更重要。<strong>任何 veto 失败立即 Reject</strong>，无论分数多高。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 4 级 Release Disposition</div>
+<ul>
+<li><strong>Production Ready</strong>（≥85）：可公开发布</li>
+<li><strong>Limited Release</strong>（75-84）：有限范围可用</li>
+<li><strong>Beta Only</strong>（60-74）：仅 beta 测试</li>
+<li><strong>Reject</strong>（&lt;60）：不可部署</li>
+</ul>
+<p>同时标注 high-risk flag（Y / N / Unclear）——如"可能产出误导性医学建议"。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 可靠性度量：ICC(2,1) + 加权 Cohen's κ</div>
+<p>用 two-way random effects ICC 度量 system-expert 一致性：</p>
+<p>$$\text{ICC}(2,1)=\frac{\sigma_{\text{between skills}}^2}{\sigma_{\text{between skills}}^2+\sigma_{\text{error}}^2+\sigma_{\text{rater}}^2}$$</p>
+<p>对 disposition rank 用 linearly weighted Cohen's $\kappa$（对一阶相邻 disagreement 给部分信用）。用 Wilcoxon signed-rank 测试方向性偏差（p = 0.613，无偏差）。</p>
+</div>
+
+<div class="example-box">
+<strong>失败 skill 审计案例：S039 "histolab"（数字病理学代码生成）</strong>
+<ol>
+<li><strong>输入：</strong>SKILL.md + 3 个 Python 脚本（声明提供 "whole-slide image tiling"功能）。</li>
+<li><strong>Structural Audit：</strong>
+<ul>
+<li>T1 Operational Stability FAIL：<code>pip install histolab</code> 与 <code>openslide-python</code> 版本冲突，无法安装。</li>
+</ul></li>
+<li><strong>Veto 触发：</strong>T1 即失败，立即 Reject，不进入 domain audit。</li>
+<li><strong>Final Score：50.4 / 100，disposition = Reject，high-risk = Y</strong>（若未发现会导致研究流程失败）。</li>
+<li><strong>专家独立评分：</strong>Expert 1 给 48；Expert 2 给 53；共识为 50.4——<em>框架与专家评分差 0</em>。</li>
+<li><strong>输出 JSON 结构化报告：</strong>指出"critical dependency conflicts"，并建议 skill 作者：固定版本锁定或提供 Docker 环境。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Evaluation set: 75 skills × 5 类别（Evidence Insight, Protocol Design, Data Analysis, Academic Writing, Other），每类 15 个。两位专家独立审查（0-100 分）。</p>
+
+<table>
+<thead><tr><th>Metric</th><th>Human Expert 1 vs Expert 2</th><th>MedSkillAudit vs 共识</th><th>解读</th></tr></thead>
+<tbody>
+<tr><td>ICC(2,1)</td><td>0.300 (95% CI: 0.080-0.490)</td><td class="best">0.449 (95% CI: 0.250-0.610)</td><td>系统 ICC 超过人类基线</td></tr>
+<tr><td>SD of disagreement</td><td>12.4</td><td class="best">9.5</td><td>系统-共识分歧小于专家-专家分歧</td></tr>
+<tr><td>Mean absolute diff</td><td>13.8 pts</td><td>(见 Bland-Altman)</td><td>—</td></tr>
+<tr><td>Weighted κ (disposition)</td><td>0.270</td><td>—</td><td>人类基线偏低</td></tr>
+<tr><td>Wilcoxon p (directional bias)</td><td>—</td><td>0.613</td><td>系统无方向性偏差</td></tr>
+</tbody>
+</table>
+
+<p><strong>类别级一致性（ICC per category）：</strong></p>
+
+<table>
+<thead><tr><th>类别</th><th>ICC</th><th>解读</th></tr></thead>
+<tbody>
+<tr><td class="best">Protocol Design</td><td class="best">0.551</td><td>结构化最强，系统最可靠</td></tr>
+<tr><td>Evidence Insight</td><td>~0.45</td><td>良好</td></tr>
+<tr><td>Data Analysis</td><td>~0.40</td><td>良好</td></tr>
+<tr><td>Other</td><td>~0.35</td><td>中等</td></tr>
+<tr><td>Academic Writing</td><td><strong>-0.567</strong></td><td>⚠️ 严重不一致（rubric 与专家期望结构性错配）</td></tr>
+</tbody>
+</table>
+
+<p><strong>部署分布：</strong>17 skills (22.7%) Production Ready、15 (20.0%) Limited Release、31 (41.3%) Beta Only、12 (16.0%) Reject——<strong>57.3% 的 skill 低于 Limited Release 门槛</strong>，提示医学 skill 生态的整体成熟度堪忧。</p>
+
+<div class="module-title">消融与讨论</div>
+<p><strong>Academic Writing 类别的结构性问题：</strong>ICC=-0.567（负值！）意味着系统与专家的排序几乎完全相反。作者诊断：该类别的评分 rubric 过于依赖 structural criteria（如"段落数"、"引用格式"），而专家更看重"学术深度"、"论证质量"——需要领域特定的 rubric 重构。<strong>局限：</strong>样本 75 只；每类别只 15 个难做统计推断；仅两位专家，更大规模 multi-rater 验证待进行；框架依赖 SKILL.md 格式，不兼容非标准 skill；对"scientific integrity"等抽象维度的评分仍需 LLM judge，可能有循环 bias。</p>
+
+<div class="module-title">结论与启发</div>
+<p>这是医学 AI 治理领域的重要基础设施工作：<strong>把"skill 能否发布"作为独立的一层审计，而不是等部署后出事再回溯</strong>。核心启示：(1) 医学 skill 需要<em>硬 veto + 软评分</em>的分层结构——光打分不够，某些不合规问题必须直接 reject；(2) 自动化审计可以比<em>专家间</em>的一致性更高——对小样本、成本敏感的场景极具价值（LLM 不累、rubric 固定，减小 human noise）。对工业意义：Claude Skills / Qwen Skills / AgentScope 等 skill 市场急需类似的准入审计机制；医疗 AI 合规（FDA、NMPA）未来可能把这类结构化审计作为备案前提。未来：扩展到 legal / financial skill 的领域版本；把 audit 本身做成 continuous monitoring（skill 更新后自动复查）。</p>
+</div>

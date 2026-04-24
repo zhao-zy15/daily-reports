@@ -1,0 +1,100 @@
+<h2 class="section-title rl">🎯 RL · 强化学习与对齐</h2>
+
+<div class="paper-card" id="p6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20659" target="_blank">⑥ GRPO-VPS：用"模型自信心增量"做可验证过程监督（ICLR 2026）</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Huawei, Tsinghua University</span><br>
+<span class="tag tag-rl">RL</span>
+<span class="tag tag-rl">GRPO</span>
+<span class="tag tag-rl">Process Reward</span>
+<span class="tag tag-rl">ICLR 2026</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>GRPO 通过组内比较消除 critic 模型，但它把轨迹级的 reward 均匀分摊到所有中间 token，导致<strong>无差别的 credit assignment</strong>——无法识别真正关键的推理步骤，还造成过度思考（overthinking）。现有过程监督方法要么需要昂贵的 Monte Carlo rollouts（S-GRPO），要么需要训练辅助模型（PRIME, Skywork-prm），都偏离了 RLVR "不用辅助模型" 的设计哲学。<strong>问题：能否<em>不用任何辅助模型、不做 rollouts</em>，从模型本身"免费"抽取 segment-level 过程监督信号？</strong></p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Reasoning Process Segmentation（基于熵的自适应切分）</div>
+<p>直接按 token 数均匀切会把不同重要性的步骤混在一起。作者用 token-level entropy $e_t$ 找"高不确定性"位置作为分段点：</p>
+<p>$$U=\{t\mid e_t\ge\tau\},\quad \tau=\text{perentile}_{p}(\{e_t\})$$</p>
+<p>然后选择分段边界 $\{t_1, \dots, t_{M+1}\}$，使每个 segment 内的 cutpoint 数量大致均等：$|U\cap[t_m, t_{m+1})|\approx|U|/M$。这保证每个 segment 包含相当数量的"决策点"，分段语义有意义。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 用"模型对正确答案的信心"作为过程信号</div>
+<p>关键创新：给定正确答案 $y^*$，在 segment 边界处<strong>把 $y^*$ 拼接到当前 prefix 后</strong>，取模型条件概率作为 confidence：</p>
+<p>$$C(z_{\le k})=\pi_\theta(y^*\mid x, z_{\le k})$$</p>
+<p>Progress score = confidence 增量：</p>
+<p>$$\Delta C_k=C(z_{\le k})-C(z_{\le k-1})=\pi_\theta(y^*\mid x, z_{\le k})-\pi_\theta(y^*\mid x, z_{\le k-1})\in[-1, 1]$$</p>
+<p><strong>直觉：</strong>若 segment $k$ 是有用推理，模型对正确答案的概率会上升（$\Delta C_k>0$）；若是幻觉或弯路，概率会下降。这个信号完全 model-free，不需额外 rollouts。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Hybrid Advantage（outcome + process 融合）</div>
+<p>outcome 级优势保留 GRPO 的 group-relative：$A^i=r^i-\frac{1}{G}\sum_j r^j$（$r\in\{0,1\}$）。最终 hybrid advantage：</p>
+<p>$$\tilde{A}^i_k=A^i+\alpha\cdot\Delta C_k,\quad \alpha=1.2$$</p>
+<p>梯度估计器：</p>
+<p>$$\nabla_\theta J(\theta)=\frac{1}{G}\sum_{i=1}^G\sum_{k=1}^M(A^i+\alpha\cdot\Delta C_k)\cdot\nabla_\theta\log\pi_\theta(z_k^i\mid x, z_{<k}^i)$$</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 设计直觉与互补性</div>
+<p>$A^i$ 提供全局锚（无它会只顾局部进步而丢失最终答案正确性）；$\Delta C_k$ 提供稠密信号（无它则退化为普通 GRPO）。两者叠加让每个 token 的梯度既懂"对/错"又懂"这一段贡献了多少"。</p>
+</div>
+
+<div class="example-box">
+<strong>组合数计算题上的 confidence 轨迹</strong>
+<ol>
+<li><strong>Query：</strong>"Compute $\binom{11}{9}$." 正确答案 $y^*=55$。</li>
+<li><strong>初始 confidence:</strong> $C_0=\pi_\theta(y^*\mid x)=0.01$（几乎为零）。</li>
+<li><strong>Segment 1：</strong>"We can express this as $\binom{11}{2}$."  → $C_1=0.65$, $\Delta C_1=+0.64$ ✅ 大跃迁。</li>
+<li><strong>Segment 2：</strong>"Note that $\binom{11}{9}=\binom{11}{11-9}=\binom{11}{2}$" → $C_2=0.96$, $\Delta C_2=+0.31$ ✅ 确认推导。</li>
+<li><strong>Segment 3：</strong>冗余罗嗦的 recap… → $C_3=0.90$, $\Delta C_3=-0.06$ ❌ 被 VPS 识别为"冗余"。</li>
+<li><strong>最终答案：</strong>"$\boxed{55}$" $r=1$。</li>
+<li><strong>效果：</strong>VPS 让模型学到"早做关键变换，少做 recap"——实验显示输出长度降低 34-36%。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Backbones: Qwen2.5-Math-1.5B/7B, Gemma-2-2B-it。Training: MATH 7500 问题, verl framework, 8×H800。</p>
+
+<table>
+<thead><tr><th>方法</th><th>AMC23</th><th>AIME24</th><th>MATH</th><th>Olympiad</th><th>Avg P@1</th><th>Avg Token</th></tr></thead>
+<tbody>
+<tr><td colspan="7"><em>Qwen2.5-Math-1.5B</em></td></tr>
+<tr><td>BASE</td><td>16.3</td><td>5.8</td><td>22.6</td><td>19.0</td><td>15.9</td><td>5237</td></tr>
+<tr><td>GRPO</td><td>46.9</td><td>18.3</td><td>68.8</td><td>30.0</td><td>41.0</td><td>3772 (−28%)</td></tr>
+<tr><td>DrGRPO</td><td>44.4</td><td class="best">20.0</td><td>70.5</td><td>30.8</td><td>41.4</td><td>3756</td></tr>
+<tr><td>GSPO</td><td>45.0</td><td>13.3</td><td>68.0</td><td>28.9</td><td>38.8</td><td>3924</td></tr>
+<tr><td>S-GRPO (MC rollouts)</td><td>46.3</td><td>14.2</td><td>67.5</td><td>28.3</td><td>39.1</td><td>3523</td></tr>
+<tr><td>GRPO w/ Skywork-PRM</td><td>50.0</td><td>11.7</td><td>71.4</td><td>29.8</td><td>40.7</td><td>3607</td></tr>
+<tr><td class="best">GRPO-VPS（本文）</td><td class="best">55.0</td><td>15.0</td><td class="best">72.2</td><td class="best">32.1</td><td class="best">43.6 (+27.7 vs BASE)</td><td class="best">3355 (−35.9%)</td></tr>
+<tr><td colspan="7"><em>Qwen2.5-Math-7B</em></td></tr>
+<tr><td>GRPO</td><td>62.5</td><td>30.0</td><td>75.4</td><td>36.8</td><td>51.2</td><td>3620</td></tr>
+<tr><td>Eurus-2-7B-PRIME</td><td class="best">65.0</td><td>15.0</td><td class="best">78.3</td><td class="best">42.2</td><td>50.1</td><td>4382 (−7.5%)</td></tr>
+<tr><td>GRPO-VPS</td><td>64.8</td><td class="best">31.7</td><td>75.6</td><td>37.2</td><td class="best">52.3</td><td class="best">3121 (−34%)</td></tr>
+</tbody>
+</table>
+
+<p>通用域基准（MMLUPro/TheoremQA）上 GRPO-VPS 分别 +1.8 和 +2.4 点，证明泛化良好。<strong>Eurus-PRM 的反差：</strong>虽然 MATH 得分略高（78.3 vs 75.6），但 AIME24 仅 15.0%（GRPO-VPS 31.7%）——PRM 过拟合训练分布，不鲁棒。</p>
+
+<div class="module-title">消融与讨论</div>
+<p><strong>Segment 粒度（每段平均 n 个 cutpoint）：</strong>$n=4$ 最优；$n=2$ 太细导致计算开销过大拖慢收敛；$n=8$ 太粗信号稀疏。<strong>分段策略：</strong>自适应熵切分 vs 固定 token 数切分（n=6 均等分）——前者收敛更快、准确率更高、输出更短。<strong>单一信号消融：</strong></p>
+
+<table>
+<thead><tr><th>Reward Signal</th><th>MATH Accuracy</th></tr></thead>
+<tbody>
+<tr><td>Outcome only (即 GRPO)</td><td>68.8</td></tr>
+<tr><td>VPS only（去掉 $A^i$）</td><td>50.1 ⚠️ 大幅退化</td></tr>
+<tr><td class="best">Both（完整方法）</td><td class="best">72.0</td></tr>
+</tbody>
+</table>
+
+<p>说明 outcome reward 不可或缺——仅靠 confidence 增量会让模型陷入"局部最优推理但答错"的困境。<strong>局限：</strong>confidence 信号依赖于 $\pi_\theta(y^*\mid x, z)$ 的数值，当模型对答案过于自信或过于不自信（初期）时信号噪声大；对于非数值类、多答案任务（开放问答）probe 的稳定性有待验证；$\alpha$ 权重需要 per-task 微调。</p>
+
+<div class="module-title">结论与启发</div>
+<p>GRPO-VPS 揭示一个优雅观察：<strong>正确答案的概率增量本身就是最好的 process reward——它完全来自模型自己，与 RLVR 的"只用可验证信号"哲学完美契合</strong>。对工业级 RL 训练的意义：避免维护 PRM 模型，减少 MC rollout 开销，还能主动抑制 overthinking（推理长度减 35%）。未来可探索：多候选答案 (top-k) 的 confidence 融合；非数学任务（代码、多跳 QA）的 confidence probe 校准；与 RLEP 等多策略机制组合。</p>
+</div>

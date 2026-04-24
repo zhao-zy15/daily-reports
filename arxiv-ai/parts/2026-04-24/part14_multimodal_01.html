@@ -1,0 +1,102 @@
+<h2 class="section-title multimodal">🌐 Multimodal · 多模态大模型</h2>
+
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20755" target="_blank">⑬ V-tableR1：Critic 引导的过程监督 RL，4B 模型击败 72B（Meituan Longcat）</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Meituan Longcat</span><br>
+<span class="tag tag-multimodal">Multimodal</span>
+<span class="tag tag-multimodal">Process RL</span>
+<span class="tag tag-multimodal">Table Reasoning</span>
+<span class="tag tag-multimodal">PGPO</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>VLM 在表格推理上系统性失败——不是因为看不清单个 cell 值，而是<em>推理层面</em>走 shortcut：利用语言先验瞎猜而不做精确 cell 定位和多跳聚合。SFT 用教师强制训练，只学推理语法不学推理本质；RLVR 在文本数学/代码上成功，但扩展到视觉域极难——自然图像 VQA 的答案主观性大，reward 几乎无法构造而易被 hack。<strong>作者的关键洞察：表格具有严格的网格结构——中间推理步骤（cell 坐标）和最终答案都可严格验证，是多模态 RLVR 的理想 testbed</strong>。</p>
+
+<div class="module-title">核心方法详解（V-tableR1 + PGPO）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Visual Chain-of-Thought（V-CoT）生成</div>
+<p>强制 policy VLM 在每个推理步输出 Visual Anchor（相对网格坐标）：<code>&lt;cell: Row 2, Col 3&gt;</code> + cell value。生成轨迹 $y=(s_1, a_1, \dots, s_K, a_K, \text{ans})$。三种行为被此显式分开：</p>
+<ul>
+<li><strong>Path 1（严谨推理）</strong>：正确定位 + 正确值 + 正确计算 ✅</li>
+<li><strong>Path 2（视觉幻觉）</strong>：coordinate 错 → 值错 → 答错</li>
+<li><strong>Path 3（捷径猜测）</strong>：跳过定位，靠语言先验凑对答案 ❌</li>
+</ul>
+<p>传统 outcome-only RL 把 Path 1 和 Path 3 等同奖励。本文显式惩罚 Path 3。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Critic VLM：密集过程评分</div>
+<p>用 <strong>Qwen-3 8B</strong> 在高质量推理上做 coord 和 intermediate value 扰动，生成负样本；再训 <strong>Qwen-3-VL 32B</strong> 作 critic。Critic 对每条 V-CoT 产出 $r_{\text{proc}}\in[0,1]$ 的过程分。组合 reward：</p>
+<p>$$R(y)=\begin{cases}R_{\text{base}}+\alpha, & R_{\text{base}}>1\wedge r_{\text{proc}}>\tau_{\text{high}}\\ r_{\text{fmt}}+\beta, & R_{\text{base}}>1\wedge r_{\text{proc}}<\tau_{\text{low}}\\ R_{\text{base}}+\alpha\cdot r_{\text{proc}}, & R_{\text{base}}>1\wedge\tau_{\text{low}}\le r_{\text{proc}}\le\tau_{\text{high}}\\ R_{\text{base}}, & \text{otherwise}\end{cases}$$</p>
+<p>Golden-Case 奖励 $\alpha$ 给严谨推理；Conservative Penalty $\beta$ 把 Path 3 的答对信用降到仅 format 分。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Decoupled Clipping（继承 DAPO）</div>
+<p>$$J_{\text{DAPO}}(\theta)=\frac{1}{G}\sum_i\frac{1}{|y_i|}\sum_t\min(\rho_{i,t}\hat{A}_i, \mathrm{clip}(\rho_{i,t}, 1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}})\hat{A}_i)$$</p>
+<p>非对称 clip $\epsilon_{\text{low}}&lt;\epsilon_{\text{high}}$ 稳定长推理链训练。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ Length-Aware Dynamic Sampling（LSPO）</div>
+<p>观察到：极短轨迹 = 死记硬背；中等长度 = 泛泛 pattern matching；极长 = 复杂多跳或自我修正。<strong>保留底部 30% + 第 60-90 百分位</strong>——即把最短和最长保留、丢弃中等长度。这既提高 RL 效率，又让策略搜索分布更广。</p>
+</div>
+
+<div class="example-box">
+<strong>TabMWP 多跳数学题的三种路径对比</strong>
+<ol>
+<li><strong>问题：</strong>表格含国家-人口列，"Which country has the third-largest population among those starting with 'A'?"</li>
+<li><strong>Path 1（V-tableR1 4B）：</strong>
+<ul>
+<li><code>&lt;cell: Row 1, Col 1&gt; = "Algeria"</code>; <code>&lt;cell: Row 1, Col 2&gt; = "44M"</code></li>
+<li>[扫描所有 A 开头国家…]</li>
+<li>"Sort by pop: Algeria 44M, Argentina 45M, Angola 33M"</li>
+<li>"Third-largest = <strong>Angola</strong>" ✅ $r_{\text{proc}}=0.92$，Golden-Case</li>
+</ul></li>
+<li><strong>Path 3（Qwen3-VL-72B shortcut）：</strong>直接答"Angola"不做 cell 定位——恰好答对但 $r_{\text{proc}}=0.15$ → Conservative Penalty，训练中被惩罚。</li>
+<li><strong>结果：</strong>V-tableR1 4B 在 TabMWP 上 <strong>83.38%</strong>，Qwen3-VL-72B 81.95%（仅差无法实质区分，但结构化可靠性天差地别）。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Base: Qwen3-VL-2B/4B。Benchmarks: TabFact, InfoTabs (TFV) + FinQA, HiTab, TAT-QA, TabMWP, WTQ (TQA)。</p>
+
+<table>
+<thead><tr><th>Model</th><th>TabFact</th><th>InfoTabs</th><th>FinQA</th><th>HiTab</th><th>TabMWP</th><th>WTQ</th></tr></thead>
+<tbody>
+<tr><td colspan="7"><em>闭源/大规模</em></td></tr>
+<tr><td>GPT-4.1</td><td>87.32</td><td>92.43</td><td>23.44</td><td>32.39</td><td>74.06</td><td>63.45</td></tr>
+<tr><td>Gemini-2.5-Flash</td><td class="best">88.16</td><td class="best">91.43</td><td class="best">40.48</td><td class="best">55.43</td><td class="best">88.37</td><td class="best">78.18</td></tr>
+<tr><td>Qwen2.5-VL-72B</td><td>73.45</td><td>72.82</td><td>19.34</td><td>44.04</td><td>81.95</td><td>65.70</td></tr>
+<tr><td>QVQ-72B</td><td>77.68</td><td>74.64</td><td>23.12</td><td>45.70</td><td>82.20</td><td>68.20</td></tr>
+<tr><td>Qwen3-VL-32B</td><td>82.43</td><td>78.25</td><td>26.32</td><td>46.20</td><td>80.37</td><td>65.49</td></tr>
+<tr><td colspan="7"><em>4B 小模型</em></td></tr>
+<tr><td>Qwen3-VL-4B (base)</td><td>73.28</td><td>77.33</td><td>14.74</td><td>27.75</td><td>71.92</td><td>54.72</td></tr>
+<tr><td>Qwen3-VL-4B (SFT)</td><td>83.88</td><td>87.33</td><td>18.88</td><td>36.58</td><td>76.60</td><td>54.32</td></tr>
+<tr><td class="best">V-tableR1 4B（本文）</td><td class="best">87.95</td><td>88.94</td><td class="best">28.98</td><td class="best">47.24</td><td>83.38</td><td>63.37</td></tr>
+</tbody>
+</table>
+
+<p><strong>关键：</strong>V-tableR1 4B 在 FinQA 上 <strong>28.98%</strong> 超过 InternVL-2.5-14B (24.27%) 和 QVQ-72B (23.12%) —— <strong>参数少 18×</strong>。TabFact 上 <strong>87.95%</strong> 媲美 GPT-4.1 (87.32%)。相较 SFT baseline，FinQA +10.10, HiTab +10.66，证明 PGPO 的 RL 收益。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>Table 3 组件消融（Qwen3-VL-2B base）：</p>
+
+<table>
+<thead><tr><th>方法</th><th>TFV-Avg</th><th>TQA-Avg</th></tr></thead>
+<tbody>
+<tr><td>GRPO</td><td>81.34</td><td>46.43</td></tr>
+<tr><td>DAPO (decoupled clip)</td><td>82.48</td><td>49.04</td></tr>
+<tr><td>PGPO w/o process supervision</td><td>83.12</td><td>49.34</td></tr>
+<tr><td class="best">Full PGPO</td><td class="best">86.12 (+4.78)</td><td class="best">51.04 (+4.61)</td></tr>
+</tbody>
+</table>
+
+<p>单独 decoupled clip 提 +2.61%，length-aware sampling 再提 +0.30%，但<strong>critic 过程监督一项就贡献 +2.52% TQA</strong>——比前两者相加还多。训练曲线上 GRPO 在第 40 步 reward collapse（典型 reward hacking），DAPO 平稳但早期 plateau，PGPO 突破 0.7 reward 天花板。GPT-5 as-judge 评分：V-tableR1 的 Visual Grounding 从 2.3 → 3.8（+65%相对提升）。<strong>局限：</strong>只适用于<em>可严格验证的结构化视觉</em>（表格、图表）；critic 训练需 32B VLM 额外开销；自然图像 VQA 因语义模糊无法直接套用此范式。</p>
+
+<div class="module-title">结论与启发</div>
+<p>V-tableR1 是一个漂亮的"限定域 × 精细工程"工作——通过找到视觉任务中"结构化的 deterministic 部分"（表格网格），在该局部 demostrate RLVR 的真实威力。核心启示：<em>多模态 RLVR 的关键不是更强的 critic，而是选对可验证的子域</em>。对工业界：财报分析、BI dashboards 的 agent 化可直接应用 V-tableR1（Meituan 场景就是本地生活数据表分析）。未来：扩展到代码块、schema 图、UML 等其它"网格化"结构；multi-turn 场景下的 critic 重用；更小 critic（从 32B → 7B）以降低训练成本。</p>
+</div>

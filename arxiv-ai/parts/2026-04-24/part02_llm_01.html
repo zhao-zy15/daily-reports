@@ -1,0 +1,94 @@
+<h2 class="section-title llm">🧠 LLM · 纯文本大模型</h2>
+
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20564" target="_blank">① Where Reasoning Breaks：逻辑连接词是推理崩溃的"分叉点"</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 University of Florida</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-llm">Reasoning</span>
+<span class="tag tag-llm">Decoding</span>
+<span class="tag tag-llm">ACL 2026</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>LLM 在多步逻辑推理中脆弱：单步错误会沿链式传播导致完全失败。现有"全局"测试时扩展方法（beam search, self-consistency）计算开销大（3-6× token 成本、2.8-4.1× 延迟）且并非一致有效。作者通过 <strong>token-level 熵分析</strong> 发现，<em>逻辑连接词（therefore, however, but, and, instead 等）集中了模型不确定性</em>——它们是"高熵分叉点"。仅替换这些连接词就能近乎对半翻转最终答案（比替换其它高熵 token 的扰动效果强近 2 倍）。假设：<strong>只在这些逻辑关键处干预，即可以近贪婪成本获得近全局搜索的准确率</strong>。</p>
+
+<div class="module-title">核心方法详解（三层干预）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 激活层：Gradient-based Logical Steering</div>
+<p>不同于之前依赖激活平均的 steering 方法（会捕到语义噪声），本文用<strong>目标概率的梯度</strong>来定位"推动生成正确连接词"的方向。对层 $l$ 在连接词位置 $t$ 前的隐状态 $h_t^l$：</p>
+<p>$$g(i)=\nabla_{h_t^l}\log P(w_c\mid h_t^l, x_{<t}),\quad v_{\text{steer}}=\frac{1}{N}\sum_{i=1}^{N}\mathrm{Normalize}(g(i))$$</p>
+<p>推理时将所有逻辑连接词位置的隐状态做一次<strong>加性干预</strong>：$\tilde{h}_t^l=h_t^l+\alpha\cdot v_{\text{steer}}$。$\alpha$ 控制引导强度，不修改权重。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 解码层：Localized Branching（局部分支）</div>
+<p>触发条件：(i) top-1 token 属于连接词集合 $S_l$；(ii) top-K 中至少出现 2 个 $S_l$ 候选。仅在此"真正的分叉点"触发 lookahead。对每个候选连接词 $c^{(k)}$ 生成长度 $L$ 的轨迹 $\tau^{(k)}$，用两个<strong>标准化后的</strong>指标联合打分：</p>
+<p>$$H(\tau^{(k)})=\frac{1}{L}\sum_{j=1}^L H(P(\cdot\mid x,c^{(k)},\tau^{(k)}_{<j})),\quad S(\tau^{(k)})=\frac{1}{L}\sum_{j=1}^L\log P(y_j\mid x,c^{(k)},\tau^{(k)}_{<j})$$</p>
+<p>$$c^{*}=\arg\min_{c^{(k)}\in C}\left(\tilde{H}_k-\tilde{S}_k\right)$$</p>
+<p>即选择"熵最低、对数似然最高"的分支，避免全局 beam 的爆炸式开销。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 训练层：Targeted Transition Preference Optimization（TTPO）</div>
+<p>DPO 在整句上优化会导致非关键 token 的梯度污染能力。TTPO 仅在连接词位置单 token 上做 DPO 式偏好损失：</p>
+<p>$$s_\theta(x,w)=\log\pi_\theta(w\mid x)-\log\pi_{\text{ref}}(w\mid x)$$</p>
+<p>$$\Delta_\theta=s_\theta(x,w_c)-s_\theta(x,w_r),\quad \mathcal{L}_{\text{TTPO}}=-\mathbb{E}_D[\log\sigma(\beta\Delta_\theta)]$$</p>
+<p>训练时 forward 只走到连接词位置，梯度仅从这一时间步反传——作者称之为"外科手术式"更新。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 设计直觉</div>
+<p>三层互补：steering 改"潜空间方向"，branching 改"解码路径"，TTPO 改"概率分布本身"。核心观察是错误高度<strong>集中于特定 token 位置</strong>，因此<em>稀疏干预</em>优于<em>全局平均</em>。</p>
+</div>
+
+<div class="example-box">
+<strong>水果选择推理：连接词翻转结论</strong>
+<ol>
+<li><strong>Prompt：</strong>规则要求 Red + Sweet，选项有 Lime(Green, Sour) / Chili(Red, Spicy) / Apple(Red, Sweet) / Lemon(Yellow, Sour)。</li>
+<li><strong>前缀：</strong>"We are considering the Chili because it matches the red color requirement." ← 下一步模型需选一个连接词。</li>
+<li><strong>五种连接词导致的不同结局：</strong>
+<ul>
+<li>"<em>But</em> it is spicy…" → 选 <strong>Apple</strong> ✅</li>
+<li>"<em>And</em>, the rules strictly demand sweetness…" → 选 <strong>Apple</strong> ✅</li>
+<li>"<em>Even if</em> it is spicy, we prioritize visual…" → 选 <strong>Chili</strong> ❌</li>
+<li>"<em>However</em>, it looks ripe…" → 选 <strong>Chili</strong> ❌</li>
+<li>"<em>Instead</em>, we pick the Lime…" → 选 <strong>Lime</strong> ❌</li>
+</ul></li>
+<li><strong>结论：</strong>同一前缀，连接词选择本身决定了最终答案的对错。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>在 5 个基准（ZebraLogic, BBH-Deductive, RuleBERT, LogiQA 2.0, ProntoQA）上对比 Greedy / Beam Search 与本文三种方法：</p>
+
+<table>
+<thead><tr><th>方法</th><th>ZebraLogic</th><th>BBH(Ded)</th><th>RuleBERT</th><th>LogiQA 2.0</th><th>ProntoQA</th></tr></thead>
+<tbody>
+<tr><td colspan="6"><em>Gemma-3-4b-it</em></td></tr>
+<tr><td>Greedy</td><td>38.8</td><td>75.3</td><td>60.3</td><td>55.2</td><td>90.0</td></tr>
+<tr><td>Beam Search</td><td>33.4</td><td>77.0</td><td class="best">67.7</td><td>54.0</td><td>90.6</td></tr>
+<tr><td>Steering</td><td>39.0</td><td>75.5</td><td>62.0</td><td>55.5</td><td>90.2</td></tr>
+<tr><td>Branching</td><td class="best">42.0</td><td>74.7</td><td>63.4</td><td class="best">56.8</td><td>90.2</td></tr>
+<tr><td>TTPO</td><td>40.4</td><td>75.9</td><td>60.8</td><td>56.0</td><td>90.4</td></tr>
+<tr><td colspan="6"><em>Phi-4-mini-instruct (4B)</em></td></tr>
+<tr><td>Greedy</td><td>38.8</td><td>67.3</td><td>50.3</td><td>57.7</td><td>93.6</td></tr>
+<tr><td>Beam Search</td><td>31.8</td><td class="best">73.8</td><td>51.7</td><td>59.0</td><td>93.2</td></tr>
+<tr><td>Branching</td><td>39.6</td><td>69.1</td><td>51.9</td><td>57.0</td><td>94.8</td></tr>
+<tr><td>TTPO</td><td>38.6</td><td>67.2</td><td>50.7</td><td class="best">59.4</td><td class="best">96.6</td></tr>
+<tr><td colspan="6"><em>Gemma-3-12b-it</em></td></tr>
+<tr><td>Greedy</td><td>53.2</td><td>87.5</td><td>58.2</td><td>59.2</td><td>99.0</td></tr>
+<tr><td>TTPO</td><td class="best">55.6</td><td>86.4</td><td>57.3</td><td>59.5</td><td>99.2</td></tr>
+</tbody>
+</table>
+
+<p>Branching 以 <strong>≤1.45× greedy 成本</strong>达到 self-consistency (n=5)（2.90× 成本）相当的平均准确率；Phi-4-mini 上 SC 仅多 0.5 点却要 4.37× token。<strong>lookahead 匹配真值连接词的命中率</strong>：Gemma-3-4b 73.4%、Phi-4-mini 69.1%。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>Table 5 显示 TTPO 与 steering / branching <strong>正交互补</strong>：TTPO + Steering 在 Phi-4-mini 上进一步把 BBH 从 67.2 → 70.4（+3.2）；TTPO + Branching 让 Gemma-3-4b ProntoQA 从 90.4 → 92.2。作者指出方法增益与<strong>连接词密度</strong>高度相关（LogiQA / BBH 连接词稀疏，增益受限）。<strong>局限：</strong>仅处理显式连接词，对隐式逻辑跳跃无效；连接词集合 $S_l$ 需人工维护；对 Phi-4-reasoning-plus 这类强推理模型 BBH 出现 70.2 → 86.4 非预期波动（推测与其训练分布对连接词分布敏感有关）。</p>
+
+<div class="module-title">结论与启发</div>
+<p>这项工作提供了"<strong>推理在哪里断裂</strong>"的可证伪答案——不是在"思考内容"，而是在逻辑连接 token 上。它启发了一个新范式：<em>用语言学/话语关系作为先验，稀疏地干预 LLM 解码</em>，比全局扩展（SC / beam / tree-of-thought）具有数量级成本优势。对工业部署意义明显：可在推理延迟预算紧张的场景以近零开销换准确率提升。未来可把 $S_l$ 扩展到多语言话语连接词、引入学习化的"分叉点检测器"。</p>
+</div>

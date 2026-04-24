@@ -1,0 +1,94 @@
+<div class="paper-card" id="p8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19859" target="_blank">⑧ DR-Venus：10K 开放数据训出 4B 前沿深度研究智能体（Ant Group）</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span>
+<span>🏛 Ant Group (Venus Team)</span><br>
+<span class="tag tag-rl">RL</span>
+<span class="tag tag-rl">Deep Research Agent</span>
+<span class="tag tag-rl">IGPO</span>
+<span class="tag tag-rl">Edge-scale</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>Deep Research Agent（深度研究智能体）需要长程规划、可靠工具使用（search + browse）、多轮证据聚合，单次 query 可达 200+ 交互轮次。现有 SOTA 都是 30B+ 模型 + 闭源数据（Tongyi-DR-30B, DeepSeek-V3.2, GLM-4.7 等）。<strong>边端部署（成本/延迟/隐私）呼唤 &lt;9B 的小模型深度研究代理，但小模型有两大困难：</strong>(1) 对噪声轨迹、格式瑕疵、不完美工具使用更敏感——需极高数据质量；(2) agentic RL 时 rollout 组内几乎全是失败轨迹，advantage 塌缩——监督严重不够。<strong>问题：仅用 ~10K 开源数据，4B 模型能走多远？</strong></p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① 数据质量工程（4 步清洗 + 重采样）</div>
+<p>从 10001 条 REDSearcher 原始轨迹出发：(a) <strong>Environment alignment</strong>——统一 message schema、tool-call 格式到推理环境；(b) <strong>Disallowed-tool pruning</strong>——只保留 search/browse，剔除 3378 次 Python-Interpreter 等工具调用；同时去重复调用 15728 次（大多是 browse）；(c) <strong>Correctness filtering</strong>——用 Qwen3-235B 作 judge，保留最终答案正确的 9365 条（93.65%）；(d) <strong>Turn-aware Resampling</strong>——按轨迹长度加权：0-50 轮 ×1，51-100 ×2，&gt;100 ×5。结果：训练集从 9365 → 18745，长轨迹占比 60.28% → 80.15%（&gt;50 轮），13.29% → 33.21%（&gt;100 轮）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Agentic SFT（基础能力）</div>
+<p>标准 next-token loss，但仅在 assistant token 上计算（mask 掉 observation）：</p>
+<p>$$\mathcal{L}_{\text{SFT}}(\theta)=-\sum_{H\in D_{\text{SFT}}}\sum_{i\in M(H)}\log\pi_\theta(x_i\mid x_{<i})$$</p>
+<p>$M(H)$ 是 agent 生成的 reasoning trace + tool calls + 最终答案的 token 位置。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ IGPO — 基于信息增益的密集 turn-level RL</div>
+<p><strong>Information Gain Reward：</strong>用 ground-truth $g$ 的对数概率随轮次变化量作为 turn-level 监督：</p>
+<p>$$r_{i,t}^{\text{IG}}=\log\pi_\theta(g\mid h_{i,\le t})-\log\pi_\theta(g\mid h_{i,\le t-1}),\quad 1\le t&lt;T$$</p>
+<p>其中 $\log\pi_\theta(g\mid h)=\frac{1}{L}\sum_j\log\pi_\theta(g_j\mid h, g_{<j})$。IG reward 对 stop-gradient 以稳定训练。<strong>Browse-aware 分配：</strong>只对 browse 轮计算 IG，并把其 reward 分配给该 browse 和此前的所有 search（因为 browse 才是真正获取证据的动作）。<strong>Turn-level 格式惩罚：</strong>对格式错误的单个 turn 给 $-\lambda_{\text{fmt}}$ 惩罚，而非整条轨迹惩罚——细粒度。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ IG-Scale + 折扣累积</div>
+<p>超长轨迹下 outcome reward 稀疏（200 轮才有一个终局 reward），IG 可能主导。IG-Scale 自适应缩放：$s=\min(\max(M_O, \eta)/(M_{IG}+\delta), s_{\max})$，$\eta=0.3$, $s_{\max}=10$。折扣累积 reward：</p>
+<p>$$\tilde{R}_{i,t}=\sum_{k=t}^{T_i}\gamma^{k-t}\bar{r}_{i,k},\quad \gamma=0.95$$</p>
+<p>最后用 GRPO 式 clip 目标优化策略：$J_{\text{IGPO}}(\theta)=\mathbb{E}[\frac{1}{G}\sum_i\frac{1}{|u_i|}\sum_k\min(\rho_{i,k}\tilde{R}_{i,k}, \mathrm{clip}(\rho_{i,k}, 1\pm\epsilon)\tilde{R}_{i,k})-\beta D_{\text{KL}}(\pi_\theta\|\pi_{\text{ref}})]$。</p>
+</div>
+
+<div class="example-box">
+<strong>BrowseComp 长程检索任务示例</strong>
+<ol>
+<li><strong>Query：</strong>"What is the highest mountain in the country that invented the printing press, measured in feet?"</li>
+<li><strong>ground-truth $g$：</strong>"Zugspitze, 9718 feet"（德国最高峰）。</li>
+<li><strong>Turn 1-5（search 阶段）：</strong>IG rewards 几乎为零（搜索 "printing press history", "Gutenberg" 未命中最终答案）。Browse-aware 策略将这几轮 IG 合并归给下一个 browse turn。</li>
+<li><strong>Turn 6（browse Wikipedia "Germany"）：</strong>观察到"Germany is the country of Gutenberg"，$\log\pi_\theta(g\mid h_6) - \log\pi_\theta(g\mid h_5) = +0.42$ → <strong>大 IG reward</strong>。</li>
+<li><strong>Turn 9（browse "Zugspitze"）：</strong>获取高度数据 2962m, $\log\pi_\theta(g)$ 再跃升 +0.31。</li>
+<li><strong>Turn 10（answer）：</strong>输出 "Zugspitze, 9718 feet"，$r_O^i=1$。</li>
+<li><strong>RL 效果：</strong>learns to do fewer redundant searches, more targeted browses（browse ratio 降低 5 pp 但命中率升）。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Backbone: Qwen3-4B-Thinking-2507。RL on 16×A100, context 256K。</p>
+
+<table>
+<thead><tr><th>Model</th><th>BrowseComp</th><th>BrowseComp-ZH</th><th>GAIA-T</th><th>xBench-DS-2505</th><th>xBench-DS-2510</th><th>DeepSearchQA</th></tr></thead>
+<tbody>
+<tr><td colspan="7"><em>Foundation models (closed/larger)</em></td></tr>
+<tr><td>DeepSeek-V3.2</td><td>67.6</td><td>65.0</td><td>75.1</td><td>78.0</td><td>55.7</td><td>60.9</td></tr>
+<tr><td>GPT-5 High</td><td>54.9</td><td>65.0</td><td class="best">76.4</td><td>77.8</td><td class="best">75.0</td><td>79.0</td></tr>
+<tr><td>Gemini-3-Pro</td><td>59.2</td><td>66.8</td><td>—</td><td>—</td><td>53.0</td><td>76.9</td></tr>
+<tr><td>Claude-4.5-Opus</td><td>67.8</td><td>62.4</td><td>—</td><td>—</td><td>—</td><td class="best">80.0</td></tr>
+<tr><td colspan="7"><em>Trained agents ≥ 30B</em></td></tr>
+<tr><td>Tongyi-DR-30B</td><td>43.4</td><td>46.7</td><td>70.9</td><td>75.0</td><td>55.0</td><td>—</td></tr>
+<tr><td>REDSearcher-30B-A3B</td><td>42.1</td><td>49.8</td><td>80.1</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>OpenResearcher-30B-A3B</td><td>26.3</td><td>—</td><td>64.1</td><td>65.0</td><td>—</td><td>—</td></tr>
+<tr><td colspan="7"><em>Trained agents ≤ 9B</em></td></tr>
+<tr><td>WebExplorer-8B-RL</td><td>15.7</td><td>32.0</td><td>50.0</td><td>53.7</td><td>23.0</td><td>17.8</td></tr>
+<tr><td>AgentCPM-Explore-4B</td><td>24.1</td><td>29.1</td><td>63.9</td><td>70.0</td><td>34.0</td><td>32.8</td></tr>
+<tr><td>DR-Venus-4B-SFT</td><td>26.8</td><td>35.7</td><td>65.4</td><td>69.0</td><td>35.3</td><td>37.7</td></tr>
+<tr><td class="best">DR-Venus-4B-RL（本文）</td><td class="best">29.1</td><td class="best">37.7</td><td>64.4</td><td class="best">74.7</td><td class="best">40.7</td><td class="best">39.6</td></tr>
+</tbody>
+</table>
+
+<p><strong>关键数字：</strong>DR-Venus-4B-RL 在 xBench-DS-2505 上 74.7，接近 Tongyi-DR-30B 的 75.0（仅差 0.3 点但参数少 7.5 倍）；BrowseComp-ZH 37.7 超过 OpenResearcher-30B 以及所有 ≤9B 模型。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>Table 2 消融在 BrowseComp / BrowseComp-ZH：</p>
+<ul>
+<li><strong>w/o Resampling vs w/ Resampling：</strong>BrowseComp +4.0（22.8→26.8），BrowseComp-ZH +1.8（33.9→35.7）——长轨迹上采样对小模型关键。</li>
+<li><strong>DR-Venus-4B-SFT (w/ Resample) vs REDSearcher-30B-A3B-SFT：</strong>前者 BrowseComp-ZH 35.7 vs 26.8（超过 30B SFT 基线 +8.9pp）——数据质量可以弥补巨大参数差距。</li>
+<li><strong>GRPO vs IGPO：</strong>GRPO 在 BrowseComp 上反而 -1.5（25.3 vs 26.8），IGPO +2.3（29.1 vs 26.8）——传统稀疏 trajectory-level RL 在长轨迹任务上不稳定，密集 turn-level 信号是 RL 成功的前提。</li>
+<li><strong>Pass@K 分析：</strong>BrowseComp SFT 16 次采样 Pass@16=61.7%，RL 版 63.7%——小模型的<em>能力天花板已经很高</em>，RL 主要提升"单次即中"的可靠性。</li>
+<li><strong>工具使用画像：</strong>正确轨迹 browse 比例始终 &gt; 错误轨迹（例 BrowseComp SFT: correct 21.1% vs wrong 13.8%），RL 进一步校准工具使用趋向"多 browse 少 search"。</li>
+</ul>
+<p><strong>局限：</strong>GAIA 上 RL 反而 -1.0（65.4→64.4）——RL 对轨迹超长（&gt;100 轮）任务的泛化性有限；IG reward 需 policy 模型自己计算，额外前向开销显著；仅两种工具 (search, browse) 的简化环境，真实场景需代码执行、文件操作。</p>
+
+<div class="module-title">结论与启发</div>
+<p>DR-Venus 证明了"开源数据 + 精心工程 + 密集信号 RL" 可以让 4B 模型达到接近 30B-class 的深度研究能力——这对边缘部署（手机端 research 助手、隐私敏感企业内部 agent）意义极大。最核心的启示：<em>agentic RL 的成败不在算法而在 reward 密度</em>——sparse outcome reward 在 200 轮轨迹下几乎不可训，必须设计 per-turn 的 dense 监督（IGPO 的 IG reward 是 model-free 的好解）。未来可与 test-time scaling（Pass@K 投票）、动态工具注册（code execution, file I/O）组合，推向更复杂的企业研究场景。</p>
+</div>

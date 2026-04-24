@@ -1,0 +1,92 @@
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20140" target="_blank">⑦ HiPO：把 DPO 拆成"查询-元思考-答案"三段的分层偏好优化</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Yale</span><br>
+<span class="tag tag-rl">RL</span>
+<span class="tag tag-rl">DPO</span>
+<span class="tag tag-rl">Reasoning</span>
+<span class="tag tag-rl">Alignment</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>DPO 把完整 response 当作单个单元优化——优化的是 $\pi_\theta(y_w\mid x)/\pi_\theta(y_l\mid x)$ 的整体对数比。但推理任务天然由三种不同认知组件组成：<strong>查询理解</strong>（有时需要澄清模糊问题）、<strong>元思考</strong>（规划步骤、组织知识）、<strong>答案格式化</strong>（严格格式如 boxed）。不同任务对这三类能力的需求差异巨大——竞赛题依赖元思考，开放问答依赖查询重构。现有 DPO 无法分别施加不同权重，导致"一刀切"训练。<strong>问题：能否在保留 DPO 高效稳定的同时，对推理的不同组件加差异化权重？</strong></p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Hierarchical Response Decomposition（响应三段分解）</div>
+<p>每条 preference 数据 $(x, y_w, y_l)$ 被拆成三段：</p>
+<ul>
+<li>$R_q$ — <strong>Refined Query</strong>：对原问题的重述 + 上下文整理</li>
+<li>$M_t$ — <strong>Meta-thinking</strong>：推理步骤、计划、概念应用</li>
+<li>$A$ — <strong>Answer</strong>：最终答案 / 格式化输出</li>
+</ul>
+<p>每条 chosen / rejected 都分成这三段（可用 GPT-4 自动切分或基于格式规则）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 分段 DPO 损失</div>
+<p>对每个 segment $s\in\{R_q, M_t, A\}$ 独立计算 log-ratio：</p>
+<p>$$\beta_s=\log\frac{\pi_\theta(s_w\mid x, \text{prev})}{\pi_{\text{ref}}(s_w\mid x, \text{prev})}-\log\frac{\pi_\theta(s_l\mid x, \text{prev})}{\pi_{\text{ref}}(s_l\mid x, \text{prev})}$$</p>
+<p>$$\mathcal{L}_{\text{DPO}}^s=-\mathbb{E}[\log\sigma(\beta_s)]$$</p>
+<p>同时保留对整体 $y$ 的 DPO 损失 $\mathcal{L}_{\text{DPO}}^y$ 作为全局锚。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 多目标加权组合</div>
+<p>最终 HiPO 损失是四项加权和：</p>
+<p>$$\mathcal{L}_{\text{HiPO}}=w_{R_q}\mathcal{L}_{\text{DPO}}^{R_q}+w_{M_t}\mathcal{L}_{\text{DPO}}^{M_t}+w_{A}\mathcal{L}_{\text{DPO}}^{A}+w_y\mathcal{L}_{\text{DPO}}^{y}$$</p>
+<p>其中 $w_{R_q}+w_{M_t}+w_A+w_y=1$。权重可配置实现"偏向哪类能力"：如 Rq-bias 用 (0.60, 0.15, 0.15, 0.10)；Mt-bias 用 (0.20, 0.50, 0.20, 0.10)；Rq+Mt-bias 用 (0.35, 0.30, 0.15, 0.25)。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ Stepwise 训练策略</div>
+<p>同一模型按 $R_q\to M_t\to R_q+M_t$ 顺序训练三个阶段——作者称之为"循序渐进的推理能力构建"。<em>设计直觉：先学会理解问题，再学会规划，最后把两者融合</em>。相较于 individual training（只训一种权重），stepwise 在 Qwen 上显著更强。</p>
+</div>
+
+<div class="example-box">
+<strong>AIME24 数学竞赛题：对三段式分解的训练效果</strong>
+<ol>
+<li><strong>原 response（preferred）：</strong>"<em>Let's rewrite the question: we need to find the smallest positive integer n such that…</em> <strong>[R_q]</strong> | <em>Let $f(n)=\dots$. We observe that $f$ is monotonically increasing when…</em> <strong>[M_t]</strong> | <em>Therefore the answer is $\boxed{47}$.</em> <strong>[A]</strong>"</li>
+<li><strong>HiPO 训练（Qwen-2.5-7B, Rq+Mt-bias）：</strong>
+<ul>
+<li>$w_{R_q}=0.35$ 强调问题重述——模型学到明确问题结构。</li>
+<li>$w_{M_t}=0.30$ 强调元思考——奖励结构化推理步骤。</li>
+<li>$w_A=0.15$ 答案部分权重较小。</li>
+</ul></li>
+<li><strong>效果：</strong>GSM8K 从 76.20% → 90.09%（+13.89）、MATH500 从 60.07% → 66.50%（+6.43）、Gaokao2023 58.61% → 61.11%（+2.50）。</li>
+<li><strong>对比：</strong>标准 DPO 在同数据训同样轮次只把 GSM8K 推到 77.84%（+1.64），<em>纯单一答案监督</em> 反而让 AIME24 从 4.33% 降到 0.66%。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Backbones: Qwen-2.5-7B-Instruct 和 Llama-3.1-8B-Instruct。数据：Math Stack Exchange preference pairs。评估：5 个数学基准。</p>
+
+<table>
+<thead><tr><th>Config (Qwen-2.5-7B)</th><th>Minerva</th><th>AIME24</th><th>Gaokao2023</th><th>GSM8K</th><th>MATH500</th></tr></thead>
+<tbody>
+<tr><td>Base</td><td>48.26</td><td>4.33</td><td>58.61</td><td>76.20</td><td>60.07</td></tr>
+<tr><td>Standard DPO</td><td>48.81 [+0.55]</td><td>0.66 [-3.67]</td><td>57.53 [-1.08]</td><td>77.84 [+1.64]</td><td>60.92 [+0.85]</td></tr>
+<tr><td>HiPO-Rq-bias</td><td>47.66</td><td>2.00</td><td>59.49</td><td>78.43</td><td>59.60</td></tr>
+<tr><td>HiPO-Mt-bias</td><td class="best">51.02 [+2.76]</td><td class="best">4.66</td><td>62.18 [+3.57]</td><td>85.38 [+9.18]</td><td>62.62 [+2.55]</td></tr>
+<tr><td>HiPO-Rq+Mt-bias</td><td>47.65</td><td>3.33</td><td class="best">61.11</td><td class="best">90.09 [+13.89]</td><td class="best">66.50 [+6.43]</td></tr>
+</tbody>
+</table>
+
+<table>
+<thead><tr><th>Config (Llama-3.1-8B)</th><th>Minerva</th><th>AIME24</th><th>Gaokao</th><th>GSM8K</th><th>MATH500</th></tr></thead>
+<tbody>
+<tr><td>Base</td><td>42.58</td><td>7.33</td><td>46.03</td><td>81.80</td><td>47.07</td></tr>
+<tr><td>Standard DPO</td><td>39.45 [-3.13]</td><td>5.66</td><td>44.73</td><td>81.34</td><td>48.32</td></tr>
+<tr><td>HiPO-Rq-bias</td><td class="best">45.43 [+2.85]</td><td class="best">9.00 [+1.67]</td><td class="best">49.19 [+3.16]</td><td>83.27</td><td>47.04</td></tr>
+<tr><td>HiPO-Rq+Mt-bias</td><td>38.38</td><td>0.66</td><td>46.44</td><td class="best">85.52 [+3.72]</td><td>47.31</td></tr>
+</tbody>
+</table>
+
+<div class="module-title">消融与讨论</div>
+<p><strong>个体训练 (Individual Training)：</strong>Rq-Only 让 Qwen 平均提升 +4.46%（GSM8K 最高 +11.18%）；Mt-Only 让 Llama 提升 +1.57%（AIME24 最高 +11.00%）。<strong>关键发现：A-Only 一律变差</strong>——Qwen 平均 -6.26%（MATH500 最低 -8.36%），Llama 约 -2.10%。这说明<em>只对"答案格式"加权会让模型过度拟合表面 pattern 而丢失推理能力</em>。<strong>架构差异：</strong>Qwen 更适合 Mt 驱动（本身 CoT 强，需结构化强化），Llama 更适合 Rq 驱动（查询理解是瓶颈）——不同模型家族需不同权重策略。<strong>局限：</strong>响应分段需要数据预处理，若原数据无清晰结构需 GPT-4 辅助切分；三段划分对非数学任务（代码、开放问答）的适用性未充分验证；段权重需要 per-model grid search。</p>
+
+<div class="module-title">结论与启发</div>
+<p>HiPO 把"结构化推理"这件事从"多 agent 架构（ReMA）/ Tree of Thoughts 等昂贵推理时方法"下放到"训练时目标函数"——保持 DPO 的单次前向、稳定训练特性，却获得多组件分工优化。对齐社区的启示：<em>偏好数据不应只作为黑盒 yes/no 信号，其内部结构可显式建模</em>。适合工业场景：企业可以根据需求（问题澄清 vs 规划推理 vs 格式输出）调整权重，快速生成面向特定任务的对齐模型。未来可扩展到代码生成（规格-思考-代码三段）、法律分析（事实-推理-结论）等结构化领域。</p>
+</div>

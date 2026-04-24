@@ -1,0 +1,85 @@
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20487" target="_blank">⑤ Knowledge Capsules：从"prompt 注入"到"KV 注入"的记忆级知识整合</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22 (v2: 04-23)</span>
+<span>🏛 Zhejiang Angel Medical AI, Miti AI</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-llm">RAG</span>
+<span class="tag tag-llm">KV Cache</span>
+<span class="tag tag-llm">Memory</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>RAG 通过检索拼接文档到 prompt 提供外部知识，但存在<strong>结构性失配</strong>：模型的推理是在注意力机制里通过 Key-Value 记忆的相似度竞争完成的，而 RAG 把知识作为<em>原始 token</em> 注入。这些 token 必须先被编码进内部表征才能参与注意力，天生处于劣势——在长上下文和多跳推理中更是被格式、话语结构等 token 稀释。<strong>问题：能否把检索到的知识直接编译成 KV 记忆单元，让它和参数化记忆"对等"地参与 attention 竞争？</strong></p>
+
+<div class="module-title">核心方法详解（KVI 框架）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Knowledge Capsule（胶囊表示）</div>
+<p>用<strong>冻结的基础 LLM</strong>从文档语料直接蒸馏关系三元组 (h, r, t)，每个三元组规范化为胶囊 $C=(\text{entity}_h, \text{relation}, \text{entity}_t, \text{provenance})$——保留出处溯源，允许验证。胶囊是<em>无参数、无需 fine-tuning</em> 的模块化知识。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② External KV Injection（注意力级注入）</div>
+<p>将胶囊编译成 KV 对 $(K_{\text{ext}}, V_{\text{ext}})$，在选定层直接拼接到模型的 attention cache：</p>
+<p>$$\mathrm{Attn}(Q, [K_{\text{int}}; K_{\text{ext}}], [V_{\text{int}}; V_{\text{ext}}])=\mathrm{softmax}\!\left(\frac{Q[K_{\text{int}}; K_{\text{ext}}]^\top}{\sqrt{d}}\right)[V_{\text{int}}; V_{\text{ext}}]$$</p>
+<p>关键：$K_{\text{ext}}, V_{\text{ext}}$ 与模型内部 KV 同构，<strong>直接参与同一个 softmax 竞争</strong>，不再是"token 竞争"而是"memory 竞争"。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Graph-Guided Multi-hop Retrieval</div>
+<p>给定 query，在预编译的知识图上做实体锚定的多跳遍历（entity-anchored traversal）检索相关胶囊，然后用 DRM（Document Relevance Matching）分数过滤。多跳结构本身就约束了搜索空间，对 MedHop 这类"必须输出规范 DrugBank ID"的严格格式任务有天然优势。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ Dual-Channel Injection</div>
+<p>同时走两条通道：(a) 结构化关系 → KV cache 注入（for reasoning）；(b) 原始文本证据 → prompt（for grounding）。前者提供 "结构偏置"，后者提供"可引用的措辞"。注入预算和关系感知的 filtering 都是小规模可配置超参，不碰模型权重。</p>
+</div>
+
+<div class="example-box">
+<strong>MedHopQA 药物相互作用查询</strong>
+<ol>
+<li><strong>Query（自然语言）：</strong>"Which drug interacts with Aspirin via CYP2C9?"</li>
+<li><strong>期望输出：</strong>规范的 DrugBank ID，例如 <code>DB00564</code>。</li>
+<li><strong>RAG 基线：</strong>检索到相关 Wikipedia 段落拼进 prompt，Qwen2.5-7B 生成 "The drug is carbamazepine, which is known as DB00564…" ——含 ID 但格式错误（多了描述性 token），EM = <strong>0</strong>。</li>
+<li><strong>KVI：</strong>
+<ul>
+<li>图遍历：Aspirin --[metabolized_by]--> CYP2C9 --[inhibited_by]--> ? 得候选集 {DB00564, DB01058, DB00564}。</li>
+<li>胶囊 $C_1=(\text{Aspirin}, \text{interacts\_with}, \text{DB00564}, \text{prov: DrugBank 2024})$ 编译成 KV 插入第 14 层。</li>
+<li>Prompt 同时给自然语言证据。</li>
+<li>输出："<code>DB00564</code>"，EM = <strong>1</strong>。</li>
+</ul></li>
+<li><strong>关键观察：</strong>MedHopQA_n40 上 LLM/RAG 得 0.0%，KVI 得 92.5%——不是"内容知道"，而是"格式稳定"。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Backbones: Qwen2.5-7B-Instruct 和 Mistral-7B-Instruct-v0.3（都冻结）。5 条件完整消融网格：LLM / RAG / GraphRAG / KV Prefix / KVI。</p>
+
+<table>
+<thead><tr><th>Dataset</th><th>Backbone</th><th>LLM</th><th>RAG</th><th>GraphRAG</th><th>KV Prefix</th><th>KVI (本文)</th></tr></thead>
+<tbody>
+<tr><td>NQ (单跳)</td><td>Qwen2.5</td><td>20.0</td><td>41.0</td><td>44.0</td><td>14.0</td><td class="best">49.0</td></tr>
+<tr><td>HotpotQA (多跳)</td><td>Qwen2.5</td><td>16.7</td><td>22.5</td><td>32.5</td><td>15.8</td><td class="best">33.3</td></tr>
+<tr><td>MedHopQA_n40</td><td>Qwen2.5</td><td>0.0</td><td>0.0</td><td>82.5</td><td>0.0</td><td class="best">92.5</td></tr>
+<tr><td>MedHopQA_official</td><td>Qwen2.5</td><td>0.0</td><td>0.0</td><td>74.3</td><td>0.0</td><td class="best">75.4</td></tr>
+<tr><td>NQ</td><td>Mistral</td><td>34.0</td><td>63.0</td><td class="best">67.0</td><td>17.0</td><td class="best">67.0</td></tr>
+<tr><td>HotpotQA</td><td>Mistral</td><td>30.8</td><td>36.7</td><td>38.3</td><td>16.7</td><td class="best">40.8</td></tr>
+<tr><td>MedHopQA_official</td><td>Mistral</td><td>0.0</td><td>0.3</td><td>13.5</td><td>0.6</td><td class="best">33.3</td></tr>
+</tbody>
+</table>
+
+<p><strong>关键信号：</strong>KV Prefix（只注入不结构化）全都低于 LLM 基线——证实"只把检索文本塞进 KV cache"会引入噪声，反而有害。必须先把知识压缩成<em>规范关系三元组</em>再注入。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>5 条件自然形成完整 2×2 消融网格：</p>
+<ul>
+<li><strong>w/o Graph（KV Prefix）：</strong>NQ 从 49.0 → 14.0（-35 点）——图引导是检索质量的决定因素。</li>
+<li><strong>w/o KV（GraphRAG）：</strong>NQ 49.0 → 44.0（-5），MedHopQA_official 75.4 → 74.3（-1）——KV 注入在 single-hop 任务上收益较小，在<em>严格格式的 multi-hop</em> 任务上放大。</li>
+<li><strong>w/o both（RAG）：</strong>Qwen 上 MedHopQA 直接归零（0.0% EM），因为格式完全无约束。</li>
+</ul>
+<p><strong>失败模式分析：</strong>KVI 在 MedHopQA_n40（小样本 40 个）Mistral 上只有 12.5%（远低于 Qwen 的 92.5%）——注入信号可能与 Mistral 的 RoPE 偏置冲突；作者推测不同家族模型对外部 KV 的 layer selection 敏感。<strong>局限：</strong>需维护知识图构造成本（entity extraction + relation normalization）；KV 注入层/预算需 per-task 调优；胶囊蒸馏假设语料粒度适合三元组（长叙述类语料可能失效）；需事先知道目标关系模式。</p>
+
+<div class="module-title">结论与启发</div>
+<p>这项工作把 RAG 的根本瓶颈从"检索精度"转移到"注入机制"——<strong>结构化的内容要在结构化的通道注入</strong>。对产品级 RAG 系统的启发：prompt 拼接并非 RAG 的唯一选择，把关系图 + KV 注入作为第二条通道可显著提高严格格式任务的稳定性（医疗、合规、金融条款）。这也给"长上下文幻觉"问题提供了新视角：让真正的知识绕开 token-level 注意力竞争。未来可与 speculative decoding、KV cache 压缩等机制组合，或探索"动态胶囊加载"（query-adaptive KV 注入）。</p>
+</div>

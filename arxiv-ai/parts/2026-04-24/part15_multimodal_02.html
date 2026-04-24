@@ -1,0 +1,88 @@
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20398" target="_blank">⑭ WebGen-R1：7B 模型通过 RL 生成多页网站，媲美 DeepSeek-R1（671B）（Alibaba 🏢）</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Alibaba, HKUST</span><br>
+<span class="tag tag-multimodal">Multimodal</span>
+<span class="tag tag-multimodal">Code RL</span>
+<span class="tag tag-multimodal">VLM Reward</span>
+<span class="tag tag-industry">🏢 Industry</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>LLM 在 function-level 代码生成上已达到人类水平，但<em>project-level 网站生成</em>（多页路由、动态功能、UI 设计、响应式布局）仍极具挑战。现有方法两极化：(1) 简化为单页静态网站，回避现代 web app 的复杂性；(2) multi-agent 编排框架（不同 agent 做 UI、后端、测试），但 agent 间契约脆弱（一个文件名不一致整个 build 就崩），且多轮执行带来高延迟和 token 成本。<strong>RL 是理想方案</strong>，但 reward 设计是瓶颈——网站功能需交互验证（点击、路由、状态变化），美学验证又主观。本文通过 <strong>scaffold-driven + 级联多模态 reward</strong> 解决这个问题。</p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Scaffold-driven Structured Generation（脚手架驱动）</div>
+<p>不让模型从头生成全部文件，而是基于预验证的 <strong>React template</strong> 生成<em>变化组件</em>。定义网站为 $W=\langle G, \Phi\rangle$（目录图 + 文件内容）。不变子图 $G_T$（build config, routing 骨架, server）由 template 提供，策略 $\pi_\theta$ 只生成变量部分 $\Delta=W\setminus T$：</p>
+<p>$$W_{\text{gen}}=T\oplus\pi_\theta(\Delta\mid S, x, T)$$</p>
+<p>这保证了 build 入口、路由、依赖关系 <em>a priori</em> 正确，大幅减小开放动作空间。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② 分层验证与渲染流水线</div>
+<p><strong>Phase I Static Compliance：</strong>$I_{\text{static}}(W_{\text{gen}})=\prod_{c\in C}\mathbb{1}[c(W_{\text{gen}})]$ 检查 structure/files/commands/content 合规。失败直接早退。<strong>Phase II 构建 + 渲染：</strong></p>
+<p>$$o=R_{\text{render}}(L_{\text{serve}}(B_{\text{bundler}}(I_{\text{install}}(W_{\text{gen}}))))$$</p>
+<p>headless 浏览器截图 $\{I_p\}_{p\in P}$ + runtime/console logs。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Cascaded Multimodal Reward</div>
+<p>$$R(y)=\begin{cases}\psi_{\text{static}}(W_{\text{gen}}), & I_{\text{static}}=0\\ \psi_{\text{build}}(\Lambda_{\text{runtime}}), & \text{build fails}\\ R_{\text{dense}}=s_{\text{vis}}+\gamma\cdot s_{\text{func}}+\lambda\cdot s_{\text{cot}}, & \text{otherwise}\end{cases}$$</p>
+<p>三部分：(a) $s_{\text{vis}}\in[0,5]$ 由 VLM（GPT-4o）对截图给美学分（layout, typography, stylistic alignment）；(b) $s_{\text{func}}=\mathbb{1}[N_{\text{err}}=0]$ 零错误奖励；(c) $s_{\text{cot}}\in\{0, 1\}$ 奖励 <code>&lt;think&gt;</code> 包装的 CoT 推理。$\gamma=\lambda=0.1$。<strong>级联设计：</strong>昂贵 VLM 打分只在通过 static check + build 成功后才运行——节省 10×+ 训练成本。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ GRPO 优化</div>
+<p>网站生成 reward 方差极大（一个 syntax error 就从高分降到 0），actor-critic 难优化。用 GRPO 的组内归一化解决：</p>
+<p>$$\hat{A}_{i,t}=\frac{R(y_i)-\text{mean}(\{R(y_j)\}_{j=1}^G)}{\text{std}(\{R(y_j)\}_{j=1}^G)}$$</p>
+<p>标准 clip + KL 约束。Training：warm-up SFT（Qwen2.5-Coder-7B + 600 GPT-4.1 distilled samples, 2 epochs）→ RL 400 steps, group size 16, 8×H100。</p>
+</div>
+
+<div class="example-box">
+<strong>Real-time Tracker 网站生成任务的 reward 演化</strong>
+<ol>
+<li><strong>Prompt：</strong>"Build a real-time stock price dashboard with dark theme, watchlist, live chart (using recharts), and filter by market cap."</li>
+<li><strong>Training step 10（早期）：</strong>模型尝试写 <code>App.jsx</code> 但 forgot import Router → build 失败 → $R=\psi_{\text{build}}=0$。</li>
+<li><strong>Training step 50：</strong>基于 scaffold 正确引用 Router → static + build 通过，VLM 打分 <code>s_vis=2.1</code>（layout 勉强、缺暗色主题），$s_{\text{func}}=0$（console 有 3 个 undefined reference），$R=2.1+0.1\cdot 0=2.1$。</li>
+<li><strong>Training step 300：</strong>
+<ul>
+<li>Thinking block: "Plan: Header, WatchlistSidebar, ChartPanel with recharts, Filter dropdown..."</li>
+<li>Generated：正确目录、主题 provider、响应式 grid。</li>
+<li>$s_{\text{vis}}=4.2$（暗色主题 + 优雅排版），$s_{\text{func}}=1$（0 console errors），$s_{\text{cot}}=1$。</li>
+<li>$R=4.2+0.1\cdot 1+0.1\cdot 1=4.4$。</li>
+</ul></li>
+<li><strong>最终 WebGen-R1-7B vs baseline：</strong>VRR 30.56% → <strong>95.89%</strong>（+65.33 pp）；AAS 2.73 → <strong>3.94</strong>（+44.32%）；FSR 1.59% → <strong>29.21%</strong>（+27.62 pp）。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Benchmark: WebGen-Bench（101 tasks, FSR/AAS/VRR）。Training: WebGen-Instruct 6667 samples + WebDev-Arena 119 out-of-distribution 任务。</p>
+
+<table>
+<thead><tr><th>Model</th><th>Size</th><th>FSR (%)</th><th>AAS</th><th>VRR (%)</th></tr></thead>
+<tbody>
+<tr><td>GPT-5</td><td>—</td><td>46.53</td><td>3.34</td><td>90.43</td></tr>
+<tr><td>GPT-4.1</td><td>—</td><td>43.91</td><td>3.78</td><td>82.09</td></tr>
+<tr><td>Claude-3.7-Sonnet</td><td>—</td><td class="best">57.72</td><td>3.90</td><td>84.00</td></tr>
+<tr><td>Claude-Sonnet-4</td><td>—</td><td>46.13</td><td>3.86</td><td>86.05</td></tr>
+<tr><td>Gemini-2.5-Pro</td><td>—</td><td>36.31</td><td>3.89</td><td>83.33</td></tr>
+<tr><td>DeepSeek-R1</td><td>671B</td><td>30.25</td><td>3.67</td><td>42.86</td></tr>
+<tr><td>Qwen2.5-Coder-7B (base)</td><td>7B</td><td>1.59</td><td>2.73</td><td>30.56</td></tr>
+<tr><td>Qwen2.5-72B-Instruct</td><td>72B</td><td>2.54</td><td>3.14</td><td>8.86</td></tr>
+<tr><td>Qwen3-32B</td><td>32B</td><td>18.69</td><td>3.39</td><td>59.42</td></tr>
+<tr><td>Qwen3-Coder-30B-A3B</td><td>30B</td><td>6.06</td><td>2.90</td><td>32.81</td></tr>
+<tr><td class="best">WebGen-R1-7B（本文）</td><td class="best">7B</td><td>29.21 (+27.62)</td><td class="best">3.94 (+44.3%)</td><td class="best">95.89 (+65.3 pp)</td></tr>
+</tbody>
+</table>
+
+<p><strong>关键观察：</strong>(1) WebGen-R1 的 <strong>VRR 95.89% 全场最高</strong>——甚至超过 GPT-5 (90.43%)；(2) FSR 29.21% 与 DeepSeek-R1（671B，30.25%）几乎相同，但参数少 <strong>96×</strong>；(3) AAS 3.94 超过所有 proprietary 基线。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>⚠️ 原文消融表未完整抓取到，但主结果显示：Qwen2.5-Coder-7B-Instruct 原始 FSR 仅 1.59%（几乎完全非功能），经 SFT warm-up + WebGen-R1 RL 到 29.21%（+27.62 pp），其中 warm-up SFT 和 RL 的贡献分解需查原文附录。<strong>跨域泛化：</strong>WebDev-Arena 上 WebGen-R1-7B 保持竞争力（具体数字在 Appendix）。<strong>类别分析（Table 2）：</strong>User Interaction 27.25%, Data Management 26.88%——在交互/数据类任务上都远超基础 7B 模型。<strong>局限：</strong>仅限 React stack，不支持 Vue/Svelte/Angular；VLM 美学判断本身是主观 proxy，可能有 bias；RL 仍需昂贵的 build + render 环境；不支持动态后端（要真实部署数据库的 full-stack 任务）。</p>
+
+<div class="module-title">结论与启发</div>
+<p>WebGen-R1 展示了"<strong>结构化约束 × RL × 多模态 reward</strong>"如何把一个几乎非功能的 7B 模型（base FSR 1.59%）训练成能媲美 671B 的 end-to-end 网站生成器。核心启示：(1) <em>scaffold 不是约束创造力的枷锁，而是让 RL 可行的必要条件</em>——没有它开放动作空间让 reward 方差爆炸；(2) <em>级联 reward 设计</em>是多模态 RL 的计算关键——便宜的 static check 在前，昂贵的 VLM 判断在后；(3) 美学 + 功能的<em>双模态 reward</em>终结了"要么好看但坏掉，要么能用但丑"的选择困境。对工业意义：Alibaba 的 no-code 建站平台、Shopify 模板生成等可直接应用。未来：扩展到 full-stack（带数据库/API）、移动端（React Native）、PWA 支持。</p>
+</div>

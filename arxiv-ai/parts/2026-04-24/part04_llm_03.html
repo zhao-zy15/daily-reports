@@ -1,0 +1,92 @@
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20098" target="_blank">③ Differentiable Conformal Training：用可微弛豫让事实性保证"学得出来"</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 UIUC</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-llm">Hallucination</span>
+<span class="tag tag-llm">Conformal Prediction</span>
+<span class="tag tag-llm">Reasoning Factuality</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>LLM 幻觉让高风险部署困难。<strong>Conformal Prediction (CP)</strong> 提供分布无关的统计覆盖保证——通过校准一个非一致性阈值 $\hat\tau_\alpha$，可以保证保留的声明集合至少以 $1-\alpha$ 概率覆盖真实答案。2025 年的 <strong>Coherent Factuality (CF)</strong> 把 CP 扩展到多步推理：用 ADG 依赖图建模，只有当节点的所有祖先也被保留时才保留该节点。但 CF 依赖手工设计的频率一致性打分器（self-consistency frequency），<strong>在严格的 $\alpha=0.01$ 下会砍掉高达 60% 真实声明</strong>，实用价值受限。核心挑战：CF 包含 threshold filter + ancestor coherence + argmax 三个<em>强耦合的离散操作</em>，无法端到端学习打分器。<strong>本文问题：能否把 CF 整个流水线可微化，让打分器学出来？</strong></p>
+
+<div class="module-title">核心方法详解（DCF 四步弛豫）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Soft Membership（软成员）</div>
+<p>把硬指示 $\mathbb{1}\{r_v\le\tau\}$ 换成 sigmoid：</p>
+<p>$$p_{v,\tau}=\sigma\!\left(\frac{\tau-r_v}{T_p}\right),\quad T_p\to 0^+$$</p>
+<p>祖先合取（"节点和所有祖先都要过阈值"）用<strong>加权几何平均</strong>代替乘积，避免长链被稀释：</p>
+<p>$$\log q_{v,\tau}=\frac{\sum_{u\in\mathrm{Anc}(v)\cup\{v\}} w_u\log p_{u,\tau}}{\sum_{u} w_u},\quad w_u=\gamma\text{ for ancestors},\ w_v=1$$</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Differentiable Calibration（可微校准）</div>
+<p>违规分数 $V_\tau$：用真假声明集 $V^-$ 上的正确过滤概率的几何平均：</p>
+<p>$$\log Q_\tau=\frac{1}{|V^-|}\sum_{v\in V^-}\log(1-q_{v,\tau}),\quad V_\tau=1-Q_\tau^{1/\tau_s}$$</p>
+<p><strong>Soft Supremum</strong>：sup 其实是 argmax，用 softmax 弛豫：</p>
+<p>$$s_\tau=\lambda\cdot\tau-V_\tau,\quad w_\tau^{\text{cal}}=\frac{\exp(\beta\cdot s_\tau)}{\sum_{\tau'\in T}\exp(\beta\cdot s_{\tau'})},\quad \tilde\tau=\sum_\tau w_\tau^{\text{cal}}\cdot\tau$$</p>
+<p>最后的 $\hat\tau_\alpha$ 用 Grover et al. (2019) 的 SoftQuantile 算子（同 ConfTr 机制）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Gated Soft Argmax（预测阶段）</div>
+<p>测试时要从阈值集合选 $\tau&lt;\hat\tau_\alpha$ 中最大的，用"softmax + sigmoid 门"实现约束 argmax：</p>
+<p>$$w_\tau^{\text{unnorm}}=\exp(\beta\cdot\tau)\cdot\sigma\!\left(\frac{\hat\tau_\alpha-\tau}{\tau_z}\right)$$</p>
+<p>$$q_v=\sum_\tau w_\tau\cdot q_{v,\tau}$$</p>
+<p><em>设计直觉：exp(β·τ) 偏爱大阈值，sigmoid 门把超过 $\hat\tau_\alpha$ 的阈值柔性排除。</em></p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ 收敛定理 + 保留损失</div>
+<p><strong>Theorem 3.1 & 3.2</strong> 证明当温度参数按特定顺序趋于极限（$T_p\to 0^+, \tau_s\to 0, \beta\to\infty$），DCF 软版本精确收敛到原始 CF 算法——<em>保证测试时可用硬 CF 获得同样的覆盖率</em>。训练损失直接最大化真实声明的保留数：</p>
+<p>$$\mathcal{L}_{\text{retention}}=-\frac{1}{|D_{\text{pred}}|}\sum_{i\in D_{\text{pred}}}\sum_{v\in V_i} y_{i,v}\cdot q_{i,v}$$</p>
+<p>由于整条流水线可微，梯度一直反传回打分器 $\pi_\theta$。</p>
+</div>
+
+<div class="example-box">
+<strong>MATH 问题上的 12-claim 推理（α=0.06，用 Vieta 公式的非常规证法）</strong>
+<ol>
+<li><strong>场景：</strong>该问题全部 12 个声明均正确，但关键中间步"使用 Vieta 公式"LLM 很少自我复现，其 frequency-score = 0。</li>
+<li><strong>CF 基线（纯频率打分器）：</strong>关键步被当成高风险砍掉，因 ancestor coherence 级联破坏整条链。最终保留 <strong>0/12</strong>。</li>
+<li><strong>DCF（学到的打分器）：</strong>同一个 Claim 8 综合 8 个特征：
+<ul>
+<li>nx_reachability=3.0 (w=0.272, 贡献 +0.815)</li>
+<li>claim_index=8 (w=0.098, 贡献 +0.780)</li>
+<li>quadratic_equations 语义匹配 (w=0.229, +0.229)</li>
+<li>… 累加总分 <strong>2.66</strong>，远高于保留阈值。</li>
+</ul></li>
+<li><strong>结果：</strong>DCF 保留 <strong>9/12</strong> 声明。图结构（reachability, 位置）在频率失效时提供互补证据。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Benchmark：MATH（复杂多步推理）+ FELM（长文事实性）。α∈[0.01, 0.10]。</p>
+
+<table>
+<thead><tr><th>方法</th><th>MATH α=0.02 保留</th><th>MATH α=0.06</th><th>FELM α=0.03</th><th>FELM α=0.09</th></tr></thead>
+<tbody>
+<tr><td>Independent Factuality</td><td>~15%</td><td>~30%</td><td>~12%</td><td>~35%</td></tr>
+<tr><td>Boosted Independent</td><td>~18%</td><td>~35%</td><td>~15%</td><td>~38%</td></tr>
+<tr><td>XGBoost + Conformal</td><td>~22%</td><td>~42%</td><td>~18%</td><td>~42%</td></tr>
+<tr><td>Coherent Factuality (手工 freq)</td><td>~28%</td><td>~55%</td><td>~22%</td><td>~45%</td></tr>
+<tr><td class="best">Differentiable CF（本文）</td><td class="best">~67%</td><td class="best">~80%</td><td class="best">~30%</td><td class="best">~55%</td></tr>
+</tbody>
+</table>
+
+<p><strong>最强战果：MATH 上保留率最多提升 141%</strong>（例：α=0.02 时 CF 只保留 ~28%，DCF 保留 ~67%）；FELM 上最多 +61%。所有情况下 DCF 都达到或超过目标覆盖率 $1-\alpha$（图 2b/2d）。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>单特征 CF 基线对比（SHAP 分析识别最重要的 3 个特征）：</p>
+<ul>
+<li><strong>MATH：</strong>nx_reachability（图连通性）是最强单特征，但 DCF 仍超它 <strong>7-50%</strong>（取决于 α）——学到的多特征组合使用方式不可替代。</li>
+<li><strong>FELM：</strong>frequency-score 单独已足够强，中等 α 下略好于 DCF；但 DCF 在极端 α（0.01, 0.09）超出最多 64%。</li>
+<li><strong>关键发现：</strong>最佳单特征<em>因数据集而异</em>（MATH 靠图连通、FELM 靠频率），但 DCF 能自适应地组合。</li>
+</ul>
+<p><strong>局限：</strong>CF 要求 ADG 可用（需解析 LLM 输出成依赖图），这一前置步骤仍是手工的；温度参数训练时的顺序性耦合（$T_p, \tau_s, \beta$ 必须按特定速率趋向极限）使得超参搜索代价较高；不同打分器特征的泛化（跨模型、跨数据集）未充分验证。</p>
+
+<div class="module-title">结论与启发</div>
+<p>DCF 把一个"难以优化但严格保证"的统计推断流水线变成了"可端到端学习且仍严格保证"的机制。它揭示了一条一般路径：<em>把离散算法通过 softmax / sigmoid / geometric mean 分层弛豫，只要证明收敛到硬版本，就能既学又保证</em>。对高风险 LLM 应用（医疗、法律）意义巨大——可以在 α=0.01 的严苛阈值下把保留率从 ~28% 推到 ~67%，让 CP 真正可用。未来可延伸到 agent 工具调用安全（把 CF 换成"工具调用成功"的依赖图）。</p>
+</div>

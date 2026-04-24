@@ -1,0 +1,114 @@
+<h2 class="section-title agent">🤖 Agent · 智能体与工具使用</h2>
+
+<div class="paper-card" id="p9">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.20714" target="_blank">⑨ Learning to Evolve：文本参数图 + 元学习的多智能体自进化（Alibaba 🏢）</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-22</span>
+<span>🏛 Alibaba (Future Living Lab)</span><br>
+<span class="tag tag-agent">Agent</span>
+<span class="tag tag-agent">Multi-Agent</span>
+<span class="tag tag-agent">Prompt Optimization</span>
+<span class="tag tag-industry">🏢 Industry</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>多智能体系统（MAS）需要精心设计 agent 的 system prompt、工具描述、inter-agent 通信协议和 workflow。现有 Automatic Prompt Optimization（APO）有两个根本缺陷：(1) <strong>缺乏结构感知</strong>——只对"扁平的 prompt 字符串"做优化，无法识别究竟是哪个 agent 的工具描述、哪个 workflow 边出错；(2) <strong>优化器是静态的</strong>——每次失败都从头找答案，不积累经验。<strong>问题：能否让 MAS 的"优化器自己"也学会进化？</strong></p>
+
+<div class="module-title">核心方法详解（TPGO + GRAO）</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Textual Parameter Graph (TPG)</div>
+<p>把整个 MAS 的文本配置 $\Theta$ 建模成有向图 $G=(V, E)$：</p>
+<ul>
+<li><strong>Role 节点</strong>：agent 的 persona 和高层目标</li>
+<li><strong>Logic 节点</strong>：推理规则、操作约束</li>
+<li><strong>Tool 节点</strong>：API 规范、使用示例</li>
+</ul>
+<p>边表示依赖关系（intra-agent flow、tool integration、inter-agent communication）。 $\Theta=\bigcup_{v\in V}\mathrm{Content}(v)$。这把"黑盒 prompt 编辑"转为"模块化图操作"。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Textual Gradient（文本梯度）</div>
+<p>执行 MAS 得到轨迹 $\mathcal{T}=\{\tau_1,\dots,\tau_N\}$，诊断模型与 ground truth 对比，生成：</p>
+<p>$$\nabla_{\text{text}}=\mathrm{Generate}(\tau_k)\to\{\delta^+, \delta^-\}$$</p>
+<ul>
+<li>$\delta^+$：正面梯度（"agent 正确地把问题拆成 A, B, C 三步"）</li>
+<li>$\delta^-$：负面梯度（"agent 幻觉了 search 工具的参数；应先调 list_parameters"）</li>
+</ul>
+<p>然后对所有 $\{\delta_k^-\}$ 做语义 embedding + DBSCAN 聚类，找出系统性错误模式（而非单次个案）。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ Graph Edit Operations（图编辑操作）</div>
+<p>对每个错误簇，Optimizer LLM 生成 machine-readable 的 proposal $\Delta G$，4 种原子操作：</p>
+<ul>
+<li><code>REWRITE_NODE(v, new_content)</code>：改节点文本</li>
+<li><code>PRUNE_EDGE(u, v)</code>：去掉错误依赖路径</li>
+<li><code>ADD_NODE(v_new, content)</code>：引入新技能/约束</li>
+<li><code>ADD_EDGE(u, v)</code>：建立新的依赖或逻辑流</li>
+</ul>
+<p>演化：$G'\leftarrow G\oplus\Delta G$。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ Group Relative Agent Optimization (GRAO)：元学习</div>
+<p>核心创新：让"优化器自己"学习历史经验。每次 $\Delta G$ 应用后在对应 error cluster 的任务子集上验证，计算有效性分数 $E(\Delta G)\in[0,1]$。所有 (Problem Context $C$, $\Delta G$, $E$) 三元组存入 <strong>Optimization Experience Memory</strong>。遇到新错误 $C_{\text{new}}$ 时：</p>
+<ol>
+<li>检索语义相似的历史 $\{C_k\}$ 形成一"组"。</li>
+<li>按 $\{E_k\}$ 排序（group-relative ranking）。</li>
+<li>Top-ranked exemplars 以 few-shot 形式喂给 Optimizer LLM。</li>
+</ol>
+<p><em>这让优化器从"盲目试"进化为"基于经验做出决策"——名字 GRAO 对标 GRPO，meta-layer 而非 policy-layer。</em></p>
+</div>
+
+<div class="example-box">
+<strong>MCP-Universe Web Searching 任务上的进化</strong>
+<ol>
+<li><strong>初始 ReAct (DeepSeek-V3.2)：</strong>遇到 "latest news about X" 任务，agent 调用 search 时漏了日期过滤参数，success rate 16.36%。</li>
+<li><strong>Iteration 1：</strong>收集 100 条失败轨迹 → 负面梯度簇："search 工具的 time_filter 参数被忽略"。Optimizer 提议：<code>REWRITE_NODE(search_tool)</code>加入"always specify time_filter='recent' for news queries"。验证后 E=0.67。</li>
+<li><strong>Iteration 3：</strong>发现新簇"agent 在 browse 前未等 search 完成"。GRAO 检索历史发现相似问题 → 提议：<code>ADD_EDGE(search_complete, browse)</code> 建立同步约束。</li>
+<li><strong>Iteration 5：</strong>overall success rate 从 16.36% → <strong>30.73%</strong>（+14.37 点）。</li>
+<li><strong>对比 w/o GRAO：</strong>同样 5 轮后反而降到 14.55%（catastrophic forgetting：新更新覆盖了早期正确修复）。</li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>Agent 框架：ReAct（GPT-4.1 / DeepSeek-V3.2）、MiroFlow（GPT-5）。Benchmark: MCP-Universe (exploratory) + GAIA (imitative)。</p>
+
+<table>
+<thead><tr><th>Model / Benchmark</th><th>Repo Mgmt</th><th>3D Design</th><th>Browser Auto</th><th>Web Search</th><th>Overall</th></tr></thead>
+<tbody>
+<tr><td colspan="6"><em>MCP-Universe（exploratory）</em></td></tr>
+<tr><td>ReAct (GPT-4.1)</td><td>36.70</td><td>55.26</td><td>26.41</td><td>5.45</td><td>30.96</td></tr>
+<tr><td>+ TPGO (5 iters)</td><td class="best">41.21 (+4.51)</td><td class="best">65.79 (+10.53)</td><td class="best">33.74 (+7.33)</td><td class="best">14.55 (+9.10)</td><td class="best">38.82 (+7.86)</td></tr>
+<tr><td>ReAct (DS-V3.2)</td><td>42.18</td><td>60.03</td><td>20.51</td><td>16.36</td><td>34.77</td></tr>
+<tr><td>+ TPGO (5 iters)</td><td class="best">45.52</td><td>63.16</td><td class="best">28.03</td><td class="best">30.73 (+14.37)</td><td class="best">41.86</td></tr>
+</tbody>
+</table>
+
+<table>
+<thead><tr><th>GAIA (imitative) / MiroFlow-GPT5</th><th>Level 1</th><th>Level 2</th><th>Level 3</th><th>Overall</th><th>Avg Time</th></tr></thead>
+<tbody>
+<tr><td>Baseline MiroFlow</td><td>78.8</td><td>77.5</td><td>44.4</td><td>73.8</td><td>4014s</td></tr>
+<tr><td>+ TPGO (1 iter)</td><td>76.9</td><td>71.2</td><td>45.5</td><td>70.59</td><td>3680s</td></tr>
+<tr><td>+ TPGO (3 iters)</td><td>82.1</td><td>73.1</td><td>54.5</td><td>75.7</td><td>2278s</td></tr>
+<tr><td class="best">+ TPGO (5 iters)</td><td class="best">90.6 (+15.0)</td><td class="best">79.1</td><td class="best">63.6 (+43.2%)</td><td class="best">81.6 (+10.6%)</td><td class="best">1765s (−56.0%)</td></tr>
+</tbody>
+</table>
+
+<p>最惊人：<strong>GAIA Level 3（最难）success rate 从 44.4% 跳到 63.6%（相对 +43.2%），同时平均耗时减半</strong>——不仅更准，还更快。</p>
+
+<div class="module-title">消融与讨论</div>
+<p>Table 3 消融（MCP-Universe Browser Automation）：</p>
+<ul>
+<li><strong>w/o TPG（退回整 prompt 改写）：</strong>28.03 → 25.13（-2.90）——结构化模块化有价值。</li>
+<li><strong>w/o 结构图编辑（只文本改写）：</strong>28.03 → 24.90（-3.13）——拓扑修改不可或缺。</li>
+<li><strong>w/o Clustering：</strong>28.03 → 26.52；<strong>随机聚类：</strong>28.03 → <strong>19.97</strong>（-8.06）——聚类质量是关键，错误的聚合甚至比没有更糟。</li>
+<li><strong>GRAO 稳定性：</strong>有 GRAO 5 轮后稳定在 33.74%；无 GRAO 第 2 轮达峰 30.03%，之后剧降到 14.55%——<em>历史经验记忆防止灾难性遗忘</em>。</li>
+<li><strong>Cross-domain：</strong>只在 Browser 上优化，泛化到 Web / Repo / 3D 也有增益（例如 DS-V3.2 Browser 20.51→28.03 + Web 16.36→18.18 + Repo 42.18→44.91 + 3D 60.03→63.16）——学到的是<em>通用 agent 工程模式</em>而非局部 overfitting。</li>
+</ul>
+<p><strong>局限：</strong>需要能生成 textual gradient 的强大 LLM（用 Gemini-2.5-Pro 做 optimizer）；对 structural edit 的组合爆炸没有正式的收敛保证；聚类超参敏感（DBSCAN 的 $\epsilon$）。</p>
+
+<div class="module-title">结论与启发</div>
+<p>TPGO 把 Agent Engineering 从"体力活 + 经验艺术"变成"可自动化的图优化问题"。GRAO 进一步让优化器本身学会进化——这是 MAS 迈向真正自主的关键一步：<em>meta-learning at the optimizer level</em>。对工业意义：<strong>Alibaba Future Living Lab 正在部署基于 MCP（Model Context Protocol）的多工具 agent 生态</strong>，TPGO 可能是未来 Qwen-Agent / AgentScope 等框架的核心优化引擎。未来可扩展到连续学习（终身优化 memory）、跨 agent 架构迁移（把 ReAct 优化经验用到 MiroFlow）。</p>
+</div>

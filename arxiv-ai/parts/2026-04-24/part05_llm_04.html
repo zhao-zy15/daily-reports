@@ -1,0 +1,79 @@
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2604.19835" target="_blank">④ Expert Upcycling：把 7B MoE"长"成 13B，节省 32% GPU 小时</a></div>
+<div class="paper-meta">
+<span>📅 2026-04-21</span>
+<span>🏛 Amazon</span><br>
+<span class="tag tag-llm">LLM</span>
+<span class="tag tag-llm">MoE</span>
+<span class="tag tag-llm">Scaling</span>
+<span class="tag tag-llm">Continued Pre-training</span>
+</div>
+
+<div class="module-title">背景与动机</div>
+<p>前沿 MoE 模型（Qwen3 235B, DeepSeek-V3 671B, Kimi K2 1T）通过增加专家数量来降低激活比（active/total），获得 scaling law 预测的高质量。但是<strong>从头训练这样的大 MoE 代价极高</strong>：专家权重、梯度、优化器状态全都必须驻留 GPU 内存——即使每个 token 只激活一部分；跨设备的 all-to-all 通信可占总训练时间 45-50%。<strong>问题：能否先训一个小 MoE，训到一半再把它"长大"，既获得大 MoE 的质量，又省掉一半的大规模训练成本？</strong>现有 Sparse Upcycling（Komatsuzaki 2023）是把 dense 模型转成 MoE，不解决 MoE → 更大 MoE 的扩容。</p>
+
+<div class="module-title">核心方法详解</div>
+
+<div class="sub-module">
+<div class="sub-module-title">① Expert Upcycling 算子</div>
+<p>给一个训好的 $E$-专家模型，在步 $\tau$ 触发升级：每个专家 $e$ 被复制 $r_e\ge 1$ 次（可非均匀：高效用专家得更多副本，满足 $\sum r_e=m\cdot E$），路由器对应扩展到 $mE$ 槽位：</p>
+<p>$$U_m:\,(E\text{-expert model},\tau)\to (mE\text{-expert model}),\text{ with top-}K\text{ routing unchanged}$$</p>
+<p>由于 top-$K$ 保持不变，<strong>每 token FLOPs 和推理成本不变</strong>——只是总参数变多。复制瞬间，新模型和原模型在计算上函数等价（warm init），起点损失几乎相同。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">② Utility-Based Expert Selection（非均匀复制）</div>
+<p>使用梯度范数 $\|g_e\|_2$ 作为专家重要性分数：高贡献专家得更多副本。作者证明了 CPT 预算有限时这能把 gap closure 提高 3×+。直觉：<em>重要专家更值得"分裂"出多个专家化变体</em>，而 under-used 的专家复制也无益。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">③ 理论框架：Capacity Gap + Initialization Gain</div>
+<p>作者证明 Theorem 3.1 将 upcycled 模型与 Fixed-$mE$ 的质量差距分解为两项：</p>
+<p>$$L_{\text{upcycled}}-L_{\text{Fixed-}mE}=\underbrace{\frac{\sum_{t=0}^{\tau-1}\eta_t}{\sum_{t=0}^{T-1}\eta_t}\cdot\Delta_{\text{cap}}}_{\text{Capacity Term (I)}}+\underbrace{\Delta_{\text{init}}}_{\text{Initialization Term (II)}}$$</p>
+<p>CPT 预算 $T-\tau$ 越大，Term (I) 系数越小；好的 upcycling 算子让 Term (II) 接近 0。两者共同决定总 gap。</p>
+</div>
+
+<div class="sub-module">
+<div class="sub-module-title">④ Symmetry Breaking</div>
+<p>复制后专家完全相同，靠 <strong>stochastic gradient diversity（不同 mini-batch 产生不同梯度）</strong> + 路由器噪声来打破对称，驱使副本分化专业化。实验证明作者试的 10 种启发式初始化变体（SVD 扰动、Drop-upcycle、orthogonal 正交化、sparse code mix 等）<em>相对朴素 copy 增益都 &lt; 1e-3 验证 loss</em>——说明<em>已稀疏的模型中，训好的路由器本身就提供了足够的对称破坏信号</em>。</p>
+</div>
+
+<div class="example-box">
+<strong>7B→13B Upcycling 的实际过程</strong>
+<ol>
+<li><strong>Step 1：</strong>从头训一个 20-层 interleaved MoE，32 专家，top-2 routing（7B 总参，1B 激活），在 380B tokens 上预训练。</li>
+<li><strong>Step 2（步 τ）：</strong>算每个专家的 $\|g_e\|_2$，按排名非均匀复制：最强的 16 个专家各复制 3 份，最弱的 16 个各复制 1 份，合计 64 专家。Router 扩展到 64 槽位 + 小幅偏置噪声。复制瞬间 CPT loss = 1.38（源模型 1.32，随机初始化 64 专家则 = 10.5）。</li>
+<li><strong>Step 3：</strong>继续 CPT 190B tokens（50% 原预算），top-2 routing 不变。前 22B tokens 内训练 loss 已低于 Fixed-32。</li>
+<li><strong>Step 4（100% CPT 后）：</strong>
+<ul>
+<li>Upcycled: val_loss = 1.263, avg_acc = 56.4</li>
+<li>Fixed-64（从头训的 64 专家版）: val_loss = 1.267, avg_acc = 56.7</li>
+<li>GPU hours: Upcycled 27888 vs Fixed-64 41328 → <strong>省 32%</strong></li>
+</ul></li>
+</ol>
+</div>
+
+<div class="module-title">实验结果</div>
+<p>20-层 interleaved MoE, 7B→13B total, ~1B active, 380B tokens pretrain + 50%/100% CPT。</p>
+
+<table>
+<thead><tr><th>任务 (100% CPT)</th><th>Fixed-32（下界）</th><th>Upcycled 32→64（本文）</th><th>Fixed-64（从头训上界）</th><th>Gap Closure</th></tr></thead>
+<tbody>
+<tr><td>Val. Loss ↓</td><td>1.301</td><td class="best">1.263</td><td>1.267</td><td><strong>111.8%</strong></td></tr>
+<tr><td>MMLU</td><td>47.5</td><td>52.3</td><td class="best">52.7</td><td>92%</td></tr>
+<tr><td>BBH CoT</td><td>33.4</td><td>43.8</td><td class="best">45.0</td><td>90%</td></tr>
+<tr><td>GSM8K</td><td>39.3</td><td>48.3</td><td class="best">49.1</td><td>92%</td></tr>
+<tr><td>HellaSwag</td><td>65.1</td><td class="best">67.3</td><td>66.1</td><td>120%</td></tr>
+<tr><td>PIQA</td><td>76.6</td><td>77.4</td><td class="best">77.5</td><td>89%</td></tr>
+<tr><td>Avg 11 bench</td><td>52.9</td><td>56.4</td><td class="best">56.7</td><td>92%</td></tr>
+</tbody>
+</table>
+
+<p>Full MoE 泛化（256→512 专家, top-8, 3% 激活比）：154M–1B 全部尺度 gap closure <strong>93-95%</strong>，证明方法不限于 interleaved 架构。</p>
+
+<div class="module-title">消融与讨论</div>
+<p><strong>CPT 预算扫描：</strong>从 10% → 100% CPT，gap closure 从 34.7% 单调升到 98.0%——50% CPT 是"强收益"的最低阈值。<strong>Transition timing（固定总预算）：</strong>早期转换（τ/T ≤ 0.25）达到 94-100% 效率，但太早（τ/T = 0.05）反而不好——源模型需先学出"可复用"的专家化。<strong>策略对比：</strong>10 种复制启发式（Copy+Noise、Drop-upcycle、SVD-Perturb、Orthogonal、Sparse Code Mix 等）相对 Copy 增益全都 &lt; 1e-3——<em>已稀疏模型的对称破坏足够，花哨的初始化策略没必要</em>。<strong>重要反差：</strong>Scaling Laws for Upcycling MoE (Nakamura et al. 2025) 发现 dense→MoE 随 dense pretrain 越长效率越差；而本文发现 MoE→MoE<em>相反</em>，越长预训练下 upcycling 效率越高——源模型的专家化越强，复制越有效。<strong>局限：</strong>需保存小模型完整 checkpoint；CPT 预算占 50%+ 才见完整收益；对于极小激活比（&lt;3%）需更多实验验证。</p>
+
+<div class="module-title">结论与启发</div>
+<p>Expert Upcycling 是 MoE 时代的 "Net2Net"——<strong>函数保持的增长</strong>应用到专家维度。对开源 MoE 训练有实际意义：Qwen3、DeepSeek-V4 等可以先训 100B 总参数版，验证收敛稳定后再 upcycle 到 300B/671B 规模，节省 30-50% 大规模训练算力。理论启示：作者用 PL-condition 证明 upcycling 收敛等价于"先优化子空间再全空间"的两阶段优化，这为未来的渐进式训练提供了原理基础。未来可与层堆叠（depth stacking）正交组合，或与 DeRS（expert 压缩）链式使用——训到大后再压缩。</p>
+</div>
