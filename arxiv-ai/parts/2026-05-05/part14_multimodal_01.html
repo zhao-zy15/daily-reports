@@ -1,0 +1,71 @@
+<h2 class="section-title multimodal">🌐 Multimodal（多模态大模型）</h2>
+
+<div class="paper-card" id="p13">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02735" target="_blank">Visual Latents Know More Than They Say: Unsilencing Latent Reasoning in MLLMs</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 A*STAR Singapore, SUTD, HUST</span><br>
+<span class="tag tag-multimodal">MLLM 潜在推理</span><span class="tag tag-multimodal">推理时方法</span><span class="tag tag-multimodal">对比对齐 + RL</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>潜在推理（latent reasoning）从 Coconut 开始已被证明比离散 textual CoT 更具表达力——把推理移到连续 hidden state，模型可在 latent 空间做"隐式 BFS"。但作者发现 MLLM 中的<strong>"Silenced Visual Latents"现象</strong>：联合训练中 latent 同时被两个目标拉扯——左侧的<em>自回归 next-token 预测</em>偏好快捷方式（autoregressive shortcut），右侧的<em>视觉推理</em>需要把视觉证据真正整合到 latent。两个目标冲突时模型倾向走快捷方式，导致 latent 表征被丰富了视觉信息但<em>下游答案预测时根本不用它</em>。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 失效模式诊断：解耦 Quality vs Utilization。</strong> 作者首先证明 latent 表征本身已经富含视觉信息（latent quality 指标 \(I(z; v)\) 高），但答案 \(\hat y\) 与 latent 的因果关系微弱（utilization 指标 \(I(\hat y; z|x_{\text{txt}})\) 接近零）。这是一个根本性洞察——既往工作都在试图改进 latent 训练目标，本文论证<em>需在推理时分别治理两个失效</em>。
+</div>
+
+<div class="sub-module">
+<strong>② Stage I：Chunk-wise Contrastive Alignment（提升 quality）。</strong> 把视觉证据 \(V\) 划分为正负样本块：与查询相关的 patch 为正集、其他为负集。每个 latent token \(z_i\) 通过对比损失：
+$$\mathcal L_{\text{align}} = -\log\frac{\exp(\mathrm{sim}(z_i, V^+_i)/\tau)}{\exp(\mathrm{sim}(z_i, V^+_i)/\tau)+\sum_{V^- } \exp(\mathrm{sim}(z_i, V^-)/\tau)}$$
+关键设计：<em>chunk-wise assignment</em> 让每个 latent token 关注不同 patch 子集，避免 latent collapse。
+</div>
+
+<div class="sub-module">
+<strong>③ Stage II：Confidence-Progression Reward（提升 utilization）。</strong> 推理时迭代扰动 latent 并要求 token 预测分布<em>沿 latent 跨度逐渐 concentration</em>：
+$$r_t = -[\;H(p(\hat y | z_{1:t})) - H(p(\hat y | z_{1:t-1}))\;]$$
+即每延伸一个 latent token，下游答案熵应该单调下降。这逼迫模型走 latent 路径而非 autoregressive 快捷。
+</div>
+
+<div class="sub-module">
+<strong>④ Frozen Backbone：完全推理时方法。</strong> 关键工程优势：(a) 主模型参数完全冻结；(b) 不需要重训；(c) 仅在推理时通过对比对齐 + 奖励驱动微调 latent 本身。这意味着可以即插即用到 Qwen2.5-VL、InternVL3、Llama 3.2 Vision、GPT-4o-mini-VL 任意 MLLM 上。
+</div>
+
+<div class="example-box">
+<strong>深度案例：MMVP "数 sheep 数量"题</strong><br>
+<b>输入</b>：图片包含 5 只羊（其中 1 只半隐藏在岩石后），问"How many sheep are in the picture?"<br><br>
+<b>vanilla Qwen2.5-VL-7B</b>：直接 autoregressive 输出 "There are 4 sheep" —— 走文本快捷方式，没用 latent 推理。<br><br>
+<b>LVR baseline（仅 latent reasoning，无 unsilencing）</b>：latent 表征已正确编码 5 只羊位置（量化 \(I(z; v)\)=0.83），但答案仍是 4 ：utilization 失败。<br><br>
+<b>本文 unsilencing 方法</b>：
+<ul>
+<li>Stage I 对比对齐：5 个 latent token 分别专注于 5 只羊的 patch（chunk-wise 分配避免坍缩）；</li>
+<li>Stage II Reward 驱动：迭代时下游分布从 \(p(\hat y)=[3:0.4, 4:0.4, 5:0.2]\) 逐步 concentration 到 \(p(\hat y)=[3:0.05, 4:0.15, 5:0.80]\)；</li>
+<li>最终输出 "There are 5 sheep, including one partially hidden behind the rock"。</li>
+</ul>
+对比 latent quality 指标：vanilla 0.34，本文 0.91（+168% 表征质量），utilization 从 0.12 → 0.78（+550%）—— 同时治理两端。
+</div>
+
+<div class="module-title">📊 实验结果（Qwen2.5-VL-7B baseline）</div>
+<table>
+<thead><tr><th>方法</th><th>Counting</th><th>IQTest</th><th>RR</th><th>MMVP</th><th>Hull-Bench</th><th>ScienceQA</th><th>MM-Star</th></tr></thead>
+<tbody>
+<tr><td>Vanilla</td><td>65.00</td><td>22.67</td><td>38.90</td><td>68.67</td><td>65.40</td><td>82.30</td><td>59.30</td></tr>
+<tr><td>MCoT</td><td>66.67 (+1.7)</td><td>22.67</td><td>35.82 (−3.1)</td><td>68.00</td><td>63.62 (−1.8)</td><td>83.90</td><td>57.90 (−1.4)</td></tr>
+<tr><td>CCoT</td><td>66.67 (+1.7)</td><td>21.33 (−1.3)</td><td>43.28 (+4.4)</td><td>69.00</td><td>64.88</td><td>83.80</td><td>58.70</td></tr>
+<tr><td>ICoT</td><td>68.33 (+3.3)</td><td>25.33 (+2.7)</td><td>37.31</td><td>69.33</td><td>65.51</td><td>78.40 (−3.9)</td><td>60.40</td></tr>
+<tr><td>CoVT</td><td>67.50</td><td>30.67 (+8.0)</td><td>38.81</td><td>72.67 (+4.0)</td><td>64.46</td><td>83.80</td><td>62.00</td></tr>
+<tr><td>LVR (baseline)</td><td>68.33 (+3.3)</td><td>28.67 (+6.0)</td><td>40.30 (+1.4)</td><td>69.00</td><td>66.67 (+1.3)</td><td>82.80</td><td>60.40</td></tr>
+<tr><td class="best">Ours (Unsilencing)</td><td class="best">68.33 (+3.3)</td><td class="best">31.33 (+8.7)</td><td class="best">44.78 (+5.9)</td><td class="best">73.00 (+4.3)</td><td class="best">67.30 (+1.9)</td><td class="best">84.20 (+1.9)</td><td>61.80 (+2.5)</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">Unsilencing 在 8 个 benchmark 中 6 个夺得最佳，在视觉推理较难的 IQTest（+8.7）、RR（+5.9）、Hull-Bench（+1.9）三个上都创新高。重要的是这些是<em>frozen backbone</em>下的提升，意味着可零开销叠加在任何 MLLM 之上。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>关键消融：(1) 仅 Stage I（quality）：MMVP +1.5 pp，证明 latent 表征质量提升有效但不够；(2) 仅 Stage II（utilization）：MMVP +2.0 pp，无 alignment 时 reward 信号太弱；(3) 两阶段联合：+4.3 pp。chunk-wise vs uniform：uniform 分配导致所有 latent 收敛到全图，丢失局部细节信息。<strong>局限</strong>：(1) reward computation 增加 ~25% 推理延迟；(2) chunk 划分依赖 query-aware patch attention，对密集场景（医学影像）划分质量待评测；(3) 视频和音频模态尚未扩展。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这篇论文的概念贡献是一个广泛适用的<strong>"quality vs utilization 双重诊断"框架</strong>——既往关于潜在推理、知识引入、attention bias 等问题都可能存在类似的"特征已具备但下游不用"现象。Unsilencing 这种 frozen-backbone + inference-time RL 的范式既保留了大模型不动的工业稳定性，又让 latent 推理真正"上桌"，是 2026 年 MLLM 推理时优化的代表性工作。可预见这种思路会很快被扩展到 video LLM、agentic VLM 等场景。</p>
+</div>
+

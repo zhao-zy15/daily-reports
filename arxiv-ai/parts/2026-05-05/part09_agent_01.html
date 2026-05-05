@@ -1,0 +1,61 @@
+<h2 class="section-title agent">🤖 Agent（LLM 智能体）</h2>
+
+<div class="paper-card" id="p8">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02801" target="_blank">Reinforcement Learning for LLM-based Multi-Agent Systems through Orchestration Traces</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Independent Researcher</span><br>
+<span class="tag tag-agent">多智能体 RL</span><span class="tag tag-agent">编排范式</span><span class="tag tag-agent">综述+理论</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>单 Agent RL 的核心对象是 <em>trajectory</em>（一条 token+tool+observation 的序列）。但现实部署的 LLM 系统正快速向"多 Agent 协同团队"演进——Moonshot Kimi K2.6 的 Agent Swarm（PARL 训练，64+ sub-agents，5000+ 协调步骤）、OpenAI Codex 的并行软件工程 Agent、Cursor / Devin 等 IDE Agent 都已不再是单 Agent。但既有 RL 形式化、奖励设计、credit assignment 都是为单 Agent 设计的。本文（203K 字大综述+原创理论）把<strong>编排轨迹（orchestration trace）</strong>作为多 Agent 系统 RL 的统一抽象单位，重写了 reward design、credit assignment、orchestration learning 三大支柱。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Orchestration Trace 形式化：dynamic Dec-POMDP。</strong> 经典 Dec-POMDP 假设 agent 数量固定，无法捕捉 spawn/despawn。作者扩展为：
+$$\mathcal M_d = (\mathcal S, \mathcal A^{\text{spawn}}, \mathcal A^{\text{despawn}}, \mathcal A^{\text{message}}, \mathcal A^{\text{tool}}, \mathcal A^{\text{aggregate}}, T, \Omega, R, \gamma)$$
+其中 spawn/despawn 是元动作（创建/解散 sub-agent）。轨迹不再是 token 序列而是<em>事件图</em>：节点=agent 状态，边=消息/工具调用/聚合操作。
+</div>
+
+<div class="sub-module">
+<strong>② 8 个奖励家族 R1–R8。</strong> 综述对 84 篇代表性工作做奖励家族分类：(R1) team outcome only、(R2) per-agent verifiable、(R3) process / step reward、(R4) tool-call success、(R5) verifier critic、(R6) communication efficiency、(R7) orchestrator decision quality、(R8) safety / sandbox compliance。这种分类首次让"为什么有的多 agent RL 训练崩溃"可以追到具体的奖励错配。
+</div>
+
+<div class="sub-module">
+<strong>③ Credit Assignment 8 个粒度单元。</strong> 从最粗到最细：team-level → orchestrator decision → per-agent → per-turn → per-message → per-tool-call → per-aggregation → per-token。作者论证：单纯团队奖励 + token 级 GAE 在 sub-agent ≥ 8 时几乎必然不收敛——这与 Kimi PARL 的"必须 per-agent verifiable"工程经验吻合。
+</div>
+
+<div class="sub-module">
+<strong>④ Orchestration Learning 5 个决策 O1–O5。</strong> orchestrator 学习什么：(O1) when to spawn、(O2) whom to delegate to、(O3) how to communicate、(O4) which tools available、(O5) how to aggregate. 综述指出 O1+O2 是<em>组合爆炸</em>核心来源（spawn 时刻 × 子 agent 集合），需要 hierarchical RL 或 attention-based routing 才可处理。
+</div>
+
+<div class="example-box">
+<strong>深度案例：Kimi K2.6 PARL vs Codex 并行 Agent</strong><br>
+<b>Kimi K2.6 PARL（Moonshot 公开报告）</b>：训练 ≥64 sub-agents，5000+ 协调步骤；reward = team success（R1）+ per-agent verifiable（R2）混合；credit assignment 从 trajectory 级降到 message 级。综述把它归入"成熟 deployment evidence"类。<br><br>
+<b>OpenAI Codex App</b>：官方材料描述为 "command center managing parallel software-engineering agents"——但<em>没有公开训练 trace</em>。综述将其归入"orchestration product evidence"。<br><br>
+<b>开放问题 P1–P15</b>：例如 P3 = "在跨 Agent 信息泄露下保持隐私的 MARL"、P11 = "如何评估 emergent communication protocol 的 fidelity"、P15 = "团队 reward + 个体 reward 的多目标 Pareto 前沿"。作者指出 132 项现有工作仅触及 11/15 个问题，4 个完全空白。
+</div>
+
+<div class="module-title">📊 实验结果（综述结构化数据）</div>
+<table>
+<thead><tr><th>维度</th><th>所覆盖工作 #</th><th>未覆盖份额</th><th>代表性 case</th></tr></thead>
+<tbody>
+<tr><td>R1 Team outcome only</td><td>32</td><td>—</td><td>多数早期 MAS</td></tr>
+<tr><td>R2 Per-agent verifiable</td><td class="best">28</td><td>—</td><td>Kimi PARL</td></tr>
+<tr><td>R3 Process / step reward</td><td>15</td><td>—</td><td>Verbal-R3</td></tr>
+<tr><td>R4 Tool-call success</td><td>12</td><td>—</td><td>OpenInterpreter, ToolRL</td></tr>
+<tr><td>R5–R8 (cross)</td><td>9</td><td>跨多家族</td><td>Codex, Kimi K2.5</td></tr>
+<tr><td>Orchestration learning O1–O5</td><td>17 (部分覆盖)</td><td class="best">~57% empty</td><td>Multi-agent debate adaptive</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">综述强调：现有 RL 工作大量集中在 R1+R2，而 R7（orchestrator decision quality）和 O1–O5（编排学习）是几乎 empty 的研究空间，是 2026–2027 的关键机会。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>作者对 116 篇候选论文做严格筛选，最终 84 篇结构化标注，32 篇排除（重复/无奖励credit信号）。综述同时点出现存评测的两大缺陷：(1) 缺乏针对 dynamic spawn 的 benchmark；(2) safety 评估几乎只看 final action，不看 communication content。<strong>局限</strong>：(1) 作为 single-author 综述存在引用选择偏差；(2) 工业系统 trace 多为公开声明而非可复现实验，部分声明（如 K2.6 的 "5000+ steps"）作者也保留怀疑；(3) 综述截止日 May 4 2026，遗漏 5 月公开新工作。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这篇综述+理论的最大贡献是把"多 Agent 系统 RL"从碎片化论文集合升级为<strong>统一研究议程（research agenda）</strong>。orchestration trace 这一抽象与 LangGraph、AutoGen 等开源框架的运行时数据结构高度对应——意味着工业实践已经走在前面，但理论与训练范式严重落后。对 2026 下半年最值得投入的方向是：(a) Orchestrator-as-a-policy 的 RL（O1+O2 联合学习）；(b) 跨家族奖励组合的 Pareto 优化；(c) 多 Agent communication 的 emergent protocol 学习与隐私防御。</p>
+</div>
+

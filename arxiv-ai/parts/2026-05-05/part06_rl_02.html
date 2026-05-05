@@ -1,0 +1,61 @@
+<div class="paper-card" id="p5">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01831" target="_blank">RMGAP: Benchmarking the Generalization of Reward Models across Diverse Preferences</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Beijing Univ. Posts & Telecom, Nanjing University</span><br>
+<span class="tag tag-rl">奖励模型基准</span><span class="tag tag-rl">偏好泛化</span><span class="tag tag-rl">语言变体一致性</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>现有 RM 基准（RewardBench、PRMBench）都隐含"<strong>单一普适偏好</strong>"假设：同一个 prompt 下某个回答就是"好"的，另一个就是"差"的。但真实用户偏好是<em>多元的</em>——有人要正式书面化解释、有人要口语通俗化，同样一个问答的理想回答取决于用户的偏好轮廓。作者提出 RMGAP 基准，沿<strong>两个正交轴</strong>评测 RM：(i) 对多元偏好的<em>敏感性</em>，(ii) 对语言变体（同义 paraphrase）的<em>一致性</em>。这是首个显式评估 RM 跨偏好泛化能力的基准。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 种子 prompt 过滤与多样性构建。</strong> 从 Chat、Writing、Reasoning、Safety 四域共采集 3,371 个种子 prompt，经人机混合过滤（质量、重复率、公平性）保留 1,097 个评测实例。每实例对应 4 条风格分化明显的回答。
+</div>
+
+<div class="sub-module">
+<strong>② 五维风格分化生成。</strong> 沿五个可控维度生成 4 个风格差异化响应：<em>Formality（正式度）、Conciseness（简洁度）、Technicality（技术深度）、Emotionality（情感色彩）、Perspective（视角）</em>。例如同一个"如何解释概率"的 prompt，4 个回答分别是：(a) 高正式+高技术（数学家风格）、(b) 低正式+低技术（类比日常）、(c) 高正式+高简洁（一行定义）、(d) 低正式+低简洁（举多个案例）。
+</div>
+
+<div class="sub-module">
+<strong>③ 偏好触发 prompt 合成。</strong> 对每个响应，合成一个<em>唯一偏爱该回答</em>的 tailored prompt，如 "用 3 个生活中的类比，口语化地解释一下概率"——此 prompt 应让 RM 给 (b) 最高分。RMGAP 的关键契约：偏好是 prompt 条件化的，而不是响应绝对质量。这 4 个"偏好类型"的 prompt 共 4,388 个。
+</div>
+
+<div class="sub-module">
+<strong>④ 语言变体一致性评测。</strong> 每个 tailored prompt 再自动生成 2 个语义等价的 paraphrase 变体，共 3 个表达。评分指标：
+$$\text{Ranking Consistency} = \frac{1}{N}\sum_{i=1}^{N}\mathbb{1}\Big[\mathrm{rank}_{\text{RM}}(R_i \mid p_i) = \mathrm{rank}_{\text{RM}}(R_i \mid p_i^{(\text{paraphrase})})\Big]$$
+如果 RM 真正理解偏好，则对同义 prompt 的排序应保持一致。这是 "sensitivity" 之外的关键 "robustness" 维度。
+</div>
+
+<div class="example-box">
+<strong>深度案例：Writing 域的风格偏好触发</strong><br>
+<b>种子 prompt</b>："写一段描述春天早晨的文字。"<br>
+<b>4 个风格化响应</b>：(a) 古典诗歌风格 30 字、(b) 现代散文 150 字、(c) 儿童故事口吻 80 字、(d) 科学说明文 100 字。<br>
+<b>Tailored prompt 示例（偏好 (c)）</b>："请用给 5 岁小朋友讲故事的口吻，描述一下春天早晨。"<br>
+<b>Paraphrase 变体</b>："像给幼儿园孩子讲述一样，描绘春天的清晨。" / "用孩子听得懂的话讲一个春天早上的小故事。"<br><br>
+<b>评测</b>：Skywork-Reward-V2-Qwen3-8B 对原 prompt 将 (c) 排第 1；但对 paraphrase-1 排 (b) 第 1、对 paraphrase-2 排 (a) 第 1 —— 一致性失败。另一方面 Llama-3.1-Tulu-3-8B-DPO 三个 prompt 都正确选 (c)，一致性 100%。这揭示：<em>高分 RM 未必偏好稳健</em>。
+</div>
+
+<div class="module-title">📊 实验结果（24 种 RM 评测）</div>
+<table>
+<thead><tr><th>Reward Model</th><th>类型</th><th>Pairwise Acc (%)</th><th>BoN Acc (%)</th><th>Ranking Consistency (%)</th></tr></thead>
+<tbody>
+<tr><td class="best">Skywork-Reward-V2-Qwen3-8B</td><td>Scalar</td><td class="best">69.97</td><td class="best">49.27</td><td>57.95</td></tr>
+<tr><td>Skywork-Reward-V2-Llama-3.1-8B</td><td>Scalar</td><td>64.53</td><td>43.11</td><td>49.99</td></tr>
+<tr><td>URM-LLaMa-3.1-8B</td><td>Scalar</td><td>62.81</td><td>42.36</td><td>49.28</td></tr>
+<tr><td>Llama-3.1-Tulu-3-8B-DPO</td><td>Implicit (DPO)</td><td>55.12</td><td>38.07</td><td class="best">58.76</td></tr>
+<tr><td>Qwen2.5-7B-Instruct (EndoRM)</td><td>Generative</td><td>53.92</td><td>—</td><td>49.40</td></tr>
+<tr><td>Qwen2.5-7B-Instruct (Listwise)</td><td>Generative</td><td>—</td><td>—</td><td>1.64</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">核心发现：(1) Best-of-N 准确率即使最强 RM 也只 49.27%，跨 4 个候选几乎一半时间无法选出最优 —— 现代 RM 在多元偏好下远未可靠；(2) Scalar RM 精度最高但一致性略逊；DPO 隐式 RM 精度更低但一致性更稳定；(3) Listwise generative 评分范式几乎完全失效（一致性 1.64%）。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>规模效应：7B→685B 的 Qwen3 家族 pairwise 精度从 52% 提升到 67%，但一致性提升很有限。这表明"扩大参数"不能解决偏好泛化问题，需改进训练范式。<strong>局限</strong>：(1) 四个风格维度可能未覆盖所有实际偏好（文化、领域专业化等）；(2) paraphrase 由 LLM 生成可能存在系统性偏差；(3) Safety 域未涉及长对话上下文的偏好迁移问题。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>RMGAP 是奖励模型评测从"单一标准"走向"多元化"的重要里程碑。核心洞察——<em>精度与一致性是正交的失败模式</em>——对 RLHF pipeline 有实际指导意义：只做 pairwise 精度验收的 RM 在个性化部署（Copilot-style 多用户场景）中可能表现极差。未来 RM 训练应显式加入 preference conditioning 与语言 invariance 约束（如对比学习、paraphrase augmentation），而不是只靠扩展规模。</p>
+</div>
+

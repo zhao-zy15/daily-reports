@@ -1,0 +1,74 @@
+<div class="paper-card" id="p14">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01327" target="_blank">SAPO: Segment-Aligned Policy Optimization for Multi-Modal Reasoning</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 (机构信息未标注)</span><br>
+<span class="tag tag-multimodal">多模态推理 RL</span><span class="tag tag-multimodal">段对齐策略优化</span><span class="tag tag-multimodal">熵自适应分段</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>当前 LLM/MLLM RL 的两个极端：(a) PPO 等 token-level 方法用 GAE 给每个 token 算 advantage，但 long-CoT 中稀疏终局奖励要回传几千 token，方差大且同一推理步内多个 token 信号不一致；(b) GRPO 等 sequence-level 方法用整轨迹相对优势，<em>无法区分中间步骤贡献</em>——当模型大部分步骤正确仅最后一步格式错误时，所有正确步骤同样被惩罚。本文提出 SAPO：把强化学习的优化粒度从 token / sequence 提升到<em>推理步骤（segment）</em>，并配合自适应熵分段机制，对多模态推理尤其重要——视觉证据通常在某个明确的推理步集中出现。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 步骤级 MDP 抽象。</strong> 标准 token-MDP 中 \(s_t\) = prompt + 已生成 token，\(a_t\) = 下一个 token。SAPO 重新定义：
+$$s_k = (x, \text{seg}_{<k}), \quad a_k = \text{seg}_k = (y_{i_k}, y_{i_k+1}, \ldots, y_{i_{k+1}-1})$$
+即 \(a_k\) 是一段连贯的推理 segment（如"从 Descartes 定理推导半径关系"），terminal 奖励仅在最终答案处计算。
+</div>
+
+<div class="sub-module">
+<strong>② 段级 value function 与 advantage。</strong> 引入步骤级 value：
+$$V^\pi(s_k) = \mathbb{E}_\pi\Big[\sum_{j=k}^K \gamma^{j-k} r(s_j, a_j) \mid s_k \Big]$$
+段级 advantage：\(\hat A_k = R_k - V_\phi(s_k)\)，其中 \(V_\phi\) 是辅助 value 网络在 segment 边界处估值。这样 credit assignment 与推理步骤一一对应，避免 token 级噪声。
+</div>
+
+<div class="sub-module">
+<strong>③ 段对齐重要性采样。</strong> 标准 PPO 重要性比率是 token 级 \(r_t = \pi_\theta(a_t)/\pi_{\theta_{\text{old}}}(a_t)\)。SAPO 用段级几何均值：
+$$\rho_k = \exp\!\left(\tfrac{1}{|a_k|}\sum_{t\in a_k}\log\frac{\pi_\theta(y_t|s_t)}{\pi_{\theta_{\text{old}}}(y_t|s_t)}\right)$$
+这样防止<em>长 segment 上比率连乘爆炸</em>，是稳定 RL 训练的关键技巧。Clipped 目标：
+$$\mathcal L_{\text{SAPO}} = -\mathbb{E}\Big[\min\big(\rho_k \hat A_k, \mathrm{clip}(\rho_k, 1-\epsilon, 1+\epsilon) \hat A_k\big)\Big]$$
+</div>
+
+<div class="sub-module">
+<strong>④ 熵自适应分段。</strong> 不依赖 prompt 格式（如 \n\n 或 ###Step），SAPO 用 token 级熵识别<em>逻辑边界</em>：高熵 token 标志模型面对多种竞争续写——这正是推理步骤切换点。具体规则：当连续 \(\eta\) 个 token 熵超过阈值 \(\theta_H\) 时切段。作者用 \(\eta=30\)，相当于自动识别 ~30 token 长的 logical chunk。这种<em>模型内部信号驱动</em>的分段比 prompt-driven 更鲁棒。
+</div>
+
+<div class="example-box">
+<strong>深度案例：Geo3K 几何题"求外接圆半径"</strong><br>
+<b>问题</b>：图片中等边三角形边长 6，求其外接圆半径。<br><br>
+<b>典型推理 trajectory（SAPO 自动分段）</b>：<br>
+<ol>
+<li><b>段 1（理解）</b>：识别图中是等边三角形 + 边长 6 → 段熵中等，但首 token "Looking" 高熵触发段边界。</li>
+<li><b>段 2（公式回忆）</b>：等边三角形外接圆半径公式 \(R = \tfrac{a}{\sqrt{3}}\) → "Recall" 高熵触发，明确知识检索段。</li>
+<li><b>段 3（代入计算）</b>：\(R = 6/\sqrt{3} = 2\sqrt{3}\) → 计算段内熵低，单一路径。</li>
+<li><b>段 4（最终答案）</b>："The answer is \(2\sqrt{3}\)" 终局奖励 r=+1。</li>
+</ol>
+<b>SAPO credit 分配</b>：段 1 (Adv=+0.05)、段 2 (Adv=+0.45 知识对)、段 3 (Adv=+0.30 计算对)、段 4 (Adv=+0.20 答案对)。<br>
+<b>对比 GRPO</b>：把整轨迹平均 +1 reward 等分到所有 token，区分不出"知识检索"和"计算"哪一步贡献大。<br>
+<b>对比 PPO</b>：每个 token 独立 GAE 估值，公式中常数 \(\sqrt{3}\) 这样的 token 反而被赋负 advantage（学困难），引入梯度噪声。
+</div>
+
+<div class="module-title">📊 实验结果（Qwen2.5-VL on multi-modal reasoning, 仅 Geo3K 训练，6 测试集）</div>
+<table>
+<thead><tr><th>方法</th><th>Geo3K</th><th>LogicVista</th><th>MathVerse</th><th>WeMath</th><th>MathVista</th><th>DynaMath</th><th>Avg.</th></tr></thead>
+<tbody>
+<tr><td>Qwen2.5-VL-3B</td><td>27.29</td><td>34.45</td><td>24.75</td><td>21.81</td><td>61.60</td><td>10.97</td><td>30.15</td></tr>
+<tr><td>+ GRPO</td><td>40.60</td><td>40.72</td><td>36.67</td><td>29.43</td><td>63.00</td><td>17.37</td><td>37.97</td></tr>
+<tr><td>+ PPO</td><td>21.80</td><td>39.15</td><td>26.52</td><td>25.90</td><td>63.80</td><td>9.98</td><td>31.19</td></tr>
+<tr><td>+ VC-PPO</td><td>34.94</td><td>37.81</td><td>32.36</td><td>32.67</td><td>62.90</td><td>10.78</td><td>35.24</td></tr>
+<tr><td class="best">+ SAPO (Ours)</td><td class="best">46.26</td><td>39.60</td><td class="best">37.56</td><td class="best">36.19</td><td class="best">65.40</td><td>16.37</td><td class="best">40.23</td></tr>
+<tr><td>Qwen2.5-VL-7B</td><td>42.60</td><td>39.15</td><td>30.58</td><td>32.67</td><td>69.30</td><td>13.37</td><td>37.94</td></tr>
+<tr><td>+ GRPO</td><td>51.58</td><td>45.86</td><td>44.80</td><td>41.05</td><td>69.70</td><td>22.75</td><td>45.96</td></tr>
+<tr><td class="best">+ SAPO (7B)</td><td class="best">52.75</td><td class="best">47.30</td><td class="best">45.81</td><td class="best">42.86</td><td class="best">70.70</td><td>21.96</td><td class="best">46.90</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">3B 模型上 SAPO 平均 +10.1 pp 超越 baseline、+2.3 pp 超 GRPO；7B 模型上仍 +1.0 pp 超 GRPO。最显著的是 OOD 泛化：仅在 Geo3K 训练的 SAPO 模型在 WeMath / MathVerse 等不同分布上仍优于 GRPO，证明段级 credit 学到了更通用的推理"原子单元"。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>(1) 段长 \(\eta\)：\(\eta=30\) 最优，过短退化为 token、过长退化为 sequence；(2) 熵阈值 \(\theta_H\)：取分布的 90th percentile 自适应；(3) 不用熵分段而用 prompt-guided 段（\n\n）：性能下降 1.8 pp，因 prompt 不一致；(4) 文本数学任务（GSM8K, MATH）也提升明显。<strong>局限</strong>：(1) 仍需训练辅助 value 网络，比 GRPO 显存高 ~30%；(2) 视觉模态外的多模态（音频、视频）未验证；(3) 极长 CoT（>10k tokens）下段数过多可能拖慢 backward。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>SAPO 是 RL credit assignment 粒度演进的自然下一步：从 token （PPO）→ trajectory（GRPO）→ <strong>step</strong>（SAPO）。其特别价值在多模态推理：视觉信息整合通常发生在<em>某个明确的 segment</em>（"识别图中物体" → "代入数值"），段级 credit 让 RL 信号与多模态融合的天然结构对齐。这种思路也启发未来在 agentic RL（每个 tool call 是一个 segment）、code RL（每个函数定义/调用是一段）等场景的应用。"<em>RL 优化粒度应与任务结构粒度一致</em>"是 2026 年 RL 后训练的重要方法论命题。</p>
+</div>
+

@@ -1,0 +1,62 @@
+<div class="paper-card" id="p3">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02290" target="_blank">Distilling Long-CoT Reasoning through Collaborative Step-wise Multi-Teacher Decoding</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 KAIST</span><br>
+<span class="tag tag-llm">推理蒸馏</span><span class="tag tag-llm">多教师协同解码</span><span class="tag tag-llm">Long-CoT</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>DeepSeek-R1、QwQ-32B 等大推理模型（LRM）靠 Long-CoT 实现复杂问题求解，但参数大、成本高。主流做法是用 S1、LIMO 等"先生成再筛选"的 curation 蒸馏：每个 teacher 独立产出一条完整 CoT，然后按 PRM/MCTS 打分挑最优。然而这种<strong>后处理筛选</strong>有两个致命缺陷：(1) 大量 token 被丢弃，浪费算力；(2) teachers 之间的<em>互补性</em>无法被利用——单个 teacher 可能在第 3 步错但第 7 步对，而筛选粒度是整条轨迹，无法拼接。作者提出 CoRD：让多个异构 teachers <em>在每一步协同</em>解码，而非事后筛选。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Prompt-Guided 步骤切分。</strong> Long-CoT 常用 <code>\n\n</code> 或 "wait" 做分步，但这些在单步内也出现，易误判。作者用 prompt 让 LRM 在生成时显式标注 <code>### Step 1. Understanding the problem</code>、<code>### Step 2. Recalling Descartes' Theorem</code>……这种"命名+编号"格式既符合模型自然生成，又做到了跨模型一致切分。消融表明 prompt-guided 切分相比 line-break/prefix 在 AIME24/25 分别 +3.1/+2.5 pp。
+</div>
+
+<div class="sub-module">
+<strong>② 协同步进（Collaborative Stepping）。</strong> 令 teachers \(\mathcal{T}=\{T_1,\dots,T_n\}\)（如 R1-Qwen-32B、QwQ-32B、Phi4-Reasoning-Plus），在第 \(k\) 步每个 teacher 提出自己的下一步候选 \(s^k_i\)，共 \(n\) 个候选：
+$$\text{Candidate pool at step } k: \{(\tau_{k-1} \oplus s^k_i, T_i) \}_{i=1}^{n}$$
+</div>
+
+<div class="sub-module">
+<strong>③ Predictive Perplexity 评分与 Top-b 保留。</strong> 用一个第三方 meta-prover \(\mathcal{M}\)（独立于 teachers）在候选步后 "foresee" 最终答案 \(y\)，计算：
+$$\mathrm{PP}(s^k_i) = \exp\left(-\tfrac{1}{|y|}\sum_{t}\log p_\mathcal{M}(y_t \mid \tau_{k-1} \oplus s^k_i, y_{<t})\right)$$
+低 PP ⇔ 这步为正确答案铺路更好。每步保留 top-\(b\) 候选（beam-like），延续协同解码到终止。这样轨迹可以<em>跨 teacher 跳跃拼接</em>，例如前半段用 R1-Qwen，后半段切到 QwQ。
+</div>
+
+<div class="sub-module">
+<strong>④ 蒸馏阶段。</strong> 保留的协同轨迹作为 SFT 数据。相比 S1/LIMO 产出 1 条/题，CoRD 从协同搜索中挑 \(b\) 条组合式最优轨迹，既降低答案-PP 又扩展多样性。学生模型直接在这些高质量、高互补性轨迹上做序列级 KD。
+</div>
+
+<div class="example-box">
+<strong>深度案例：AIME 几何题（4 个两两外切圆）</strong><br>
+<b>第 1 步</b>：3 个 teachers 给出候选 —— <code>T₁: "设 R, r, r, r 为四个圆的半径"</code>、<code>T₂: "回忆 Descartes 圆定理：(k₁+k₂+k₃+k₄)² = 2(k₁²+...)"</code>、<code>T₃: "分情况讨论是否一个是外包圆"</code>。<br>
+<b>Meta-prover 打分</b>：回到目标答案 42.5，T₂ 的 predictive perplexity 最低（0.215），被选中；但 T₃ 的"外包圆分类"作为备选也保留。<br>
+<b>第 2 步</b>：从 T₂ 出发，T₁ 提出 "设 k₄=−1/R 为外圆"，T₂ 提出 "代入 k₁=k₂=k₃=1/r"。此时 T₁ 的 PP 反而更低，协同切换 teacher。<br>
+<b>第 k 步起</b>：轨迹成为 T₂→T₁→T₂→T₃ 的组合，任何单一 teacher 都无法独立产出这种"各取所长"的推理链。<br>
+最终答案与正解吻合，predictive perplexity 整条路径 = 0.774（CoRD），而 Curation 最佳单轨迹只 0.652。
+</div>
+
+<div class="module-title">📊 实验结果（Teacher quality 对比）</div>
+<table>
+<thead><tr><th>Teacher 配置</th><th>管道</th><th>Reasoning Acc (%)</th><th>Predictive PPL↓</th><th>Student AIME24</th><th>Student AIME25</th></tr></thead>
+<tbody>
+<tr><td rowspan="3">同构 (all QwQ-32B)</td><td>Curation (S1)</td><td>77.4</td><td>0.664</td><td>—</td><td>—</td></tr>
+<tr><td>Integration</td><td>88.6</td><td>0.215</td><td>—</td><td>—</td></tr>
+<tr><td class="best">CoRD (Ours)</td><td class="best">90.0</td><td>0.726</td><td>—</td><td>—</td></tr>
+<tr><td rowspan="3">异构 (R1-Qwen + QwQ + Phi4)</td><td>Curation</td><td>84.8</td><td>0.652</td><td>76.7</td><td>67.7</td></tr>
+<tr><td>Integration</td><td>91.2</td><td>0.223</td><td>—</td><td>—</td></tr>
+<tr><td class="best">CoRD (Ours)</td><td class="best">93.1</td><td class="best">0.774</td><td class="best">79.6</td><td class="best">70.2</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">异构设置下 CoRD 的 Reasoning Acc = 93.1%，学生模型 AIME24 +2.9 pp、AIME25 +2.5 pp。CoRD 优势在异构 teacher 设置下更明显——因为异质 teacher 间互补性被完整利用。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>步骤切分粒度对比：prompt-guided (93.1/0.774) > prefix (91.3/0.747) > line-break (88.4/0.734)。Beam 宽度 \(b\) 过大会引入低质量轨迹，\(b=3\) 最佳。<strong>局限</strong>：(1) meta-prover 引入额外前向开销，整体计算并未显著优于传统筛选；(2) step 粒度仍需 prompt 工程，对非推理任务（写作、对话）定义模糊；(3) 仅在数学推理验证，代码/形式化证明待扩展。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>CoRD 把"教师多样性"从 post-hoc 筛选提前到 in-process 协同，显式解锁跨 teacher 的组合式互补。核心哲学与多专家混合（MoE）类似——但这里是"多推理者混合"，在生成时刻做路由。对产业界的意义：未来开源推理模型生态越丰富（DeepSeek-R1、QwQ、o4-mini、Gemini 2.5 Thinking…），这种协同蒸馏越可能成为小模型提升的主流范式，从 "closed-set of trajectories" 升级为 "open compositional search space"。</p>
+</div>
+

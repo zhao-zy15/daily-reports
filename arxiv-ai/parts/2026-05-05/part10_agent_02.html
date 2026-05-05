@@ -1,0 +1,73 @@
+<div class="paper-card" id="p9">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01566" target="_blank">Multi-Agent Reasoning Improves Compute Efficiency: Pareto-Optimal Test-Time Scaling</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 University of Göttingen</span><br>
+<span class="tag tag-agent">测试时扩展</span><span class="tag tag-agent">MoA / 多 Agent</span><span class="tag tag-agent">FLOPs-准确率前沿</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>Test-time scaling 方法（self-consistency、self-refine、debate、Mixture-of-Agents）层出不穷，但<strong>不同方法常用差几个数量级的算力</strong>，使横向比较没有意义。论文要回答三个实际工程问题：(1) 同等 FLOPs 预算下哪种方法最优？(2) 不同任务难度是否要切不同方法？(3) 给定算力，应该堆 8B 多 Agent 还是直接上 70B 单模型？这是首次在<em>匹配算力预算</em>下系统对比四大主流 inference paradigm 的工作。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 算力公平度量。</strong> 现有研究多用 FLOPs，但忽略 memory transfer 成本。作者用<em>实测延迟 + FLOPs 双指标</em>测量 compute budget，并把所有方法的 budget 调到同一刻度（通过调整候选数 \(k\)、refine 轮数 \(r\)、debate agent 数 \(m\)、MoA 层数 \(L\) × proposer 数 \(p\)）。
+</div>
+
+<div class="sub-module">
+<strong>② 四种 paradigm 形式化。</strong><br>
+&nbsp;&nbsp;• <b>Self-consistency</b>：并行 \(k\) 次 CoT 采样 + majority vote，FLOPs \(\approx k \cdot c_{\text{CoT}}\)。<br>
+&nbsp;&nbsp;• <b>Self-refinement</b>：串行 \(r\) 轮 critique-rewrite，单模型上下文累积，FLOPs \(\approx \sum_{i=1}^r c_{\text{CoT}}^{(i)}\) 且 context 增长。<br>
+&nbsp;&nbsp;• <b>Debate</b>：\(m\) 个 agent × \(R\) 轮，每轮 agents 互相读 message，context 二次增长。<br>
+&nbsp;&nbsp;• <b>MoA</b>：\(L\) 层、每层 \(p\) 个 proposer + 1 aggregator，<em>层间 context 不累积</em>（关键架构优势）。
+</div>
+
+<div class="sub-module">
+<strong>③ 难度自适应分析。</strong> 用 CoT 单次正确率把 MMLU-Pro 1000 题分桶：easy (>75%)、medium (25–75%)、hard (<25%)。然后看每个桶在不同算力下的边际增益，得到任务难度 × 方法的二维启发表。
+</div>
+
+<div class="sub-module">
+<strong>④ 模型替换前沿。</strong> 系统比较 8B 多 Agent（heavily scaled）vs 70B 单 CoT。给定相同实测算力时，分析转换点（switch point）：何时该 "scale agents" 何时该 "scale model"。
+</div>
+
+<div class="example-box">
+<strong>深度案例：MMLU-Pro 上 4 种方法的算力-精度前沿（Llama-3.1-70B）</strong><br>
+<b>baseline</b>：CoT 单次 = 64.3% / 1× 算力。<br>
+<b>等算力对比（5× CoT 算力）</b>：<br>
+<ul>
+<li>Self-consistency (k=10)：68.7% (+4.4 pp)，但 k>10 后饱和</li>
+<li>Self-refinement (r=4)：62.1% (−2.2 pp，比 baseline 更差，因 context 累积放大错误)</li>
+<li>Debate (m=4, R=2)：69.8% (+5.5 pp)，4 agents × 2 轮饱和</li>
+<li>MoA (5 props × 4 layers)：71.4% (+7.1 pp)，依然在线性增长区</li>
+</ul>
+<b>难度分桶</b>（5–10× 算力相对 1× CoT）：<br>
+<ul>
+<li>Easy bin：CoT 94.4 → 95.4，仅 +1.0 pp（不必扩算力）</li>
+<li>Medium bin：53.0 → 60.4，+7.4 pp（最大受益）</li>
+<li>Hard bin：8.4 → 14.7，+6.3 pp（明显但绝对值低）</li>
+</ul>
+<b>大小模型替换</b>：8B 最优配置 ≤53%，远不及 70B CoT 64.3% —— 在 1× 70B-CoT 算力预算下，作者建议<em>始终用大模型</em>，多 agent 8B 反而落后 ~13 pp。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead><tr><th>方法</th><th>配置</th><th>MMLU-Pro Acc</th><th>相对 CoT 算力</th><th>每 pp 算力成本</th></tr></thead>
+<tbody>
+<tr><td>CoT (baseline)</td><td>1 sample</td><td>64.3</td><td>1×</td><td>—</td></tr>
+<tr><td>Self-consistency</td><td>k=10</td><td>68.7</td><td>10×</td><td>2.05×/pp</td></tr>
+<tr><td>Self-refinement</td><td>r=4</td><td>62.1</td><td>4.5×</td><td>负增益</td></tr>
+<tr><td>Debate</td><td>4 agent × 2 R</td><td>69.8</td><td>11×</td><td>1.82×/pp</td></tr>
+<tr><td class="best">MoA (uniform 70B)</td><td>5 prop × 4 layers</td><td class="best">71.4</td><td>13×</td><td class="best">1.83×/pp</td></tr>
+<tr><td class="best">MoA (mixed: 70B aggregator + 8B props)</td><td>5×4</td><td>70.1</td><td class="best">5×</td><td class="best">0.85×/pp</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">最佳实践推荐：(1) MoA > Debate > Self-Consistency > Self-Refine（同等算力）；(2) 难度自适应：easy 题不必扩，medium 题 MoA 最划算，hard 题需要专门方法；(3) MoA 异质组合（小 proposer + 大 aggregator）最具算力效率，比 uniform 70B 节省 60% 算力却保留大部分增益。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>核心发现：MoA 持续扩展性最强（5 模型 × 4 层仍线性提升），原因是<em>层间不累积 context</em>。Debate 反而在 4 agents 后饱和，因为对话历史使 per-agent context 二次增长。<strong>局限</strong>：(1) 仅在 MMLU-Pro 测试，code/math 推理的趋势可能不同；(2) memory-transfer 成本与硬件强相关，A100 与 H100 对比未做；(3) 量化（4-bit/8-bit）对小模型影响更大，可能扰动模型规模 vs Agent 规模的对比结论。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>对生产推理系统的关键工程指引："<em>先选难度合适的 paradigm，再选合适规模的模型，最后才考虑加 agent 数量</em>"。MoA 异质组合（小 proposers + 大 aggregator）是当前最具性价比的多 Agent 推理范式，比直接用 70B CoT 还省算力却接近精度。论文给出的"是否 multi-agent"决策框架可直接产业化：在 LLM-as-a-Service 计费场景，运营方可按用户 query 难度路由到不同 paradigm，把单位 token 推理成本降低 30–60%。</p>
+</div>
+

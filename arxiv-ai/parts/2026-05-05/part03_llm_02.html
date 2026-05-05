@@ -1,0 +1,69 @@
+<div class="paper-card" id="p2">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01373" target="_blank">Focus on the Core: Empowering Diffusion Large Language Models by Self-Contrast</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Chinese Academy of Sciences, Renmin University, Xiaohongshu</span><br>
+<span class="tag tag-llm">扩散LLM</span><span class="tag tag-llm">自对比解码</span><span class="tag tag-llm">训练无关</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>扩散 LLM（DLM，如 LLaDA、Dream）用迭代去噪替代自回归生成，支持双向上下文与并行解码，但<strong>解码策略普遍有局部偏好</strong>：已去噪 token 附近的候选获得更高 confidence，导致模型只关注局部邻域而忽视真正关键的<em>核心推理 token</em>。作者提出"异构信息密度"视角：大部分 token 只是冗余填充（Low Density, LD），少数核心 token（数字、实体、关键条件词）是逻辑锚点（High Density, HD）。HD token 的过早/不当解码往往是整条推理链偏向错误的根源。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① HD Token 的三大特性。</strong> 作者通过系统的 mask-ratio 实验揭示 HD token 有三个特性：<br>
+&nbsp;&nbsp;• <b>信息密度异质性</b>：全局 mask 50% 时 HD token 置信度 ΔConfidence≈0.52，LD token 仅 ≈0.26；<br>
+&nbsp;&nbsp;• <b>强全局上下文依赖</b>：非线性、突变式 confidence 塌陷；<br>
+&nbsp;&nbsp;• <b>"核心优先"早期收敛</b>：在 t=30% 解码进度时 HD token 已收敛 38% 而 LD 仅 28% —— 为并行加速提供契机。
+</div>
+
+<div class="sub-module">
+<strong>② 自动化 HD 识别：Top-K 截断 JS 散度 + EMA。</strong> 传统语言规则（名词+数字）在代码任务上失效。作者用模型内部信号定义不稳定性分数：
+$$U_t^{(i)} = \mathrm{JS}_{\mathrm{top}K}\big(P_t^{(i)} \parallel P_{t-1}^{(i)}\big)$$
+然后用 EMA 平滑历史振荡：
+$$S_t^{(i)} = \beta \cdot S_{t-1}^{(i)} + (1-\beta) \cdot U_t^{(i)}, \quad \beta=0.9$$
+Top-K=8 截断控制了计算开销，理论上近似误差有 \(2\epsilon_K\log 2\) 上界（附录 Prop D.2）。消融证据：JS_detect 比 POS-tagging 规则在 HumanEval/MBPP/BBH 上分别提升 +4.3/+3.8/+1.4 pp。
+</div>
+
+<div class="sub-module">
+<strong>③ 自对比解码（FoCore）。</strong> 在每一步的条件预测 \(P(x|c)\) 外，额外构造一个"mask 掉 HD token"的负样本 \(\hat c\)，再用 Classifier-Free Guidance 公式：
+$$\tilde\ell = \ell(x|c) + \gamma \cdot \big(\ell(x|c) - \ell(x|\hat c)\big)$$
+其中 \(\gamma=0.3\)。这样迫使模型在去噪时"主动关注 HD token 的贡献"。附录 Theorem D.2 证明这会严格降低 HD 位置的输出熵 \(\Delta H \ge \gamma \cdot \mathrm{IG}_{\mathcal{I}}(x)\)。
+</div>
+
+<div class="sub-module">
+<strong>④ 加速变体 FoCore_A：HD 收敛触发并行。</strong> 监控平均 EMA 不稳定度 \(\bar S_t = \frac{1}{|\mathcal{U}|}\sum_{i\in\mathcal{U}} S_t^{(i)}\)；一旦 \(\bar S_t \le \tau\)（作者用 \(\tau=10^{-5}\)），说明 HD 锚点已定，立即对周围 LD 区块做<em>并行解码 P 个 token</em>。ablation 显示 P=5–6 为最佳：GSM8K 准确率 73.00 → 75.50% + 1.18×~1.23× 加速；但 P≥10 会塌到 63%（推理链被破坏）。
+</div>
+
+<div class="example-box">
+<strong>深度案例：GSM8K 数学题"折扣玻璃杯"</strong><br>
+<b>题目</b>："每个玻璃杯 5 美元，但<em>每第二个</em>杯子只需 60% 价格。Kylar 要买 16 个玻璃杯，总共多少钱？"<br><br>
+<b>Confidence 基线（错误）</b>：识别不到"every second"这个关键约束，把 60% 折扣简单应用到全部 16 杯：\(16 \times 3 = \$48\) ❌<br><br>
+<b>FoCore（正确）</b>：通过 JS 散度识别出的 HD token 包括：<code>second (0.094)</code>, <code>costs (0.207)</code>, <code>price (0.128)</code>, <code>0 (折扣=0.6, JS=5.0)</code>。FoCore 通过 HD-mask 负样本迫使模型正确解读"every second"=每隔一个：8 个全价 + 8 个折扣 → \(8 \times 5 + 8 \times 3 = \$64\) ✓<br><br>
+另一个 GSM8K 案例（橙汁溢出）：基线忽略"洒掉 1 升"，得 13 升水（错）；FoCore 捕获 HD 约束后正确计算 \((10-1) \times \tfrac{2}{3} + 15 \times \tfrac{3}{5} = 15\) 升水 ✓。
+</div>
+
+<div class="module-title">📊 实验结果（LLaDA-8B-Instruct 骨干）</div>
+<table>
+<thead><tr><th>方法</th><th>GSM8K @256</th><th>MATH500 @256</th><th>HumanEval @256</th><th>MBPP @256</th></tr></thead>
+<tbody>
+<tr><td>Greedy</td><td>72.70</td><td>42.40</td><td>37.80</td><td>36.20</td></tr>
+<tr><td>Confidence</td><td>71.03</td><td>42.60</td><td>37.80</td><td>36.60</td></tr>
+<tr><td>Std CFG</td><td>71.72</td><td>33.40</td><td>39.02</td><td>39.40</td></tr>
+<tr><td>A-CFG (NeurIPS'25)</td><td>70.43</td><td>38.20</td><td>31.09</td><td>36.00</td></tr>
+<tr><td>KLASS (NeurIPS'25)</td><td>71.19</td><td>42.20</td><td>37.80</td><td>37.00</td></tr>
+<tr><td>Prophet (ICLR'26)</td><td>69.44</td><td>31.20</td><td>36.58</td><td>39.80</td></tr>
+<tr><td class="best">FoCore (Ours)</td><td class="best">75.05</td><td class="best">43.80</td><td class="best">42.68</td><td class="best">40.40</td></tr>
+<tr><td>FoCore_A (efficient)</td><td>73.99</td><td>42.20</td><td>40.24</td><td>36.20</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">FoCore 在代码生成上优势尤其明显（HumanEval +3.7 pp、MBPP +1.0 pp）；FoCore_A 在 GSM8K 上还能达到 2.29× 步骤加速（MBPP，端到端 7.45s vs CFG 的 15.49s）。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>超参鲁棒性：γ 在 0.3 附近为最优，过小无引导、过大陷入局部最优；Top-K 相对不敏感，K=8 已足够。Countdown 这种组合搜索任务对 γ 更敏感（SVAMP 上 88.0, Countdown 上 21.8，均超基线）。<strong>局限</strong>：(1) 超参需按任务微调；(2) 仍依赖 CFG 双前向范式，per-step 开销未减少，只是总步数少；(3) 只在 7B/8B 上验证，尚未在 100B DLM 上测试。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>FoCore 给出一个重要启示：DLM 的"并行 + 迭代去噪"架构天然容纳<em>基于内部信号的自适应引导</em>，而这是自回归模型无法简单复用的能力。"HD token 提前收敛"本是 confidence-based 解码的副产品，作者反过来把它当成并行加速的触发信号，实现了"同样 8B 模型既更准又更快"的正效应。对生产级 DLM 服务（如 LLaDA2.0 100B）而言，这种训练无关且 0 额外存储的后处理方法可能立即部署。未来 RL post-training 内化"focus-on-core"原则是明确的下一步方向。</p>
+</div>
+

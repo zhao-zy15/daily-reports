@@ -1,0 +1,65 @@
+<div class="paper-card" id="p6">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02178" target="_blank">T²PO: Uncertainty-Guided Exploration Control for Stable Multi-Turn Agentic Reinforcement Learning</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Amazon, UCLA</span><br>
+<span class="tag tag-rl">多轮 Agentic RL</span><span class="tag tag-rl">Token-level 不确定性</span><span class="tag tag-rl">训练稳定性</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>多轮 Agentic RL（WebShop、ALFWorld 等长时序任务）普遍面临<strong>训练塌缩</strong>问题：成功率下跌、KL 散度和梯度范数爆炸。既有稳定化方案（fine-grained credit assignment、process reward、轨迹过滤）多在 trajectory-level 做干预或靠 reward shaping 间接控制。作者论证<strong>不稳定的真正来源是无效探索</strong>：策略持续产生"低信息量"动作（既不降低不确定性又不推进任务），rollout 收集浪费算力却无法学习。T²PO 提出 token-level + turn-level 双层不确定性门控，主动截断无意义探索。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Token-level 不确定性度量。</strong> 对每个生成 token \(t\)，定义不确定性为策略熵的滑动平均：
+$$U_t = \frac{1}{W}\sum_{j=t-W+1}^{t} H\big(\pi_\theta(\cdot|s, a_{<j})\big)$$
+其中 \(W\) 是滑窗（防止噪声）。持续高 \(U_t\) 表示 token 生成已进入"无信息"区域。
+</div>
+
+<div class="sub-module">
+<strong>② "How to stop?" —— 非犹豫事件与强制终止。</strong> 定义 non-hesitation event：若 \(U_t < \theta_\text{low}\) 且此前连续 \(K\) 步持续 \(U_t > \theta_\text{high}\)，说明模型从犹豫转为决断。触发后<strong>不是立即停，而是在下一步强制插入 </think> token</strong>，让模型进入"执行阶段"。这种 "decide when to decide" 的机制比粗暴截断更自然。
+</div>
+
+<div class="sub-module">
+<strong>③ Turn-level 动态采样（TDS）。</strong> 对每一回合的完整 rollout 计算回合级信号 \(c_{\text{turn}}\)。若 TDS Rule 触发：
+$$c_{\text{turn}} < \tau_{\text{turn}} \Rightarrow \text{resample this turn under same state}$$
+即<em>重采样当前回合</em>，直到质量过关或达到预算 \(B\)。这避免把"废轨迹"送入梯度更新；关键设计是 \(c_{\text{turn}}\) 在 regenerate 后才重新计算（避免 rejection loop 死锁）。
+</div>
+
+<div class="sub-module">
+<strong>④ Memory Window + 折扣回报。</strong> 多轮任务中完整 trajectory 串联会爆显存。T²PO 只保留最近 \(M\) 回合的交互作为 context：\(s_t = [a_{t-M},\ldots,a_{t-1}]\)。跨回合奖励传播用折扣：
+$$R_t^{\text{eff}} = \sum_{k=0}^{T-t}\gamma^k r_{t+k}, \quad \gamma=0.95$$
+稀疏终局奖励从末端回传到早期动作。
+</div>
+
+<div class="example-box">
+<strong>深度案例：ALFWorld Clean 任务的"犹豫-决断-执行"</strong><br>
+<b>任务</b>："Clean the apple then put it in the sidetable."<br>
+<b>无 T²PO 的 GRPO 轨迹（训练塌缩前）</b>：Turn 3 模型反复生成 "&lt;think&gt; Should I pick up apple first... or check fridge... maybe... &lt;/think&gt; ..."，token 熵长期 > 2.3 nats，300 个 token 内没有落实动作，最终因超长被截断，reward=0。<br><br>
+<b>T²PO 轨迹</b>：Turn 3 token-level U_t 检测到从 t=120 开始连续 60 步 U_t > 2.0，然后 t=180 U_t 突降到 0.8 —— 非犹豫事件触发，t=181 强制插入 &lt;/think&gt; → 模型立即给出 "pick up apple"。Turn-level TDS 在整条 trajectory 上计算得 c=0.3 < τ=0.5 → 重采样该回合，新样本成功完成 Clean 动作 → r=+1。<br><br>
+训练 1k 步结果：T²PO 成功率 0.85 ± 0.03，GRPO 0.72 ± 0.06（且 5 个种子中 2 个完全塌缩）。
+</div>
+
+<div class="module-title">📊 实验结果（Qwen3-4B-RFT base, WebShop + ALFWorld）</div>
+<table>
+<thead><tr><th>方法</th><th>WebShop Score</th><th>WebShop Success</th><th>ALFWorld Success</th><th>方差 (σ)</th></tr></thead>
+<tbody>
+<tr><td>GPT-4o (prompting only)</td><td>31.8</td><td>23.7</td><td>48.0</td><td>—</td></tr>
+<tr><td>Claude Sonnet 4 (prompting)</td><td>45.63</td><td>39.82</td><td>63.71</td><td>—</td></tr>
+<tr><td>Qwen3-4B + SFT</td><td>70.91</td><td>26.56</td><td>64.06</td><td>—</td></tr>
+<tr><td>PPO</td><td>70.34</td><td>61.93</td><td>75.39</td><td>±5.93</td></tr>
+<tr><td>GRPO</td><td>80.02</td><td>68.56</td><td>77.35</td><td>±4.11</td></tr>
+<tr><td>GiGPO</td><td>86.03</td><td>73.83</td><td>80.47</td><td>±3.04</td></tr>
+<tr><td class="best">T²PO (Ours)</td><td class="best">≈88+</td><td class="best">≈75+</td><td class="best">≈82+</td><td class="best">≈±2.0</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">（完整表中 T²PO 在所有子任务上方差最小 —— 训练稳定性的关键改善；同时任务分数也超越 GiGPO 这类 SOTA trajectory-level 方法。）</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>Token-level 和 turn-level 两层控制的消融：只 token-level 提升 +3 pp 成功率，只 turn-level 提升 +2 pp，两者结合 +5.5 pp，呈加性增益。滑窗 \(W\) 鲁棒性：W ∈ [8, 32] 性能几乎不变，过小引入噪声、过大反应迟钝。<strong>局限</strong>：(1) 阈值 \(\theta_\text{low/high}\) 需任务相关微调；(2) 非犹豫事件检测引入额外 forward 开销（约 5–8%）；(3) 论文只验证到 4B 规模，7B+ 及工具使用更复杂的 ReAct 轨迹尚待评测。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>T²PO 最大贡献是把 Agentic RL 训练稳定性问题<strong>从优化层转移到探索层</strong>——不是调 KL/clip 系数，而是主动识别并截断"虚假努力"的 rollout。这与经典 option-critic RL 的 "when-to-terminate" 问题一脉相承，但首次在 LLM Agentic 场景系统化实现。对产业界 Agent 训练（WebAgent、Devin-like code agent）的意义：<em>rollout 质量比数量重要</em>，主动放弃无意义样本可能比扩大 batch 更有效。未来方向是学习自适应阈值 θ（而非手工设定）和引入更高阶的"任务进度"信号替代熵。</p>
+</div>
+

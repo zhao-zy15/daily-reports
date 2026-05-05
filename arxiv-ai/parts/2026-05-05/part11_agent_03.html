@@ -1,0 +1,70 @@
+<div class="paper-card" id="p10">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01704" target="_blank">The Reasoning Trap: An Information-Theoretic Bound on Closed-System Multi-Step LLM Reasoning</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 PolymathMinds AI Lab</span><br>
+<span class="tag tag-agent">多 Agent Debate</span><span class="tag tag-agent">推理忠实度理论</span><span class="tag tag-agent">DPI 上界</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>多 Agent Debate（MAD）一直被视为提升 LLM 推理质量的有效手段，但作者指出该领域<em>评估范式严重偏向 accuracy</em>："debate 是否提升答案？" 几乎从未真正问 "debate 是否提升答案背后的<strong>推理忠实度</strong>？"。本文给出震撼性的负面发现：标准闭环 MAD 即使保持答案准确率，<em>证据接地的推理忠实度反而被系统性侵蚀</em>——majority-vote debate 让 evidence-grounding 跌至 baseline 的 1.7%（Cohen's d = 大效应）。作者命名此现象为 <strong>Debate Trap</strong>，并证明这是<em>信息论必然</em>，由 50 年前 DeGroot–Banerjee–Janis–Asch 社会科学预言。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① Reasoning Faithfulness 形式化（Definition 1）。</strong> 给定证据集 \(E\) 和声明 \(c\)，agent \(i\) 在 round \(t\) 的输出 \(R_i^{(t)}\) 的忠实度定义为<em>条件互信息</em>：
+$$F_i^{(t)} = I(R_i^{(t)}; E \mid c)$$
+联合 MI 忠实度 \(F_{\text{joint}}^{(t)} = I(R_1^{(t)},\ldots,R_n^{(t)}; E \mid c)\) 是核心可证量。这种"以 MI 为根本测度"的设计避免了对人类标注的依赖（绕过 inter-rater 不一致问题）。
+</div>
+
+<div class="sub-module">
+<strong>② Theorem 1（DPI Bound 上界）。</strong> 若 MAD 满足四条件 Markov 闭包（agent t 输出仅依赖 t-1 轮内容 + 共享参数），则 debate 链构成 Markov 链 \(E \to R^{(0)} \to R^{(1)} \to \ldots \to R^{(T)}\)。由数据处理不等式（DPI）：
+$$F_{\text{joint}}^{(t+1)} \le F_{\text{joint}}^{(t)} \le \ldots \le F_{\text{joint}}^{(0)}$$
+即<strong>每一轮 debate 期望忠实度都不会增加</strong>，而 vote-aggregating 协议下严格小于（strict inequality）。这从信息论根本上证明了 closed-system 多步推理的天花板。
+</div>
+
+<div class="sub-module">
+<strong>③ Evidence Utilization Rate 与 Debate Trap 判据（Definition 2）。</strong> EUR\(_t\) = round t 中被引用证据占总证据的比例。Debate Trap 触发条件：存在轮 \(t<t'\) 使
+$$\mathrm{EUR}_{t'} < \mathrm{EUR}_t \quad \text{且}\quad \mathrm{Acc}_{t'} \ge \mathrm{Acc}_t - \epsilon$$
+即"<em>准确率没下降但证据使用率下降</em>"——这正是 accuracy-only 评测看不到的失败模式。
+</div>
+
+<div class="sub-module">
+<strong>④ EGSR 算法（Theorem 2 下界保证）。</strong> 作者提出 Evidence-Grounded Socratic Reasoning：每隔 \(k\) 轮在 prompt 中<em>重新注入证据 \(E\)</em>，打破 Markov 闭包。可证：开放系统的忠实度<em>下界严格大于</em>对应闭环系统：
+$$F_{\text{EGSR}}^{(t+1)} \ge F_{\text{EGSR}}^{(t)} - \delta_{\text{noise}} + \alpha \cdot I(E; \text{prompt}_{t+1} \mid R^{(t)})$$
+其中 \(\alpha\) 是注入强度系数。EGSR 在保留 multi-agent 多样性优势的同时<strong>恢复了证据 grounding</strong>。
+</div>
+
+<div class="example-box">
+<strong>深度案例：MAD 在长尾事实推理上的"Debate Trap"</strong><br>
+<b>实验设置</b>：16 个 condition × 2 模型架构（GPT-4o, Claude Opus）× R1–R8 鲁棒性测试。<br>
+<b>典型 Debate Trap 实例</b>：6 题关于"古罗马塞维里皇帝继承顺序"，提供 12 条证据片段。<br>
+<ul>
+<li><b>R0 单 agent CoT</b>：准确率 0.71，引用 8.3 条证据，SFS（语义忠实度）=0.79，EUR=69%</li>
+<li><b>R3 标准 debate</b>（4 agent × 3 轮 majority）：准确率 0.69（−2 pp），但<em>引用证据数跌到 1.4 条</em>，SFS=0.45（−43%）<strong>，EUR=12%</strong>。Wilcoxon p < 0.001。</li>
+<li><b>R3 EGSR 改造</b>（每轮重注入 E）：准确率 0.74（+3 pp），引用证据 7.6 条，SFS=0.81（+2%），EUR=63%。</li>
+<li><b>极端 majority-vote variant C15</b>：EUR 仅剩 baseline 的 1.7%，agents 完全收敛到内部相互肯定，证据彻底被忽略。</li>
+</ul>
+社会科学解读：这正是 DeGroot 共识、Janis 群体迷思、Asch 从众的 LLM 版——agents 在闭环中相互"确认偏误"，证据被边缘化但答案因模型先验而维持。
+</div>
+
+<div class="module-title">📊 实验结果（GPT-4o + Claude Opus）</div>
+<table>
+<thead><tr><th>Condition</th><th>Acc</th><th>SFS (semantic faithful.)</th><th>EUR (%)</th><th>CR (citation rate)</th></tr></thead>
+<tbody>
+<tr><td>C0 Single-agent CoT</td><td>0.71</td><td>0.79</td><td>69</td><td>8.3</td></tr>
+<tr><td>C3 Closed-MAD (4×3)</td><td>0.69</td><td>0.45</td><td>12</td><td>1.4</td></tr>
+<tr><td>C8 Closed + reflection</td><td>0.72</td><td>0.41</td><td>9</td><td>1.1</td></tr>
+<tr><td>C15 Majority-vote MAD</td><td>0.70</td><td class="best" style="color:var(--red)">0.13</td><td class="best" style="color:var(--red)">1.2</td><td>0.2</td></tr>
+<tr><td class="best">C16 EGSR (Ours)</td><td class="best">0.74</td><td class="best">0.81</td><td class="best">63</td><td class="best">7.6</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">核心反直觉：accuracy 维度下 Closed-MAD 与 baseline 几乎平手（甚至下降），但 SFS / EUR / CR 三个忠实度指标全面塌缩 —— "答案对了但理由没了"。EGSR 通过证据再注入恢复全部忠实度同时提升准确率。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>R1–R8 鲁棒性套件验证：(R1) 跨任务一致；(R2) 跨规模一致（GPT-4o 与 Claude Opus 均成立）；(R6) 跨语言（中英）<em>同一标注者前后期评分</em>偏差大于跨标注者偏差，这反过来支持 SFS 这种"不依赖人类金标"的测度。<strong>局限</strong>：(1) MI 估计在长 sequence 上需 LLM-as-judge 近似；(2) EGSR 增加 prompt 长度，per-token 推理成本上升 ~15%；(3) 适用于 evidence-grounded 任务（QA、摘要），对纯逻辑推理（数学）外延不明确。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这篇论文把 MAD 的"<em>看似有效的失败</em>"从 50 年社会科学传统一路追溯到信息论。意义远超学术：(1) 警示工业部署 multi-agent debate 系统的<em>幻觉风险</em>——准确率没下降但模型已经在和自己玩"迷思游戏"；(2) 给 RAG / Agentic Search 系统一个明确的设计原则：<em>每一轮都要 re-anchor 到外部证据</em>，否则 Markov 闭包会让推理逐步脱离原始 evidence；(3) 评估范式的根本性反思——"answer accuracy" 远不足以判断 LLM 推理质量，未来 benchmark 必须包含证据 grounding 测度。这是 Generation V "Process-Faithful Multi-Agent Reasoning" 的开山之作。</p>
+</div>
+

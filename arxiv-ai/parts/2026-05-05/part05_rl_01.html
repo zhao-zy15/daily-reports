@@ -1,0 +1,73 @@
+<h2 class="section-title rl">🎯 RL（LLM 强化学习与对齐）</h2>
+
+<div class="paper-card" id="p4">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02626" target="_blank">Gradient-Gated DPO: Stabilizing Preference Optimization in Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 University of Windsor</span><br>
+<span class="tag tag-rl">DPO 改进</span><span class="tag tag-rl">梯度动力学</span><span class="tag tag-rl">softmax 挤压效应</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>DPO 这类偏好优化最近被发现存在"概率挤压效应"（squeezing effect）：对被拒绝响应的负梯度并非只压它自己，而是通过 softmax 归一化将概率质量推到极少数高置信 token 上，<em>反而让偏好响应的概率也下降</em>。这是 softmax 学习的根本性质，而非超参问题。既有方法（IPO、Cal-DPO、Extend 数据增强）间接缓解但未解决核心：当被拒绝响应已经落在概率"山谷"（很低似然区域）时，继续推它下降<strong>收益递减却持续破坏邻近分布</strong>。作者提出 Gate-DPO：直接在梯度层面"门控"——若响应已在山谷就衰减其负梯度。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 山谷统计量 \(v(y_r)\)。</strong> 定义两种统计量检测被拒响应是否在概率山谷：<br>
+&nbsp;&nbsp;• <b>序列级（几何均值）</b>：$$v_\text{seq}(y_r) = \exp\left(\frac{1}{|y_r|}\sum_{i=1}^{|y_r|}\log p_\theta(y_{r,i}|y_{r,<i})\right)$$<br>
+&nbsp;&nbsp;• <b>Token 级（下尾分位数）</b>：$$v_\text{tok}(y_r) = Q_q\{p_\theta(y_{r,i}|\ldots):i=1..|y_r|\}, \quad q=0.1$$<br>
+前者捕捉全局似然，后者更敏感于极低概率尾部。
+</div>
+
+<div class="sub-module">
+<strong>② 平滑门控函数。</strong> 定义门控：
+$$g(y_r) = \sigma\!\left(\tau \cdot (\log v(y_r) - \theta)\right) \in (0, 1)$$
+其中 \(\theta\) 是阈值（山谷判据），\(\tau\) 控制过渡陡峭度。当 \(v(y_r) \ll e^\theta\)（在深谷）时 \(g\to 0\) 衰减负梯度；当 \(v(y_r) \gg e^\theta\)（不在谷）时 \(g\to 1\) 回归标准 DPO。<strong>关键设计</strong>：门控用 stop-gradient 从计算图剥离，即 \(g = \mathrm{sg}(g)\)，防止策略"操纵"山谷统计量来绕过门控。
+</div>
+
+<div class="sub-module">
+<strong>③ Gated 偏好损失。</strong> 修改 DPO logit：
+$$\hat u_\theta = \beta \log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \mathrm{sg}(g) \cdot \beta \log\frac{\pi_\theta(y_r|x)}{\pi_{\text{ref}}(y_r|x)}$$
+损失仍是 \(-\log\sigma(\hat u)\)。反向传播得到梯度等式（Theorem 1）：
+$$\nabla_\theta \mathcal L_\text{Gate-DPO} \supset +\nabla_\theta \log\pi_\theta(y_w) - g(y_r) \cdot \nabla_\theta \log\pi_\theta(y_r)$$
+对 chosen 响应梯度<em>完全不变</em>，只对 rejected 响应乘 \(g\in(0,1)\)。
+</div>
+
+<div class="sub-module">
+<strong>④ 理论性质与模块化。</strong> 三个结构性质：(a) <b>严格正梯度流</b>：\(g > 0\) 对任意 \(v\)，所以学习信号不会完全消失；(b) <b>山谷外温和</b>：若 \(v(y_r) \ge e^{\theta+\delta}\)，Gate-DPO 与 DPO 只差指数级小量 \(O(e^{-\tau\delta})\)；(c) <b>损失无关</b>：同一门控可套在 IPO、Cal-DPO 上（见附录 A），具备即插即用性。
+</div>
+
+<div class="example-box">
+<strong>深度案例：UltraFeedback 上的分布塌缩挽救</strong><br>
+<b>问题</b>：Qwen-0.5B 在 UltraFeedback 做 DPO 训练时出现典型 squeezing —— chosen 响应 log-prob 从 −24.6 降到 −33.1，而 rejected 响应反而更低（−42.3→−78.5）；整体分布质量 \(\Delta H\) 塌缩至 −2.3 nats。<br><br>
+<b>Gate-DPO 介入</b>：训练到 epoch 2 时，序列级门控统计显示 31% 的 rejected 样本 \(v_{\text{seq}} < e^\theta\)（已在谷）。对这些样本 \(g(y_r)=0.08–0.15\)，负梯度被衰减 85%+；剩余 69% 样本仍走标准 DPO。<br><br>
+<b>结果对比（epoch 5）</b>：
+<ul>
+<li>Chosen log-prob：DPO −33.1 → <b>Gate-DPO −25.4</b>（几乎保持 SFT 水平）</li>
+<li>Rejected log-prob：DPO −78.5 → Gate-DPO −39.2（仍被压低但不过度）</li>
+<li>偏好 gap (chosen − rejected)：DPO +45.4 nats vs Gate-DPO +13.8 nats（DPO 虚高的 gap 来自分布崩塌，Gate-DPO 真实地保留了两端概率）</li>
+<li>AlpacaEval win-rate：DPO 52.3% → <b>Gate-DPO 58.1%</b>（vs. SFT baseline）</li>
+</ul>
+</div>
+
+<div class="module-title">📊 实验结果（Pythia-410M / Qwen-0.5B / LLaMA-7B 对比）</div>
+<table>
+<thead><tr><th>方法</th><th>门控激活率</th><th>Δ(chosen log-p)</th><th>Δ(reject log-p)</th><th>挤压 ρ</th></tr></thead>
+<tbody>
+<tr><td>DPO (baseline)</td><td>—</td><td>−8.5</td><td>−36.2</td><td>+0.82（强挤压）</td></tr>
+<tr><td>IPO</td><td>—</td><td>−3.1</td><td>−8.7</td><td>+0.21</td></tr>
+<tr><td>Cal-DPO</td><td>—</td><td>−2.8</td><td>−12.4</td><td>+0.35</td></tr>
+<tr><td class="best">Gate-DPO (seq, τ=20)</td><td class="best">31%</td><td class="best">+0.3</td><td>−7.1</td><td class="best">−0.04</td></tr>
+<tr><td class="best">Gate-DPO (token, τ=20)</td><td>39%</td><td>+0.1</td><td>−5.8</td><td class="best">−0.02</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">Gate-DPO 是唯一让挤压系数 ρ 回归到零附近的方法；Pythia-410M 的 gated chosen 改进量甚至超过未门控 LLaMA-7B —— 证明"控制梯度动力学"可在小模型上超越"扩大规模"。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>阈值鲁棒性：序列级门控在 \(\theta \in [-5.5, -4.5]\) 范围都满足成功判据；token 级在 \([-3.0, -2.0]\)。τ 控制过渡陡峭度，τ=20 时约 30–40% 样本进入门控。<strong>局限</strong>：(1) 门控统计量需要全序列前向计算；(2) 多回合 RLHF（如 online RL）下 \(\pi_\theta\) 漂移可能使阈值 \(\theta\) 需动态调整，本文未探讨；(3) 理论仅覆盖 DPO 家族，对 PPO/GRPO 这类 reward-based 方法的扩展留作未来工作。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>Gate-DPO 的重要意义是揭示：偏好优化的稳定性问题<strong>不在损失函数形式，而在梯度几何</strong>。既有 IPO/Cal-DPO 等新损失函数都是间接干预，而 Gate-DPO 直接在梯度流上贴"减震器"，保留 DPO 最大的优点（无需奖励建模的简洁性）同时系统性消除分布塌缩。这种"loss-agnostic + stop-gradient 式检测"范式可能成为未来偏好优化的标准构件，适用于各种基于对比学习的对齐方法。</p>
+</div>
+

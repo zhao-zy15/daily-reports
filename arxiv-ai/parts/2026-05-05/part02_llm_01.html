@@ -1,0 +1,74 @@
+<h2 class="section-title llm">🧠 LLM（纯文本大模型）</h2>
+
+<div class="paper-card" id="p1">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01106" target="_blank">Component-Aware Self-Speculative Decoding in Hybrid Language Models</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Universitat Politècnica de València</span><br>
+<span class="tag tag-llm">LLM推理加速</span><span class="tag tag-llm">自推测解码</span><span class="tag tag-llm">Falcon-H1 / Qwen3.5</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>自回归生成是 LLM 推理延迟的核心瓶颈：每个 token 都需一次完整前向。推测解码（Speculative Decoding）通过 draft-then-verify 范式可得 1.5–3× 的无损加速，但关键挑战是如何获得"便宜且质量高"的 draft 模型。LayerSkip、CLaSp、SWIFT 等自推测方法假设模型是同构层堆叠（skip layer），在纯 Transformer 上可得 1.3–2.0× 的加速。但近期 Falcon-H1、Qwen3.5、Jamba 等<strong>混合架构</strong>同时包含 SSM/线性注意力与 softmax 注意力，现有 LayerSkip 无法充分利用架构异质性。本文提出核心问题：<em>能否直接把混合模型内部的 SSM-only 子图当作零成本自推测 drafter？</em></p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 混合架构的形式化与组件提取（Component Subgraph）。</strong> 对 \(L\) 层混合模型，每层含替代组件 \(\mathcal{A}_l\)（SSM/线性注意力）与注意力组件 \(\mathcal{S}_l\)。<br>
+&nbsp;&nbsp;• <b>并行混合（Falcon-H1）</b>：$$h_l = \mathcal{A}_l(h_{l-1}) + \mathcal{S}_l(h_{l-1})$$ Draft 构造：将 \(\mathcal{S}_l\) 输出置零，保留 \(\mathcal{A}_l\) 路径。<br>
+&nbsp;&nbsp;• <b>序列混合（Qwen3.5）</b>：层分成不交集 \(L_\mathcal{A}=\{线性层\}\) 与 \(L_\mathcal{S}=\{注意力层\}\)（24层=18+6）。Draft 构造：对 \(l\in L_\mathcal{S}\) 做恒等穿透 \(h_l = h_{l-1}\)。<br>
+Draft 模型 \(M_d\) 无需额外参数、无训练、无外部模型，通过 forward hook 实时切换。
+</div>
+
+<div class="sub-module">
+<strong>② Draft-Verify 协议与拒绝采样。</strong> Draft 阶段 \(M_d\) 自回归生成 \(K\) 个 token 并记录 \(q_i(x)\)；Verify 阶段完整模型 \(M\) 一次前向算出 \(p_i(x)\)；每位置 \(i\) 应用标准拒绝采样：
+$$\alpha_i = \min\Big(1, \frac{p_i(x_i)}{q_i(x_i)}\Big)$$
+贪心解码下简化为 \(\arg\max p_i = \arg\max q_i\) 则接受。全接受率 \(\alpha^{(K)}\) 是衡量 draft 质量的关键指标。
+</div>
+
+<div class="sub-module">
+<strong>③ 理论加速与 FLOP 比率。</strong> 对 Falcon-H1-0.5B，SSM-only 路径约占完整模型 FLOPs 的 78.4%；Qwen3.5-0.8B 线性-only 路径占 77.3%。速度公式：
+$$\text{Speedup} = \frac{1-\alpha^{K+1}}{(1-\alpha)(1+c K)}$$
+其中 \(c\) 是 draft/verify FLOP 比。SSM 路径在长上下文还有 \(O(1)\) 内存（KV cache 消除）的额外优势。
+</div>
+
+<div class="sub-module">
+<strong>④ 消融诊断：PPL 降解率预测自推测可行性。</strong> 本文发现一个非常干净的规律——通过<em>简单的 PPL 消融</em>（移除注意力后 PPL 膨胀倍数）可提前预测自推测可行性，无需真正实现 draft-verify 流水线：
+<ul>
+<li>Falcon-H1：PPL 从 5.62 → 17.73（×3.15）→ 接受率 0.370</li>
+<li>Qwen3.5：PPL 从 7.62 → 624.84（×81.96）→ 接受率 0.019</li>
+</ul>
+这个近乎完美的反相关关系意味着：新混合架构可通过单次 PPL 评测（几分钟）决定是否值得投入工程实现。
+</div>
+
+<div class="example-box">
+<strong>深度案例：Falcon-H1-0.5B 贪心自推测实例</strong><br>
+输入 prefix："The capital of France is"<br>
+<ol>
+<li><b>Draft 阶段（SSM-only）</b>：并行跳过所有注意力输出，SSM 分支输出 \(q(x)\) 顺次给出 \(K=3\) 个 draft token：<code>" Paris", ",", " which"</code>，总耗时 ≈ 1 次完整模型前向的 78%。</li>
+<li><b>Verify 阶段</b>：完整 Falcon-H1-0.5B 单次 forward 算出这 3 个位置的目标分布 \(p(x)\)，top-1 分别为 <code>" Paris", ",", " which"</code>。</li>
+<li><b>接受判定</b>：3 个位置贪心全匹配 → 接受 3 个 token，一次前向产出 3 个 token（理论 2.4× 吞吐）。</li>
+<li><b>对照 Qwen3.5-0.8B</b>：线性-only 路径 \(q(x)\) top-1 仅 32% 概率是 " Paris"，\(K=2\) 的全接受率只有 3.8% —— 几乎每次都退化为 1 token/轮。</li>
+</ol>
+核心结论：组件感知自推测对<em>并行</em>混合是零成本获胜策略，对<em>序列</em>混合则完全不可行。
+</div>
+
+<div class="module-title">📊 实验结果</div>
+<table>
+<thead><tr><th>模型</th><th>架构</th><th>TVD(q‖p)</th><th>α@K=2 (greedy)</th><th>α@K=3</th></tr></thead>
+<tbody>
+<tr><td>Qwen3.5-0.8B</td><td>序列混合</td><td>0.803</td><td>0.038</td><td>0.019</td></tr>
+<tr><td>Qwen2.5-0.5B (LayerSkip 33%)</td><td>纯 Transformer</td><td>0.473</td><td>0.520</td><td>0.326</td></tr>
+<tr><td class="best">Falcon-H1-0.5B</td><td>并行混合</td><td class="best">0.302</td><td class="best">0.680</td><td class="best">0.370</td></tr>
+<tr><td class="best">Falcon-H1-3B</td><td>并行混合</td><td class="best">0.307</td><td>0.590</td><td>0.351</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">核心落差：Falcon-H1 与 Qwen3.5 的接受率相差 <b>17.9×</b>（0.680 vs 0.038），且 Falcon-H1-3B 与 0.5B 指标几乎重叠 → 架构决定论（architectural determinism）成立，与模型规模无关。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>任务依赖实验表明数学推理（GSM8K）受益最大（Falcon-H1 α=0.495），事实回忆（MMLU）受益最小（0.208），与"注意力主要负责事实检索"假设一致。替代策略对比显示，对序列混合必须用 LayerSkip：Qwen3.5-0.8B 的 LayerSkip-33% α=0.233（12.3× 高于组件感知）。<strong>局限性</strong>：作者 Python 级实现未达到实际 wall-clock 加速（< 1.0×），需 CUDA 融合核；规模只到 3B，7B+ 情况待验证；未覆盖 Jamba 等 Transformer-Mamba-MoE 复杂块。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这是首次将<em>模型架构异构性</em>转化为零成本推测解码源：<b>"组件集成模式决定推测可行性"</b>比参数规模、训练技巧更根本。对未来混合模型设计者的明确启发是——若希望保留自推测友好性，应优先选择<em>并行加法式</em>而非<em>串行交替式</em>组件整合，因为前者保证了每条子路径仍是"够用"的 LM。此外 PPL 消融作为预测诊断的思路可推广到多种推理加速场景，成为"先算便宜指标再决定工程投入"的通用方法论。</p>
+</div>
+

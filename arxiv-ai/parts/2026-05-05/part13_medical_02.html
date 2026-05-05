@@ -1,0 +1,72 @@
+<div class="paper-card" id="p12">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.01011" target="_blank">CLEAR: Revealing How Noise and Ambiguity Degrade Reliability in LLMs for Medicine</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Vanderbilt University, Intuit AI Research</span><br>
+<span class="tag tag-med">医学 LLM 评测</span><span class="tag tag-med">弃权能力</span><span class="tag tag-med">噪声鲁棒性</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>真实临床决策充斥噪声、歧义、不完整信号。优秀医生的关键能力是<em>知道何时不知道</em>——admitting uncertainty, abstaining, seeking help。但既有医学 LLM benchmark（MedMCQA、MedQA、JAMA-CC）<strong>都假设答案在选项里</strong>，无法测量 LLM 的"认知谦逊（epistemic humility）"。论文提出 CLEAR 框架，通过三种系统性扰动（增加干扰项、引入弃权选项、改变弃权语义）把现有 QA benchmark 改造为可靠性测试床。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 三轴扰动设计。</strong><br>
+&nbsp;&nbsp;• <b>选项数量轴</b>：原 4 选 1 → 2/3/4/5/6 个 plausible 选项（competing answer pressure）；<br>
+&nbsp;&nbsp;• <b>Ground truth 存在轴</b>：保留 GT vs 移除 GT 仅留 distractors + 弃权（gold-absent 场景）；<br>
+&nbsp;&nbsp;• <b>弃权语义轴</b>：3 种不同弃权 framing：<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;– <b>NA</b>（None of the Above，断言式拒绝）<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;– <b>IDK</b>（I Don't Know，承认不确定）<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;– <b>INA</b>（I Need Assistance，请求协助）<br>
+三者临床意义递进，但在 prompt 表面只是用词不同。
+</div>
+
+<div class="sub-module">
+<strong>② 评测指标。</strong> 不仅算 accuracy，还分别报告：<br>
+&nbsp;&nbsp;• <b>Abstention Rate</b>：在 GT-absent 场景下选择"弃权"选项的比例（理论应≈100%）；<br>
+&nbsp;&nbsp;• <b>Wrong-Selection Rate</b>：在 GT-absent 但有弃权选项时仍选 distractor 的比例；<br>
+&nbsp;&nbsp;• <b>Calibration ECE</b>：置信度与正确率匹配度。
+</div>
+
+<div class="sub-module">
+<strong>③ 17 模型 × 2.6M 推理。</strong> 涵盖 GPT-5.2、GPT-4o、Claude Opus 4、Llama-3.3-70B、Qwen2.5-72B、DeepSeek-V3、MedGemma 等 17 个开/闭源模型，三个 benchmark（MedMCQA / MedQA / JAMA-CC）每个题目做 3 轴扰动，共 2.6M 次唯一推理。这是迄今最大规模的医学 LLM 可靠性评测。
+</div>
+
+<div class="sub-module">
+<strong>④ Reasoning model 子分析。</strong> 单独对比"普通"vs"reasoning"模式（CoT、o1-style）：模型规模和推理深度对 abstention 行为的复合影响。该问题之所以重要：扩规模/扩 reasoning 是否能<em>同时</em>提升推理能力与认知谦逊？答案是悲观的。
+</div>
+
+<div class="example-box">
+<strong>深度案例：JAMA-CC 上的 Ground-Truth-Absent 场景</strong><br>
+<b>原题（JAMA Clinical Challenges）</b>：一位 47 岁男性病史，正确答案是<em>药物诱导横纹肌溶解</em>。<br>
+<b>CLEAR 扰动</b>：移除 GT，留下 4 个 plausible distractors（脱水、急性肾损伤、心肌炎、慢性肾病）+ 1 个弃权选项。<br><br>
+<b>不同弃权 framing 下 GPT-5.2 的行为</b>：
+<ul>
+<li><b>NA framing</b>："None of the above" → 弃权率 53%（最高，因 NA 语气最坚定）</li>
+<li><b>IDK framing</b>："I am not sure" → 弃权率 25%（−28 pp，因模型把 IDK 解读为"软弱"）</li>
+<li><b>INA framing</b>："I need to consult an expert" → 弃权率 20%（最低）</li>
+</ul>
+<b>Qwen 2.5 家族扩规模</b>：7B → 32B → 72B 这三档，<em>NA 弃权率提升</em>（28%→41%→55%），但 IDK / INA 弃权率<strong>反而下降</strong>（21%→18%→14%）—— "扩规模让模型更敢于断言式拒绝，更不愿意 admit uncertainty"。<br><br>
+<b>反人类直觉的扩规模负效应</b>：GPT-5.2 在 INA framing 下平均弃权 20%，反而<em>低于随机选择</em>（1/(4+1)=20%）！意味着前沿模型主动避免请求协助，宁愿瞎猜。
+</div>
+
+<div class="module-title">📊 实验结果（GT-absent, 4 distractors + 1 abstention, 17 模型平均）</div>
+<table>
+<thead><tr><th>弃权 framing</th><th>平均弃权率</th><th>GPT-5.2</th><th>GPT-4o</th><th>Claude Opus 4</th><th>开源 SOTA</th></tr></thead>
+<tbody>
+<tr><td><b>NA</b>（断言式）</td><td class="best">48%</td><td>53%</td><td>45%</td><td>57%</td><td>32%</td></tr>
+<tr><td><b>IDK</b>（承认不确定）</td><td>31%</td><td>25%</td><td>27%</td><td>40%</td><td>21%</td></tr>
+<tr><td><b>INA</b>（请求协助）</td><td style="color:var(--red)">25%</td><td style="color:var(--red)">20%</td><td>22%</td><td>34%</td><td>17%</td></tr>
+<tr><td>随机选择基线</td><td>20%</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">触目惊心的发现：GPT-5.2 在 INA 模式下弃权率（20%）<em>等于随机选择</em>，意味着模型主动避免请求协助。Claude Opus 4 是少数在三种 framing 下都明显高于随机的模型。CoT 提升弃权率有限，且经常只是把 below-random 提到 random 水平，对临床安全无意义。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>核心发现：(1) <strong>弃权能力与传统 scaling law 解耦</strong>——更大模型更准但更不愿 admit uncertainty；(2) framing 微小用词变化（IDK→INA）导致弃权率 −5 pp，意味着医学部署需在 prompt 中精确选词；(3) CoT-reasoning 能提升弃权率但效果不稳定，对前沿模型甚至会负效应（自圆其说化）。<strong>局限</strong>：(1) 仅英文 medical QA；(2) 选项扰动是合成的，与真实 EHR free-text 决策环境不同；(3) 弃权率与"是否真的应该弃权"未做精细标注。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>CLEAR 是首次把"<em>知道何时不知道</em>"系统性变成可量化基准的工作。对临床 AI 落地的关键警示：<strong>当前最强 LLM 不仅没有医生级诊断能力，更缺乏医生级的认知谦逊</strong>——前者尚可补救，后者直接对应医疗事故风险。论文的最佳实践建议：(1) 临床部署必须用 NA 而非 INA 作为 abstention prompt；(2) 不能只跑 medical benchmark accuracy，必须跑 GT-absent 场景；(3) 后训练阶段应专门强化 abstention behavior（如 RLHF 中加入 "honest refusal" 偏好对）。这是医学 LLM 评估的下一代标杆。</p>
+</div>
+

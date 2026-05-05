@@ -1,0 +1,76 @@
+<div class="paper-card" id="p7">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02469" target="_blank">Reference-Sampled Boltzmann Projection for KL-Regularized RLVR: Target-Matched Weighted SFT, Finite One-Shot Gaps, and Policy Mirror Descent</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 (机构信息未标注)</span><br>
+<span class="tag tag-rl">RLVR 理论</span><span class="tag tag-rl">加权 SFT</span><span class="tag tag-rl">策略镜像下降</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>在线 RLVR（Reinforcement Learning with Verifiable Rewards）虽然有效，但训练路径上要保留 rollout 生成、verifier 打分、reference 评测都在优化环上，成本高。实践界希望用<strong>静态加权 SFT</strong>替代：预先生成 rollout、预先打分、预先算权重，然后用多 epoch 加权 MLE 拟合。但"加权 SFT 的拟合策略到底等于不等于 KL-RLVR 的目标策略？"一直缺乏清晰答案。本文给出<em>唯一使两者相等的组合</em>，并用 projection 视角解释为什么多 epoch SFT 永远修复不了 coverage 缺陷。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① KL-RLVR 的目标分布刻画。</strong> 给定参考策略 \(\pi_{\text{ref}}\) 与可验证奖励 \(r(\tau)\in\{0,1\}\)，KL-正则化 RLVR 目标为：
+$$\max_\pi \mathbb{E}_{\tau\sim\pi}[r(\tau)] - \beta \cdot \mathrm{KL}(\pi \parallel \pi_{\text{ref}})$$
+经典变分解：
+$$\pi^*(\tau) \propto \pi_{\text{ref}}(\tau) \cdot \exp\big(r(\tau)/\beta\big)$$
+这就是 fixed-reference Boltzmann 分布。
+</div>
+
+<div class="sub-module">
+<strong>② Weighted SFT 的诱导策略。</strong> 静态加权 SFT 给定采样器 \(\mu\)（生成 rollout 的分布）和权重 \(w(\tau)\ge 0\)，优化：
+$$\mathcal L(\theta) = -\mathbb{E}_{\tau\sim\mu}[w(\tau) \log \pi_\theta(\tau)]$$
+渐近下诱导策略：\(\pi_\mu^{w}(\tau) \propto \mu(\tau) w(\tau)\)。<br>
+<b>关键等价性定理</b>：\(\pi_\mu^w = \pi^*\) 当且仅当：
+$$\mu = \pi_{\text{ref}} \quad\text{且}\quad w(\tau) = \frac{\pi_{\text{ref}}(\tau)}{\mu(\tau)} \cdot \exp(r(\tau)/\beta) = \exp(r(\tau)/\beta)$$
+即采样器必须是 \(\pi_{\text{ref}}\) 本身，权重是 prompt-normalized Boltzmann 密度比。作者据此提出 <b>BOLT 算法</b>（Boltzmann-Targeted SFT）。
+</div>
+
+<div class="sub-module">
+<strong>③ 有限样本的 One-Shot Gap。</strong> 即使采样器权重都正确，一次性预采数据集 \(D\) 也可能没覆盖到 \(\pi^*\) 的某些 trajectory。作者证明"支集受限"下的最佳 Boltzmann projection 损失恰好等于 fixed-reference gap：
+$$\Delta_{\text{FR}} = \mathrm{KL}(\pi^* \parallel \pi^{D}_*)$$
+即<em>数据没覆盖的概率质量无法被任何多 epoch SFT 找回</em>——这直接解释了为什么 pass@k 在 RLVR 不是"创造新推理支集"而是"在已有支集上集中概率"。
+</div>
+
+<div class="sub-module">
+<strong>④ Sampler Refresh = Policy Mirror Descent。</strong> 当覆盖弱但非零时，作者证明重复"当前策略 → 新参考 → 再次 Boltzmann projection"恢复了 KL policy mirror descent 算法：
+$$\pi_{k+1}(\tau) \propto \pi_k(\tau) \cdot \exp\big(r(\tau)/\beta\big)$$
+每步内部的有限加权 SFT 解作为对精确 mirror 步的 <em>comparator drift</em> 进入误差分析。这就理论上把"多次 refresh + weighted SFT"与 online RLVR 统一起来，给出精确等价性与误差分解。
+</div>
+
+<div class="example-box">
+<strong>深度案例：GSM8K 上 BOLT vs 基线的 checkpoint 动态</strong><br>
+<b>配置</b>：Qwen3-8B + LoRA, \(n=16\) rollouts/prompt。<br>
+<b>观察</b>：
+<ul>
+<li><b>BOLT (1 GPU, single-run)</b>：step 1k→3k 分别 51.93 → 52.92 → 51.86，2k 达到峰值 <em>然后饱和</em>——完美印证"one-shot saturation under fixed support"。</li>
+<li><b>BOLT Iter.（3 轮 sampler refresh）</b>：step 1k→8k 分别 50.80 → 51.10 → 52.99 → 53.22 → 54.44 → 53.54 → 52.08，持续改进到 5k。验证 policy mirror descent 的单调性。</li>
+<li><b>GRPO online baseline</b>：1k→10k 从 49.13 单调提升至 53.17，与 BOLT Iter. 大致相当但计算成本高得多。</li>
+<li><b>SFT on ground truth</b>：1k→10k 从 48.37 升至 52.37，缺乏奖励信号所以收敛慢 1–2 pp。</li>
+</ul>
+核心启示：BOLT Iter. 以<em>离线 + 分离式采样</em>恢复了 online GRPO 的性能，同时避免了 GPU 利用率低下。
+</div>
+
+<div class="module-title">📊 实验结果（GSM8K checkpoint curves）</div>
+<table>
+<thead><tr><th>Step</th><th>SFT</th><th>GRPO</th><th>BOLT (1 shot)</th><th>BOLT Iter.</th></tr></thead>
+<tbody>
+<tr><td>Base</td><td>87.72</td><td>87.72</td><td>87.72</td><td>87.72</td></tr>
+<tr><td>1k</td><td>87.63</td><td>87.36</td><td>87.92</td><td>87.92</td></tr>
+<tr><td>2k</td><td>87.71</td><td>88.67</td><td>88.47</td><td>88.63</td></tr>
+<tr><td>4k</td><td>87.96</td><td>89.01</td><td>89.57</td><td>89.37</td></tr>
+<tr><td>8k</td><td>88.09</td><td>89.36</td><td>89.96</td><td>89.74</td></tr>
+<tr><td>12k</td><td>88.17</td><td>89.70</td><td class="best">90.23</td><td class="best">90.01</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">核心对比：(1) BOLT 单次 checkpoint 早期就跟上 GRPO 但会饱和；(2) BOLT Iter. 在 12k 步反超 GRPO 0.53 pp；(3) 朴素 reference-rollouts + raw reward weighting（表中未展示的 Refit）收益显著小于 Boltzmann 权重，验证"权重必须是 density-ratio 乘 exp(r/β)"的理论约束。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>作者在 Qwen3-0.6B / Qwen3-8B / Qwen3.5-9B 三规模上都验证了 projection predictions。温度-覆盖-方差前沿分析显示当参考 pass 概率 \(p=0.05\) 时，Boltzmann target 把 95% mass 放在稀有正确 rollout 上需要 \(O(1/p)=20×\) 的参考样本。<strong>局限</strong>：(1) 理论依赖二值 verifier；连续奖励需重做分解；(2) 实际 refresh 调度超参（如何时 refresh）未给理论最优；(3) LoRA 拟合，全参数训练下的近似保证未探讨。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这篇论文给 RLVR 实践界提供了一把<strong>理论剃刀</strong>：把"采样、评分、权重、优化"四个操作严格解耦——改变 target 的操作（权重/reference）、改变有限覆盖的操作（sampler refresh）、只改变优化成本的操作（batch size 等）可以分开分析。对工业 RLVR 系统（如 DeepSeek、Qwen 的大规模推理训练）意义重大：许多看似"更多 epoch / 更多数据"的改进本质上修不了 coverage；正确的答案是 sampler refresh（即 mini-rounds of online sampling between long SFT phases）。这也解释了为什么 OpenAI、Anthropic 的后期训练 pipeline 都包含多轮 rejection sampling。</p>
+</div>
+

@@ -1,0 +1,65 @@
+<h2 class="section-title medical">⚕️ Medical（医学大模型）</h2>
+
+<div class="paper-card" id="p11">
+<div class="paper-title"><a href="https://arxiv.org/abs/2605.02266" target="_blank">Reliability-Oriented Multilingual Orthopedic Diagnosis: A Domain-Adaptive Modeling and a Conceptual Framework</a></div>
+<div class="paper-meta">
+<span>📅 2026-05-05</span>
+<span>🏛 Wuhan University, NUIST, Bahawal Victoria Hospital</span><br>
+<span class="tag tag-med">多语言临床NLP</span><span class="tag tag-med">骨科诊断</span><span class="tag tag-med">可靠性导向评测</span>
+</div>
+
+<div class="module-title">🔥 背景与动机</div>
+<p>印度等多语言医疗环境中临床交互常使用印地语、旁遮普语等区域语言，而 EHR 系统和 AI 临床决策支持却以英语为中心。这种<strong>语言错配</strong>导致诊断延迟、误诊与照护不一致。骨科诊断（脊柱 vs. 关节、急性 vs. 慢性损伤）症状描述常重叠且术语异质，是评估多语言临床建模可靠性的理想测试床。既有工作有三类局限：(1) 通用多语言模型（XLM-R、IndicBERT）未针对临床安全场景校准；(2) 指令微调 LLM 在分类任务上缺少结构化约束；(3) 聚合 metric 掩盖类别条件 / 语言条件的失败模式。</p>
+
+<div class="module-title">⚙️ 核心方法详解</div>
+
+<div class="sub-module">
+<strong>① 三语骨科数据集构建。</strong> 由持照骨科医生监督，构建英语（拉丁文字）、印地语（梵文字符）、旁遮普语（古鲁穆奇文字）三种语言的标注数据集，6 个骨科诊断类别（脊柱疾病、骨折、关节疾病、退行性病变、软组织损伤、外伤后并发症）。两种分布：<br>
+&nbsp;&nbsp;• <b>Controlled</b>：每语言每类 1000 条 = 18,000 平衡样本；<br>
+&nbsp;&nbsp;• <b>Natural</b>：每语言 ≥45,000 条偏态分布样本（反映真实世界）；<br>
+合计约 135,000 条。脱敏严格，仅含症状描述与诊断标签。
+</div>
+
+<div class="sub-module">
+<strong>② 域自适应建模。</strong> 评估四种 transformer encoder：mBERT、XLM-R、mDeBERTa、IndicBERT；并提出域自适应增强：在 medical-specific 语料（PubMed-MC + IndicHealthCorpus）上做 continued pretraining，再在三语骨科数据上 fine-tune。这种<em>双阶段域自适应</em>显著提升低资源语言泛化。
+</div>
+
+<div class="sub-module">
+<strong>③ 可靠性测度框架。</strong> 不仅报 macro-F1，还引入：<br>
+&nbsp;&nbsp;• <b>类别条件混淆率</b>：CCC = \(\sum_{i,j} P(j|i) \cdot \mathbb{1}[i\ne j, \text{class }i\sim j]\)（衡量临床相似类别的混淆）<br>
+&nbsp;&nbsp;• <b>语言条件不稳定性</b>：LCS = \(\max_l F1_l - \min_l F1_l\)（跨语言性能差距）<br>
+&nbsp;&nbsp;• <b>校准误差 ECE</b>：标准 expected calibration error。
+</div>
+
+<div class="sub-module">
+<strong>④ 失败模式审计。</strong> 在 natural distribution 上做<em>失败案例分类</em>：(a) 跨语言术语未对齐导致误诊（如印地语"jod ki kharabi"对应英语 "joint disorder" 但匹配不到）、(b) Mixed-script（拉丁+梵文混写）解析失败、(c) 长尾类别（外伤并发症）系统性低召回。这些粒度级失败信息对临床安全部署至关重要。
+</div>
+
+<div class="example-box">
+<strong>深度案例：旁遮普语骨科主诉的诊断流程</strong><br>
+<b>输入</b>（古鲁穆奇文字）："ਮੇਰੀ ਪਿੱਠ ਵਿੱਚ ਤਿੰਨ ਮਹੀਨੇ ਤੋਂ ਦਰਦ ਹੈ, ਖਾਸ ਕਰਕੇ ਸਵੇਰੇ ਉੱਠਣ ਵੇਲੇ"（"我的背痛三个月，特别是早上起床时"）。<br><br>
+<b>典型失败（XLM-R baseline）</b>：将"ਪਿੱਠ"（背）误识别为"软组织"类，因为模型在英文 PubMed 学到的"back pain"高频对应肌肉拉伤；漏掉了"早起加重"这一脊柱关节炎的关键信号。F1 = 0.41 在脊柱类。<br><br>
+<b>域适应后（mDeBERTa + medical-CP）</b>：正确识别为<em>脊柱关节炎（Spinal disorder）</em>，置信度 0.83；ECE 从 0.18 降到 0.07。注意机制可视化显示模型抓取到"ਸਵੇਰੇ ਉੱਠਣ ਵੇਲੇ"（晨起时）这一关键时间词。<br><br>
+<b>极端案例 (Mixed-script)</b>："Lower back ਦਰਦ"（英旁遮普混写）—— 朴素 IndicBERT 完全无法解析，准确率 12%；本文方法通过混合脚本预处理保留双语 token，准确率回升到 71%。
+</div>
+
+<div class="module-title">📊 实验结果（Controlled distribution, 6 类骨科诊断）</div>
+<table>
+<thead><tr><th>方法</th><th>EN F1</th><th>HI F1</th><th>PA F1</th><th>跨语言差距 LCS↓</th><th>ECE↓</th></tr></thead>
+<tbody>
+<tr><td>mBERT (vanilla)</td><td>0.78</td><td>0.62</td><td>0.51</td><td>0.27</td><td>0.18</td></tr>
+<tr><td>XLM-R</td><td>0.83</td><td>0.71</td><td>0.65</td><td>0.18</td><td>0.14</td></tr>
+<tr><td>IndicBERT</td><td>0.71</td><td>0.74</td><td>0.69</td><td>0.05</td><td>0.16</td></tr>
+<tr><td>mDeBERTa</td><td>0.85</td><td>0.74</td><td>0.69</td><td>0.16</td><td>0.13</td></tr>
+<tr><td class="best">mDeBERTa + Medical-CP (Ours)</td><td class="best">0.89</td><td class="best">0.84</td><td class="best">0.81</td><td class="best">0.08</td><td class="best">0.07</td></tr>
+</tbody>
+</table>
+<p style="color:var(--text2);font-size:0.88em">Medical-CP 域自适应在低资源语言（PA）上提升 +12 pp F1；同时把跨语言差距从 0.16 降到 0.08，ECE 减半，是<em>同时提升精度与可靠性</em>的少见案例。</p>
+
+<div class="module-title">🔬 消融与讨论</div>
+<p>消融：去掉 medical-CP 阶段使 PA F1 跌 −10 pp，验证医学语料预训练的必要性；去掉 multilingual fine-tune 而仅用 EN→PA 零样本，PA F1 仅 0.49。Natural distribution 测试显示长尾类（外伤并发症 5%）召回从 0.31 提升到 0.58。<strong>局限</strong>：(1) 仅 6 类骨科子集，未覆盖罕见病；(2) 数据由单一医生标注，inter-rater 一致性未量化；(3) 未涉及多模态（X-ray + 文本）联合诊断；(4) 临床部署需要更多回归测试与红队评估。</p>
+
+<div class="module-title">💡 结论与启发</div>
+<p>这是少见的把<strong>临床可靠性维度</strong>（语言条件、类别条件、校准）作为一等公民的多语言医学 NLP 工作。对真正想在印度、东南亚等多语言地区部署 AI 临床支持的工程方有直接启发：(1) 通用多语言 LLM 在医学场景<em>必须做域自适应预训练</em>，不能靠单纯微调；(2) F1 不够，要看跨语言差距和 ECE；(3) Mixed-script 是真实现实但被多数 evaluation 忽视。框架可移植到放射科、皮肤科、心血管等多语言诊断场景。</p>
+</div>
+
