@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股盘前前瞻 · 2026-05-05</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #0a0a14;
+            color: #e0e0f0;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+        .report-header {
+            text-align: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, #1a0a2e 0%, #0d1b2a 50%, #1a0a2e 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at 30% 20%, rgba(239, 68, 68, 0.1) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 60%);
+        }
+        .report-header > * { position: relative; z-index: 1; }
+        .header-icon { font-size: 3.5rem; margin-bottom: 15px; }
+        .report-header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #f87171, #fbbf24, #f87171);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .report-header .subtitle { color: #a0a0b8; font-size: 1.05rem; }
+        .report-header .date-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 6px 20px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #fca5a5;
+        }
+        .alert-banner {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border: 1px solid #dc2626;
+            border-radius: 14px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .alert-banner.positive {
+            background: linear-gradient(135deg, #1a0a0a, #2d1212);
+            border: 1px solid #ef4444;
+        }
+        .alert-banner.caution {
+            background: linear-gradient(135deg, #1a1508, #2d2410);
+            border: 1px solid #f59e0b;
+        }
+        .alert-banner .alert-icon { font-size: 2rem; flex-shrink: 0; }
+        .alert-banner .alert-content h3 { color: #fca5a5; font-size: 1.15rem; margin-bottom: 6px; }
+        .alert-banner.caution .alert-content h3 { color: #fcd34d; }
+        .alert-banner .alert-content p { color: #fde8e8; font-size: 0.95rem; line-height: 1.6; }
+        .alert-banner.caution .alert-content p { color: #fef3c7; }
+        .section {
+            background: #12121e;
+            border: 1px solid #1e1e32;
+            border-radius: 16px;
+            padding: 25px 28px;
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 1.35rem;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #1e1e32;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .icon { font-size: 1.4rem; }
+        .market-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .market-table th {
+            text-align: left;
+            padding: 10px 14px;
+            background: #1a1a2e;
+            color: #a0a0b8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .market-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #1e1e32;
+            font-size: 0.95rem;
+        }
+        .market-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .up { color: #ef4444; font-weight: 600; }
+        .down { color: #22c55e; font-weight: 600; }
+        .flat { color: #a0a0b8; }
+        .news-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #1e1e32;
+        }
+        .news-item:last-child { border-bottom: none; }
+        .news-item h4 {
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+            color: #f0f0ff;
+        }
+        .news-item p {
+            color: #a0a0b8;
+            font-size: 0.93rem;
+            line-height: 1.65;
+        }
+        .news-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+        .tag-hot { background: rgba(239,68,68,0.2); color: #f87171; }
+        .tag-policy { background: rgba(59,130,246,0.2); color: #93c5fd; }
+        .tag-geo { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .tag-earn { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .tag-tech { background: rgba(6,182,212,0.2); color: #67e8f9; }
+        .hotspot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .hotspot-card {
+            background: #1a1a2e;
+            border: 1px solid #2d2d44;
+            border-radius: 12px;
+            padding: 18px 20px;
+            transition: transform 0.2s;
+        }
+        .hotspot-card:hover { transform: translateY(-2px); }
+        .hotspot-card h4 { color: #f0f0ff; font-size: 1rem; margin-bottom: 8px; }
+        .hotspot-card p { color: #a0a0b8; font-size: 0.9rem; }
+        .hotspot-card .catalyst { color: #fbbf24; font-size: 0.85rem; margin-top: 8px; }
+        .stock-card {
+            background: #12121e;
+            border: 1px solid #1e1e32;
+            border-radius: 16px;
+            padding: 22px 25px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stock-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 4px;
+        }
+        .stock-card.bullish::before { background: linear-gradient(180deg, #ef4444, #f97316); }
+        .stock-card.bearish::before { background: linear-gradient(180deg, #22c55e, #10b981); }
+        .stock-card.neutral::before { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .stock-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #f0f0ff;
+        }
+        .stock-code { color: #a0a0b8; font-size: 0.85rem; margin-left: 8px; }
+        .stock-badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-bullish { background: rgba(239,68,68,0.2); color: #f87171; }
+        .badge-bearish { background: rgba(34,197,94,0.2); color: #4ade80; }
+        .badge-neutral { background: rgba(251,191,36,0.2); color: #fbbf24; }
+        .stock-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .stock-info-item {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 12px 15px;
+        }
+        .stock-info-item .label { color: #a0a0b8; font-size: 0.8rem; margin-bottom: 4px; }
+        .stock-info-item .value { font-size: 0.95rem; color: #e0e0f0; }
+        .stock-detail { margin-top: 12px; }
+        .stock-detail p { color: #a0a0b8; font-size: 0.92rem; margin-bottom: 6px; }
+        .stock-rating { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+        .stars { color: #fbbf24; font-size: 1.1rem; letter-spacing: 2px; }
+        .rating-label { color: #a0a0b8; font-size: 0.85rem; }
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .tech-card {
+            background: #1a1a2e;
+            border: 1px solid #2d2d44;
+            border-radius: 12px;
+            padding: 18px 20px;
+        }
+        .tech-card h4 { color: #f0f0ff; margin-bottom: 10px; font-size: 1.05rem; }
+        .tech-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+        .tech-row .label { color: #a0a0b8; }
+        .tech-row .value-up { color: #ef4444; font-weight: 600; }
+        .tech-row .value-down { color: #22c55e; font-weight: 600; }
+        .report-footer {
+            text-align: center;
+            padding: 25px;
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 30px;
+        }
+        .summary-box {
+            background: linear-gradient(135deg, #1a0a2e, #0d1b2a);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 14px;
+            padding: 22px 25px;
+            margin-bottom: 25px;
+        }
+        .summary-box h3 {
+            color: #c084fc;
+            font-size: 1.15rem;
+            margin-bottom: 12px;
+        }
+        .summary-box ul { list-style: none; }
+        .summary-box li {
+            padding: 6px 0;
+            color: #d0d0e8;
+            font-size: 0.95rem;
+            padding-left: 20px;
+            position: relative;
+        }
+        .summary-box li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #c084fc;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #f87171;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            padding: 6px 14px;
+            background: #12121e;
+            border-radius: 8px;
+            border: 1px solid #1e1e32;
+        }
+        .back-link:hover { background: #1a1a2e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../" class="back-link">← 返回导航</a>
+
+        <div class="report-header">
+            <div class="header-icon">🔮</div>
+            <h1>A股港股盘前前瞻</h1>
+            <p class="subtitle">伊朗袭击UAE · 美股高位回落 · 油价跳涨 · A股休市末日 · 港股独自应战</p>
+            <div class="date-badge">📅 2026年5月5日 周二 · 09:00</div>
+        </div>
+
+        <!-- 核心提示 -->
+        <div class="alert-banner">
+            <div class="alert-icon">🚨</div>
+            <div class="alert-content">
+                <h3>隔夜核心信号：伊朗对UAE发动停火以来首次导弹袭击 · 地缘溢价回归 · 港股独自承压</h3>
+                <p>美股5/4周一三大指数从历史高位回落——标普-0.4%、道指-1.1%（跌约150点）、纳指-0.2%；起因为<strong>UAE国防部报告拦截来自伊朗的12枚弹道导弹+3枚巡航导弹+4架无人机</strong>，富查伊拉（Fujairah）石油工业区起火，3人受伤，航班改道。这是4月初"两周停火协议"一个月后伊朗首次对海湾国家发动袭击，<strong>布伦特原油盘中一度飙至108美元/桶后回落至105.99、WTI触101后回落至99.89</strong>，金价创4640美元新高。<strong>A股5月1日-5日休市（今日为节假日最后一天，5月6日周三开市）</strong>，今日港股独自应战：<strong>恒指夜期5月报25885点，跌121点（-0.465%），低水211点</strong>，暗示今日港股开盘将面对低开压力；不过南向资金今日恢复通道后将成关键看点。港股5/4延续节前强势（恒指+1.24%至26095.88/恒科+2.16%至4976.70），今日能否消化地缘风险考验多头决心。</p>
+            </div>
+        </div>
+
+        <!-- ==================== 一、全球隔夜市场回顾 ==================== -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">🌐</span>
+                <span>全球隔夜市场回顾</span>
+            </div>
+
+            <h3 style="color:#4ade80; margin-bottom: 12px;">美股（5/4 周一收盘）— 历史高位遭遇伊朗袭击UAE · 地缘避险升温</h3>
+            <table class="market-table">
+                <thead>
+                    <tr><th>指数</th><th>涨跌幅</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>道琼斯工业</td><td class="down">-1.1%</td><td>跌约150点，油股逆势拉升未能救市，三大指数领跌</td></tr>
+                    <tr><td>标普500</td><td class="down">-0.4%</td><td>从历史新高回落，能源板块唯一飘红</td></tr>
+                    <tr><td>纳斯达克</td><td class="down">-0.2%</td><td>科技股韧性较强，但科技七巨头多数下跌</td></tr>
+                    <tr><td>费城半导体</td><td class="flat">震荡</td><td>存储芯片（美光/西数）受供给担忧仍强势，AI算力链受压</td></tr>
+                    <tr><td>恒生ADR指数</td><td class="down">-0.18%</td><td>收报26048.99（较港收低46.89点），腾讯ADR+0.06%至473.29港元</td></tr>
+                </tbody>
+            </table>
+            <p style="color:#a0a0b8; font-size:0.9rem; margin-top:8px;">🔑 <strong>关键拖累</strong>：① <strong>伊朗袭击UAE</strong>——阿联酋国防部凌晨确认拦截12枚弹道+3枚巡航导弹+4架无人机，富查伊拉石油区起火（Gulf News/Reuters实时报道），是停火以来首次针对海湾产油国的袭击；② Trump此前释放"Iran提出1个月停火谈判deadline"消息后市场本已高位，袭击直接证伪停火预期；③ 美股5月进入历史性弱势6个月周期（Zacks），从4月录得最大单月涨幅后自然获利回吐。<br>🛢️ <strong>大宗商品</strong>：Brent盘中+6-7%冲108后回落至$105.99（-2.4%日内波幅达10%），WTI冲$101后回落至$99.89；纽约金突破$4640/oz创新高（日内-0.11%）；铜、铝作为避险代表坚挺。</p>
+
+            <h3 style="color:#93c5fd; margin: 20px 0 12px;">欧洲 & 亚太市场（5/4 周一）</h3>
+            <table class="market-table">
+                <thead>
+                    <tr><th>市场</th><th>表现</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>德国 DAX30</td><td class="down">回落</td><td>汽车+化工受油价冲击，银行股跟随美股</td></tr>
+                    <tr><td>英国 FTSE100</td><td class="up">相对抗跌</td><td>BP/壳牌等能源股大涨对冲指数</td></tr>
+                    <tr><td>日经225</td><td class="flat">休市</td><td>日本"黄金周"5/3-5休市，周三重开</td></tr>
+                    <tr><td>韩国 KOSPI</td><td class="flat">休市</td><td>5/5韩国儿童节假期休市</td></tr>
+                    <tr><td>港股 恒生指数</td><td class="up">+1.24% 至 26095.88</td><td>5/4节前大涨，小米+6.75%领涨，南向资金暂未恢复</td></tr>
+                    <tr><td>港股 恒生科技</td><td class="up">+2.16% 至 4976.70</td><td>AI产业链短线共振，重返5000关口一步之遥</td></tr>
+                    <tr><td>A股 上证指数</td><td class="flat">休市</td><td>5/1-5/5劳动节假期休市，5/6周三开市</td></tr>
+                </tbody>
+            </table>
+            <p style="color:#a0a0b8; font-size:0.9rem; margin-top:10px;">⚠️ <strong>亚太特殊日历</strong>：今日（5/5周二）日本、韩国均假期休市，A股同样休市，<strong>港股是亚太地区唯一正常交易的主要市场</strong>，流动性相对集中，也意味着波动可能放大。</p>
+        </div>
+
+        <!-- ==================== 二、影响A股港股的重大隔夜消息 ==================== -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">📰</span>
+                <span>影响A股港股的重大隔夜消息</span>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-geo">地缘冲突</span>伊朗对UAE发动大规模导弹袭击 — 停火协议事实性破裂</h4>
+                <p>阿联酋国防部5月4日晚间确认：防空系统拦截来自伊朗的<strong>12枚弹道导弹、3枚巡航导弹、4架无人机</strong>；<strong>富查伊拉（Fujairah）石油工业区遭袭起火</strong>，3人受伤，阿联酋多个机场航班改道。该袭击在4月初"两周停火协议"已延长约一月的背景下发生，事实上结束了停火预期。美国计划引导商船通过霍尔木兹海峡的动作被视为直接诱因。对A股港股：①<strong>利空航空、化工下游</strong>；②<strong>利多油气石化、军工、黄金</strong>；③<strong>避险情绪或加剧南向资金配置防御板块</strong>。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-earn">公司财报</span>伯克希尔Q1净利+120% · 现金储备$3973亿创历史新高</h4>
+                <p>5月2日巴菲特股东大会召开，<strong>阿贝尔（Greg Abel）首次以CEO身份主持</strong>，巴菲特入座董事席前排获长达数分钟掌声。一季报数据：净利润同比+120%，<strong>现金储备达3973亿美元创历史新高</strong>；阿贝尔"对AI持保守态度，但看好数据中心基础设施"。对港股互联网估值锚无直接利好，但<strong>3973亿现金储备反映美股顶层投资者极高避险姿态</strong>，可能预示5月美股波动率上升。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-hot">产业催化</span>科技巨头一季报纷纷上调AI资本开支 · AI产业链5/4集体爆发</h4>
+                <p>港股5/4 AI产业链短线共振：大型科网股领涨（小米+6.75%/阿里+4.52%/快手+3.64%/百度+3.45%），光通信、电力设备、半导体、消费零售、机械板块齐涨。背景：Alphabet/Microsoft/Meta等美股巨头Q1财报均上调2026年资本开支指引，腾讯、阿里、小米等国内大厂也陆续加码AI capex。国金证券数据：恒生科技一致预期EPS前向12个月增速高于恒生指数、纳斯达克100、标普500、日经225等主要指数，<strong>当前PEG约0.57倍</strong>处于估值洼地。该逻辑今日若遇地缘风险回调，或提供"估值+基本面"双支撑。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-hot">汽车板块</span>小米汽车4月交付突破3万辆 · 环比+50%创年度新高</h4>
+                <p>5月1日小米汽车公布：<strong>4月交付量超过3万辆，环比增长50%，增速创年度新高</strong>；2026年前四个月累计交付量达<strong>10.9万辆</strong>，同比增长11%。5月2日雷军公开回应"YU7新车将按计划交付"。这一数据直接点燃小米集团周一港股——<strong>5/4早盘涨幅一度达9.65%至31.82港元，市值突破8200亿港元，创近3个月最大单日涨幅</strong>，收盘仍涨6.75%。高盛此前上调小米2026年交付量预测至65.5万辆，较市场共识高出48%。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-policy">资金流向</span>港股通5/5恢复南向通道 · 节后首日资金面成最大变量</h4>
+                <p>A股通（北向）、港股通（南向）于5月1日-5月5日休市期间不提供服务，<strong>5月6日周三起恢复开通</strong>。但根据港交所规则，<strong>今日（5/5周二）是港股通恢复后的首个可交易日</strong>（注：部分媒体口径显示5/5已恢复南向，5/6全部恢复）。过去一周恒指+1.24%、恒科+2.16%强势上涨过程中<strong>南向资金缺席</strong>，今日若南向回归呈现净流入，尤其在科技股回调时加仓，将是重要的做多信号。4/30最后一个交易日南向净买入曾达122亿港元。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-geo">大宗商品</span>油价日内波幅10% · 金价创$4640新高</h4>
+                <p>伊朗袭击UAE引发布伦特原油盘中一度涨至$108/桶，随后在<strong>美国计划"护航商船通过霍尔木兹"的消息</strong>下回落至$105.99（-2.4%），WTI同样在触及$101后回落至$99.89（-2%）。纽约期金日内突破<strong>$4640/oz创历史新高</strong>（-0.11%）。这一组价格信号意味着：① 市场已部分price-in地缘溢价，但avocado not yet完全定价全面战争；② 金价的强势说明避险情绪持续发酵。对A股港股：石油石化、军工、贵金属今日应相对抗跌。</p>
+            </div>
+
+            <div class="news-item">
+                <h4><span class="news-tag tag-tech">芯片供给</span>存储芯片/半导体板块"结构性牛市" · 天数智芯5/4飙12%</h4>
+                <p>美股存储芯片概念股上周五大涨，给港股半导体板块带来联动效应。5/4港股半导体板块全线爆发：<strong>天数智芯单日+12%</strong>、澜起科技、中芯国际、华虹半导体、紫光展锐均涨幅靠前。背景：AI训练端对HBM内存需求持续超出供给，美光Q2指引强劲+SK海力士停产部分消费级NAND；国产算力链叠加"国产替代+AI capex扩产"双主线。<strong>Alphabet/Microsoft上调capex指引，利好算力产业链</strong>。</p>
+            </div>
+        </div>
+
+        <!-- ==================== 三、今日A股港股关键看点 ==================== -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">🎯</span>
+                <span>今日A股港股关键看点</span>
+            </div>
+
+            <div class="alert-banner caution">
+                <div class="alert-icon">📌</div>
+                <div class="alert-content">
+                    <h3>关键背景：A股今日休市 · 港股独自应战 · 流动性+波动或放大</h3>
+                    <p>A股5/1-5/5劳动节休市，<strong>今日为假期最后一天，5/6周三开市</strong>；港股5/1已休市1天，5/4已正常交易并大涨。今日（5/5周二）<strong>全亚太只有港股开市</strong>（日韩均休市），叠加美股隔夜从高位回落+地缘风险回归，港股将独自消化：① 恒指夜期低水211点预示低开压力；② 但南向资金恢复是重大边际变量；③ AI产业链逻辑未破，关注回调买点。</p>
+                </div>
+            </div>
+
+            <h3 style="color:#fbbf24; margin: 20px 0 12px;">🔥 可能的热点板块</h3>
+            <div class="hotspot-grid">
+                <div class="hotspot-card">
+                    <h4>🛢️ 油气石化 · 军工</h4>
+                    <p>伊朗袭击UAE直接利好。港股关注：中国海洋石油(0883)、中国石油股份(0857)、中海油服(2883)；军工关注中航科工(2357)。</p>
+                    <div class="catalyst">⚡ 催化：Brent日内一度触108/桶 + 地缘停火破裂</div>
+                </div>
+                <div class="hotspot-card">
+                    <h4>🏆 黄金 · 贵金属</h4>
+                    <p>金价创$4640新高。港股关注紫金矿业(2899)、山东黄金(1787)、招金矿业(1818)；A股假期休市，5/6开市或高开。</p>
+                    <div class="catalyst">⚡ 催化：避险+央行增持+实际利率下行</div>
+                </div>
+                <div class="hotspot-card">
+                    <h4>🤖 AI产业链（可能分歧）</h4>
+                    <p>5/4爆发后今日需观察能否持续。核心：小米（已+6.75%）、阿里、腾讯、百度、中芯国际、华虹半导体、天数智芯。Alphabet/MSFT上调capex为中期利好。</p>
+                    <div class="catalyst">⚡ 催化：大厂资本开支上调 + Hang Seng Tech PEG 0.57估值洼地</div>
+                </div>
+                <div class="hotspot-card">
+                    <h4>🚗 新能源车 · 小米供应链</h4>
+                    <p>小米4月交付超3万辆环比+50%，利好产业链。关注：欣旺达、智能底盘、激光雷达（禾赛、速腾聚创）。A股宁德时代5/6开市或补涨。</p>
+                    <div class="catalyst">⚡ 催化：小米交付创高 + 4月新势力交付陆续公布</div>
+                </div>
+                <div class="hotspot-card">
+                    <h4>🛡️ 防御板块（高股息）</h4>
+                    <p>地缘风险升温阶段高股息受资金青睐。港股关注：中国神华(1088)、中国移动(0941)、中国电信(0728)、中国海外发展(0688)等。</p>
+                    <div class="catalyst">⚡ 催化：低波动+股息率防御属性</div>
+                </div>
+                <div class="hotspot-card">
+                    <h4>⚠️ 航空 · 化工下游</h4>
+                    <p>油价高位直接冲击，回避：国泰航空(0293)、中国国航(0753)、南方航空(1055)；化工下游（PTA/MEG/橡胶）承压。</p>
+                    <div class="catalyst">⚡ 回避理由：成本端压力+需求担忧</div>
+                </div>
+            </div>
+
+            <h3 style="color:#f87171; margin: 25px 0 12px;">⚠️ 风险提示</h3>
+            <ul style="color: #a0a0b8; padding-left: 25px;">
+                <li><strong>伊朗行动升级风险</strong>：若本周伊朗袭击范围扩大至沙特油田或伊拉克基地，布伦特可能再度冲115-120美元，带动全球风险资产新一轮回调。</li>
+                <li><strong>港股独自应战+低水211点</strong>：恒指夜期25885点低水211点预示低开，若南向资金今日未能积极回流，昨日涨幅可能回吐。</li>
+                <li><strong>美股5月季节性弱势</strong>："Sell in May"历史规律+4月创最大单月涨幅后自然回吐压力；关注5/7美联储FOMC会议（本周四凌晨2:00）是否如期维持利率不变。</li>
+                <li><strong>中概流动性真空</strong>：南向通道缺席+亚太大部分市场休市，意味着港股今日易受单一消息冲击，成交量或较5/4明显缩小。</li>
+                <li><strong>5/6 A股开市"堰塞湖效应"</strong>：今日港股表现将直接传导至明日A股开盘情绪，若港股今日大幅下跌，A股明日或低开。</li>
+            </ul>
+
+            <h3 style="color:#c084fc; margin: 25px 0 12px;">📅 本周重要事件日历</h3>
+            <table class="market-table">
+                <thead>
+                    <tr><th>日期</th><th>事件</th><th>市场影响</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>5/5 周二</td><td>今日：港股独自开市；日韩休市；A股休市最后一天</td><td>港股波动放大，南向资金恢复首日</td></tr>
+                    <tr><td>5/6 周三</td><td>A股节后首个交易日；中国4月财新服务业PMI</td><td>A股集中消化长假积累信息</td></tr>
+                    <tr><td>5/7 周四凌晨</td><td>美联储FOMC利率决议+鲍威尔记者会</td><td>大类资产核心事件，关注降息路径</td></tr>
+                    <tr><td>5/8 周四</td><td>中国4月进出口数据公布</td><td>外贸+关税影响验证</td></tr>
+                    <tr><td>5/9 周五</td><td>中国4月CPI、PPI公布</td><td>通胀数据验证消费复苏</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ==================== 四、技术面快览 ==================== -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">📐</span>
+                <span>技术面快览 — 关键支撑/压力位</span>
+            </div>
+
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>🇨🇳 上证指数（休市）</h4>
+                    <div class="tech-row"><span class="label">上次收盘（4/30）</span><span class="value-up">~4100附近</span></div>
+                    <div class="tech-row"><span class="label">强压力位</span><span class="value-up">4200（2022年以来高点）</span></div>
+                    <div class="tech-row"><span class="label">次压力位</span><span class="value-up">4150（前期震荡上沿）</span></div>
+                    <div class="tech-row"><span class="label">近支撑位</span><span class="value-down">4050（MA20）</span></div>
+                    <div class="tech-row"><span class="label">强支撑位</span><span class="value-down">3950-4000（整数关口+MA60）</span></div>
+                    <p style="color:#a0a0b8; font-size:0.85rem; margin-top:10px;">📌 5/6开市关注：① 港股5/5表现将直接传导；② 若地缘风险放大，开市或先低开测试4050支撑；③ AI/油气/黄金三主线有望支撑指数韧性。</p>
+                </div>
+
+                <div class="tech-card">
+                    <h4>🇭🇰 恒生指数</h4>
+                    <div class="tech-row"><span class="label">5/4收盘</span><span class="value-up">26095.88 (+1.24%)</span></div>
+                    <div class="tech-row"><span class="label">恒指夜期(5月)</span><span class="value-down">25885 (-0.47%，低水211点)</span></div>
+                    <div class="tech-row"><span class="label">强压力位</span><span class="value-up">26400-26500（前期阻力区）</span></div>
+                    <div class="tech-row"><span class="label">近支撑位</span><span class="value-down">25800-25900（MA20+夜期位置）</span></div>
+                    <div class="tech-row"><span class="label">强支撑位</span><span class="value-down">25500（MA60+2月低点）</span></div>
+                    <p style="color:#a0a0b8; font-size:0.85rem; margin-top:10px;">📌 今日策略：夜期低水211点提示开盘低开风险，关注25800能否守住；若守住+南向资金净流入+AI权重股抗跌，则可能"低开高走"；若跌破25800，下一支撑看25500。</p>
+                </div>
+
+                <div class="tech-card">
+                    <h4>💻 恒生科技指数</h4>
+                    <div class="tech-row"><span class="label">5/4收盘</span><span class="value-up">4976.70 (+2.16%)</span></div>
+                    <div class="tech-row"><span class="label">关键关口</span><span class="value-up">5000 整数关口（1月以来未破）</span></div>
+                    <div class="tech-row"><span class="label">强压力位</span><span class="value-up">5100-5150（年线上方）</span></div>
+                    <div class="tech-row"><span class="label">近支撑位</span><span class="value-down">4900（MA10）</span></div>
+                    <div class="tech-row"><span class="label">强支撑位</span><span class="value-down">4800（MA20+前期平台）</span></div>
+                    <p style="color:#a0a0b8; font-size:0.85rem; margin-top:10px;">📌 关键观察：距5000只差23点，冲击5000是否成功决定短期方向；PEG仅0.57处历史低位，估值支撑强；短期能否突破取决于南向资金+AI主线延续性。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 五、自选股推演 ==================== -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">⭐</span>
+                <span>9只自选股今日推演</span>
+            </div>
+
+            <!-- 1. 腾讯控股 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">腾讯控股</span>
+                        <span class="stock-code">0700.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">震荡偏多</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：+1.11% 收报473港元，蓝筹股中温和上涨。<strong>ADR</strong>：5/4夜盘收473.291港元（较港收+0.06%），基本平盘。</p>
+                    <p><strong>今日关注点</strong>：① 南向资金恢复后是否回流腾讯（最近5个交易日持股额减幅最大-24.98亿元，表明节前有抛售）；② Q1财报期将至（预计下周发布），游戏+微信视频号广告+SaaS业务预期；③ 回购节奏持续性。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">465（MA20）</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">480（前高）</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">高盛 540 / 摩根 520</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">回调至470下方分批建仓</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★★</span><span class="stars" style="color:#333;">★</span>
+                    <span class="rating-label">推荐指数 · 蓝筹防御价值凸显</span>
+                </div>
+            </div>
+
+            <!-- 2. 阿里巴巴 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">阿里巴巴</span>
+                        <span class="stock-code">9988.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">高位震荡</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：+4.52%，在AI产业链爆发中领涨之一（和小米/快手/百度一起），成为恒生科技指数重回4976点主要功臣。<strong>ADR</strong>：美股周一回落，中概互联ETF(KWEB)跟随，但阿里本身盘后表现相对抗跌。</p>
+                    <p><strong>今日关注点</strong>：① 南向资金最近5日净减持-21.95亿元（第二大减仓），今日是否回补；② 云计算+AI capex上调利多持续；③ Q1财报期临近（预计5月中旬），通义千问商业化进展+国际商业（Lazada/AE）是否拖累。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">140（MA10）</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">155（2月高点）</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">摩根 175 / 野村 168</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">今日低开可加仓，重点观察140支撑</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★★</span><span class="stars" style="color:#333;">★</span>
+                    <span class="rating-label">推荐指数 · AI云叙事+南向资金关注</span>
+                </div>
+            </div>
+
+            <!-- 3. 美团 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">美团</span>
+                        <span class="stock-code">3690.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">震荡</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：美团-WR（83690.HK）收报73.6港元，+1.1%，相对大盘偏弱。未进入领涨阵营，显示即时零售板块昨日分化。</p>
+                    <p><strong>今日关注点</strong>：① 五一消费数据（假期最后一天，关注文旅部数据）；② 油价高位对骑手成本压力；③ 即时零售与抖音本地生活+京东到家的竞争格局；④ 近期北向/南向资金偏好AI权重，对美团有分流。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">72（MA20）</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">76（近期高点）</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">中金 95 / 大摩 88</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">观望，等待五一消费数据公布</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★</span><span class="stars" style="color:#333;">★★</span>
+                    <span class="rating-label">推荐指数 · 消费股静待催化</span>
+                </div>
+            </div>
+
+            <!-- 4. 蜜雪冰城 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">蜜雪冰城</span>
+                        <span class="stock-code">2097.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">区间震荡</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：消费板块整体温和，新消费三杰（蜜雪冰城/泡泡玛特/老铺黄金）近期表现分化，蜜雪冰城相对稳定。</p>
+                    <p><strong>今日关注点</strong>：① 五一全国茶饮+咖啡消费数据，蜜雪门店下沉市场+高频复购逻辑；② 原材料（白砂糖、咖啡豆）价格走势；③ 海外拓展（东南亚门店）进度披露。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">MA60附近</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">前高区间上沿</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">中金 / 海通均看多</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">观望为主，等待财报催化</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★</span><span class="stars" style="color:#333;">★★★</span>
+                    <span class="rating-label">推荐指数 · 新消费龙头静默期</span>
+                </div>
+            </div>
+
+            <!-- 5. 宁德时代 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">宁德时代</span>
+                        <span class="stock-code">300750.SZ</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">休市 · 节后看补涨</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>状态</strong>：A股休市中，4/30最后交易日收报436.00元（-2.02%）。<strong>H股（3750.HK）</strong>节前已有独立表现，今日（5/5）H股单独交易可作为A股5/6开市参考。</p>
+                    <p><strong>今日关注点（H股）</strong>：① 小米4月交付创高利好锂电产业链情绪；② 新能源车4月交付数据陆续公布（理想、蔚来、小鹏、问界）；③ 钠电池量产进度；④ 油价高位强化电动替代逻辑。A股5/6开市后关键观察H股今日走势及CATL全球市占率Q1数据。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">A股近支撑位</div><div class="value">420（MA20）</div></div>
+                    <div class="stock-info-item"><div class="label">A股近压力位</div><div class="value">450（前期高点）</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">中信 500+ / 高盛 520</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">5/6开市看H股映射，油价高位利好</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★★</span><span class="stars" style="color:#333;">★</span>
+                    <span class="rating-label">推荐指数 · 油价+小米供应链双逻辑</span>
+                </div>
+            </div>
+
+            <!-- 6. 泡泡玛特 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">泡泡玛特</span>
+                        <span class="stock-code">9992.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">震荡</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：新消费板块普遍未领涨，泡泡玛特震荡。Labubu IP 海外热度虽未见明显减弱，但短期进入业绩真空期。</p>
+                    <p><strong>今日关注点</strong>：① 五一门店销售数据（核心门店客流）；② IP出海（美国/东南亚/中东）进度；③ Q2财报预告时间窗口临近；④ 近期板块资金偏向AI/科技，对新消费分流。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">MA20附近</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">前高</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">高盛 / 摩根看多</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">观望，等待IP新品+财报催化</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★</span><span class="stars" style="color:#333;">★★</span>
+                    <span class="rating-label">推荐指数 · 盲盒IP仍有全球化空间</span>
+                </div>
+            </div>
+
+            <!-- 7. 小米集团 -->
+            <div class="stock-card bullish">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">小米集团</span>
+                        <span class="stock-code">1810.HK</span>
+                    </div>
+                    <span class="stock-badge badge-bullish">强势看多 🔥</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现（绝对主角）</strong>：早盘大涨超9%最高+9.65%至31.82港元，收涨<strong>+6.75%</strong>，市值一度突破8200亿港元，<strong>创近3个月最大单日涨幅</strong>。恒生指数成分股中领涨。催化：4月交付3万+环比+50%、2026前四月累计10.9万辆、雷军5/2公开表态YU7按计划交付。</p>
+                    <p><strong>今日关注点</strong>：① 昨日已大涨，今日能否续强需观察南向资金+获利盘消化；② 今年AI研发+capex高达160亿；③ 特斯拉4月交付数据如疲弱将进一步利好小米；④ 高盛已上调2026年交付量预测至65.5万辆（比市场共识高48%）。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">30（5/4开盘）</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">32-33（前高）</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">高盛 42 / 中金 38</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">持仓可持有，若追涨注意回撤</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★★★</span>
+                    <span class="rating-label">推荐指数 · 汽车+AI双主线共振</span>
+                </div>
+            </div>
+
+            <!-- 8. 快手 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">快手</span>
+                        <span class="stock-code">1024.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">跟随科网</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：+3.64%，紧随小米/阿里之后，受益于港股科网股全面回暖+可灵AI视频生成模型产业催化。</p>
+                    <p><strong>今日关注点</strong>：① 可灵AI对抗OpenAI Sora的进展；② Q1财报预期（电商GMV+广告ARPU）；③ 短视频+直播电商龙头地位稳固性；④ 与抖音的流量争夺格局。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">MA20</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">近期高点</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">摩根 / 中金均看多</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">跟随科网板块节奏</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★</span><span class="stars" style="color:#333;">★★</span>
+                    <span class="rating-label">推荐指数 · AI视频生成叙事</span>
+                </div>
+            </div>
+
+            <!-- 9. 优必选 -->
+            <div class="stock-card neutral">
+                <div class="stock-header">
+                    <div>
+                        <span class="stock-name">优必选</span>
+                        <span class="stock-code">9880.HK</span>
+                    </div>
+                    <span class="stock-badge badge-neutral">主题催化</span>
+                </div>
+                <div class="stock-detail">
+                    <p><strong>5/4表现</strong>：人形机器人板块在AI产业链爆发中受益，跟随科技股上涨。近期持续受益于"具身智能+人形机器人量产年"主题。</p>
+                    <p><strong>今日关注点</strong>：① 特斯拉Optimus进度+宇树/银河通用/智元机器人融资轮；② 工业场景落地订单披露节奏；③ 人形机器人硬件BOM成本下降速度；④ 上周北京车展（人形机器人+新能源汽车双主线）延续热度。</p>
+                </div>
+                <div class="stock-info-grid">
+                    <div class="stock-info-item"><div class="label">近支撑位</div><div class="value">MA20</div></div>
+                    <div class="stock-info-item"><div class="label">近压力位</div><div class="value">前高区域</div></div>
+                    <div class="stock-info-item"><div class="label">机构目标价</div><div class="value">小型标的分歧大</div></div>
+                    <div class="stock-info-item"><div class="label">策略</div><div class="value">主题股+小盘β，轻仓博弈</div></div>
+                </div>
+                <div class="stock-rating">
+                    <span class="stars">★★★★</span><span class="stars" style="color:#333;">★</span>
+                    <span class="rating-label">推荐指数 · 人形机器人量产年主题</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 六、开盘策略总结 ==================== -->
+        <div class="summary-box">
+            <h3>🎯 开盘策略总结（仅供参考 · 非投资建议）</h3>
+            <ul>
+                <li><strong>整体基调</strong>：港股今日独自应战+恒指夜期低水211点预示低开压力，但AI产业链+南向资金恢复是两大支撑因素，<strong>预计高波动、震荡偏弱</strong>。</li>
+                <li><strong>做多方向</strong>：① 油气石化（中海油/中石油）；② 黄金贵金属（紫金矿业/山东黄金）；③ 军工；④ 小米为首的新能源车链（若回调）；⑤ AI算力存储（中芯国际/华虹）。</li>
+                <li><strong>分歧观察</strong>：昨日领涨的阿里、腾讯、快手今日是否能顶住地缘风险。重点观察南向资金是否回流这三只龙头（过去5日减仓居前）。</li>
+                <li><strong>回避方向</strong>：① 航空股（国泰/国航/南航），油价高位直接打击；② 化工下游（PTA/MEG）；③ 高估值概念题材股（无业绩支撑者）。</li>
+                <li><strong>仓位建议</strong>：短期地缘风险+假期流动性真空下，建议仓位不超过<strong>五成</strong>；若港股今日守住25800支撑+南向净流入，可加仓至六成。</li>
+                <li><strong>A股假期最后一天</strong>：今日A股休市，5/6周三开市会集中消化长假（5/1-5/5）积累的多重信息——伊朗袭击UAE、伯克希尔大会、AI产业链爆发、小米交付创高，开盘方向将取决于港股今日5/5的收盘表现。</li>
+            </ul>
+        </div>
+
+        <div class="report-footer">
+            <p>⚠️ 本报告所有内容仅为市场信息整理与分析，不构成任何投资建议。市场有风险，投资需谨慎。</p>
+            <p style="margin-top: 8px;">📊 数据来源：路透社、CNBC、Investopedia、Barrons、AP News、Gulf News、东方财富、新浪财经、腾讯财经、智通财经、财联社等公开信息</p>
+            <p style="margin-top: 8px;">📅 报告生成时间：2026-05-05 09:00 | 覆盖时段：5/4 全球隔夜行情 → 5/5 港股盘前（A股休市）</p>
+        </div>
+    </div>
+</body>
+</html>
