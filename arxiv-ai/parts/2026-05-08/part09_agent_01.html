@@ -1,0 +1,86 @@
+  <h2 class="section-title agent">🤖 Agent · 智能体（3 篇）</h2>
+
+  <div class="paper" id="p8">
+    <h3 class="paper-title">8. StraTA: Incentivizing Agentic RL with Strategic Trajectory Abstraction</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06642</span>
+      <span>🏛 CUHK, Shanghai AI Lab, Univ. of Georgia</span>
+      <br>
+      <span class="tag tag-agent">Agentic RL</span><span class="tag tag-agent">Long-Horizon</span><span class="tag tag-agent">Strategy</span>
+      <span><a href="https://arxiv.org/abs/2605.06642" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>当前 LLM Agent 的 RL 训练（GRPO/GiGPO 等）几乎全是 reactive：每步只看当前状态预测下一动作，<strong>"决策即时性 + 整体规划"被强行耦合在一个 prompt 里</strong>。这导致短视探索、不必要回退、轨迹内不一致行为。人类解题不是这样——人类先做高层规划，再执行局部动作。本文提出 StraTA：在每个 episode 开始<strong>先生成一个紧凑自然语言策略</strong>，固定后用作所有后续动作的条件。把长视域决策分解为 strategy generation + strategy execution 两个层级目标。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 分层 GRPO：Strategy-level + Action-level 双目标优化</strong>
+        <p>对每个任务，先采样 \(N\) 个候选策略 \(z_i \sim \pi_\theta(\cdot\mid s_0)\)，每个策略下再采样 \(M\) 个 rollout，形成层级群组。Strategy 级群 \(\mathcal{G}_\text{strategy} = \{z_i\}\)，Action 级群 \(\mathcal{G}_\text{action}^i = \{a_t^{i,j}\}\)。GRPO 优势计算分别在两个层级做组内归一化。总目标：</p>
+        $$\mathcal{J}_\text{StraTA}(\theta) = \mathbb{E}\Bigl[\sum_{z_i\in\mathcal{G}_\text{strategy}}\mathcal{L}(z_i, A(z_i); \theta) + \sum_{i=1}^N\sum_{a_t^{i,j}\in\mathcal{G}_\text{action}^i}\mathcal{L}(a_t^{i,j}, A(a_t^{i,j}); \theta) - \beta D_\text{KL}\Bigr]$$
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② Diverse Strategy Rollout via Farthest Point Sampling</strong>
+        <p>关键问题：即使提高 sampling temperature，模型也会生成高度相似的策略，限制策略空间探索。解决方案：<strong>过采样 \(\sigma\times N\) 候选策略，再用 farthest point sampling (FPS)</strong> 选 \(N\) 个最互不相似的：</p>
+        $$z_\text{select} = \arg\min_{z_i\notin\mathcal{Z}} \max_{z_j\in\mathcal{Z}} e_i^\top e_j$$
+        <p>用预训练 sentence embedder \(\phi(\cdot)\) 提取语义向量。这让 strategy-level GRPO 比较的是真正不同的策略而非微小变体，提供有意义的对比信号。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Critical Self-Judgment Step-level 奖励</strong>
+        <p>Trajectory 级奖励太稀疏（仅终态有信号），credit assignment 困难。StraTA 引入"自我批判"：让模型自己判断哪些 action 既不符合策略也未推进任务。对这些"无效步"赋 step-level 辅助惩罚：</p>
+        $$R_\text{aux}(a_t^{i,j}) = -\kappa \cdot \mathbb{1}[\text{judged uninformative}]$$
+        <p>结合长度惩罚 \(R_\text{length}\) 和格式惩罚 \(R_\text{format}\)，最终奖励 \(\hat R = \text{clip}(R + R_\text{length} + R_\text{format}, -1, 1)\)。这种细粒度信号显著改善 long-horizon credit assignment。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ Non-cumulative Context 设计稳定训练</strong>
+        <p>每步 prompt 只包含当前状态 + 任务描述（不含完整交互历史），避免上下文长度爆炸。Strategy 通过 prepend 方式注入。这种设计与 AgentGym-RL 一致，对长视域任务训练稳定性至关重要。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>任务：</strong> ALFWorld "Cool a tomato in fridge then put on counter"
+        <ul>
+          <li><strong>Reactive Agent (GRPO)：</strong> step 1 "go to kitchen" → step 2 "look around"（浪费一步）→ step 3 "wait, what's my goal?" → step 4 "go to counter"（错方向）→ ... → 失败 reward=0。Trajectory-level 信号让所有这些动作的 advantage 都一致负值，credit 完全不知该惩罚谁。</li>
+          <li><strong>StraTA 策略生成：</strong> z = "First locate the tomato (likely on counter/table), bring it to fridge, wait, then move to designated counter."</li>
+          <li><strong>Strategy-conditioned execution：</strong> step 1 "go to counter" (符合策略 step 1) → step 2 "take tomato" → step 3 "go to fridge" → step 4 "put tomato in fridge" → ... 任务成功。</li>
+          <li><strong>多策略对比：</strong> 同任务下 4 个 FPS 选出的策略可能：z₁="prioritize fridge first then locate", z₂="systematic room scan", z₃="check pantry first", z₄="ask environment". Strategy-level GRPO 比较 4 个策略的 outcome，把高 reward 策略的概率推上去。</li>
+          <li><strong>Self-judgment：</strong> 即使任务最后成功了，"step 2 look around"被自动判定为无效步（既未执行策略也未推进任务），获得 step-level -0.1 惩罚，credit 精确分配。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>ALFWorld + WebShop（Qwen2.5-7B-Instruct backbone，3 seeds 均值）：</p>
+      <table>
+        <thead><tr><th>方法</th><th>ALFWorld 总成功率</th><th>WebShop Score</th><th>WebShop 成功率</th></tr></thead>
+        <tbody>
+          <tr><td>GPT-5.1 (闭源)</td><td>55.7</td><td>31.2</td><td>22.2</td></tr>
+          <tr><td>Claude-4-Sonnet (闭源)</td><td>72.9</td><td>23.7</td><td>18.4</td></tr>
+          <tr><td>Gemini-2.5-Flash (闭源)</td><td>38.6</td><td>4.7</td><td>4.4</td></tr>
+          <tr><td>PPO</td><td>87.4</td><td>82.2</td><td>68.9</td></tr>
+          <tr><td>RLOO</td><td>75.5</td><td>80.3</td><td>65.7</td></tr>
+          <tr><td>GRPO</td><td>77.1</td><td>79.8</td><td>68.2</td></tr>
+          <tr><td>GiGPO</td><td>90.8</td><td>84.4</td><td>72.8</td></tr>
+          <tr><td><strong>StraTA</strong></td><td class="best">93.1</td><td class="best">91.2</td><td class="best">84.2</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">关键观察：(1) StraTA 7B 全面超越 GPT-5.1 和 Claude-4-Sonnet（开源 7B 击败闭源 frontier）；(2) WebShop 成功率比次优 GiGPO 高 11.4pt（72.8→84.2）。在 SciWorld 上 StraTA 7B 拿 63.5%，超过 AgentGym-RL-7B 和 ScalingInter-7B。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>FPS diversity 的必要性：</strong> 移除 FPS 用普通采样，ALFWorld 成功率 90.7→85.3 (-5.4pt)，证明策略多样性是 strategy-level GRPO 工作的前提。<strong>Self-judgment 的贡献：</strong> 移除 self-judgment auxiliary reward，WebShop 成功率 84.2→78.5 (-5.7pt)，证明 step-level credit 对长视域任务关键。<strong>策略 vs 反应基线：</strong> 把 strategy 改为 ReAct 风格（每步生成 reasoning），效果差于 StraTA — 说明<strong>"全局固定策略"比"每步 reasoning"在长视域任务上更优</strong>，因为前者保持 trajectory 一致性。<strong>局限：</strong> (1) Strategy generation 在 task initial state 信息不全时可能导致整条 trajectory 误导；(2) FPS 需要额外 sentence embedder（少量推理开销）；(3) 仅在 3 个文本 agent 任务（ALFWorld/WebShop/SciWorld）验证，对复杂多模态 GUI agent 效果未知。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>StraTA 是 agentic RL 一个重要进展。它把"先规划后执行"这一显然但被忽视的人类行为模式正式形式化为<strong>"分层 GRPO + 多样策略 + 自批判"</strong>三件套。CUHK + Shanghai AI Lab 这次又一次贡献了高质量的 agentic RL 工作（与他们之前的 GiGPO 一脉相承）。对做 LLM agent 的团队：(1) 任何长视域任务（10+ 步）都应该考虑加 strategy abstraction；(2) FPS 是个简单又有效的 trick，可以通用于其他需要 group diversity 的 RL 设置；(3) 7B + StraTA 击败闭源 frontier 模型的现象证明<strong>算法创新可以补足参数规模差距</strong>，对开源 agent 社区是利好。已开源 GitHub + HuggingFace。</p>
+    </div>
+  </div>
+</content>

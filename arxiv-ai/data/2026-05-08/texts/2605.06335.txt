@@ -1,0 +1,950 @@
+Eliciting associations between clinical variables from
+LLMs via comparison questions across populations
+Fabian Kabus1, Kian Kordtomeikel2, Thomas Brox2, Heinz Wiendl4,
+Daiana Stolz3, Harald Binder1
+1Institute of Medical Biometry and Statistics (IMBI), Medical Center, University of Freiburg
+2Department of Computer Science, Faculty of Engineering, University of Freiburg
+3Department of Pneumology, Medical Center, University of Freiburg
+4Department of Neurology and Neurophysiology, Medical Center, University of Freiburg
+fabian.kabus@uniklinik-freiburg.de
+Abstract
+The training data of large language models (LLMs) comprises a wide range of
+biomedical literature, reflecting data from many different patient populations. We
+investigate how it might be possible to recover information on correlation and
+causal links between patient characteristics, as a key building block for medical
+decision making. To avoid the pitfalls of direct elicitation, we propose an approach
+based on structured comparison questions, specifically patient comparison triplet
+questions. This is combined with a statistical model for the LLM representation
+that provides estimates of correlations without access to activations or model in-
+ternals. Intuitively, we consider how similarity decisions of LLMs based on a first
+variable are affected by providing information on a second variable for one of the
+patients being assessed. We then induce prompt-level environment shifts to ob-
+tain correlation estimates for different subpopulations, which enables an invariant
+causal prediction (ICP) approach to obtain conservative candidate parent links. We
+demonstrate the method in two clinical domains, chronic obstructive pulmonary
+disease (COPD) and multiple sclerosis (MS). Across prompted environments, the
+elicited correlations are smooth, stable, and clinically interpretable, yet vary in a
+statistically significant way that supports downstream invariance testing, such that
+ICP provides a small set of candidate invariant parent links. These results show
+that indirect elicitation via triplet comparisons can recover meaningful associa-
+tion structure from LLMs and offer a cautious route from implicit correlations to
+causal statements that are congruent with LLM answering patterns.
+1 Introduction
+As large language models (LLMs) are becoming a viable option for clinical decision tasks [Brodeur
+et al., 2026], a major question is how to best query LLMs, and how the representation of clinical
+settings by LLMs could be formalized. We focus on the task of assessing the association between
+different patient characteristics, via correlation or causal links, as a key ingredient of clinical deci-
+sions. As LLMs have been trained on a multitude of biomedical papers describing a broad range of
+different patient populations, it might be feasible to not only obtain a general statement, e.g. on the
+correlation of two clinical markers, but values specific to a decision task and subpopulation at hand,
+by getting the LLM to give more weight to relevant evidence. An obvious approach for retrieving
+such information is to ask directly: ”What is the correlation between X and Y in population Z?”
+Direct queries, however, may fail in multiple ways. First, the answer may reflect recall of a specific
+statement rather than aggregated knowledge across studies. Second, even when the model responds
+with a plausible number, we cannot verify whether it respects that relationship when subsequently
+Preprint.
+arXiv:2605.06335v1  [cs.LG]  7 May 2026
+used for decision-making. Beyond these fundamental issues, models exhibit sycophancy by ad-
+justing answers to match perceived user beliefs [Sharma et al., 2024], responses are sensitive to the
+order of options [Pezeshkpour and Hruschka, 2024], outputs may be hallucinated without grounding
+[Ji et al., 2023], and chain-of-thought explanations can reflect post-hoc rationalization rather than
+actual computation [Lindsey et al., 2025]. This implies that when extracting LLM knowledge, we
+should treat LLMs as experimental subjects to be measured, not as self-reflecting agents to be asked.
+The cognitive sciences have faced similar challenges when investigating the representations of hu-
+man subjects, and have developed approaches for obtaining quantitative representations from struc-
+tured comparison questions [Suppes et al., 1989]. Inspired by this research, we specifically propose
+to query LLMs with triplet questions—“Is entity 3 more similar to entity 1 or to entity 2?”—to obtain
+implicit correlations between patient characteristics, and to formalize the problem representation of
+LLMs. This also is related to more recent results, where triplet questions have been used to recover
+similarity structure [Vankadara et al., 2023] and applied to derive clinical concept embeddings from
+LLMs [Kabus et al., 2026].
+To obtain information about the relationship between two patient characteristics, i.e. variables, we
+construct a triplet question involving three artificial patients, denoted 1, 2, and 3. We specify the
+values of the first variable for all three patients, but a value for the second variable is specified only
+for patient 3. This allows us to observe whether the value of the second variable tips the balance
+of the LLM similarity assessment of patient 3. By systematically varying the values, we can then
+assess how extreme the values of the second variable have to be to influence the decision, which
+carries information on correlation. We formalize this intuition into a statistical surrogate model for
+the LLM representation and decision to obtain estimates of implied correlation coefficients, includ-
+ing confidence intervals. We demonstrate the method in two clinical settings, with lung function
+markers in chronic obstructive pulmonary disease (COPD) and multiple sclerosis (MS) biomark-
+ers, highlighting how different correlation estimates are obtained for different patient populations,
+contrasted with results from directly requesting correlation values from LLMs.
+Having access to estimated correlations from different subpopulations is also useful for causal as-
+sessment. Specifically, Invariant Causal Prediction [ICP; Peters et al., 2016] allows us to test for
+causal links when given observational data from multiple environments, such as patient populations,
+that share the same causal structure. The invariance principle is as follows: ifXcausally affects
+Y, then the conditional distributionP(Y|X), e.g. as assessed by regression models, remains sta-
+ble across environments, even as the marginal distribution ofXshifts. Spurious correlations, by
+contrast, break under distribution shift. The original ICP approach requires several individual-level
+datasets from different patient populations, but these might be difficult to obtain in practice. We
+demonstrate how the required regression parameter estimates can alternatively be obtained from our
+proposed correlation estimations, including uncertainty to enable statistical testing. To implement
+this, we synthesize environments through prompt variations, preceding the triplet question, by spec-
+ifying the mean of the variable in the subpopulation under consideration. This allows us to identify
+causal relationships that congruently describe LLM decision behavior.
+Our contributions are as follows:
+•Triplet-based extraction of clinical associations.We introduce a framework that recovers
+pairwise correlations from LLM similarity judgments without access to model internals.
+•Prompted environments for causal assessment.We estimate environment-specific cor-
+relations in prompted subpopulations and use ICP to obtain candidate parent links.
+•Clinical demonstration in COPD and MS.We show that the extracted associations are
+clinically interpretable, more stable than direct correlation queries, and support a small set
+of plausible invariant parent links.
+Empirically, triplet decision surfaces are smooth and well fit by the surrogate model, and triplet-
+based correlation estimates are substantially less noisy than direct numeric queries. The implied cor-
+relations are clinically plausible and generally align known characteristics. Further, across prompted
+environments, ICP identifies a small conservative set of invariant parent links.
+Section 2 introduces the triplet representation and decision model, derives the symmetric correlation
+estimator, and describes the uncertainty-aware ICP procedure with prompted environment shifts.
+Section 3 describes the clinical applications and experimental protocol, Section 4 reports the empir-
+ical results, Section 5 discusses related work, and Section 6 provides concluding remarks.
+2
+2 Methods
+Our method treats the LLM as an experimental subject from which information on the association
+between different variables, e.g., different patient characteristics, is to be obtained. The basic build-
+ing block is the elicitation of correlation for pairs of variables. For each variable pair, we ask patient
+comparison triplet questions, fit a surrogate model to the resulting binary choices, and recover the
+model’s implied correlation from the fitted slopes. Repeating this procedure for different prompted
+environments (i.e. patient subpopulations) yields correlation matrices that we pass to invariant causal
+prediction.
+2.1 Triplet questions
+LetX={X 1, . . . , Xp}denote the variable set of interest. To extract pairwise correlation structure,
+we query the LLM about three patients, Patient 1, 2, and 3, and pairs of variablesXj andX k,j̸=k.
+All experiments are replicated across distinct environmentse∈ {1, . . . , m}, where each environ-
+ment has its own implied population meansµ (e) = (Ee[X1], . . . ,Ee[Xp]), and is implemented via
+a corresponding prompt text. Variation in these means serves as a synthetic distribution shift for the
+downstream ICP analysis.
+For a fixed environmente,X j is reported for all three patients, i.e. the question specifies values
+X (1)
+j , X(2)
+j , X(3)
+j . The value of the other variableX (3)
+k is specified only for Patient 3. The LLM is
+asked whether Patient 3 is more similar to Patient 1 or to Patient 2, takingX (3)
+k into account. The
+binary responseY (e)
+jk ∈ {1,2}is our observation for subsequent modeling. We collect responses per
+environment by varying(X (3)
+j , X(3)
+k )over a regular grid while holding(X (1)
+j , X(2)
+j )fixed. If the
+representation of the LLM entails a strong relation betweenX j andX k, presentation of a specific
+valueX (3)
+k in relation to the valuesX (1)
+j , X(2)
+j , X(3)
+j intuitively should more strongly influence the
+answer. We also consider a version of the questions, where the roles ofX j andX k are flipped. The
+symmetric estimator of the correlation in Section 2.3 integrates LLM answers from both versions.
+2.2 Decision surrogate model based on a rational LLM representation
+For inferring a correlation from triplet question answers, we assume an LLM representation that
+reflects rational behavior. Specifically, the valueX (3)
+j is assumed to be a noisy measurement of the
+true stateX ∗,(3)
+j of Patient 3, i.e.X (3)
+j =X ∗,(3)
+j +ϵ j, withE(ϵ j) = 0andVar(ϵ j) =σ 2
+j . The
+additionally specified valueX (3)
+k then provides a second route towardsX ∗,(3)
+j . We assume a linear
+relationX ∗
+j =a 0 +a 1Xk +U j|k, whereU j|k ⊥X k with varianceτ 2
+j|k. Lettings 2
+j = Var(Xj)and
+s2
+k = Var(Xk), the slope is directly related to the population correlationρ jk via
+a1 =ρ jk sj/sk.(1)
+Assuming the LLM representation entails a measurement error perspective, the LLM prediction
+would incorporate the projection
+X (3)
+j|k =a 0 +a 1X (3)
+k ,(2)
+i.e. the value ofX ∗,(3)
+j predicted fromX (3)
+k for minimizing measurement error. Its residual variance
+isτ 2
+j|k =s 2
+j(1−ρ 2
+jk), and the total error variance with respect toX ∗,(3)
+j isv 2
+j|k =σ 2
+j +τ 2
+j|k.
+The statistically optimal combination of the direct measurementX (3)
+j and the indirect measurement
+X (3)
+j|k for assessingX ∗,(3)
+j is the inverse-variance estimate
+ˆX ∗,(3)
+j =w 1X (3)
+j +w 2X (3)
+j|k , w 1 =
+v2
+j|k
+σ2
+j +v 2
+j|k
+, w 2 = σ2
+j
+σ2
+j +v 2
+j|k
+.(3)
+For providing an answer based on this estimate, the LLM ideally should compare ˆX ∗,(3)
+j to the
+reference midpointX j,ref = (X (1)
+j +X (2)
+j )/2, similar to a regression model
+3
+P
+
+Y (e)
+jk = 2|X (3)
+j , X(3)
+k
+
+=h
+
+βs ·( ˆX ∗,(3)
+j −X j,ref)
+
+(4)
+=h
+
+β(e)
+0,jk +β (e)
+1,jk X (3)
+j +β (e)
+2,jk X (3)
+k
+
+(5)
+withh(η) = 1/(1 + exp(−η)), and scaling parameterβ s. Expanding (5) using (2) and (3) shows
+thatβ (e)
+1,jk =β sw1 andβ (e)
+2,jk =β sw2a1 =β sw2ρjk
+sj
+sk
+, hence
+β(e)
+2,jk
+β(e)
+1,jk
+= w2
+w1
+sj
+sk
+ρjk ,(6)
+tyingρ jk to the fitted logistic coefficientsβ (e)
+1,jk andβ (e)
+2,jk through their slope ratio.
+2.3 Correlation estimation
+Symmetric estimator.The directional relation in (6) depends not only on the correlationρ jk,
+but also on nuisance terms tied to variable scaling and relative cue weighting. Using the alternative
+question version, which flips the role ofXj andX k, we obtain an estimate ofρkj. We can exploit two
+symmetry properties: first, the true correlation is symmetric,ρ jk =ρ kj, so both question versions
+target the same quantity; second, reversing the query exchanges the roles of the two variables and of
+the corresponding evidence channels. Under this paired-query symmetry, thes j/sk scaling cancels
+exactly and the remaining directional asymmetry is reduced in the product of the two slope ratios
+ˆβ(e)
+2,jk
+ˆβ(e)
+1,jk
+·
+ˆβ(e)
+2,kj
+ˆβ(e)
+1,kj
+≈
+
+ρ(e)
+jk
+2
+.(7)
+We recoverˆρ(e)
+jk from this product by taking the square root and assigning the sign indicated by the
+fitted slope ratios.
+Uncertainty.The surrogate model fit returns a covariance matrix for the fitted coefficients. We
+propagate this uncertainty through the slope ratios and the symmetric estimator using the delta
+method, yielding a standard errorˆσ(e)
+ρ,jk for each pair and environment. These standard errors enter
+the ICP stage.
+2.4 Invariant causal prediction
+Environment-specific correlations.Each environmentespecifies a vector of implied patient pop-
+ulation meansµ (e) and yields a set of elicited pairwise correlation estimates. Collecting these esti-
+mates across environments lets us ask which conditional relationships remain stable across subpop-
+ulation shifts, in the spirit of ICP’s observational heterogeneity framing [Peters et al., 2016].
+Invariance testing.For a targetX t and a set of candidate predictorsC ⊆ X \ {X t}, ICP [Pe-
+ters et al., 2016] tests subsetsS⊆ Cfor stability of the regression ofX t onSacross environ-
+ments. IfScontains the direct causes ofX t and the conditional mechanism is stable, these re-
+gression slopes should remain invariant. Spurious predictors, by contrast, can change their ap-
+parent explanatory power as the marginal means shift. For a given(t, S)pair, let ˆR(e)
+SS denote
+the estimated|S| × |S|predictor–predictor correlation matrix andˆr (e)
+S,t the vector of estimated
+predictor–target correlations in environmente. We then compute the environment-specific stan-
+dardised OLS slopes as ˆβ(e)
+t,S =
+  ˆR(e)
+SS
+−1
+ˆr(e)
+S,t. This is the standard OLS formula in the standardised
+(unit-variance, zero-mean) setting, applied directly to the elicited correlation estimates without any
+raw data. Uncertainty in ˆβ(e)
+t,S is propagated fromˆσ (e)
+ρ,jk via the delta method, yielding precision
+matrices ˆΛ(e)
+t,S = [Var( ˆβ(e)
+t,S)]−1. We test joint invariance across allmenvironments via the Wald
+statistic:
+Wt,S =
+mX
+e=1
+
+ˆβ(e)
+t,S − ˆβR
+⊤
+ˆΛ(e)
+t,S
+
+ˆβ(e)
+t,S − ˆβR
+
+,(8)
+4
+where ˆβR =
+P
+e ˆΛ(e)
+t,S
+−1P
+e ˆΛ(e)
+t,S ˆβ(e)
+t,S is the precision-weighted common slope under the null.
+UnderH 0,W t,S ∼χ 2
+(m−1)|S|; we acceptSas invariant for targettifp > α. After testing all
+subsetsS⊆ C, we retain the variables contained in the intersection of all accepted sets. A variable
+is retained only if it cannot be excluded fromanyinvariant set, making the estimate conservative by
+design. Repeating this for each target yields a conservative set of candidate parent links.
+3 Experiments
+Applications.We apply our method to two clinical domains: COPD (pneumology) and MS (neu-
+rology). The full variable list is given in Appendix B, grouped by measurement modality. All
+variables are expressed as z-scores (zero mean, unit variance), which puts them on a common scale
+despite different units and ranges. For lung function markers in COPD this matches common report-
+ing practice and corrects for age, sex, and height.
+Setup.We use OpenAI’s open-weight modelgpt-oss-120band, for the model-size comparison,
+gpt-oss-20b[OpenAI, 2025]. Both models are distributed under the Apache 2.0 license, subject
+to thegpt-ossusage policy. Prompts establish a domain-specific expert persona (pneumologist for
+COPD, neurologist for MS), instruct the model to consider missing values, note that measurements
+tend to be correlated, and require a binary choice between Patients 1 and 2. We specify environments
+in the prompt as a short textual description followed by the mean values of selected variables. Unless
+stated otherwise, no environment is provided.
+All triplet experiments use a common dense Cartesian query grid. The core range around the center
+is extended symmetrically by a small margin of0.4and sampled in increments of0.2, yielding an
+effective span of±1.4on each axis. Patients 1 and 2 are placed symmetrically around the reference,
+withX (1)
+j =X j,ref −0.5andX (2)
+j =X j,ref + 0.5. TheX (3)
+j axis is centered atX j,ref (default0
+unless explicitly varied), whileX (3)
+k is centered at0. Per grid point, we collect3binary triplet deci-
+sions and extend to at most6only if the initial responses are not unanimous. We then aggregate the
+patient counts and fit a binomial GLM instatsmodels[Seabold and Perktold, 2010] by iteratively
+reweighted least squares.
+ICP.For ICP, we use a bipartite design: prompted environments shift a small set of clinically
+motivated input variables, and the selected variables serve as candidate targets. This avoids testing
+links within the same modality and focuses the analysis on plausible predictor–outcome directions.
+Each environment is stated explicitly in the prompt through a short clinical description together with
+the mean z-score values of the shifted variables. Three environments are defined per application;
+their descriptions and mean z-score configurations are shown in Table 1.
+4 Results
+4.1 Recovered correlations
+The surrogate decision model fits well.Figure 1a shows the binary LLM response fractions over
+the queried Patient-3 value grid for four representative variable pairs. Full directed answer-grid
+matrices for all COPD and MS variable pairs are provided in Appendix C. The empirical response
+surfaces are smooth and monotone, and thep= 0.5decision boundaries estimated by logistic
+regression fit the decisions in all cases. The boundary slopes are consistent with the expected sign
+of the correlation: for positively correlated pairs (e.g. FEV1 and DLCO), the decision boundary
+has a negative slope—a high value ofX (3)
+k shifts the decision boundary leftward, as expected when
+the two variables co-vary positively. The decision surfaces confirm that the decision pattern of the
+LLM is well described by the surrogate model of Section 2.2, providing empirical support for the
+elicitation procedure.
+Clinical plausibility.Table 2 reports the estimated pairwise correlationsˆρ. The implied correla-
+tions are clinically plausible and show clearer structure in COPD than in MS. In COPD, the strongest
+associations lie within measurement modalities: the spirometry variables (FEV1, FEV1/FVC,
+5
+Table 1: ICP environments for both applications. Each environment is described by a clinical sce-
+nario and the z-score means of the input variables (standardised z-scores).
+DescriptionsNfL sGFAP T1BHV
+MS1 The patients are from a relapsing-remitting MS cohort with recent clinical
+relapses and evidence of active focal white matter inflammation. +1.5 0.0 -0.5
+MS2
+The patients are from a progressive MS cohort with diffuse
+neuroinflammation and predominant grey matter involvement, without recent
+clinical relapses.
++0.5 +1.5 -0.3
+MS3 The patients are from a long-standing MS cohort with high accumulated
+structural lesion burden and currently low inflammatory activity. -0.5 -0.5 +1.5
+Description pack-
+years PM2.5 BMI
+COPD1 The patients are from a COPD outpatient clinic with a long history of
+cigarette smoking and typical urban air quality exposure. +1.5 0.0 0.0
+COPD2 The patients are urban residents with no significant smoking history,
+chronically exposed to elevated ambient fine particulate matter (PM2.5). -0.5 +1.5 -0.2
+COPD3 The patients are from a rural area with clean air and no significant smoking
+history, recruited from an obesity clinic. -0.5 -0.8 +1.5
+FEV1
+DLCO
+FEV1/FVC
+RV/TLC
+-1 1
+-1
+1
+sGFAP
+sNfL
+R5-R20
+KCO
+(a) Triplet decision surfaces.
+COPD1
+COPD2
+COPD3
+(PM2.5, TLC)
+COPD1
+COPD2
+COPD3
+(BMI, TLC)
+0.5
+ 0.4
+ 0.3
+ 0.2
+ 0.1
+ 0.0 0.1 0.2 0.3 0.4 0.5
+Correlation estimate 
+MS1
+MS2
+MS3
+(sGFAP, 9HPT)
+Direct query
+Ours (95% CI) (b) Direct queries and triplet estimates.
+Figure 1: Main extracted associations. (a) Answer-grid response fractions with surrogate decision
+boundaries. Axes are labelled by the clinical variable names and correspond to the queried Patient-
+3 values of the two variables in each panel. Blue indicates Patient 1, red indicates Patient 2 was
+chosen. (b) Direct-query distributions and triplet 95 % CIs.
+FEF25-75) form a tight block (ˆρ≈0.68–0.73), as do DLCO and KCO (ˆρ= 0.68), whereas
+oscillometry variables (R5-R20, X5) are less aligned with the others, consistent with oscillome-
+try capturing airway mechanics complementary to conventional spirometry and diffusion testing
+[Peng et al., 2025]. The signs of key pairs also match established physiology: FEV1/FVC is neg-
+atively associated with RV/TLC (ˆρ=−0.48) and TLC (ˆρ=−0.55), in line with airflow ob-
+struction, air trapping, and hyperinflation in COPD [Alter et al., 2020], while DLCO and TLC are
+positively correlated (ˆρ= 0.75), consistent with the known relation between diffusion capacity
+and structural lung damage, though this relation can vary by phenotype [Devalla et al., 2024]. In
+MS, correlations are weaker overall. The largest values occur in a few established pairs, such as
+T25FW–T2-LV (ˆρ= 0.40), T25FW–9HPT (ˆρ= 0.33), and sNfL–sGFAP (ˆρ= 0.38), whereas most
+fluid-biomarker–to–clinical-scale pairs remain at or below 0.25. One plausible explanation is that
+cross-modality associations in MS are represented less strongly in the model, perhaps because the
+relevant literature is sparser or more heterogeneous than in COPD. SDMT is particularly weakly
+related to the other variables, including lesion volumes, which is consistent with its use as a measure
+6
+Table 2: Estimated pairwise correlations for COPD and MS. Lower-left triangle: COPD. Upper-
+right triangle: MS. Cell color encodes the estimated correlation (orange: negative, blue: positive).
+(a)sNfL sGFAP EDSS SDMT T25FW 9HPT
+T2-
+LV
+T1-
+BHV(b)
+FEV1 0.38 0.23 -0.04 0.32 0.25 0.34 0.18sNfL
+FEV1/FVC 0.69 0.16 -0.05 0.21 0.16 0.21 0.16sGFAP
+FEF25-75 0.68 0.73 -0.08 0.22 0.16 0.17 0.16EDSS
+R5-R20 -0.16 -0.20 -0.11 -0.13 -0.02 -0.16 -0.15SDMT
+X5 0.20 0.28 0.27 0.02 0.33 0.40 0.32T25FW
+DLCO 0.72 0.67 0.40 -0.04 0.17 0.19 0.129HPT
+KCO 0.41 0.51 0.31 0.01 0.15 0.68 0.33T2-LV
+TLC 0.55 -0.55 0.42 0.27 0.16 0.75 -0.09 T1-BHV
+RV/TLC -0.21 -0.48 -0.24 0.29 -0.02 -0.16 -0.15 0.43
+FEV1
+FEV1/
+FVC
+FEF25-
+75
+R5-
+R20 X5 DLCO KCO TLC
+RV/
+TLC
+of cognitive processing speed and with the only moderate association reported between cognitive
+performance and white-matter lesion burden in MS [Morrow et al., 2025, Mollison et al., 2017].
+4.2 Invariant causal prediction
+Table 3 reports the ICPp-values for all non-empty subsets of{pack-years, PM2.5, BMI}as can-
+didate parents for each lung function target (COPD) and{sNfL, sGFAP, T1-black-hole-volume}
+as candidate parents of the four clinical performance scales (MS). Because ICP is conservative by
+design—a variable is accepted as a causal parent only if it cannot be excluded from any invariant
+set—the method frequently returns an empty parent set (denoted —), which should be interpreted
+as “no robust causal link detected” rather than evidence of no causal relationship.
+COPD.Three links survive the intersection: pack-years as a parent of DLCO; PM2.5 as a parent
+of TLC; and BMI as a parent of R5-R20. The pack-years→DLCO link is clinically plausible given
+the established association between smoking exposure, emphysema, and reduced diffusion capacity
+[Devalla et al., 2024]. The PM2.5→TLC link is more tentative, but it is directionally consistent
+with broader evidence linking particulate air pollution to reduced lung function and increased COPD
+risk [Wang et al., 2025]. The BMI→R5-R20 link is also plausible, as oscillometry studies report
+higher respiratory impedance in obesity [Holtz et al., 2023]. Notably, FEV1/FVC has no accepted
+parent under ICP despite its clear clinical relation to smoking exposure, illustrating the conservative
+nature of the procedure.
+MS.T1-black-hole-volume (T1-BHV) as a parent of EDSS, and sGFAP as a parent of 9HPT are
+identified as potential associations.
+The T1-BHV→EDSS link is consistent with meta-analytic evidence that MRI lesion burden, in-
+cluding T1 lesion volume, is associated with disability in MS [Mirmosayyeb et al., 2024]. The sG-
+FAP→9HPT link remains exploratory, although higher sGFAP has been associated with relapse-
+independent disability accrual using a composite outcome that includes 9HPT [Rosenstein et al.,
+2024].
+4.3 Validation and sensitivity analyses
+Comparison with direct queries.Figure 1b compares the distributions obtained by asking the
+LLM directly for Pearson correlations (blue kernel density estimates, KDE, based on 50 repetitions)
+with the estimates from our triplet method (orange 95 % CIs). Direct-query responses are much
+more dispersed, with standard deviations typically in the range0.1–0.3, whereas the triplet-based
+confidence intervals are narrower; forˆρ PM2.5,TLC, the direct-query distribution is even bimodal,
+with one positive and one negative peak. They are also less sensitive to prompted environments:
+the distributions overlap substantially across environments for most variable pairs, while the triplet
+7
+COPD MS
+pack-
+years PM2.5 BMI FEV1/
+FVC RV/TLC TLC DLCO R5-R20 sNfL sGFAP T1BHV EDSS SDMT T25FW 9HPT
+◦ ◦ •.000.989.004 .000.056◦ ◦ •.579 .631.000 .000
+◦ • ◦.002 .000.052.000 .002◦ • ◦.048.987.000.539
+• ◦ ◦.003.982.038.720.048• ◦ ◦.006.830.026 .000
+◦ • •.000 .010 .001 .000 .000◦ • •.183 .927.000 .001
+• ◦ •.000.983.004 .000 .003• ◦ •.052 .848.000 .000
+• • ◦.000 .002.061.000 .015• • ◦.001.965.000 .002
+• • •.000.077.006 .000 .001• • •.014.958.000 .000
+parents— — PM2.5 pack-
+years BMIparentsT1BHV — — sGFAP
+Table 3: ICP p-values for COPD and MS targets. Filled circles indicate included candidate parents;
+open circles indicate excluded ones.Boldentries are rejected atp <0.05.
+1.0
+ 0.5
+ 0.0 0.5 1.0
+Reference z-score (xref)
+1.00
+0.75
+0.50
+0.25
+0.00
+0.25
+0.50
+0.75
+1.00
+Estimated 
+(FEV1, DLCO)
+(FEV1/FVC, RV/TLC)
+(sGFAP, sNfL)
+(T2-LV, T25FW)
+(a) Sensitivity to reference choice.
+1.00
+ 0.75
+ 0.50
+ 0.25
+ 0.00 0.25 0.50 0.75 1.00
+ (gpt-oss-120b)
+1.00
+0.75
+0.50
+0.25
+0.00
+0.25
+0.50
+0.75
+1.00
+ (gpt-oss-20b)
+COPD
+MS (b) Model-size comparison.
+Figure 2: Robustness checks. (a) Sensitivity to the reference valueX j,ref for the queried first vari-
+able. (b) Model-size comparison of pairwiseˆρestimates.
+estimates vary more strongly, as required for ICP. Taken together, these patterns suggest that triplet-
+based correlation estimation is less noisy than direct queries, especially when it comes to discerning
+differences across environments.
+Reference choice.Figure 2a shows howˆρvaries as a function of the reference valueX j,ref for
+selected variable pairs. Estimates are stable in the central range (|X j,ref |≲1) and tend to shrink
+toward zero in the tails, as expected when the anchor and reference patients become more similar
+and implied differences are harder to distinguish. One exception is the FEV1–DLCO pair in COPD,
+which remains elevated even at positiveX j,ref ≈1.
+Model size.Figure 2b compares pairwiseˆρestimates from the large model (gpt-oss-120b, hor-
+izontal axis) and the smaller model (gpt-oss-20b, vertical axis) across both applications. Most
+points lie close to the diagonal, indicating that both models recover a similar relative correlation
+structure across variable pairs. Thegpt-oss-20bestimates are, however, slightly smaller in ab-
+solute magnitude, suggesting that the smaller model has internalized the correlation structure less
+strongly even though the overall association pattern remains similar.
+8
+5 Related Work
+LLMs as sources of causal knowledge.Some authors queried models directly about causal re-
+lations and compared the answers with known graphs or benchmark tasks [Long et al., 2022, Jin
+et al., 2024, 2023, Zhou et al., 2024, Ze ˇcevi´c et al., 2023]. Others used LLM judgments as priors,
+constraints, or refinements for statistical causal discovery, rather than as complete discovery proce-
+dures [Long et al., 2023, Ban et al., 2023, 2025, Darvariu et al., 2024, Takayama et al., 2025]. Wan
+et al. [2025] survey this literature and distinguish direct inference, prior-knowledge integration, and
+post-hoc refinement. Most of this work elicits knowledge through explicit statements about edges,
+directions, or causal relevance. We instead recover dependence structure via comparison questions
+that do not rely on the quality of quantitative statements from LLMs and apply invariant causal
+prediction only as a second step [Peters et al., 2016].
+Knowledge probing and behavioral elicitation.The LAMA benchmark tested whether a model
+can recover knowledge-base triples from cloze queries [Petroni et al., 2019], and later surveys or-
+ganized a broad set of related probing methods and datasets [Youssef et al., 2023]. Follow-up work
+showed that the answer depends strongly on the prompt used to elicit the fact [Shin et al., 2020].
+Biomedical variants extend this setting to clinical and scientific relations, where multi-token entities,
+long-tailed vocabularies, and many-to-many relations make probing harder [Sung et al., 2021, Meng
+et al., 2022b, Yao et al., 2023]. These studies mostly targeted discrete facts such as entity–relation
+triples. Closer to our setting, Requeima et al. [2024] elicited numerical predictive distributions from
+LLMs conditioned on natural-language descriptions and numerical context. Instead of asking the
+model directly, we infer continuous associations using triplet-style comparisons, which have been
+used to recover similarity structure from qualitative judgments [Vankadara et al., 2023] and to test
+whether clinical embeddings agree with expert similarity judgments [Kabus et al., 2026].
+Probing and mechanistic interpretability.Probing classifiers can reveal whether representations
+contain linguistic, factual, spatial, temporal, or truth-related information [Belinkov, 2022, Gurnee
+and Tegmark, 2024, Marks and Tegmark, 2024, Mallen et al., 2024]. However, encoded information
+need not be used by the model in the behavior of interest. This distinction has motivated stronger
+causal tests, including amnesic probing, mediation analysis, activation patching, and model edit-
+ing [Elazar et al., 2021, Vig et al., 2020, Meng et al., 2022a, Conmy et al., 2023, Lindsey et al.,
+2025]. These methods can provide mechanistic evidence, but they require access to internal activa-
+tions and often assume that the relevant computation can be localized. We instead study the model
+behaviorally, using controlled prompts and observed choices rather than internal activations.
+6 Conclusion
+We introduced a behavioral framework for extracting association structure from LLMs using struc-
+tured triplet comparisons. The method turns binary similarity judgments into pairwise correlation
+estimates without requiring access to model internals, uses prompted subpopulation shifts to com-
+pare these estimates across environments and applies ICP as a conservative filter for candidate parent
+links. In COPD and MS, the recovered correlations were stable and clinically interpretable, with a
+stronger and more coherent signal in COPD than in MS. Compared with direct correlation queries,
+the triplet-based estimates were less dispersed and more sensitive to prompted environment shifts,
+which is important for downstream invariance testing. Additional robustness checks showed stable
+estimates over central reference choices and broadly consistent association structure across model
+sizes. These results suggest that structured comparison queries can expose meaningful association
+structure represented in LLMs.
+Several limitations qualify this interpretation. Most notably, the method recovers model-implied
+rather than empirical clinical associations. Moreover, although the surrogate model fits the observed
+triplet decisions well, the translation from fitted slopes to correlation estimates still depends on the
+relational assumptions underlying the estimator and may not capture non-linear internal structure.
+Finally, the empirical study is limited to two clinical domains, a modest variable set, and a small set
+of models. Within these limits, the proposed framework provides an exploratory tool for probing
+association structure in LLMs.
+9
+Acknowledgments and Disclosure of Funding
+Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-
+ID 499552394 – SFB 1597.
+References
+Peter Alter, Jan Orszag, Christoph Kellerer, Kathrin Kahnert, Tobias Speicher, Henrik Watz, Robert
+Bals, Tobias Welte, Claus V ogelmeier, and Rudolf A. J ¨orres. Prediction of air trapping or pul-
+monary hyperinflation by forced spirometry in COPD patients: Results from COSYCONET.
+ERJ Open Research, 6(3):00092–2020, 2020. doi: 10.1183/23120541.00092-2020. URL
+https://doi.org/10.1183/23120541.00092-2020.
+Taiyu Ban, Lyuzhou Chen, Derui Lyu, Xiangyu Wang, and Huanhuan Chen. Causal structure learn-
+ing supervised by large language model, 2023. URLhttps://arxiv.org/abs/2311.11689.
+arXiv preprint arXiv:2311.11689.
+Taiyu Ban, Lyuzhou Chen, Derui Lyu, Xiangyu Wang, Qinrui Zhu, Qiang Tu, and Huanhuan Chen.
+Integrating large language model for improved causal discovery.IEEE Transactions on Artificial
+Intelligence, pages 1–13, 2025. doi: 10.1109/TAI.2025.3560927.
+Yonatan Belinkov. Probing classifiers: promises, shortcomings, and advances.Computational Lin-
+guistics, 48(1):207–219, 2022. doi: 10.1162/coli a 00422.
+Peter G. Brodeur, Thomas A. Buckley, Zahir Kanjee, Ethan Goh, Evelyn Bin Ling, Priyank Jain,
+Stephanie Cabral, Raja-Elie Abdulnour, Adrian D. Haimovich, Jason A. Freed, Andrew Olson,
+Daniel J. Morgan, Jason Hom, Robert Gallo, Liam G. McCoy, Haadi Mombini, Christopher Lu-
+cas, Misha Fotoohi, Matthew Gwiazdon, Daniele Restifo, Daniel Restrepo, Eric Horvitz, Jonathan
+Chen, Arjun K. Manrai, and Adam Rodman. Performance of a large language model on the rea-
+soning tasks of a physician.Science, 392(6797):524–527, 2026. doi: 10.1126/science.adz4433.
+URLhttps://www.science.org/doi/10.1126/science.adz4433.
+Arthur Conmy, Augustine N. Mavor-Parker, Aengus Lynch, Stefan Heimersheim, and Adri `a
+Garriga-Alonso. Towards automated circuit discovery for mechanistic interpretability, October
+2023. URLhttps://arxiv.org/abs/2304.14997. arXiv preprint arXiv:2304.14997.
+Victor-Alexandru Darvariu, Stephen Hailes, and Mirco Musolesi. Large language models are ef-
+fective priors for causal graph discovery, 2024. URLhttps://arxiv.org/abs/2405.13551.
+arXiv preprint arXiv:2405.13551.
+Lokesh Devalla, Bhalchandra Ghewade, Ulhas S. Jadhav, and Srinivasulareddy Annareddy. Resolv-
+ing the complexity: A comprehensive review on carbon monoxide diffusion capacity in chronic
+obstructive pulmonary disease patients.Cureus, 16(2):e53492, 2024. doi: 10.7759/cureus.53492.
+URLhttps://doi.org/10.7759/cureus.53492.
+Yanai Elazar, Shauli Ravfogel, Alon Jacovi, and Yoav Goldberg. Amnesic probing: behavioral
+explanation with amnesic counterfactuals.Transactions of the Association for Computational
+Linguistics, 9:160–175, 2021. doi: 10.1162/tacl a 00359.
+Wes Gurnee and Max Tegmark. Language models represent space and time.
+InThe Twelfth International Conference on Learning Representations, 2024.
+URLhttps://proceedings.iclr.cc/paper_files/paper/2024/hash/
+0a6059857ae5c82ea9726ee9282a7145-Abstract-Conference.html.
+Mayara Holtz, Laura Perossi, Juliana Perossi, Daniele Oliveira dos Santos, Hugo Celso Dutra
+de Souza, and Ada Clarice Gastaldi. Respiratory system impedance in different decubitus evalu-
+ated by impulse oscillometry in individuals with obesity.PLOS ONE, 18(3):e0281780, 2023. doi:
+10.1371/journal.pone.0281780. URLhttps://doi.org/10.1371/journal.pone.0281780.
+Ziwei Ji, Nayeon Lee, Rita Frieske, Tiezheng Yu, Dan Su, Yan Xu, Etsuko Ishii, Yejin Bang, Delong
+Chen, Wenliang Dai, Ho Shu Chan, Andrea Madotto, and Pascale Fung. Survey of hallucination
+in natural language generation.ACM Computing Surveys, 55(12):1–38, December 2023. ISSN
+0360-0300, 1557-7341. doi: 10.1145/3571730.
+10
+Zhijing Jin, Yuen Chen, Felix Leeb, Luigi Gresele, Ojasv Kamal, Zhiheng Lyu, Kevin Blin, Fer-
+nando Gonzalez Adauto, Max Kleiman-Weiner, Mrinmaya Sachan, and Bernhard Sch ¨olkopf.
+CLadder: assessing causal reasoning in language models. InAdvances in Neural Information Pro-
+cessing Systems, volume 36, 2023. URLhttps://proceedings.neurips.cc/paper_files/
+paper/2023/hash/631bb9434d718ea309af82566347d607-Abstract-Conference.html.
+Zhijing Jin, Jiarui Liu, Zhiheng Lyu, Spencer Poff, Mrinmaya Sachan, Rada Mihalcea, Mona
+Diab, and Bernhard Sch ¨olkopf. Can large language models infer causation from correla-
+tion? InThe Twelfth International Conference on Learning Representations, 2024. URL
+https://openreview.net/forum?id=vqIH0ObdqL.
+Fabian Kabus, Julia Hindel, Jelena Bratuli ´c, Meropi Karakioulaki, Ayush Gupta, Cristina Has,
+Thomas Brox, Abhinav Valada, and Harald Binder. Assessing multimodal chronic wound embed-
+dings with expert triplet agreement, April 2026. URLhttps://arxiv.org/abs/2603.29376.
+arXiv preprint arXiv:2603.29376.
+Jack Lindsey, Wes Gurnee, Emmanuel Ameisen, Brian Chen, Adam Pearce, Nicholas L. Turner,
+Craig Citro, David Abrahams, Shan Carter, Basil Hosmer, Jonathan Marcus, Michael Sklar, Adly
+Templeton, Trenton Bricken, Callum McDougall, Hoagy Cunningham, Thomas Henighan, Adam
+Jermyn, Andy Jones, Andrew Persic, Zhenyi Qi, T. Ben Thompson, Sam Zimmerman, Kelley
+Rivoire, Thomas Conerly, Chris Olah, and Joshua Batson. On the biology of a large language
+model.Transformer Circuits Thread, 2025.
+Stephanie Long, Tibor Schuster, and Alexandre Pich ´e. Can large language models build causal
+graphs? InWorkshop on Causal Machine Learning for Real-World Impact at NeurIPS 2022,
+2022. URLhttps://neurips.cc/virtual/2022/61740.
+Stephanie Long, Alexandre Pich ´e, Valentina Zantedeschi, Tibor Schuster, and Alexandre Drouin.
+Causal discovery with language models as imperfect experts. InICML 2023 Workshop on Struc-
+tured Probabilistic Inference & Generative Modeling, 2023. URLhttps://icml.cc/virtual/
+2023/28078.
+Alex Mallen, Madeline Brumley, Julia Kharchenko, and Nora Belrose. Eliciting latent knowledge
+from “quirky” language models. InThe First Conference on Language Modeling, 2024. URL
+https://openreview.net/forum?id=nGCMLATBit.
+Samuel Marks and Max Tegmark. The geometry of truth: emergent linear structure in large language
+model representations of true/false datasets. InThe First Conference on Language Modeling,
+2024. URLhttps://openreview.net/forum?id=aajyHYjjsk.
+Kevin Meng, David Bau, Alex Andonian, and Yonatan Belinkov. Locating and editing fac-
+tual associations in GPT. InAdvances in Neural Information Processing Systems, vol-
+ume 35, 2022a. URLhttps://proceedings.neurips.cc/paper_files/paper/2022/
+hash/6f1d43d5a82a37e89b0665b33bf3a182-Abstract-Conference.html.
+Zaiqiao Meng, Fangyu Liu, Ehsan Shareghi, Yixuan Su, Charlotte Collins, and Nigel Collier.
+Rewire-then-probe: a contrastive recipe for probing biomedical knowledge of pre-trained lan-
+guage models. InProceedings of the 60th Annual Meeting of the Association for Computational
+Linguistics (Volume 1: Long Papers), pages 4798–4810. Association for Computational Linguis-
+tics, May 2022b. doi: 10.18653/v1/2022.acl-long.329.
+Omid Mirmosayyeb, Mohammad Yazdan Panah, Yousef Mokary, Mohammad Mohammadi, El-
+ham Moases Ghaffary, Vahid Shaygannejad, Bianca Weinstock-Guttman, Robert Zivadinov, and
+Dejan Jakimovski. Neuroimaging markers and disability scales in multiple sclerosis: A system-
+atic review and meta-analysis.PLOS ONE, 19(12):e0312421, 2024. doi: 10.1371/journal.pone.
+0312421. URLhttps://doi.org/10.1371/journal.pone.0312421.
+Daisy Mollison, Robin Sellar, Mark Bastin, Denis Mollison, Siddharthan Chandran, Joanna Ward-
+law, and Peter Connick. The clinico-radiological paradox of cognitive function and MRI bur-
+den of white matter lesions in people with multiple sclerosis: A systematic review and meta-
+analysis.PLOS ONE, 12(5):e0177727, 2017. doi: 10.1371/journal.pone.0177727. URL
+https://doi.org/10.1371/journal.pone.0177727.
+11
+Sarah A. Morrow, Marina Everest, David Beniameen, and Heather Rosehart. The influence of
+manual dexterity on processing speed assessment in multiple sclerosis: A comparison of the PST
+and oral SDMT.Multiple Sclerosis and Related Disorders, 104:106799, 2025. doi: 10.1016/j.
+msard.2025.106799. URLhttps://doi.org/10.1016/j.msard.2025.106799.
+OpenAI. Introducing gpt-oss.https://openai.com/index/introducing-gpt-oss/, August
+2025. OpenAI product announcement and model overview.
+Junjie Peng, Xiaohua Li, Hong Zhou, Tao Wang, Xiaoou Li, and Lei Chen. Clinical value of impulse
+oscillometry in chronic obstructive pulmonary disease: A systematic review and meta-analysis.
+Respiration, 104(2):100–109, 2025. doi: 10.1159/000541633. URLhttps://doi.org/10.
+1159/000541633.
+Jonas Peters, Peter B ¨uhlmann, and Nicolai Meinshausen. Causal inference by using invariant
+prediction: identification and confidence intervals.Journal of the Royal Statistical Society
+Series B: Statistical Methodology, 78(5):947–1012, November 2016. ISSN 1369-7412. doi:
+10.1111/rssb.12167.
+Fabio Petroni, Tim Rockt ¨aschel, Sebastian Riedel, Patrick Lewis, Anton Bakhtin, Yuxiang Wu,
+and Alexander Miller. Language models as knowledge bases? InProceedings of the 2019
+Conference on Empirical Methods in Natural Language Processing and the 9th International
+Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 2463–2473, Hong
+Kong, China, 2019. Association for Computational Linguistics. doi: 10.18653/v1/D19-1250.
+Pouya Pezeshkpour and Estevam Hruschka. Large language models sensitivity to the order of op-
+tions in multiple-choice questions. InFindings of the Association for Computational Linguis-
+tics: NAACL 2024, pages 2006–2017. Association for Computational Linguistics, 2024. doi:
+10.18653/v1/2024.findings-naacl.130.
+James Requeima, John Bronskill, Dami Choi, Richard E. Turner, and David Du-
+venaud. LLM processes: numerical predictive distributions conditioned on natu-
+ral language. InAdvances in Neural Information Processing Systems, volume 37,
+2024. URLhttps://proceedings.neurips.cc/paper_files/paper/2024/hash/
+c5ec22711f3a4a2f4a0a8ffd92167190-Abstract-Conference.html.
+Igal Rosenstein, Anna Nordin, Hemin Sabir, Clas Malmestr¨om, Kaj Blennow, Markus Axelsson, and
+Lenka Novakova. Association of serum glial fibrillary acidic protein with progression independent
+of relapse activity in multiple sclerosis.Journal of Neurology, 271:4412–4422, 2024. doi: 10.
+1007/s00415-024-12389-y. URLhttps://doi.org/10.1007/s00415-024-12389-y.
+Skipper Seabold and Josef Perktold. Statsmodels: Econometric and statistical modeling with
+python. InProceedings of the 9th Python in Science Conference, pages 92–96, 2010.
+doi: 10.25080/Majora-92bf1922-011. URLhttps://proceedings.scipy.org/articles/
+Majora-92bf1922-011.
+Mrinank Sharma, Meg Tong, Tomasz Korbak, David Duvenaud, Amanda Askell, Samuel R.
+Bowman, Newton Cheng, Esin Durmus, Zac Hatfield-Dodds, Scott R. Johnston, Shauna
+Kravec, Timothy Maxwell, Sam McCandlish, Kamal Ndousse, Oliver Rausch, Nicholas
+Schiefer, Da Yan, Miranda Zhang, and Ethan Perez. Towards understanding sycophancy
+in language models. InThe Twelfth International Conference on Learning Represen-
+tations, 2024. URLhttps://proceedings.iclr.cc/paper_files/paper/2024/hash/
+0105f7972202c1d4fb817da9f21a9663-Abstract-Conference.html.
+Taylor Shin, Yasaman Razeghi, Robert L. Logan Iv, Eric Wallace, and Sameer Singh. AutoPrompt:
+eliciting knowledge from language models with automatically generated prompts. InProceedings
+of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP), pages
+4222–4235, Online, 2020. Association for Computational Linguistics. doi: 10.18653/v1/2020.
+emnlp-main.346.
+Mujeen Sung, Jinhyuk Lee, Sean Yi, Minji Jeon, Sungdong Kim, and Jaewoo Kang. Can language
+models be biomedical knowledge bases? InProceedings of the 2021 Conference on Empirical
+Methods in Natural Language Processing, pages 4723–4734, Online and Punta Cana, Dominican
+Republic, 2021. Association for Computational Linguistics. doi: 10.18653/v1/2021.emnlp-main.
+388.
+12
+Patrick Suppes, David M. Krantz, R. Duncan Luce, and Amos Tversky.Foundations of measure-
+ment: Geometrical, threshold, and probabilistic representations. Academic Press, 1989. ISBN
+978-0-12-425402-2. doi: 10.1016/C2009-0-21665-5. URLhttps://www.sciencedirect.
+com/book/monograph/9780124254022/foundations-of-measurement.
+Masayuki Takayama, Tadahisa Okuda, Thong Pham, Tatsuyoshi Ikenoue, Shingo Fukuma, Shohei
+Shimizu, and Akiyoshi Sannai. Integrating large language models in causal discovery: a sta-
+tistical causal approach.Transactions on Machine Learning Research, 2025. URLhttps:
+//openreview.net/forum?id=Reh1S8rxfh.
+Leena Chennuru Vankadara, Michael Lohaus, Siavash Haghiri, Faiz Ul Wahab, and Ulrike von
+Luxburg. Insights into ordinal embedding algorithms: a systematic evaluation.Journal of Ma-
+chine Learning Research, 24(191):1–83, 2023.
+Jesse Vig, Sebastian Gehrmann, Yonatan Belinkov, Sharon Qian, Daniel Nevo, Yaron Singer, and
+Stuart Shieber. Investigating gender bias in language models using causal mediation analysis.
+InAdvances in Neural Information Processing Systems, volume 33, pages 12388–12401. Curran
+Associates, Inc., 2020.
+Guangya Wan, Yunsheng Lu, Yuqi Wu, Mengxuan Hu, and Sheng Li. Large language models for
+causal discovery: current landscape and future directions. InProceedings of the Thirty-Fourth
+International Joint Conference on Artificial Intelligence, pages 10687–10695, 2025. doi: 10.
+24963/ijcai.2025/1186.
+Tinggui Wang, Mengdan Liang, Xiaoying Ye, Xiaoxiao Huang, Hanbing Chen, Xiongkun He,
+Mengying Xie, Xiaowei Xie, Xiannuan Jiang, Zhehui Chen, Baosong Xie, Yiming Zeng, and
+Xiaoxu Xie. Ambient air pollution exposure, mediating biomarkers and risk of COPD: A
+cohort study and meta-analysis.European Respiratory Review, 34(177):250055, 2025. doi:
+10.1183/16000617.0055-2025. URLhttps://doi.org/10.1183/16000617.0055-2025.
+Zonghai Yao, Yi Cao, Zhichao Yang, and Hong Yu. Context variance evaluation of pretrained lan-
+guage models for prompt-based biomedical knowledge probing.AMIA Joint Summits on Trans-
+lational Science Proceedings, pages 592–601, 2023. URLhttps://pubmed.ncbi.nlm.nih.
+gov/37350903/.
+Paul Youssef, Osman Alperen Koras ¸, Meijie Li, J¨org Schl¨otterer, and Christin Seifert. Give me the
+facts! A survey on factual knowledge probing in pre-trained language models. InFindings of the
+Association for Computational Linguistics: EMNLP 2023, pages 15588–15605. Association for
+Computational Linguistics, 2023. doi: 10.18653/v1/2023.findings-emnlp.1043.
+Matej Zeˇcevi´c, Moritz Willig, Devendra Singh Dhami, and Kristian Kersting. Causal parrots: large
+language models may talk causality but are not causal.Transactions on Machine Learning Re-
+search, 2023. URLhttps://openreview.net/forum?id=tv46tCzs83.
+Yu Zhou, Xingyu Wu, Beicheng Huang, Jibin Wu, Liang Feng, and Kay Chen Tan. CausalBench: a
+comprehensive benchmark for causal learning capability of LLMs, 2024. URLhttps://arxiv.
+org/abs/2404.06349. arXiv preprint arXiv:2404.06349.
+13
+A Prompt Templates
+This appendix shows the abstract prompt templates used in the experiments. We replace
+implementation-specific fields by placeholders such as[expert persona],[environment
+description], and the variable namesX j andX k, while keeping the substantive wording of the
+prompts unchanged. Here[environment description]stands for the full environment specifi-
+cation: the textual cohort description together with the mean values of the shifted variables, as listed
+in Table 1. All numeric values are rendered with one decimal place.
+Triplet comparison prompt.
+[expert persona]
+All values are population-normalized z-scores: 0.0 = population
+mean, 1.0 = one population standard deviation.
+[environment description]
+Patient 1:X j = [value],X k = missing
+Patient 2:X j = [value],X k = missing
+Patient 3:X j = [value],X k = [value]
+Infer the missingX k values for Patients 1 and 2 from their observed
+Xj values.
+Be mindful that clinical variables and biomarkers tend to be highly
+correlated.
+Then choose which patient (1 or 2) is more similar to Patient 3.
+Respond with exactly one line containing only:
+1
+or
+2
+Direct correlation query prompt.
+[expert persona]
+What is the Pearson correlation coefficient betweenX j andX k in
+the relevant patient population?
+[environment description]
+Reason through this carefully. Consider the physiological or
+clinical relationship between the two variables, draw on specific
+studies, cohorts, or reference ranges you are aware of, and discuss
+any factors that might strengthen or attenuate the association.
+Weigh conflicting evidence if it exists.
+On the very last line of your response, write exactly (and nothing
+else):
+correlation: X.XX
+Persona texts.
+Table 4: Prompt persona texts.
+Domain Persona text
+COPD You are a pneumologist specialized in obstructive and restrictive lung disease.
+MS You are a neurologist specialized in multiple sclerosis and demyelinating disease.
+14
+B Variable Reference
+Table 5: Variables and descriptions for COPD and MS.
+ModalityVariable Description
+COPD
+Spirometry
+FEV1 Forced expiratory volume in 1 s.
+FEV1/FVC Ratio of FEV1 to FVC; obstructive ratio.
+FEF25-75 Mean forced expiratory flow, 25%–75% of FVC.
+Oscillometry R5-R20 Frequency-dependent resistance (5 Hz−20 Hz).
+X5 Respiratory system reactance at 5 Hz.
+Diffusion DLCO Diffusing capacity for carbon monoxide.
+KCO Transfer coefficient (DLCO / alveolar volume).
+Plethysmography TLC Total lung capacity.
+RV/TLC Residual volume fraction of total lung capacity.
+MS
+Fluid Biomarkers sNfL Neurofilament light chain; neuroaxonal damage.
+sGFAP Glial fibrillary acidic protein; astrocyte damage.
+Clinical Scales
+EDSS Expanded Disability Status Scale.
+SDMT Symbol Digit Modalities Test; processing speed.
+T25FW Timed 25-Foot Walk; ambulation.
+9HPT 9-Hole Peg Test; manual dexterity.
+MRI Lesions T2-lesion-volume T2-hyperintense white matter lesion volume.
+T1-black-hole-volume T1-hypointense lesion volume; axonal loss.
+15
+C Full Answer Grids
+Figures 3 and 4 show the full directed answer-grid matrices for all COPD and MS variable pairs.
+FEV1
+FEV1
+FEV1/FVC
+ FEF25-75
+ R5-R20
+ X5
+ DLCO
+ KCO
+ TLC
+ RV/TLC
+FEV1/FVC
+FEF25-75
+R5-R20
+X5
+DLCO
+KCO
+TLC
+RV/TLC
+Figure 3: Full COPD answer-grid matrix.
+16
+sNfL
+sNfL
+sGFAP
+ EDSS
+ SDMT
+ T25FW
+ 9HPT
+ T2-LV
+ T1-BHV
+sGFAP
+EDSS
+SDMT
+T25FW
+9HPT
+T2-LV
+T1-BHV
+Figure 4: Full MS answer-grid matrix.
+17
+D Compute Resources
+Table 6 summarizes the number of LLM requests required by the main analysis blocks underlying
+the reported results. The experiments were run on our local cluster. For the Slurm jobs underlying
+the reported artifacts, we reserved 8 CPU cores, 48 GB host memory, and 1 GPU. The model server
+ran via vLLM on a single NVIDIA H100 GPU with 95,830 MiB VRAM; the compute node class
+uses AMD EPYC 9454 processors. After warm-up, average throughput was approximately 9 re-
+quests per second. During method development, some analyses were rerun multiple times, so total
+development-time request counts were higher than the final counts reported here, although caching
+reduced repeated inference costs.
+Table 6: LLM request counts for the main analysis blocks.
+Analysis block Supported artifacts Requests
+Pairwise correlation (gpt-oss-120b) Table 2 and Figure 1a 52,545
+Pairwise correlation (gpt-oss-20b) Figure 2b 53,400
+ICP analysis Table 3 and Figure 1b 78,960
+Reference-value sweeps Figure 2a 23,871
+18

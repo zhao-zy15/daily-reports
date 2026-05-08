@@ -1,0 +1,88 @@
+  <h2 class="section-title llm">🧠 LLM · 大语言模型（4 篇）</h2>
+
+  <div class="paper" id="p1">
+    <h3 class="paper-title">1. Rethinking RL for LLM Reasoning: It's Sparse Policy Selection, Not Capability Learning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06241</span>
+      <span>🏛 University of Southern California, DEVCOM ARL</span>
+      <br>
+      <span class="tag tag-llm">LLM</span><span class="tag tag-llm">RL Mechanism</span><span class="tag tag-llm">Post-Training</span>
+      <span><a href="https://arxiv.org/abs/2605.06241" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>RLVR（带可验证奖励的强化学习）已成为 LLM 推理后训练的事实标准（DeepSeek-R1、OpenAI o1、Qwen3 等都依赖它），但社区一个根深蒂固的假设——"RL 像 AlphaGo 那样发现新策略"——正被越来越多证据动摇：Yue et al.(2025) 发现 base 模型在 pass@k 大 k 时反超 RL 模型；Davis & Recht(2025) 证明二元奖励 RL 等价于在正确概率单调变换上做 SGA；Wang et al.(2025) 观察到 RL 改进集中在高熵"分叉 token"上。本文要回答的关键问题是：<strong>如果 RL 只是"在已知路径中选对分支"，那么 RL 优化循环本身是否还有必要？</strong></p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① Token 级机制刻画：RL 编辑稀疏、保守、定位于决策点</strong>
+        <p>对 base 模型 \(\pi_\text{base}\) 与 RL 教师 \(\pi_\text{teacher}\)，在每个 token 位置计算分类标签：</p>
+        $$\text{UNSHIFTED}: \arg\max\pi_\text{base} = \arg\max\pi_\text{teacher}$$
+        $$\text{RERANKED}: \arg\max\pi_\text{teacher}\neq\arg\max\pi_\text{base},\ \arg\max\pi_\text{teacher}\in\text{Top-5}(\pi_\text{base})$$
+        $$\text{SHIFTED}: \arg\max\pi_\text{teacher}\notin\text{Top-5}(\pi_\text{base})$$
+        <p>实测在 4 对 base→RL（Qwen2.5-1.5B/7B、Qwen3-4B 等）上：仅 1.0–4.1% 位置被 RERANKED，<strong>SHIFTED 比例为 0%</strong>，平均提升的 token 在 base 模型中已是 rank 2.14–2.39，且这些位置的 base 熵比未编辑位置高 5–12 倍。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 因果验证：Oracle 干预精确复现 RL 增益</strong>
+        <p>设计 oracle 干预实验：在 base 解码时只把 RERANKED 位置的 token 替换为 teacher 的 top-1，其余照旧；对照组用 base top-20 内的随机 token 替换。结果 oracle 干预精确复刻 RL 模型的 pass@1（仅触动 1–4% token），随机替换则常退化到比 base 还差。这从因果上证明 RL 的全部增益就是这一小撮决策点上的精准选择。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ 熵自定位 + KL-LoRA 低维性</strong>
+        <p>关键发现：定位决策点根本不需要 teacher，base 模型自己的 token 熵 \(H_t = -\sum_v \pi_\theta(v\mid q,o_{<t})\log \pi_\theta(v\mid q,o_{<t})\) 就足够（用阈值 \(\tau=1.2\) 命中决策点）。进一步，对 base 模型挂一个 rank-32 LoRA 适配器，最小化 KL 蒸馏损失：</p>
+        $$\mathcal{L}_\text{distill} = \sum_t \mathrm{KL}\bigl(\pi_\text{teacher}(\cdot\mid x_{<t})\,\|\,\pi_{\text{base}+\Delta\theta}(\cdot\mid x_{<t})\bigr)$$
+        <p>仅在 100 道随机问题上训练，就能在 MATH-500、GSM8K 上完全复刻 RL 教师，<strong>仅修改 0.27%–0.49% 模型参数</strong>。证明 RL 的"修正"在参数空间也是低维的。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ REASONMAXXER：极简无 RL 训练流程</strong>
+        <p>把上述洞察打包成方法：(a) 从 base 采样 K 个 rollout，仅保留 base pass-rate ∈ (0,1) 的 mixed-success 问题（utilizes "edge of competence"）；(b) 用 \(H_t > \tau\) 标记决策点集合 \(\mathcal{D}\)；(c) 计算群体归一化优势 \(A_i=(r_i-\bar r)/(\sigma_r+\epsilon)\)，定义双段损失：</p>
+        $$\mathcal{L}_\text{dec} = -\sum_{t\in\mathcal{D}} A_i\cdot \log p_\theta(x_t\mid x_{<t}),\quad \mathcal{L}_\text{anchor} = \sum_{t\notin\mathcal{D}} \mathrm{KL}\bigl(p_\text{base}(\cdot\mid x_{<t})\,\|\,p_\theta(\cdot\mid x_{<t})\bigr)$$
+        <p>总损失 \(\mathcal{L} = \mathcal{L}_\text{dec} + \lambda\mathcal{L}_\text{anchor}\)。LoRA rank-32，仅训练适配器，单 GPU 几分钟即收敛。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>题目：</strong> "How many numbers from 1 to 30 are divisible by 2, 3, or 5?"
+        <ol>
+          <li><strong>base 模型解码：</strong> "Count multiples of 2,3,5: 15,10,6 ... add them ... 31 ... subtract overlaps ..."（在第 N 步 base 倾向 top-1 token "wait, we should not add 30 ... 21" — 计算正确但中间分叉处 entropy 极高）</li>
+          <li><strong>RL 教师在分叉点选择 base top-2/3：</strong> 在 base entropy 7-12× 高于平均的位置，把 token 改成 base 已考虑过的 rank-2 候选"add back triple"，整条轨迹被引向正确答案 22。</li>
+          <li><strong>关键统计：</strong> 整篇推理共 ~500 token，只有 ~10 个位置（2%）被改写，但这 10 个改写点 100% 在 base 已有的 top-5 候选内，平均 rank 2.25，熵比平均高 8.27×。</li>
+          <li><strong>REASONMAXXER 复刻：</strong> 用 base 自己的熵自动找到这 10 个位置，用对比损失把概率质量从错误候选转移到正确候选，无需教师。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>6 个数学推理 benchmark 上对 8 个公开 RL checkpoint 的清洁对比（pass@1 平均，单位 USD 训练成本）：</p>
+      <table>
+        <thead><tr><th>方法</th><th>MATH-500</th><th>GSM8K</th><th>AIME24</th><th>AMC23</th><th>平均</th><th>训练成本</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen2.5-7B base</td><td>0.586</td><td>0.751</td><td>0.046</td><td>0.300</td><td>0.351</td><td>—</td></tr>
+          <tr><td>+ SimpleRL-Zoo (GRPO)</td><td>0.656</td><td>0.851</td><td>0.088</td><td>0.375</td><td>0.410</td><td>$600</td></tr>
+          <tr><td>+ Open-Reasoner-Zero (PPO)</td><td class="best">0.732</td><td class="best">0.924</td><td class="best">0.121</td><td>0.463</td><td class="best">0.485</td><td>$6,300</td></tr>
+          <tr><td><strong>+ REASONMAXXER (Ours)</strong></td><td>0.706</td><td>0.918</td><td>0.113</td><td class="best">0.475</td><td>0.472</td><td class="best">$5</td></tr>
+          <tr><td>Qwen2.5-32B + Open-Reasoner-Zero</td><td>0.646</td><td class="best">0.945</td><td>0.067</td><td>0.350</td><td>0.436</td><td>$103,000</td></tr>
+          <tr><td><strong>Qwen2.5-32B + REASONMAXXER</strong></td><td>0.636</td><td>0.865</td><td class="best">0.117</td><td class="best">0.438</td><td class="best">0.440</td><td class="best">$25</td></tr>
+          <tr><td>Qwen3-4B + General-Reasoner (GRPO+verifier)</td><td class="best">0.746</td><td>0.916</td><td>0.021</td><td>0.050</td><td>0.406</td><td>$4,600</td></tr>
+          <tr><td><strong>Qwen3-4B + REASONMAXXER</strong></td><td>0.660</td><td class="best">0.919</td><td class="best">0.096</td><td class="best">0.472</td><td class="best">0.476</td><td class="best">$4</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">REASONMAXXER 在大多数对比中匹配或超越 RL 基线，<strong>训练成本降低 2-4 个数量级</strong>（$5 vs $6,300/$103,000）。仅用 50 道 mixed-success 问题、1000 条 rollout、几分钟单卡训练。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>熵阈值 \(\tau\) 鲁棒性：</strong> \(\tau\) 在 1.0-2.2 范围内 pass@1 都接近 RL 模型；最优 MATH-500 0.502 在 \(\tau=1.4\)（5.2% token 被门控），第二个峰在 \(\tau=1.8\)（2.6% token，与 RL 实测的 2.11% 干预率几乎吻合）。<strong>对比项的必要性：</strong> 仅用正样本（A>0）训练（等价于在正确轨迹上 SFT）只能把 Qwen2.5-1.5B 的 MATH-500 从 0.298 提升到 0.398（base→SFT），远不及完整 REASONMAXXER 的 0.502 — 负梯度抑制错误决策贡献了约一半增益，证明双向对比信号是关键。<strong>局限：</strong> base 模型本身能力上限决定了 ceiling（Mistral-7B-v0.1 base 仅 0.056，REASONMAXXER 提到 0.089，仍受限于 base），不能"凭空创造"全新推理能力，这与"RL 不能学新策略"的整体论点自洽。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇可能改写 LLM 后训练范式的论文。它提供了 RL-for-reasoning 的<strong>机制级因果解释</strong>：RL 的全部增益就是在 1-3% 高熵决策点上把 base 已有的 top-2/3 候选 promotion 为 top-1。这种"修正"在 token 空间稀疏、在参数空间低维（rank-32 LoRA 即可吸收）。社区对"重型 RL 流水线"的默认投资可能与问题真实复杂度严重不匹配。对在做 LLM 推理后训练的研究者：可以先用 REASONMAXXER 这种轻量基线探路，把 GPU 预算留给真正需要新能力（如 long-horizon agent、多轮工具使用）的场景。对评审博士论文这类需要严谨方法的工作：本文展示了"先做 token 级机制分析、再做因果干预、最后导出极简方法"的范式，是一种很有借鉴价值的研究路径。</p>
+    </div>
+  </div>
+</content>

@@ -1,0 +1,93 @@
+  <div class="paper" id="p6">
+    <h3 class="paper-title">6. Asymmetric On-Policy Distillation: Bridging Exploitation and Imitation at the Token Level (AOPD)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06387</span>
+      <span>🏛 HUST, Peking University, Meituan</span>
+      <br>
+      <span class="tag tag-rl">On-Policy Distillation</span><span class="tag tag-rl">Knowledge Distillation</span><span class="tag tag-rl">Math</span>
+      <span><a href="https://arxiv.org/abs/2605.06387" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>On-policy distillation (OPD)（由 Thinking Machines Lab 提出）让 student 在自己的轨迹上接受 teacher 的 token-level 反馈，性能优于 off-policy KD 和标准 RL。但本文识别出 OPD 的<strong>三个结构性缺陷</strong>：(1) 负优势区域更新方差大；(2) 大量位置 advantage = 0 导致梯度消失；(3) 当 student 先验中正确 token 概率极低时，OPD 抑制错误但无力"促进"正确选项，形成"探索黑洞"。本文提出 AOPD：在不同优势区域采用不同学习范式——正优势用 RL exploitation，零/负优势改用 imitation（teacher KL）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① OPD 的标准更新与三重缺陷分析</strong>
+        <p>OPD 的 token-level advantage：\(A_t = \log\dfrac{P_T(y_t\mid c_t)}{P_S(y_t\mid c_t)}\)，policy gradient \(\nabla_\theta\log P_S(y_t\mid c_t)\cdot A_t\)。<strong>缺陷分析：</strong> 当 \(P_T(y_t)\gg P_S(y_t)\)（teacher 强烈偏好该 token），advantage 大但 \(\log P_S\) 很负，更新幅度爆炸 → 高方差；当 \(P_T(y_t)\approx P_S(y_t)\)（advantage ≈ 0），梯度消失；当 student 的先验对 teacher 偏好的 \(v^*\) 几乎为 0，OPD 只能抑制采样到的错误 token 但无法"提升"未采样的正确 token——形成 exploration black hole。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② Teacher Support 上的 Forward KL 引导</strong>
+        <p>对每个位置 \(t\) 定义 teacher support 为 teacher 分布的 top-\(K\)：</p>
+        $$\mathcal{S}_t = \text{Top-}K\bigl(P_T(\cdot\mid c_t),\ K\bigr)$$
+        <p>在 \(\mathcal{S}_t\) 上计算 forward KL guidance loss：</p>
+        $$\mathcal{L}_t^\text{FKL} = \frac{1}{K}\sum_{v\in\mathcal{S}_t} P_T(v\mid c_t)\bigl[\log P_T(v\mid c_t) - \log P_S(v\mid c_t)\bigr]$$
+        <p>关键点：用 teacher 的 top-K 集合限定监督范围（避免在 teacher 都不感兴趣的 token 上浪费梯度）；用 forward KL（teacher 在前）让 student 直接对齐 teacher 的<strong>选择倾向</strong>而非全分布。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Asymmetric 总目标：正优势用 RL，零/负优势用 KL</strong>
+        $$\mathcal{L}_\text{AOPD} = \mathbb{E}\Bigl[\frac{1}{|y|}\sum_{t\in\mathcal{S}_{\leq 0}}\mathcal{L}_t^\text{FKL}\Bigr] + \mathcal{L}_\text{Pos}$$
+        <p>其中 \(\mathcal{S}_{\leq 0}\) 是 advantage ≤ 0 的 token 集合，\(\mathcal{L}_\text{Pos}\) 保持 OPD 在正优势位置的 advantage-weighted PG 不变。直觉：<strong>"对的就强化、不对的就改抄 teacher"</strong>。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 阈值参数 \(\tau\) 控制干预稀疏度</strong>
+        <p>默认在 \(A_t \leq 0\) 介入；论文进一步引入阈值 \(\tau\)：</p>
+        $$\mathcal{S}_\text{intervene} = \{t : A_t \leq \tau\}$$
+        <p>\(\tau = 0\) 是默认（约 30-40% token 被 KL 干预）；\(\tau = -0.2\) 仅在 teacher-student gap 显著负时介入（< 10% token）；\(\tau = 1.0\) 退化为 OPD。论文称 \(\tau = -0.2\) 即"AOPD-Zero"变体。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong> Qwen3-4B-Base student 在 AIME 数学题上自生成轨迹"... so n+2 must divide 39"
+        <ul>
+          <li><strong>OPD 在某 token 处：</strong> student 概率分布 P_S("39")=0.85，P_T("13")=0.6（teacher 认为该写"13 (=3×13×1)"展开），P_S("13")=0.001。advantage \(A=\log(0.6/0.001)\approx 6.4\) 极大，更新爆炸。</li>
+          <li><strong>OPD 后果：</strong> student 强行抑制"39"但因为"13"先验概率仅 0.001，下次仍倾向输出别的常见 token，陷入 exploration black hole。</li>
+          <li><strong>AOPD 在此处的行为：</strong> 该位置 A < 0（student 选错了），切换到 forward KL guidance：
+            <ul>
+              <li>取 teacher top-32：{"13", "39", "39 since", "1 13", ...}</li>
+              <li>对该 set 上 P_S 与 P_T 做 forward KL，"13"的概率被显著推高（不再依赖 student 自发探索）</li>
+            </ul>
+          </li>
+          <li><strong>结果：</strong> student 在 30 步内学会优先输出 teacher 偏好的展开形式，AIME24 Pass@1 从 OPD 的 57.08% → AOPD 的 61.04%（+4pt）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>蒸馏设置：Qwen3-32B → Qwen3-8B-Base, Qwen3-8B → Qwen3-4B-Base，DeepMath 训练，AIME/HMMT 评测：</p>
+      <table>
+        <thead><tr><th>Student</th><th>方法</th><th>AIME24 P@1</th><th>AIME25 P@1</th><th>HMMT25 P@1</th><th>平均 P@1</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="5">Qwen3-4B-Base (3K SFT warmup)</td><td>SFT</td><td>52.29</td><td>46.25</td><td>27.08</td><td>41.87</td></tr>
+          <tr><td>SeqKD</td><td>42.50</td><td>40.00</td><td>24.58</td><td>35.69</td></tr>
+          <tr><td>OPD</td><td>57.08</td><td>51.88</td><td class="best">32.92</td><td>47.29</td></tr>
+          <tr><td>GKD</td><td>58.13</td><td>50.42</td><td>29.79</td><td>46.11</td></tr>
+          <tr><td><strong>AOPD</strong></td><td class="best">61.04</td><td class="best">54.37</td><td>32.08</td><td class="best">49.16</td></tr>
+          <tr><td rowspan="3">Qwen3-8B-Base (1K SFT warmup, 弱初始化)</td><td>OPD</td><td>43.13</td><td>38.12</td><td>23.13</td><td>34.79</td></tr>
+          <tr><td>GKD</td><td>54.79</td><td>42.08</td><td>25.83</td><td>40.90</td></tr>
+          <tr><td><strong>AOPD</strong></td><td>53.75</td><td class="best">45.21</td><td class="best">30.42</td><td class="best">43.13</td></tr>
+          <tr><td rowspan="3">Qwen3-8B-Base (3K SFT warmup, 强初始化)</td><td>OPD</td><td>61.46</td><td>52.29</td><td>34.17</td><td>49.31</td></tr>
+          <tr><td>GKD</td><td>66.25</td><td>48.54</td><td>34.17</td><td>49.65</td></tr>
+          <tr><td><strong>AOPD</strong></td><td class="best">66.87</td><td class="best">55.00</td><td class="best">38.33</td><td class="best">53.40</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">弱初始化（1K SFT warmup）下 AOPD vs OPD 增益高达 <strong>+8.34pt</strong>，强初始化下也有 +4.09pt 平均增益。证明 AOPD 在 student 起点弱（探索黑洞高发）时优势最显著。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>\(\tau\) 敏感性：</strong> \(\tau=-0.2\) 仅干预 < 10% token 也能显著优于 OPD，证明<strong>少量 targeted 干预即足够</strong>，与 LLM-1 (REASONMAXXER) 思想一致。<strong>策略熵保持：</strong> AOPD 训练全程 policy entropy 高于 OPD/GKD，说明它没有过度坍缩到 teacher 分布。<strong>持续学习能力：</strong> 在数学蒸馏后用 ToolAlpaca 做工具使用持续学习，AOPD tool-call success rate 比 OPD 高，验证 localized supervision 保留了更多原能力。<strong>局限：</strong> (1) 需要 teacher 分布访问（不能在闭源 teacher 上做）；(2) Top-K 的 K 选择需调（论文用 K=32），过大引入噪声、过小信号不足；(3) 仅在数学/工具使用验证，开放生成（创意写作）效果未知。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>AOPD 提出了一个简单优雅的"<strong>asymmetric learning</strong>"原则：在 RL 学习曲面的不同区域采用不同算法。它的核心洞察—<strong>"零/负优势区域改用 imitation 比 RL 高效"</strong>—与本期 LLM-1 的"RL 仅在稀疏决策点起作用"在精神上呼应。对蒸馏实践者：当 student 与 teacher gap 大（弱 student）或长尾 token 多时，AOPD 应替代 OPD；teacher 闭源场景应继续用 GKD。Meituan 在这种"小但干净"的训练算法上的工作越来越多，质量稳定。该方法已经接近可生产，TRL 集成应该不难。</p>
+    </div>
+  </div>
+</content>

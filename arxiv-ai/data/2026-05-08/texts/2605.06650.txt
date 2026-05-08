@@ -1,0 +1,1523 @@
+Preprint. Under review.
+Beyond Negative Rollouts: Positive-Only Policy Optimization
+with Implicit Negative Gradients
+Mingwei Xu1, † , Hao Fang1, †,∗
+1 University of Washington, Seattle, USA
+† equally contributed
+∗ Authors to whom any correspondence should be addressed
+Abstract
+Reinforcement learning with verifiable rewards (RLVR), due to the deter-
+ministic verification, becomes a dominant paradigm for enhancing the
+reasoning ability of large language models (LLMs). The community wit-
+nesses the rapid change from the Proximal Policy Optimization (PPO) to
+Group Relative Policy Optimization (GRPO), in which GRPO reduces the
+complicated advantage estimation with simple estimation over grouped
+positive and negative rollouts. However, we note that negative rollouts may
+admit no gradation of failure severity, and the combinatorial vastness makes
+penalizing a few sampled negatives unlikely to cover a meaningful reward
+signal under sparse binary rewards. In this work, we propose Positive-Only
+Policy Optimization (POPO), a novel RLVR framework in which learning
+can occur exclusively via online positive rollouts. Specifically, POPO uti-
+lizes bounded importance sampling over the positive rollout set. Thus,
+no disjoint negative rollouts are used for the gradient guidance during
+the policy post-training. We show that implicit negative gradients can
+emerge naturally through reinforcing the positive probability via rollouts
+redistribution. Next, POPO stabilizes the policy optimization through two
+mechanisms. First, it applies a siamese policy network with a momentum-
+based adaptation law for stabilized policy evolution. Second, we replace
+the KL-divergence with a bounded similarity penalty term in the siamese
+representation space. We conduct extensive experiments using publicly
+available, well-established text-LLM models, e.g., the Qwen family, across
+all-level mathematical benchmarks (MATH-500, AMC23, AIME 2024/2025,
+and Olympiad). Our experiment demonstrates that POPO achieves perfor-
+mance comparable to, or even superior to GRPO. Notably, we show that
+POPO can achieve 36.67% in AIME 2025 with Qwen-Math-7B, outperform-
+ing GRPO 30.00%. Our ablation and sweep studies further illustrate the
+necessity and robustness of POPO components. Our results suggest a new
+RLVR direction without negative rollouts.
+1 Introduction
+The emergence of reasoning capabilities in large language models (LLMs) through reinforce-
+ment learning (RL) makes a significant advance in the capability enhancement and human
+feedback (RLHF) alignment (Ouyang et al., 2022). Well-known work, such as DeepSeek-
+R1 (Guo et al., 2025) and OpenAI’s o1 series (Jaech et al., 2024), demonstrates that LLMs
+can surge intelligent chain-of-thought (COT) (Wei et al., 2022) reasoning ability through
+RL with Verifiable Rewards (RLVR) (Lambert et al., 2024). In general, RLVR works by
+giving a sampled question x and the corresponding LLM-generated response y contain-
+ing reasoning steps and a final answer, a verifier provides deterministic feedback such
+as R(x, y) =1[verify(y) =True] (Cobbe et al., 2021). The simplicity of the verification
+mechanism, together with various RL algorithms, has achieved substantial improvements
+in mathematical problem-solving and coding tasks (Le et al., 2022), where LLMs show a
+strong ability of self-reflection and generating sophisticated reasoning chains.
+1
+arXiv:2605.06650v1  [cs.CL]  7 May 2026
+Preprint. Under review.
+Generates
+Policy optimization Loop
+Mathematical question 
+Input: find the sum of all positive 
+integers n such that n+2 divides 
+the product 3(n+3)(n^2+9).
+Rollouts
+Output: The answer is 49.  
+Positive
+Output: Since 3(n+3)(n^2+9) modulo n+2 
+gives 39, n+2 must divide 39, the answer is 49. Positive
+Output: Since 3(n+3)(n^2+9) modulo n+2 
+gives 39, n+2=0, 3, 13, 39, the answer is 47.
+Output: Since n=-2 (mod n+2), n+3=1 and 
+n^2+9=13, so 3(n+3)(n^2+9)=39. Thus n+2 
+divide 39, so n=1, 11, 37, and the answer is 49.
+Positive
+            LLM policy
+× Negative
+Negative×
+Output: The answer is 11.  
+× Negative
+Output:  The answer is 37.  
+(Transformer layers)
+(A) (B)Rewards
+Steps
+Mean output length
+200 400 600 800
+0.60
+0.65
+0.70
+0.75
+200 600400 800
+360
+365
+370
+375
+GRPOPOPO
+Figure 1: (A) Scheme of RLVR for mathematical question-solving tasks. A general on-policy
+RL algorithm will reinforce the positive rollouts, while penalizing the negative rollouts.
+However, the negative rollouts may not contain a meaningful reasoning chain-of-thought in
+addressing the graduate-level mathematical questions, which motivates the POPO algorithm
+design. (B) A comparison of POPO and GRPO on the reward trace (upper panel) and mean
+output completion length (lower panel) on a simple GSM8K dataset.
+Despite these successes, current RLVR approaches face a fundamental challenge: the treat-
+ment of incorrect responses. Take the mathematical reasoning task, for example. At the
+cold-start stage, the vast majority of sampled responses are incorrect, e.g., typical pass@k
+rates are usually below 50% for the AMC 23 dataset, which happens due to diverse situa-
+tions such as computational errors, problem misinterpretations, and inappropriate solution
+strategies (see figure 1). Thus, we begin to reconsiderdo incorrect responses provide meaningful
+learning signal under the sparse reward signal setting?and thus ask the question:can a policy
+improve by reinforcing only from its successes?This seems counterintuitive at first glance, given
+the conventions in RL, which reinforce the policy with the good reward while penalizing
+it for the bad rewards. However, a few insightful observations motivate it. First, like
+GRPO (Shao et al., 2024), all correct responses share the same advantage over all incorrect
+ones. Thus, there is no gradation of “how good or how wrong” a response is. Second, the
+space of incorrect responses is combinatorially vast (Yue et al., 2025a) for mathematical tasks,
+making it unlikely that penalizing a few sampled failures meaningfully covers the failure
+modes. Third, past work in contrastive self-supervised learning (SSL) demonstrates that
+effective representations are feasible using only positive samples, works such as ”Bootstrap
+your own latent”(BYOL) (Grill et al., 2020) and ”Exploring simple siamese representation
+learning” (SimSiam) (Chen & He, 2021), achieving powerful latent representations.
+Inspired by the above, we proposePositive-Only Policy Optimization (POPO), a new on-
+policy optimization approach for RLVR that learns exclusively on positive reward responses.
+Specifically, POPO has the following contributions:
+• POPO introduces bounded importance sampling weights, which normalize over the
+positive rollout set, to preferentially reinforce positive responses, while introducing
+implicit negative penalties.
+• POPO uses an exponential moving average (EMA) to update the siamese policy
+network as an adaptive policy anchor, combining the benefits from SSL insights.
+• POPO replaces KL divergence with representation-space similarity, providing a soft
+bounded constraint that preserves semantic structure in the predictor space.
+To evaluate the POPO algorithm, we use the DeepScaleR-Preview-Dataset for policy training.
+Then, we conduct extensive test experiments using publicly available, well-established LLM
+models, including the Qwen2.5 Math family, DeepSeek-R1 distilled models, and general
+text-LLM models, across all-level mathematical reasoning benchmarks (MATH-500, AMC23,
+AIME 2024, AIME 2025, and Olympiad). Our experiment demonstrates that POPO still
+achieves comparable or even superior performance compared with GRPO and its variants.
+Especially, in AIME 2025, we show that POPO can achieve 36.67% using Qwen-Math-7B,
+2
+Preprint. Under review.
+outperforming GRPO 30.00%. Last, our ablation and sweep studies illustrate the necessity
+and robustness of POPO components and hyperparameters. Our results have implications
+for future sparse RLVR beyond negative rollouts.
+2 Related Work
+RLHF and RLVR.RLHF addresses a critical limitation that the next-token prediction objec-
+tive optimized during pretraining and supervised finetuning (SFT) phases does not directly
+capture the intentions of human users. RLHF aligns LLM behavior to be close to human
+intent by training a reward model on human preference and optimizing the policy via
+RL (Christiano et al., 2017; Stiennon et al., 2020). However, learning reward modeling is an
+imperfect proxy for human intent and thus may be sensitive to the reward hacking issue
+(Gao et al., 2023). Offline preference learning, which removes the reward modeling by purely
+using the contrastive preference, also has widespread usage. For example, Direct Preference
+Optimization (DPO) (Rafailov et al., 2023) has been applied for aligning the chatbot output
+to user intent (Tunstall et al., 2023). On the other hand, RLVR replaces the learnable reward
+modeling process with deterministic verification pipelines, where correctness can be easily
+assessed in domains such as mathematical reasoning and code generation (Cobbe et al.,
+2021; Zelikman et al., 2022). Recent technical reports (Jaech et al., 2024; Guo et al., 2025)
+demonstrate that simple RLVR elicits sophisticated COT.
+Policy Optimization Methods for RLVR.Following the well-established adoption in
+GRPO (Shao et al., 2024), it has become a widely used approach by removing the value
+network and estimating advantages through group-level reward normalization. A series
+of GRPO extensions have been proposed (Wan et al., 2026; Zheng et al., 2025; Zhang et al.,
+2025; Yue et al., 2025b; Chen et al., 2025; Liu et al., 2026; Xi et al., 2025; Hong et al., 2024;
+Meng et al., 2024; Cui et al., 2026; Yang et al., 2026). Among them, Dr.GRPO (Liu et al.,
+2025) removes per-response length and standard-deviation normalization to correct an
+optimization bias that artificially inflates advantage estimation. Dynamic sAmpling Policy
+Optimization (DAPO) (Yu et al., 2025) introduces decoupled clipping, dynamic sampling
+that filters zero-advantage groups, and token-level policy gradients. Soft Adaptive Policy
+Optimization (SAPO) (Gao et al., 2025) replaces hard clipping with a smooth temperature-
+controlled gate to preserve near-on-policy learning signals while attenuating off-policy
+outliers. However, all methods remain to learn from positive and negative rollouts.
+Learning without Negative Samples.Learning without negative samples (or exclusively
+from positive examples) undergoes a long debate in the area of contrastive representa-
+tion learning (Liu et al., 2021). The early work in self-supervised learning, such as Sim-
+CLR (Chen et al., 2020) and MoCo (He et al., 2020), needs to rely on explicit negative samples.
+BYOL (Grill et al., 2020) changed this paradigm by demonstrating that representations can
+be learned with only positive samples through an asymmetric online-target architecture.
+Meanwhile, SimSiam (Chen & He, 2021) also illustrated that a Siamese network with only a
+stop-gradient operation can enable meaningful latent representation learning. Recently, in
+the post-training of LLM, SFT works by training the alignment with giving prompts and
+expected solutions. Thus, it can be treated as a naive way of learning without negative
+samples. However, SFT-based approaches only optimize a fixed cross-entropy objective,
+which clearly suffers from the limited exploration abilities. Meanwhile, SFT can also lead
+to distribution mismatch as the policy may evolve unboundedly, causing the strong over-
+fitting on the post-training data (Liu et al., 2023). Recent work in Online SFT (Li et al.,
+2025), Rejection Sampling Fine-Tuning (Yuan et al., 2023), Self-Taught Reasoner (Zelikman
+et al., 2022), and ReSTEM (Singh et al., 2023) shows that iterative on-policy SFT supervision
+progressively improves reasoning capabilities. To this end, our POPO closes the gap by
+combining the insights from above.
+3
+Preprint. Under review.
+Input 
+Tokenization 
+Weight redistribution
+Feature extractor
+Output logits 
+Policy network
+Predictor head
+Feature 
+Extractor
+Gaussian noise
+Feature extractor
+Stop gradient (      ) ×
+Siamese networkInitial copied
+Gradient
+Momentum adaptation
+Layer
+Layer
+Entropy
+Weighted NLL
+Loss
+Similarity
+Figure 2: Overview of the POPO components. The policy network (upper part) follows
+the gradient backpropagation, while the Siamese network (lower part) uses momentum
+adaptation. Loss is in the grey box. Algorithm 1 shows forward and backward processes.
+3 Methods
+3.1 Problem Setting and Preliminary
+We consider improving an LLM’s mathematical reasoning ability through RLVR. Let
+D={(x i, a∗
+i )}N
+i=1 denote a set of mathematical problems, where xi is a problem state-
+ment (prompt) and a∗
+i is the given ground-truth answer. The policy πθ stands for an
+LLM that generates a sequence of tokens (response) y= (y 1, y2, . . ., yT) given a prompt
+x: πθ(y|x) = ∏T
+t=1 πθ(yt |x , y<t), where y<t = (y 1, . . ., yt−1) denotes the response
+prefix. The reward function provides binary feedback based on answer correctness:
+R(x, y) =1[extract(y) =a ∗] (Cobbe et al., 2021), where extract(·) parses the final an-
+swer from the response. Here, we consider the binary reward issparse(provided only at
+sequence completion) anddeterministic. For each prompt x, we partition generated response
+rollouts into two disjoint sets
+S +(x) ={y:R(x,y) =1},S −(x) ={y:R(x,y) =0}. (1)
+To maximize the expected reward, a general policy gradient optimization follows:
+max
+θ
+J(θ) =E x∼D Ey∼πθ (·|x) [R(x,y) ] , (2)
+∇θ J(θ) =E x∼D,y∼π θ (·|x) [Aπθ (x,y)∇ θ logπ θ(y|x) ] , (3)
+where Aπθ (x, y) is the estimated advantage function measuring how much better response
+y is compared to the average responses. equation (3) increases the probability of responses
+with positive advantage and decreases the negative ones. Thus, it can be viewed as∇θ J(θ) =
+∑i:A i>0 Ai∇θ logπ θ(yi |x) + ∑i:A i<0 Ai∇θ logπ θ(yi |x)(Zhu et al., 2025).
+Unified View of Policy Optimization.General policy optimization methods follow:
+L(θ) =−E πanchor [w(θ)·f(A)·logπ θ(y|x) ] +λ· R(θ), (4)
+where w(θ) is an importance sampling weight, f(A) transforms the advantage, and R(θ) is
+a regularizer term to anchor the policy. Different methods instantiate these components dif-
+ferently: PPO uses clipped importance ratios with learned values for advantage estimations,
+whereas GRPO uses group-normalized rewards with KL divergence regularization.
+3.2 Positive-Only Policy Optimization
+POPO optimizes the policy using only correct responses while maintaining stability through
+the following mechanisms: self-normalized weight, adaptive anchor, representation-space
+4
+Preprint. Under review.
+Algorithm 1Positive-Only Policy Optimization (POPO)
+Require:DatasetD, initial parametersθ 0, learning rateη, EMA momentumτ,
+similarity weightα, entropy weightβ, group sizeG
+1:Initialize Siamese policy network parameters:ξ←θ 0
+2:foriterationt=1, 2, . . . ,Tdo
+3:Sample batch of math question as prefix prompts{x 1, . . . ,xB}fromD
+4:foreach promptx i in batchdo
+5:GenerateGresponses:{y 1, . . . ,yG} ∼π θ(· |x i)
+6:Verify correctness:R j =R(x i,y j)forj=1, . . . ,G
+7:Identify positive set:S +(xi) ={y j :R j =1}
+8:end for
+9:Collect positive pairs:B + ={(x i,y):y∈ S +(xi)}
+10:ifB + is non-emptythen
+11:foreach promptxwith positivesdo
+12:Compute weightsw θ(y|x)via Equation (6)
+13:end for
+14:Compute POPO loss via Equation (5)
+15:Update policy:θ←θ−η∇ θLPOPO
+16:end if
+17:Update via EMA:ξ←τξ+ (1−τ)θ
+18:end for
+19:returnTrained policy networkπ θ
+alignment, and entropy penalty (see figure 2). The overall POPO loss function is:
+LPOPO(θ) =−E x∼D
+
+ ∑
+y∈S +(x)
+wθ(y|x)·logπ θ(y|x)
+
+ +αL sim(θ,ϕ,ξ) +βL ent(θ), (5)
+where wθ(y|x) is an importance weight over the positive set; Lsim(θ, ϕ, ξ) provides
+representation-space regularization, and Lent(θ) is an entropy bonus encouraging explo-
+ration. The coefficients α, β> 0 control regularization strength. The key distinction from
+standard policy gradient methods is that the expectation is takenonlyover responses in
+S +(x) (rejected sampling as hard advantages). Although negative responses receive no
+explicit gradient signal, we show that the implicit negative gradient exists in section 3.3.
+Self-Normalized Weight over Positive Set.POPO uses bounded and re-normalized weights
+over the positive set. Intuitively, this scheme creates aself-competitionsituation, where re-
+sponses assigned a high probability receive larger weights. Thus, we reinforce the “confident
+correct answers” more strongly while maintaining diversity through normalization. It bal-
+ances between uniform weighting (when all positives are equal) and concentrated weighting
+(when one positive dominates).
+wθ(y|x) = πθ(y|x)
+Z+(x) , whereZ +(x) = ∑
+y′∈S +(x)
+πθ(y′ |x). (6)
+Adaptive Anchor.Methods like BYOL (Grill et al., 2020) and SimSiam (Chen & He, 2021)
+achieve positive examples only through contrastive learning. POPO adopts this innovative
+design in principle. Basically, we maintain two copies of the policy: the policy network
+πθ with parameters θ that we optimize, and a siamese policy πξ with parameters ξ that
+provides a stable anchor. Siamese policy parameters are updated using an exponential
+moving average (EMA) of the policy network parameter:
+ξ←τ·ξ+ (1−τ)·θ, (7)
+whereτ∈(0, 1)is the momentum coefficient, e.g.,τ=0.999.
+Representation-Space Alignment.With the above Siamese network architecture, we next
+define how the policy network should align with the Siamese network. Conventional KL
+5
+Preprint. Under review.
+divergence in probability space suffers from high variance, token-level sensitivity, and rigid
+point-wise constraints (Huang et al., 2024). Thus, our POPO aligns the hidden representation
+within the semantic embedding space.
+Lsim(θ,ϕ,ξ) =−E x∼D
+
+ ∑
+y∈S +(x)
+wθ(y|x)·cos
+ 
+hϕ(f θ(x,y)), sg(f ξ (x,y) +ϵ)
+
+
+ , (8)
+where fθ(x, y) and fξ (x, y) are representations extracted from the both networks, respec-
+tively; hϕ is a predictor head (implemented as MLPs), sg(·) denotes stop-gradient, and
+ϵ∼ N( 0, σ2I) is Gaussian noise. Specifically,Predictor head.Predictor hϕ on the policy
+network is an asymmetrical design to ensure that the policy network must do “extra work”
+to match the Siamese network, preventing the collapse where both networks converge to
+outputs;Stop-gradient.The sg(·) operator ensures gradients flow only through the policy
+network. The Siamese network is updated solely via EMA;Gaussian noise.Adding small
+noiseϵprovides robustness against trivial embeddings.
+Entropy Regularization.Like the recent approach (Schulman et al., 2017), our POPO also
+includes the entropy loss to ensure diversity:
+Lent(θ) =−E x∼D [H(π θ(· |x)) ] . whereH(π θ(· |x)) =− ∑
+y
+πθ(y|x)logπ θ(y|x). (9)
+3.3 Learning via Implicit Negative Reward
+We answer the central question:why POPO is effective without explicit penalties on the negatives?
+via the weight probability redistribution, bounded divergence, and asymmetric learning.
+Implicit Negative Gradients via Weight Probability Redistribution.The fundamental
+constraint ∑y πθ(y|x) = 1 implies the intuition that when POPO reinforces πθ(y|x) for
+y∈ S +(x), softmax normalization implicitly forces πθ(y′ |x) to decrease for y′ ∈ S −(x).
+Thus, we analyze thegradientof LPOPO at the output logit level. Let zy denote the logit
+(pre-softmax score) for responsey, i.e.,π θ(y|x) =exp(z y)/ ∑y′′ exp(zy′′ ).
+Theorem 3.1(Implicit Negative Gradient).For any incorrect response y′ ∈ S −(x), the gradient
+ofL POPO (5)with respect to the logit z y′ satisfies
+∂LPOPO
+∂zy′
+=π θ(y′ |x)
+h
+1+β
+
+logπ θ(y′ |x) +H (πθ(· |x) )
+i
+. (10)
+This gradient is strictly positive when πθ(y′ |x)>exp
+
+− 1
+β −H(π θ(· |x))
+
+. Simply
+speaking, the gradient decomposes into two reinforcing forces: a uniform “probability
+tax” from the NLL loss on positives (via the softmax partition function), and a probability-
+dependent penalty from entropy regularization that is strongest on the most probable
+incorrect responses. The full proof is given in Appendix B.1.
+Stability through Bounded Gap and Asymmetric Architecture.Having established the
+theorem of implicit negative gradients, we next show a lemma that stabilizes the asym-
+metric policy training. The EMA anchoring and similarity regularization jointly prevent
+unbounded policy drift, avoiding the pathological gradient explosions.
+Lemma 3.2(EMA-Bounded Parameter gap).Under POPO updates with EMA momentum
+τ∈( 0, 1), learning rate η> 0, and gradient norm bound ∥∇θLPOPO∥ ≤G max, the parameter
+divergence between the policy networkθ t and the Simease networkξ t satisfies at steady state:
+∥θt −ξ t∥ ≤ τ ηG max
+1−τ . (11)
+This lemma guarantees the bounded gap even though we do not have the conventional
+KL divergence (see proof in Appendix B.2). Further, the asymmetric network architecture
+6
+Preprint. Under review.
+ensures that the policy network must actively align with a slowly evolving average rather
+than collapsing to a degenerate solution. Indeed, in symmetric architectures, training only
+on positive risks may cause self-distill SFT collapse (Li et al., 2025). Our POPO breaks
+symmetry through the above mechanisms.
+4 Experiments
+4.1 Experimental Setup
+Training Data and Evaluation Benchmarks.We adopt theDeepScaleR-Preview-
+Dataset(Luo et al., 2025) as thesingle trainingdataset for all experiments. It contains around
+40K mathematical problems sourced from diverse competitions, covering difficulty levels
+from elementary through olympiad-level. Using a single dataset throughout eliminates data
+composition as a confound when comparing benchmark algorithms. Each problem provides
+a ground-truth answer for binary reward verification: R(x, y) =1[extract(y) =a ∗], where
+extract(·) parses the boxed answer from the generated response y and a∗ is the reference
+answer. We evaluate on the following five benchmarks:MATH-500(Hendrycks et al., 2021),
+AMC 2023(Li et al., 2024),AIME 2024(Li et al., 2024),AIME 2025(Balunovi ´c et al., 2025),
+OlympiadBench(He et al., 2024)
+Base Models and Algorithm Baselines.We conduct full-parameter fine-tuning across six
+base models spanning two scales ( ∼1.5B and ∼7–8B) and three pretraining paradigms.
+Math-specialized: Qwen2.5-Math-1.5B and Qwen2.5-Math-7B (Yang et al., 2024), pretrained
+on large-scale mathematical corpora, representing the strongest available math founda-
+tions.Distilled-reasoning: DeepSeek-R1-Distill-Qwen-1.5B (named as R1-Distll-1.5B) and
+DeepSeek-R1-Distill-Qwen-7B (named as R1-Distll-7B) (Guo et al., 2025) , distilled from
+DeepSeek-R1’s COT reasoning, thus with strong reasoning priors.General-purpose: Llama-
+3.1-8B (Grattafiori et al., 2024) and DeepSeek-Math-7B (Shao et al., 2024), included as controls
+for the general models. All methods are implemented using theHugging Face TRLpackage
+for consistent reward computation, training, and generation. We compare six methods:Base,
+SFT(Ouyang et al., 2022),GRPO(Shao et al., 2024),Dr. GRPO(Liu et al., 2025),DAPO(Yu
+et al., 2025),SAPO(Gao et al., 2025),POPO(our approach). For the two general-purpose
+base models (Llama-3.1-8B and DeepSeek-Math-7B), we compare only the GRPO and POPO.
+Evaluation Protocol.We consistently report the Pass@8 metrics for all benchmarks. Pass@ k
+is computed using the unbiased estimator (Chen et al., 2021; Lewkowycz et al., 2022; Wang
+et al., 2022). Output responses use vLLM (Kwon et al., 2023) for fast generation.
+4.2 POPO achieved superior performance when the reasoning task became harder.
+We began our experimental analysis with a small yet effective Qwen-Math-1.5B model,
+which has been widely used in recent studies (Wang et al., 2025). In Table 1 first row, we
+observed that the Qwen-Math-1.5B model achieved superior performance across all five
+mathematical benchmarks (Math-500: 86.60, AMC 23: 77.50, AIME 24: 26.67, AIME 25:
+23.33, Olympiad: 51.19). Further, compared to the other baseline RL algorithms, our POPO
+performed in average better across five datasets (POPO: 53.06, v.s. GRPO 50.22; SAPO 50.71;
+Dr. GRPO 51.22; DAPO 50.36). These results gave the first confidence that our proposed
+POPO also stabilized reasonable policy optimization using only online positive rollouts.
+Next, we further tested our POPO using R1-Distill-1.5B, Qwen-Math-7B (see Table 1, second
+and third row). Those widely used open-source models are specialized in mathematical
+reasoning tasks. First, as consistently investigated in many prior research (Snell et al., 2024),
+both the distilled model (from powerful DeepSeek-R1 models with strong COT ability)
+and large models showed better performance in general. For example, either POPO R1-
+Distill-1.5B (59.92) and POPO Qwen-Math-7B (63.12) outperformed POPO Qwen-Math-1.5B
+(53.06). Second, across all math-specialized and distilled base models, we observed that
+POPO almost performed better on the hard mathematical reasoning tasks, e.g., AIME 25
+36.67 and Olympiad 57.27 using Qwen-Math-7B. Considering the fact that AIME25 was
+released (publicly available) after the model release, it rejected the potential that POPO
+7
+Preprint. Under review.
+Models AlgorithmsMATH-500 AMC 23 AIME 24 AIME 25 Olympiad Avg.
+Qwen-Math-1.5B
+Base 80.20 65.00 20.00 6.67 48.22 44.02
+SFT 78.80 71.89 20.70 10.00 47.77 45.83
+GRPO 86.20 75.00 23.33 16.25 50.30 50.22
+SAPO 86.20 76.17 23.33 17.11 50.74 50.71
+Dr. GRPO 86.00 76.62 25.18 17.39 50.89 51.22
+DAPO 86.40 75.28 22.85 16.67 50.59 50.36
+POPO (our)86.60 77.50 26.67 23.33 51.19 53.06
+R1-Distill-1.5B
+Base 86.20 75.00 20.00 20.00 54.15 51.07
+SFT 87.00 77.08 21.07 21.19 55.04 52.28
+GRPO 90.20 80.00 30.00 26.32 58.61 57.03
+SAPO 90.60 83.32 30.21 26.6759.2058.00
+Dr. GRPO 90.40 83.46 33.33 25.84 58.90 58.39
+DAPO 90.60 82.75 29.72 26.45 58.75 57.65
+POPO (our)90.80 85.24 36.67 27.8659.0559.92
+Qwen-Math-7B
+Base 82.60 72.50 33.33 20.00 44.21 50.53
+SFT 84.00 70.55 32.81 18.93 44.07 50.07
+GRPO 90.80 85.50 43.33 30.00 56.38 61.20
+SAPO 91.2086.12 46.6731.04 56.67 62.34
+Dr. GRPO 91.00 85.63 46.45 30.99 56.82 62.18
+DAPO91.4085.97 44.76 32.31 56.53 62.19
+POPO (our) 90.80 85.75 45.1336.67 57.27 63.12
+R1-Distill-7B
+Base 90.40 82.50 36.67 26.67 63.65 59.98
+SFT 91.40 84.82 39.15 33.71 62.31 62.28
+GRPO 93.60 87.50 46.67 33.33 66.91 65.60
+SAPO94.20 88.2146.71 35.00 67.0666.24
+Dr. GRPO 93.80 87.6748.5933.5067.5166.21
+DAPO 94.00 87.75 47.83 33.87 66.28 65.95
+POPO (our) 93.20 87.25 47.2236.6766.76 66.22
+Table 1: Comparison of RL algorithms’ performance across mathematical reasoning bench-
+marks using math-specialized and distilled base models. Bold numbers indicate the best.
+performed better due to any potential data leakage in the pretraining phase. Meanwhile,
+the clear trend that POPO started with comparable performance with GRPO in MATH-500,
+and later achieved better performance in the AIME 25 (AIME 25 17.59% v.s. MATH-500
+1.66%), suggested relative 15.93% improvement. This trend illustrated our assumption that
+the combinatorial vastness made penalizing a few sampled negatives unlikely to cover a
+meaningful reward signal under sparse binary rewards. We provided a concrete example of
+different RL responses given the same AIME 25 mathematical question in Appendix E.
+Regarding the R1-Distill-7B model in Table 1 fourth row, while our POPO still outperformed
+the baseline results (POPO: 66.22 v.s. Base: 59.98 ), our POPO slightly underperformed the
+GRPO across different datasets. One potential cause was that the model entropy reduced
+drastically when a larger 7B model was distilled using DeepSeek-R1. This might limit the
+on-policy exploration ability, while the negative results would contain more reasonable
+penalty information for GRPO (and its extensions) for efficient policy optimization. One of
+our future works will consider the negative rollout effects in the Distilled model to improve
+the POPO’s performance (see Discussion).
+To conclude, the above results provide both model-agnostic and dataset-agnostic evidence
+for applying POPO to improve mathematical reasoning ability.
+4.3 Ablation and Sweeping Studies
+Having established the results in Table 1, we next investigated several key components in
+our POPO, i.e., importance sampling, weight redistribution, and momentum adaptation,
+and representation-space alignment via ablation and sweeping studies. Due to the limit of
+computational resources, we took Qwen-Math-1.5B as our base model for simplicity.
+8
+Preprint. Under review.
+AIME 2025 Olympiad Avg.
+POPO (default) 23.33 51.19 37.26
+POPO w/o negative rollouts; w uniform weight 16.67 49.11 32.89
+POPO w negative rollouts; w/o uniform weight 13.33 48.07 30.70
+POPO w negative rollouts; w uniform weight 6.67 39.32 23.00
+Table 2: Ablation study on importance sampling and weight redistribution. The default
+setup is without (w/o) negative rollouts and with weight redistribution. w and w/o stand
+for with and without, respectively.
+AIME 2025 Olympiad Avg.
+POPO 23.33 51.19 37.26
+POPO w/o momentum 13.33 48.37 30.85
+POPO w/o alignment 13.33 50.15 31.74
+Table 3: Ablation study on momentum adaptation and representation-space alignment.
+Importance sampling and weight redistribution.We first considered the situation where
+we removed the positive rollout constraints, indicating the same rollout usage as GRPO. We
+surprisingly found that POPO still maintained reasonable performance (30.70 v.s. default
+37.26) across AIME 25 and Olympiad benchmarks, which contradicted our intuition. Recall
+that in the GRPO, we have grouped relative advantage estimation to penalize the negative
+rollouts. In contrast, POPO respects all rollouts for positive reinforcement. We assumed this
+magic was due to the weight redistribution, which guaranteed the negative gradient, by
+implicitly penalizing the negative rollouts. In the ablation, we removed the redistribution
+weight by treating all rollouts uniformly. In Table 2, we observed that POPO’s performance
+dropped drastically (23.00).Momentum adaptation and alignment.In Table 3, we observed
+that by removing the momentum adaptation, the POPO performances dropped to 30.85,
+indicating the necessity of slowing the adaptation of the anchor model. This observation
+also aligned with recent studies that a static reference model may limit the post-training RL
+performance. Table 3 second row showed that without the representation-space alignment,
+the policy training was unstable, causing the performance drop.Sweep study.We presented
+studies for predictor layers, predictor dimensions, and momentum rate in the Appendix C.
+4.4 POPO for General Text-LLM Models
+Last, we tested the POPO performance using Llama-3.1-8B and DeepSeek-Math-7B. Both
+models differ from the major Qwen family in the pretraining phase, thus further providing
+model-agnostic evidence for applying POPO to improve reasoning ability. Specifically,
+Llama-3.1-8B is a general-purpose language model without any math-specific data curation,
+and DeepSeek-Math-7B is a continuous pretraining from DeepSeek-Coder-Base-v1.5 7B (Guo
+et al., 2024). In Table 4, we also observed that POPO in general performs comparably to
+GRPO (Llama-3.1-8B: 29.84 v.s. 26.72; DeepSeek-Math-7B: 50.15 v.s. 47.81), which again
+demonstrated the potential model-agnostic advantages of POPO.
+Models AlgorithmsMATH-500 AMC 23 AIME 24 AIME 25 Olympiad Avg.
+Llama-3.1-8B GRPO 56.40 35.22 10.00 6.67 25.32 26.72
+POPO (our)59.80 37.78 13.33 10.00 28.29 29.84
+DeepSeek-Math-7B GRPO 80.20 73.38 20.00 16.67 48.81 47.81
+POPO (our)82.60 74.53 23.33 20.00 50.29 50.15
+Table 4: Comparison of RL algorithms’ performance using general text-LLM models.
+9
+Preprint. Under review.
+5 Discussion and Conclusion
+We propose the POPO framework that enables effective post-training RL via only positive
+rollouts. In recent RLVR research, we also note that POPO shares a similar spirit with recent
+works. For example, (Cui et al., 2026) uses a contrastive head to align reasoning paths within
+the semantic space. (Yang et al., 2026) applies the teacher-student architecture for reward
+extrapolation in on-policy distillation. However, POPO is unique in combining innovative
+components, including bounded importance sampling, adaptive EMA anchoring, and
+representation-space alignment. Further, we also provide mathematical proofs beyond the
+heuristic intuition. We test POPO using well-established open-source base LLM models on
+public mathematical reasoning benchmarks. Our results illustrate the potential implications
+of POPO in future RLVR. However, our work has a few limitations. First, we design POPO
+for sparse binary rewards, yet many practical scenarios are directly involved with dense
+reward signals (Setlur et al., 2024; Cui et al., 2025). We will extend our POPO by introducing
+an adaptive rollout partition mechanism for better utilizing negative rollouts. Second, POPO
+is validated only on text-only LLMs with purely mathematical reasoning benchmarks. We
+will extend POPO to other domains such as code generation tasks (Le et al., 2022), agentic
+RL (Feng et al., 2024), and multimodal reasoning (Lu et al., 2023). Third, we only test POPO
+up to 7B models. We will scale it up to 32B or 70B (Yang et al., 2024) in the future.
+Disclose Use of LLMs
+We used LLMs, such as Claude and GPT, for initial idea brainstorming and later to check
+grammar and spelling and improve the clarity of our manuscript’s language. All scientific
+contents, including figures, tables, experimental design, analysis, and interpretations, are
+entirely the original work of the authors.
+Ethics Statement
+All authors of this study strictly adhere to the COLM ethical guidelines. Our research does
+not involve any potential conflicts of interest or sponsorship issues. We have carefully
+considered and addressed issues related to discrimination, bias, and fairness in our method-
+ology. This study does not involve any privacy or security concerns, fully complies with
+legal requirements, and upholds the highest standards of research integrity. All experi-
+mental procedures and data processing follow established ethical guidelines for machine
+learning research.
+Reproducibility Statement
+To ensure reproducibility of the results, we provide complete implementation details of
+the proposed POPO training algorithm in the Appendix D, where all experimental set-
+tings, hyperparameters, and dataset specifications are clearly documented. A pre-release
+of our POPO algorithm implementation can be found in https://github.com/momo1443/
+colm2026-POPO. The complete code will be released upon acceptance of the paper.
+References
+Mislav Balunovi ´c, Jasper Dekoninck, Ivo Petrov, Nikola Jovanovi ´c, and Martin Vechev.
+Matharena: Evaluating llms on uncontaminated math competitions.arXiv preprint
+arXiv:2505.23281, 2025.
+Aili Chen, Aonian Li, Bangwei Gong, Binyang Jiang, Bo Fei, Bo Yang, Boji Shan, Changqing
+Yu, Chao Wang, Cheng Zhu, et al. Minimax-m1: Scaling test-time compute efficiently
+with lightning attention.arXiv preprint arXiv:2506.13585, 2025.
+10
+Preprint. Under review.
+Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde De Oliveira Pinto,
+Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, et al. Evalu-
+ating large language models trained on code.arXiv preprint arXiv:2107.03374, 2021.
+Ting Chen, Simon Kornblith, Mohammad Norouzi, and Geoffrey Hinton. A simple frame-
+work for contrastive learning of visual representations. InInternational conference on
+machine learning, pp. 1597–1607. PmLR, 2020.
+Xinlei Chen and Kaiming He. Exploring simple siamese representation learning. InProceed-
+ings of the IEEE/CVF conference on computer vision and pattern recognition, pp. 15750–15758,
+2021.
+Paul F Christiano, Jan Leike, Tom Brown, Miljan Martic, Shane Legg, and Dario Amodei.
+Deep reinforcement learning from human preferences.Advances in neural information
+processing systems, 30, 2017.
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser,
+Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, et al. Training verifiers
+to solve math word problems.arXiv preprint arXiv:2110.14168, 2021.
+Ganqu Cui, Lifan Yuan, Zefan Wang, Hanbin Wang, Yuchen Zhang, Jiacheng Chen, Wendi
+Li, Bingxiang He, Yuchen Fan, Tianyu Yu, et al. Process reinforcement through implicit
+rewards.arXiv preprint arXiv:2502.01456, 2025.
+Sijia Cui, Pengyu Cheng, Jiajun Song, Yongbo Gai, Guojun Zhang, Zhechao Yu, Jianhe
+Lin, Xiaoxi Jiang, and Guanjun Jiang. Clipo: Contrastive learning in policy optimization
+generalizes rlvr.arXiv preprint arXiv:2603.10101, 2026.
+Peiyuan Feng, Yichen He, Guanhua Huang, Yuan Lin, Hanchong Zhang, Yuchen Zhang,
+and Hang Li. Agile: A novel reinforcement learning framework of llm agents.Advances
+in Neural Information Processing Systems, 37:5244–5284, 2024.
+Chang Gao, Chujie Zheng, Xiong-Hui Chen, Kai Dang, Shixuan Liu, Bowen Yu, An Yang,
+Shuai Bai, Jingren Zhou, and Junyang Lin. Soft adaptive policy optimization.arXiv
+preprint arXiv:2511.20347, 2025.
+Leo Gao, John Schulman, and Jacob Hilton. Scaling laws for reward model overoptimization.
+InInternational Conference on Machine Learning, pp. 10835–10866. PMLR, 2023.
+Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian,
+Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Alex Vaughan, et al. The
+llama 3 herd of models.arXiv preprint arXiv:2407.21783, 2024.
+Jean-Bastien Grill, Florian Strub, Florent Altch´e, Corentin Tallec, Pierre Richemond, Elena
+Buchatskaya, Carl Doersch, Bernardo Avila Pires, Zhaohan Guo, Mohammad Ghesh-
+laghi Azar, et al. Bootstrap your own latent-a new approach to self-supervised learning.
+Advances in neural information processing systems, 33:21271–21284, 2020.
+Daya Guo, Qihao Zhu, Dejian Yang, Zhenda Xie, Kai Dong, Wentao Zhang, Guanting Chen,
+Xiao Bi, Yifan Wu, YK Li, et al. Deepseek-coder: when the large language model meets
+programming–the rise of code intelligence.arXiv preprint arXiv:2401.14196, 2024.
+Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu,
+Ruoyu Zhang, Shirong Ma, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability
+in llms via reinforcement learning.arXiv preprint arXiv:2501.12948, 2025.
+Chaoqun He, Renjie Luo, Yuzhuo Bai, Shengding Hu, Zhen Thai, Junhao Shen, Jinyi Hu,
+Xu Han, Yujie Huang, Yuxiang Zhang, et al. Olympiadbench: A challenging benchmark
+for promoting agi with olympiad-level bilingual multimodal scientific problems. In
+Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume
+1: Long Papers), pp. 3828–3850, 2024.
+11
+Preprint. Under review.
+Kaiming He, Haoqi Fan, Yuxin Wu, Saining Xie, and Ross Girshick. Momentum contrast for
+unsupervised visual representation learning. InProceedings of the IEEE/CVF conference on
+computer vision and pattern recognition, pp. 9729–9738, 2020.
+Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang,
+Dawn Song, and Jacob Steinhardt. Measuring mathematical problem solving with the
+math dataset.arXiv preprint arXiv:2103.03874, 2021.
+Jiwoo Hong, Noah Lee, and James Thorne. Orpo: Monolithic preference optimization
+without reference model. InProceedings of the 2024 Conference on Empirical Methods in
+Natural Language Processing, pp. 11170–11189, 2024.
+Audrey Huang, Wenhao Zhan, Tengyang Xie, Jason D Lee, Wen Sun, Akshay Krishnamurthy,
+and Dylan J Foster. Correcting the mythos of kl-regularization: Direct alignment without
+overoptimization via chi-squared preference optimization.arXiv preprint arXiv:2407.13399,
+2024.
+Aaron Jaech, Adam Kalai, Adam Lerer, Adam Richardson, Ahmed El-Kishky, Aiden Low,
+Alec Helyar, Aleksander Madry, Alex Beutel, Alex Carney, et al. Openai o1 system card.
+arXiv preprint arXiv:2412.16720, 2024.
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu,
+Joseph Gonzalez, Hao Zhang, and Ion Stoica. Efficient memory management for large
+language model serving with pagedattention. InProceedings of the 29th symposium on
+operating systems principles, pp. 611–626, 2023.
+Nathan Lambert, Jacob Morrison, Valentina Pyatkin, Shengyi Huang, Hamish Ivison, Faeze
+Brahman, Lester James V Miranda, Alisa Liu, Nouha Dziri, Shane Lyu, et al. Tulu 3:
+Pushing frontiers in open language model post-training.arXiv preprint arXiv:2411.15124,
+2024.
+Hung Le, Yue Wang, Akhilesh Deepak Gotmare, Silvio Savarese, and Steven Chu Hong Hoi.
+Coderl: Mastering code generation through pretrained models and deep reinforcement
+learning.Advances in Neural Information Processing Systems, 35:21314–21328, 2022.
+Aitor Lewkowycz, Anders Andreassen, David Dohan, Ethan Dyer, Henryk Michalewski,
+Vinay Ramasesh, Ambrose Slone, Cem Anil, Imanol Schlag, Theo Gutman-Solo, et al.
+Solving quantitative reasoning problems with language models.Advances in neural
+information processing systems, 35:3843–3857, 2022.
+Jia Li, Edward Beeching, Lewis Tunstall, Ben Lipkin, Roman Soletskyi, Shengyi Huang,
+Kashif Rasul, Longhui Yu, Albert Q Jiang, Ziju Shen, et al. Numinamath: The largest
+public dataset in ai4maths with 860k pairs of competition math problems and solutions.
+Hugging Face repository, 13(9):9, 2024.
+Mengqi Li, Lei Zhao, Anthony Man-Cho So, Ruoyu Sun, and Xiao Li. Online sft for
+llm reasoning: Surprising effectiveness of self-tuning without rewards.arXiv preprint
+arXiv:2510.18814, 2025.
+Shih-Yang Liu, Xin Dong, Ximing Lu, Shizhe Diao, Peter Belcak, Mingjie Liu, Min-Hung
+Chen, Hongxu Yin, Yu-Chiang Frank Wang, Kwang-Ting Cheng, et al. Gdpo: Group
+reward-decoupled normalization policy optimization for multi-reward rl optimization.
+arXiv preprint arXiv:2601.05242, 2026.
+Tianqi Liu, Yao Zhao, Rishabh Joshi, Misha Khalman, Mohammad Saleh, Peter J Liu, and
+Jialu Liu. Statistical rejection sampling improves preference optimization.arXiv preprint
+arXiv:2309.06657, 2023.
+Xiao Liu, Fanjin Zhang, Zhenyu Hou, Li Mian, Zhaoyu Wang, Jing Zhang, and Jie Tang.
+Self-supervised learning: Generative or contrastive.IEEE transactions on knowledge and
+data engineering, 35(1):857–876, 2021.
+12
+Preprint. Under review.
+Zichen Liu, Changyu Chen, Wenjun Li, Penghui Qi, Tianyu Pang, Chao Du, Wee Sun Lee,
+and Min Lin. Understanding r1-zero-like training: A critical perspective.arXiv preprint
+arXiv:2503.20783, 2025.
+Pan Lu, Hritik Bansal, Tony Xia, Jiacheng Liu, Chunyuan Li, Hannaneh Hajishirzi, Hao
+Cheng, Kai-Wei Chang, Michel Galley, and Jianfeng Gao. Mathvista: Evaluating mathe-
+matical reasoning of foundation models in visual contexts.arXiv preprint arXiv:2310.02255,
+2023.
+Michael Luo, Sijun Tan, Justin Wong, Xiaoxiang Shi, William Y Tang, Manan Roongta, Colin
+Cai, Jeffrey Luo, Tianjun Zhang, Li Erran Li, et al. Deepscaler: Surpassing o1-preview
+with a 1.5 b model by scaling rl.Notion Blog, 3(5), 2025.
+Yu Meng, Mengzhou Xia, and Danqi Chen. Simpo: Simple preference optimization with a
+reference-free reward.Advances in Neural Information Processing Systems, 37:124198–124235,
+2024.
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin,
+Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, et al. Training language
+models to follow instructions with human feedback.Advances in neural information
+processing systems, 35:27730–27744, 2022.
+Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D Manning, Stefano Ermon, and
+Chelsea Finn. Direct preference optimization: Your language model is secretly a reward
+model.Advances in neural information processing systems, 36:53728–53741, 2023.
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal
+policy optimization algorithms.arXiv preprint arXiv:1707.06347, 2017.
+Amrith Setlur, Chirag Nagpal, Adam Fisch, Xinyang Geng, Jacob Eisenstein, Rishabh
+Agarwal, Alekh Agarwal, Jonathan Berant, and Aviral Kumar. Rewarding progress:
+Scaling automated process verifiers for llm reasoning.arXiv preprint arXiv:2410.08146,
+2024.
+Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang,
+Mingchuan Zhang, YK Li, Yang Wu, et al. Deepseekmath: Pushing the limits of mathe-
+matical reasoning in open language models.arXiv preprint arXiv:2402.03300, 2024.
+Avi Singh, John D Co-Reyes, Rishabh Agarwal, Ankesh Anand, Piyush Patil, Xavier Garcia,
+Peter J Liu, James Harrison, Jaehoon Lee, Kelvin Xu, et al. Beyond human data: Scaling
+self-training for problem-solving with language models.arXiv preprint arXiv:2312.06585,
+2023.
+Charlie Snell, Jaehoon Lee, Kelvin Xu, and Aviral Kumar. Scaling llm test-time compute opti-
+mally can be more effective than scaling model parameters.arXiv preprint arXiv:2408.03314,
+2024.
+Nisan Stiennon, Long Ouyang, Jeffrey Wu, Daniel Ziegler, Ryan Lowe, Chelsea Voss, Alec
+Radford, Dario Amodei, and Paul F Christiano. Learning to summarize with human
+feedback.Advances in neural information processing systems, 33:3008–3021, 2020.
+Lewis Tunstall, Edward Beeching, Nathan Lambert, Nazneen Rajani, Kashif Rasul, Younes
+Belkada, Shengyi Huang, Leandro Von Werra, Cl´ementine Fourrier, Nathan Habib, et al.
+Zephyr: Direct distillation of lm alignment.arXiv preprint arXiv:2310.16944, 2023.
+Xu Wan, Yansheng Wang, Wenqi Huang, and Mingyang Sun. Buffer matters: Unleashing
+the power of off-policy reinforcement learning in large language model reasoning.arXiv
+preprint arXiv:2602.20722, 2026.
+Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed Chi, Sharan Narang, Aakanksha
+Chowdhery, and Denny Zhou. Self-consistency improves chain of thought reasoning in
+language models.arXiv preprint arXiv:2203.11171, 2022.
+13
+Preprint. Under review.
+Yiping Wang, Qing Yang, Zhiyuan Zeng, Liliang Ren, Liyuan Liu, Baolin Peng, Hao Cheng,
+Xuehai He, Kuan Wang, Jianfeng Gao, et al. Reinforcement learning for reasoning in large
+language models with one training example.arXiv preprint arXiv:2504.20571, 2025.
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V
+Le, Denny Zhou, et al. Chain-of-thought prompting elicits reasoning in large language
+models.Advances in neural information processing systems, 35:24824–24837, 2022.
+Zhiheng Xi, Xin Guo, Yang Nan, Enyu Zhou, Junrui Shen, Wenxiang Chen, Jiaqi Liu, Jixuan
+Huang, Zhihao Zhang, Honglin Guo, et al. Bapo: Stabilizing off-policy reinforcement
+learning for llms via balanced policy optimization with adaptive clipping.arXiv preprint
+arXiv:2510.18927, 2025.
+An Yang, Beichen Zhang, Binyuan Hui, Bofei Gao, Bowen Yu, Chengpeng Li, Dayiheng Liu,
+Jianhong Tu, Jingren Zhou, Junyang Lin, et al. Qwen2. 5-math technical report: Toward
+mathematical expert model via self-improvement.arXiv preprint arXiv:2409.12122, 2024.
+Wenkai Yang, Weijie Liu, Ruobing Xie, Kai Yang, Saiyong Yang, and Yankai Lin. Learning
+beyond teacher: Generalized on-policy distillation with reward extrapolation.arXiv
+preprint arXiv:2602.12125, 2026.
+Qiying Yu, Zheng Zhang, Ruofei Zhu, Yufeng Yuan, Xiaochen Zuo, Yu Yue, Weinan Dai,
+Tiantian Fan, Gaohong Liu, Lingjun Liu, et al. Dapo: An open-source llm reinforcement
+learning system at scale.arXiv preprint arXiv:2503.14476, 2025.
+Zheng Yuan, Hongyi Yuan, Chengpeng Li, Guanting Dong, Keming Lu, Chuanqi Tan,
+Chang Zhou, and Jingren Zhou. Scaling relationship on learning mathematical reasoning
+with large language models.arXiv preprint arXiv:2308.01825, 2023.
+Yang Yue, Zhiqi Chen, Rui Lu, Andrew Zhao, Zhaokai Wang, Shiji Song, and Gao Huang.
+Does reinforcement learning really incentivize reasoning capacity in llms beyond the base
+model?arXiv preprint arXiv:2504.13837, 2025a.
+Yu Yue, Yufeng Yuan, Qiying Yu, Xiaochen Zuo, Ruofei Zhu, Wenyuan Xu, Jiaze Chen,
+Chengyi Wang, TianTian Fan, Zhengyin Du, et al. Vapo: Efficient and reliable reinforce-
+ment learning for advanced reasoning tasks.arXiv preprint arXiv:2504.05118, 2025b.
+Eric Zelikman, Yuhuai Wu, Jesse Mu, and Noah Goodman. Star: Bootstrapping reasoning
+with reasoning.Advances in Neural Information Processing Systems, 35:15476–15488, 2022.
+Kaichen Zhang, Yuzhong Hong, Junwei Bao, Hongfei Jiang, Yang Song, Dingqian Hong,
+and Hui Xiong. Gvpo: Group variance policy optimization for large language model
+post-training.arXiv preprint arXiv:2504.19599, 2025.
+Chujie Zheng, Shixuan Liu, Mingze Li, Xiong-Hui Chen, Bowen Yu, Chang Gao, Kai Dang,
+Yuqiong Liu, Rui Men, An Yang, et al. Group sequence policy optimization.arXiv preprint
+arXiv:2507.18071, 2025.
+Xinyu Zhu, Mengzhou Xia, Zhepei Wei, Wei-Lin Chen, Danqi Chen, and Yu Meng. The
+surprising effectiveness of negative reinforcement in llm reasoning.arXiv preprint
+arXiv:2506.01347, 2025.
+14
+Preprint. Under review.
+Appendix
+A Training and Evaluation Benchmarks
+We train on DeepScaleR-Preview-Dataset and evaluate on five benchmarks spanning ele-
+mentary through Olympiad-level difficulty.
+• DeepScaleR-Preview-Dataset (Luo et al., 2025): a curated training corpus of approx-
+imately 40,000 unique mathematics problem–answer pairs compiled from AIME
+problems (1984–2023), AMC problems (before 2023), the Omni-MATH dataset,
+and the Still dataset, spanning difficulty levels from high-school competition to
+advanced mathematical reasoning.
+• MATH-500 (Hendrycks et al., 2021): a 500-problem representative subset of the
+MATH test set, from the MATH benchmark that OpenAI created in theirLet’s Verify
+Step by Step(Jaech et al., 2024) paper.
+• AMC 2023 (Li et al., 2024): a 40-problem benchmark curated from the 2023 AMC
+12A and AMC 12B contests, covering short-answer high-school competition mathe-
+matics.
+• AIME 2024 (Li et al., 2024): a 30-problem benchmark drawn from the 2024 AIME I
+and AIME II exams, consisting of challenging high-school competition problems
+with numerical final answers.
+• AIME 2025 (Balunovi´c et al., 2025): a 30-problem benchmark drawn from the 2025
+AIME I and AIME II exams; because it was released in 2025, it is commonly used as
+a fresher benchmark with lower contamination risk for models whose pretraining
+predates the contest.
+• OlympiadBench (He et al., 2024): the English mathematics portion of Olympiad-
+Bench, an Olympiad-level bilingual multimodal scientific benchmark; the official
+release provides English-math subsets spanning text-only and multimodal prob-
+lems, with both open-ended and proof-based variants.
+The downloading link for each dataset can be accessed from the Hugging Face website:
+• DeepScaleR-Preview-Dataset: https://huggingface.co/datasets/agentica-org/
+DeepScaleR-Preview-Dataset
+• MATH-500:https://huggingface.co/datasets/HuggingFaceH4/MATH-500
+• AMC 2023:https://huggingface.co/datasets/math-ai/amc23
+• AIME 2024:https://huggingface.co/datasets/Maxwell-Jia/AIME 2024
+• AIME 2025:https://huggingface.co/datasets/MathArena/aime 2025
+• OlympiadBench:https://huggingface.co/datasets/Hothan/OlympiadBench
+B Proofs of Theoretical Results
+B.1 Proof of Theorem 3.1: Implicit Negative Gradient
+Proof. We analyze the gradient ofLPOPO with respect to the logitzy′ for an incorrect response
+y′ ∈ S −(x). Recall the POPO loss in the main text equation (5):
+LPOPO(θ) =− ∑
+y∈S +(x)
+wθ(y|x)logπ θ(y|x)
+| {z }
+LNLL
++α· L sim(θ,ϕ,ξ) +β· L ent(θ). (1)
+We compute the gradient contribution of each component separately. Throughout, we work
+with a single promptxand drop the conditioning for brevity.
+15
+Preprint. Under review.
+Step 1: Softmax preliminary.Under the softmax parameterization πθ(y|x) =
+exp(zy)/ ∑y′′ exp(zy′′ ), the standard softmax Jacobian gives
+∂πθ(y|x)
+∂zy′
+=π θ(y′ |x)
+ 
+δy,y′ −π θ(y|x)
+
+, (2)
+∂logπ θ(y|x)
+∂zy′
+=δ y,y′ −π θ(y′ |x), (3)
+where δy,y′ is the Kronecker delta. Since y∈ S +(x) and y′ ∈ S −(x) are in disjoint sets, we
+haveδ y,y′ =0, and thus
+∂logπ θ(y|x)
+∂zy′
+=−π θ(y′ |x)for ally∈ S +(x). (4)
+Step 2: Weight invariance for negative logits.The bounded importance weights: wθ(y|
+x) =π θ(y|x)/Z +(x) where Z+(x) = ∑y′′ ∈S +(x) πθ(y′′ |x) . We show that these weights
+are invariant to perturbations of negative logits. For y∈ S +(x) and y′ ∈ S −(x), by the
+quotient rule:
+∂wθ(y|x)
+∂zy′
+= 1
+Z+
+∂πθ(y|x)
+∂zy′
+− πθ(y|x)
+(Z+)2
+∂Z+
+∂zy′
+. (5)
+From (2) withy̸=y ′:
+∂πθ(y|x)
+∂zy′
+=−π θ(y|x)π θ(y′ |x). (6)
+Summing over the positive set:
+∂Z+
+∂zy′
+= ∑
+y′′ ∈S +(x)
+∂πθ(y′′ |x)
+∂zy′
+=−π θ(y′ |x) ∑
+y′′ ∈S +(x)
+πθ(y′′ |x) =−π θ(y′ |x)Z +. (7)
+Substituting back into (5):
+∂wθ(y|x)
+∂zy′
+= −πθ(y|x)π θ(y′ |x)
+Z+ − πθ(y|x)
+(Z+)2
+ 
+−πθ(y′ |x)Z +
+= −πθ(y|x)π θ(y′ |x)
+Z+ + πθ(y|x)π θ(y′ |x)
+Z+ =0. (8)
+This invariance has a clear interpretation: rescaling all probabilities by the same factor (as
+the softmax does when a single logit changes) leaves theratio πθ(y|x)/Z + unchanged.
+Crucially, this means the weight normalization over S +(x) does not attenuate the implicit
+gradient on negatives.
+Step 3: NLL gradient on negative logits.Applying the product rule and using (8):
+∂LNLL
+∂zy′
+=− ∑
+y∈S +(x)
+"
+∂wθ(y|x)
+∂zy′
+·logπ θ(y|x) +w θ(y|x)· ∂logπ θ(y|x)
+∂zy′
+#
+=− ∑
+y∈S +(x)
+wθ(y|x)·
+ 
+−πθ(y′ |x)
+
+=π θ(y′ |x) ∑
+y∈S +(x)
+wθ(y|x) =π θ(y′ |x), (9)
+where the last equality uses ∑y∈S +(x) wθ(y|x) = 1. This term is unconditionally positive:
+gradient descent on the NLL loss alone already decreases the probability of every incorrect
+response.
+16
+Preprint. Under review.
+Step 4: Entropy gradient on negative logits.The entropy loss is Lent =−H(π θ(· |x)) =
+∑y πθ(y|x)logπ θ(y|x). Its gradient with respect toz y′ is:
+∂Lent
+∂zy′
+= ∑
+y
+∂πθ(y|x)
+∂zy′
+ 
+1+logπ θ(y|x)
+
+= ∑
+y
+πθ(y′ |x)
+ 
+δy,y′ −π θ(y|x)
+ 
+1+logπ θ(y|x)
+
+=π θ(y′ |x)
+h 
+1+logπ θ(y′ |x)
+
+− ∑
+y
+πθ(y|x)
+ 
+1+logπ θ(y|x)
+
+| {z }
+=1−H(π θ (·|x))
+i
+=π θ(y′ |x)
+
+logπ θ(y′ |x) +H(π θ(· |x))
+
+. (10)
+Step 5: Similarity loss does not contribute at the logit level.The similarity loss in the main
+text equation (8) depends on the negative logit zy′ only through the weights wθ(y|x) . By
+Step 2, ∂wθ(y|x)/∂z y′ = 0, and the cosine similarity term involves hidden representations
+fθ(x, y) for y∈ S +(x), which are computed from intermediate layers and do not depend on
+the output logitz y′. Therefore,∂L sim/∂zy′ =0.
+Step 6: Combining and sign analysis.Summing the contributions from Steps 3–5:
+∂LPOPO
+∂zy′
+= ∂LNLL
+∂zy′
++β ∂Lent
+∂zy′
++α ∂Lsim
+∂zy′
+=π θ(y′ |x) +β π θ(y′ |x)
+
+logπ θ(y′ |x) +H(π θ(· |x))
+
++0
+=π θ(y′ |x)
+h
+1+β
+ 
+logπ θ(y′ |x) +H(π θ(· |x))
+i
+. (11)
+Sinceπ θ(y′ |x)>0, the sign is determined by the bracketed factor. Setting it to zero:
+1+β
+ 
+logπ θ(y′ |x) +H
+
+=0⇐ ⇒π θ(y′ |x) =exp
+
+− 1
+β −H
+
+. (12)
+The gradient is strictly positive whenever πθ(y′ |x) exceeds this threshold. In practice,
+this condition is typically satisfied (as exp
+
+− 1
+β −H
+
+is close to 0) for any response with
+non-negligible probability, which completes the proof.
+The proof reveals two reinforcing forces that drive the implicit negative gradient. The first
+force originates from the weighted NLL loss on positives: through the softmax partition
+function, reinforcing correct responses imposes a uniform “probability tax” of πθ(y′ |x)
+on every incorrect logit. Notably, the bounded importance weights wθ(y|x) do not
+attenuate this force (as shown in Step 2, ∂wθ(y|x)/∂z y′ = 0 for all y′ ∈ S −(x)), so the
+weight normalization over S +(x) passes through without affecting the implicit gradient
+on negatives. The second force arises from the entropy regularization equation (10), which
+adds the strongest suppression (as the penalty) on the most probable incorrect responses.
+B.2 Proof of Lemma 3.2 (EMA-Bounded Parameter gap)
+Proof. We define the parameter gap δt =θ t −ξ t, which helps to build a recurrence relation
+using the POPO update rules.
+Step 1: Parameter gap recurrence.At iteration t, the online parameters are updated via
+gradient descent:
+θt+1 =θ t −ηg t, whereg t =∇ θLPOPO(θt)with∥g t∥ ≤G max. (13)
+The target parameters are updated via EMA (7):
+ξt+1 =τ ξ t + (1−τ)θ t+1. (14)
+17
+Preprint. Under review.
+Subtracting (14) from (13):
+δt+1 =θ t+1 −ξ t+1 =θ t+1 −τ ξ t −(1−τ)θ t+1
+=τ θ t+1 −τ ξ t =τ
+ 
+θt+1 −ξ t
+
+=τ
+ 
+θt −ηg t −ξ t
+
+=τ δ t −τ ηg t. (15)
+Step 2: Norm bound via contraction.Taking norms in (15) and applying the triangle
+inequality:
+∥δt+1∥ ≤τ∥δ t∥+τ ηG max. (16)
+This is a contractive recurrence with rateτ<1 and constant driving termτ ηG max.
+Step 3: Steady-state bound.Starting from δ0 =θ 0 −ξ 0 = 0 (since ξ0 =θ 0), we unroll (16):
+∥δt∥ ≤τ ηG max
+t−1
+∑
+k=0
+τk =τ ηG max · 1−τ t
+1−τ . (17)
+Takingt→∞:
+∥δt∥ ≤ τ ηG max
+1−τ , (18)
+which establishes the claimed bound (11). As a concrete example, for τ= 0.999, η=
+1 × 10−6, and Gmax = 1, the bound gives ∥δ∥< 10−3, confirming typical bounded gap
+throughout training.
+Lemma 3.2 bounds the parameter gap. In practice, the similarity loss Lsim also provides
+a second restoring force: its gradient component α∇θLsim pushes θ back toward ξ in
+representation space, further reducing the effective divergence. The two mechanisms are
+complementary. When τ is close to 1 (strong momentum anchoring), the EMA alone
+provides tight control and α can be set small. Conversely, when τ is smaller (faster target
+adaptation), a largerαcompensates by strengthening the representation-space tether.
+C Sweep Studies
+Parameter Avg.
+Predictor layers = 2 53.06
+Predictor layers = 3 52.45
+Predictor layers = 4 51.97
+Predictor dimension = 1024 52.38
+Predictor dimension = 2048 52.64
+Predictor dimension = 4096 53.06
+Momentum = 0.99 52.13
+Momentum = 0.999 53.06
+Momentum = 0.9999 52.21
+Table 1: Sweep study on predictor layer, embedding dimension, and momentum rate.
+We presented the sweep studies of major hyperparameters in Appendix Table 1.
+D Training Details
+Infrastructure.All experiments are conducted on a single Kubernetes (K8s) node equipped
+with 4× NVIDIA A100 80GB GPUs. We use PyTorch with Fully Sharded Data Parallelism
+(FSDP) for distributed training and vLLM (server mode) for rollout generation. It takes
+around 11 hours to run POPO for 1 epoch training on 1.5B models and 24 hours on 7B
+models, respectively. It takes 15 minutes for vLLM inferences.
+18
+Preprint. Under review.
+Hyperparameter Value
+Optimizer AdamW (β 1=0.9,β 2=0.999,ϵ=1e-8)
+Learning rate 1e-7
+LR schedule Cosine decay with 10% warmup
+Epoch 1
+Per-device batch size 32
+Gradient accumulation steps 4
+Group size 8
+Max prompt length 512
+Max completion length 1024
+Generation temperature 1.0
+Weight decay 0.01
+Gradient clipping 1.0
+Num iterations 1
+Precision bfloat16
+Table 2: Shared training hyperparameters across RL methods.
+Hyperparameter Symbol Value
+EMA momentumτ0.999
+Similarity weightα0.1
+Entropy coefficientβ0.01
+Feature noise stdσ0.02
+Reward threshold N/A 0.0
+Predictor hidden dimension N/A 4096
+Predictor layers N/A 2
+Table 3: POPO hyperparameter configuration.
+Hyperparameters.For GRPO, we use clipping parameter ϵ= 0.2 and KL coefficient
+βKL = 0.01. Dr. GRPO applies the corrected advantage normalization. DAPO uses clip-
+higher ratio ϵhigh = 0.28, ϵlow = 0.2, with dynamic sampling and overlong filtering at 1.5×
+the mean completion length. SAPO uses positive temperature τpos = 1.0 and negative
+temperatureτ neg =1.05.
+Parameter Value
+Sampling temperature 0.7
+Top-p0.95
+Passk8
+Samplesn128
+Max output length (evaluation) 4096
+Inference engine vLLM
+Mode server
+Tensor parallel size 1
+Table 4: Evaluation configuration.
+19
+Preprint. Under review.
+E Examples Responses from POPO and Other RL Algorithms
+E.1 DeepSeek-R1-Distill-Qwen-7B Model on AIME 2025 Dataset
+Input prompt:
+<|im start|>System.
+Please reason step by step, and put your final answer within boxed {} <|im end|>.
+<|im start|>User.
+”Question”<|im end|>.
+<|im start|>Assistant
+Question: An isosceles trapezoid has an inscribed circle tangent to each of its four sides.
+The radius of the circle is 3, and the area of the trapezoid is 72. Let the parallel sides of
+the trapezoid have lengthsrands, withr̸=s. Findr 2 +s 2
+Ground-truth Answer: 504
+POPO Response: First, recognize that an isosceles trapezoid with an inscribed circle is a
+tangential trapezoid, meaning the sum of the lengths of the two parallel sides equals the
+sum of the lengths of the two non-parallel sides. Given the radius of the inscribed circle
+is 3, the height (distance) between the two parallel sides is 6. The area of a trapezoid is
+given by the formula: Area= (r+s)
+2 ×h Plugging in the known values:72 = (r+s)
+2 × 6
+Solving for r+s :r+s= 24 Since the trapezoid is tangential, the sum of the lengths
+of the two parallel sides is equal to the sum of the lengths of the two non-parallel
+sides. Let the non-parallel sides each have length l:r+s= 2l 24 = 2l l= 12 To find
+r2 +s 2, use the identity:(r+s) 2 =r 2 +s 2 + 2rs 576 =r 2 +s 2 + 2rs Additionally, the
+Pythagorean theorem can be applied to the non-parallel sides, where the height is 6,
+and the difference between the bases is r−s : 12 2 = 62 +
+  r−s
+2
+2 144 = 36 +
+  r−s
+2
+2
+  r−s
+2
+2 = 108 (r−s) 2 = 432 Now, solve the system of equations:r2 +s 2 + 2rs= 576
+r2 +s 2 − 2rs= 432 Adding both equations: 2(r2 +s 2) = 1008 r2 +s 2 =504 Correct
+GRPO Response: To solve the problem, we’ll use the properties of an isosceles trapezoid
+with an inscribed circle. First, recall that for a trapezoid to have an inscribed circle
+(be tangential), the sum of the lengths of the two parallel sides must equal the sum
+of the lengths of the two non-parallel sides. Let’s denote: The lengths of the two
+parallel sides as r and s (with r̸=s ). Given that the radius of the inscribed circle is
+3, the diameter is 6. However, in an isosceles tangential trapezoid, the diameter isn’t
+directly the height. Instead, the radius is related to the area.The area A of a trapezoid
+can be expressed as: A= (r+s)
+2 ×h where h is the height. Wait, actually, no. In a
+tangential quadrilateral, the area is equal to the product of the semiperimeter and the
+radius: A= (r+s+ 2a)/2 ×r but in this case, for a trapezoid, the semiperimeter
+p is:p= r+s+2a
+2 and the area is also given by: A=p×r= r+s+2a
+2 ×r However, we
+also know that in an isosceles tangential trapezoid, the sum of the two parallel sides
+equals the sum of the two non-parallel sides: r+s= 2a.Therefore, substituting into
+the area formula: A= (r+s)+(r+s)
+2 ×r= (r+s)×r But we are given that the area
+A= 72, so: (r+s)×r= 72 Let’s consider the heighth of the trapezoid. In a tangential
+trapezoid, the height is equal to twice the radius: h= 2r= 6 Therefore, the area can
+also be expressed as: A= r+s
+2 ×h= r+s
+2 × 6 = 3(r+s) Given that A= 72, we have:
+3(r+s) = 72 r+s= 24 Now, we have two equations: r+s= 24 (r+s)×r= 72 From
+the first equation, r+s= 24. Plugging this into the second equation: 24 ×r= 72 r= 3
+Substituting r= 3 back into r+s= 24: s= 24 − 3 = 21 Finally, we need to find r2 +s 2:
+r2 +s 2 =3 2 +21 2 =9+441=450 The value ofr 2 +s 2 is 450 . Wrong
+20
+Preprint. Under review.
+Dr. GRPO Response: To solve the problem, I need to use the properties of an isosceles
+trapezoid with an inscribed circle (incircle). Here are the key steps: 1.Understanding
+the Properties:- An isosceles trapezoid with an incircle must be tangential, meaning
+the sum of the lengths of the two opposite sides is equal. In this case, the sum of the two
+parallel sides (bases) equals the sum of the two non-parallel sides (legs). 2.Expressing
+the Perimeter:- Let the lengths of the two parallel sides be r and s, and the lengths of the
+legs be l. Since the trapezoid is tangential, r+s= 2l. 3.Calculating the Area:- The area
+of a trapezoid is given by Area= (r+s)
+2 ×h , where h is the height. Given the area is 72,
+we have (r+s)
+2 ×h= 72. - Since the trapezoid is tangential and has an incircle with radius
+3, the height h= 2 ×radius= 6. 4.Solving for the Sum of the Bases:- Substituting
+h= 6 into the area formula: (r+s)
+2 × 6 = 72 leads to r+s= 24. 5.Expressing the
+Legs in Terms of the Bases:- From the tangential property, r+s= 2l implies l= 12.
+6.Using the Pythagorean Theorem:- The legs of the trapezoid can be expressed in
+terms of the height and the difference of the bases. Let d= r−s
+2 . Then, l2 =h 2 +d 2. -
+Substituting l= 12 and h= 6, we find d=
+√
+122 −6 2 =
+√
+108= 6
+√
+3. 7.Calculating
+r2 +s 2:- Using the identities (r+s) 2 =r 2 + 2rs+s 2 and (r−s) 2 =r 2 − 2rs+s 2, we
+can solve for r2 +s 2. - Adding these equations gives 2(r2 +s 2) = (r+s) 2 + (r−s) 2. -
+Substituting r+s= 24 and r−s= 12
+√
+3, we get r2 +s 2 = 242+(12
+√
+3)2
+2 = 576+432
+2 = 504.
+504 Correct
+SAPO Response: To solve the problem, let’s break it down step by step: First, we know
+that the trapezoid is isosceles and has an inscribed circle. This means it is a tangential
+trapezoid, and the sum of the lengths of the two parallel sides (bases) must equal the
+sum of the lengths of the two non-parallel sides (legs). Given that the radius of the
+inscribed circle is 3, the height of the trapezoid is twice the radius, so the height is 6.
+The area of a trapezoid is given by the formula: Area= (r+s)
+2 ×height We’re given the
+area is 72, so: 72= (r+s)
+2 ×6 Simplifying this equation: 72=3(r+s)
+r+s= 24 Since the trapezoid is tangential, the sum of the lengths of the two bases
+equals the sum of the lengths of the two legs. Let’s denote the legs as l. Therefore:
+r+s= 2l 24 = 2l l= 12 Now, each leg can be thought of as the hypotenuse of a right
+triangle formed by the height of the trapezoid and half the difference of the bases. Let’s
+denote the difference between the bases as s−r . Then, half the difference is s−r
+2 . Using
+the Pythagorean theorem:l 2 =
+  s−r
+2
+2 +height 2
+122 =
+  s−r
+2
+2 +6 2
+144=
+  s−r
+2
+2 +36  s−r
+2
+2 =108 s−r
+2 =
+√
+108
+s−r
+2 =6
+√
+3
+s−r= 12
+√
+3 Now, we have two equations: 1. r+s= 24 2. s−r= 12
+√
+3 Adding these
+two equations: 2s=24+12
+√
+3
+s=12+6
+√
+3 Subtracting the second equation from the first: 2r=24−12
+√
+3
+r=12−6
+√
+3 Finally, to findr 2 +s 2:r 2 +s 2 = (12−6
+√
+3)2 + (12+6
+√
+3)2
+= (144−144
+√
+3+108) + (144+144
+√
+3+108)
+=144−144
+√
+3+108+144+144
+√
+3+108
+=144+108+144+108
+=504 The final answer is 504 . Correct
+21
+Preprint. Under review.
+DAPO Response: To solve the problem, let’s start by recalling some properties of an
+isosceles trapezoid with an inscribed circle (a tangential trapezoid). First, in a tangential
+quadrilateral (a quadrilateral with an inscribed circle), the sum of the lengths of the
+two opposite sides is equal. For an isosceles trapezoid, this means the sum of the two
+parallel sides (the bases) is equal to the sum of the two non-parallel sides (the legs). Let’s
+denote the lengths of the two bases as r and s, and the lengths of the legs as l. So, we
+have: r+s= 2l Next, we know the radius of the inscribed circle is 3, so the areaA of the
+trapezoid can be expressed as: A= (r+s)×r= (r+s)× 3 However, the area is also
+given as 72, so: 72 = (r+s)× 3 =⇒r+s= 24 From the earlier equationr+s= 2l, we
+find that: 2l= 24 =⇒l= 12 Now, the height h of the trapezoid is twice the radius, so:
+h= 2 × 3 = 6 Using the Pythagorean theorem, we can relate the difference of the bases
+to the legs and the height. The difference between the bases is |r−s| , and half of that is:
+|r−s|
+2
+ |r−s|
+2
+2
++h 2 =l 2 Substituting the known values:
+ |r−s|
+2
+2
++ 62 = 122 Simplifying:
+ |r−s|
+2
+2
+= 144 − 36 = 108 |r−s|
+2 =
+√
+108= 6
+√
+3|r−s|= 12
+√
+3 Now, we have a system
+of equations: r+s= 24 |r−s|= 12
+√
+3 Assuming r>s , we can write: r−s= 12
+√
+3
+Now, solve for r and s: Adding the equations: 2 r= 24 + 12
+√
+3=⇒r= 12 + 6
+√
+3
+Subtracting the equations: 2s= 24 − 12
+√
+3=⇒s= 12 − 6
+√
+3 Finally, calculate r2 +s 2:
+r2 +s 2 = (12 + 6
+√
+3)2 + (12 − 6
+√
+3)2 Expanding both squares: (144 + 144
+√
+3+ 108) +
+(144−144
+√
+3+108) =144+108+144+108=504 .Correct
+BASE Response: First, since the trapezoid is isosceles and has an inscribed circle, it
+must satisfy the condition that the sum of the lengths of the two parallel sides (bases) is
+equal to the sum of the lengths of the two non-parallel sides (legs). Let the lengths of
+the parallel sides be r and s, and the lengths of the legs be l. Therefore, r+s= 2l. Given
+that the radius of the inscribed circle is 3, the height h of the trapezoid is 2 × 3 = 6. The
+area of the trapezoid is given by (r+s)
+2 ×h=72. Substitutingh=6, we have:
+(r+s)
+2 ×6=72=⇒r+s=24
+Since the trapezoid is isosceles and has an inscribed circle, the legs are equal in length,
+and we have:
+l= r+s
+2 =12
+Using the Pythagorean theorem with one of the legs and the difference of the bases:
+l2 =
+ r−s
+2
+2
++h 2 =⇒12 2 =
+ r−s
+2
+2
++6 2 =⇒144=
+ r−s
+2
+2
++36
+ r−s
+2
+2
+=108=⇒ (r−s )2 =432
+Finally, calculatingr 2 +s 2:
+(r+s) 2 =r 2 +2rs+s 2 =576=⇒r 2 +s 2 =576−2×72=432 Wrong
+22
+Preprint. Under review.
+SFT Response: Given an isosceles trapezoid with an inscribed circle, the radius of the
+circle is 3, and the area of the trapezoid is 72. We need to find r2 +s 2, where r and s
+are the lengths of the two parallel sides, with r̸=s . First, since the circle is tangent to
+both parallel sides of the trapezoid, the distance between those two sides, which is the
+height of the trapezoid, must be twice the radius. Therefore, the height is h= 2 · 3 = 6.
+Next, we use the area formula for a trapezoid: Area= 1
+2 (r+s)h . Substituting the
+given area and the height, we get 72 = 1
+2 (r+s)· 6, which simplifies to 72 = 3(r+s) ,
+so r+s= 24. At this point, we have one useful equation. Now we use the fact that
+the trapezoid has an inscribed circle. For a tangential trapezoid, the sum of the two
+bases equals the length of each leg, so we write r+s=l . Since we already found
+that r+s= 24, it follows that the leg length is l= 24. This gives us another quantity
+to work with. Because the trapezoid is isosceles, if we drop perpendiculars from the
+endpoints of the shorter base to the longer base, we form two congruent right triangles
+on the sides. If we let s be the longer base and r be the shorter base, then the horizontal
+leg of each right triangle is s−r
+2 , the vertical leg is the height 6, and the hypotenuse is
+the leg of the trapezoid, which has length 24. By the Pythagorean theorem, we have
+l=
+q  s−r
+2
+2 +6 2. Substituting l= 24, we obtain 24 =
+q  s−r
+2
+2 +36 . Squaring both
+sides gives 576 =
+  s−r
+2
+2 + 36. Subtracting 36 from both sides, we get
+  s−r
+2
+2 = 540.
+Taking square roots, we find s−r
+2 =
+√
+540. Since 540 = 36 · 15, this becomes s−r
+2 = 6
+√
+15,
+and therefore s−r= 12
+√
+15. Now we have the system r+s= 24 and s−r= 12
+√
+15.
+Adding the two equations gives (r+s) + (s−r) = 24 + 12
+√
+15, so 2s= 24 + 12
+√
+15,
+which means s= 12 + 6
+√
+15. Subtracting the second equation from the first gives
+(r+s)−(s−r) = 24 − 12
+√
+15, so 2r= 24 − 12
+√
+15, and thus r= 12 − 6
+√
+15. Finally,
+we compute r2 +s 2. Instead of squaring each expression separately, we use the identity
+(r+s) 2 + (s−r) 2 = 2(r2 +s 2). Therefore, r2 +s 2 = (r+s) 2+(s−r) 2
+2 . Substituting the
+values we found, we get r2 +s 2 = 242+(12
+√
+15)2
+2 = 576+2160
+2 = 2736
+2 = 1368. Hence, the
+value ofr 2 +s 2 is 1368 .Wrong
+E.2 Qwen2.5-Math-7B Model on Olympiad Dataset
+Input prompt:
+<|im start|>System.
+Please reason step by step, and put your final answer within boxed {} <|im end|>.
+<|im start|>User.
+”Question”<|im end|>.
+<|im start|>Assistant
+Question: For a positive integer a, define a sequence of integers x1, x2, . . . by letting
+x1 =a and xn+1 = 2xn + 1 for n≥ 1. Let yn = 2xn − 1. Determine the largest possible
+ksuch that, for some positive integera, the numbersy 1, . . . ,yk are all prime.
+Ground-truth Answer: 2
+23
+Preprint. Under review.
+POPO Response: To determine the largest possiblek such that, for some positive integer
+a, the numbers y1, y2, . . ., yk are all prime, we start by analyzing the given sequence and
+the properties of the numbers involved. Given: - x1 =a (where a is a positive integer)
+- xn+1 = 2xn + 1 for n≥ 1 - yn = 2xn − 1 We need to find the largest k such that all
+y1, y2, . . ., yk are prime numbers. First, let’s compute the first few terms of the sequence
+{xn} and corresponding yn: 1.For n= 1:- x1 =a - y1 = 2a − 1 - y1 must be prime. This
+implies that a itself must be prime since 2a − 1 is prime only if a is prime (otherwise,
+2a − 1 would be composite). 2.For n= 2:- x2 = 2x1 + 1 = 2a+ 1 - y2 = 22a+1 − 1
+- y2 must also be prime. 3.For n= 3:- x3 = 2x2 + 1 = 2(2a+ 1) + 1 = 4a+ 3 -
+y3 = 24a+3 − 1 - y3 must be prime. 4.For n= 4:- x4 = 2x3 + 1 = 2(4a+ 3) + 1 = 8a+ 7
+- y4 = 28a+7 − 1 - y4 must be prime. Continuing this pattern, each subsequent yn
+becomes exponentially larger. The challenge is to find an a such that all y1 through yk
+are prime. To maximize k, we should start with the smallest possible prime a, which is
+a= 2: - y1 = 22 − 1 = 3 (prime) - y2 = 25 − 1 = 31 (prime) - y3 = 211 − 1 = 2047 (not
+prime, since 2047=23×89) Thus, witha=2, we only getk=2. Tryinga=3:
+- y1 = 23 − 1 = 7 (prime) - y2 = 27 − 1 = 127 (prime) - y3 = 215 − 1 = 32767 (not prime,
+since 32767 = 7 × 31 × 151) Again, k= 2. Trying a= 5: - y1 = 25 − 1 = 31 (prime) -
+y2 = 211 − 1 = 2047 (not prime) Thus, k= 1. It appears that regardless of the choice
+of a, achieving k≥ 3 is not possible because y3 tends to be composite. Therefore, the
+maximum value of k for which all y1 through yk are prime is k= 2. The largest possible
+ksuch thaty 1, . . . ,yk are all prime is 2 . Correct
+GRPO Response: To solve this problem, we need to analyze the sequence xn and the
+corresponding sequence yn. 1. First, let’s define the sequence xn: - x1 =a - xn+1 =
+2xn + 1 2. From this, we can derive the general form of xn: - x2 = 2x1 + 1 = 2a+ 1
+- x3 = 2x2 + 1 = 2(2a+ 1) + 1 = 4a+ 3 - x4 = 2x3 + 1 = 2(4a+ 3) + 1 = 8a+ 7 -
+By induction, we can see that xn = 2n−1a+ 2n−1 − 1 = 2n−1(a+ 1)− 1. 3. Next, we
+define yn: - yn = 2xn − 1 - Substituting xn into yn, we get yn = 22n−1 (a+1)−1 − 1. 4.
+To find the largest possible k such that y1, y2, . . ., yk are all prime, we need to check
+the primality of the first few terms of yn. 5. Let’s start with y1: - y1 = 2a − 1 - For
+y1 to be prime, a must be such that 2 a − 1 is prime. The smallest such a is 2, so
+y1 = 22 − 1 = 3, which is prime. 6. Next, let’s checky2: - y2 = 22a+1 − 1 - For y2 to be
+prime, 2a+ 1 must be a prime exponent in the Mersenne prime form. If a= 2, then
+y2 = 22·2+1 − 1 = 25 − 1 = 31, which is prime. 7. Next, let’s check y3: - y3 = 24a+3 − 1 -
+For y3 to be prime, 4a+ 3 must be a prime exponent in the Mersenne prime form. If
+a= 2, then y3 = 24·2+3 − 1 = 211 − 1 = 2047 = 23 · 89, which is not prime. So, the
+largest possible k such that y1, y2, . . ., yk are all prime is 2. Therefore, the answer is 2 .
+Correct
+E.3 Qwen-Math-1.5B Model on the MATH-500 Dataset
+Input prompt:
+<|im start|>System.
+Please reason step by step, and put your final answer within boxed {} <|im end|>.
+<|im start|>User.
+”Question”<|im end|>.
+<|im start|>Assistant
+Question: How many positive whole-number divisors does 196 have?
+Ground-truth Answer: 9
+24
+Preprint. Under review.
+POPO Response: To find how many positive whole-number divisors 196 has, we first
+factor it into primes. We have: 196 = 142 = ( 2 × 7)2 = 22 × 72 Now, use the divisor-
+counting formula: If a number has prime factorization paqb, then the number of positive
+divisors is: (a+ 1)(b+ 1) Here, a= 2 and b= 2, so the number of positive divisors is:
+(2 + 1)(2 + 1) = 3 × 3 = 9 Therefore, the number of positive whole-number divisors of
+196 is 9 .Correct
+E.4 Deepseek-Math-7B Model on AMC 23 dataset
+Input prompt:
+<|im start|>System.
+You are a helpful assistant. Please solve the following math problem step by step and put your
+final answer within<|im end|>.
+<|im start|>User.
+”Question”<|im end|>.
+<|im start|>Assistant.
+Question: How many complex numbers satisfy the equation z5 = z, where z is the
+conjugate of the complex numberz?
+Ground-truth Answer:7
+POPO Response: We want to find the number of complex numbers z satisfying z5 = z,
+where z denotes the complex conjugate of z. To analyze this equation, write the complex
+number z in polar form: z=re iθ, where r≥ 0 and θ is a real angle. Then: z5 =r 5ei5θ
+and z=re −iθ So the equation z5 = z becomes: r5ei5θ =re −iθ Now we consider two
+cases. First, if r= 0, then z= 0, and indeed: z5 = 0 = z So z= 0 is one solution.
+Now suppose r> 0. Then we may divide both sides of r5ei5θ =re −iθ by re−iθ, giving:
+r4ei6θ = 1 For a complex number to equal 1, its magnitude must be 1 and its argument
+must be a multiple of 2π. Therefore, we must have: r4 = 1 and ei6θ = 1 Since r≥ 0, the
+equation r4 = 1 implies: r= 1 And from ei6θ = 1, we get: 6θ= 2πk for some integer k.
+Thus: θ= 2πk
+6 = πk
+3 As k= 0, 1, 2, 3, 4, 5, this gives the 6 distinct solutions on the unit
+circle: e0i, eiπ/3, ei2π/3, eiπ, ei4π/3, ei5π/3 So there are: 6 nonzero solutions, together with
+the zero solution. Hence, the total number of complex numbers satisfying the equation
+is: 6+1=7 Therefore, the answer is 7 .Correct
+25

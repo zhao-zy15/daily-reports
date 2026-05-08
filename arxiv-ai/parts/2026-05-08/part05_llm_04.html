@@ -1,0 +1,85 @@
+  <div class="paper" id="p4">
+    <h3 class="paper-title">4. EMO: Pretraining Mixture of Experts for Emergent Modularity</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06663</span>
+      <span>🏛 UC Berkeley, Allen Institute for AI</span>
+      <br>
+      <span class="tag tag-llm">MoE</span><span class="tag tag-llm">Modularity</span><span class="tag tag-llm">Pre-training</span>
+      <span><a href="https://arxiv.org/abs/2605.06663" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>MoE 表面上为模块化部署提供了希望（按域只激活相关专家），但实际上现有 MoE 在"只保留 25%/12.5% 专家"时性能急剧崩塌——专家学到的是低层句法（subword 片段、连词、标点）而不是语义域（数学、代码、医学）。这导致 14B-A1B 这种大稀疏 MoE 在内存受限场景下无法选择性部署。本文目标：让 MoE 在预训练阶段就<strong>涌现出语义级模块化</strong>，使得"按域选择专家子集"真正可行。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 文档级专家池约束（Document Expert Pool）</strong>
+        <p>核心 idea：利用<strong>文档边界</strong>作为弱监督信号（同一文档的 token 通常共享语义域）。对每个文档，先计算所有 token 的平均路由分布，取 top-d 作为该文档的专家池：</p>
+        $$\mathcal{D} = \text{Top-K}\Bigl(\frac{1}{T}\sum_{t=1}^T p_t,\ d\Bigr) \subseteq \{1,...,n_r\}$$
+        <p>然后限制该文档内所有 token 只能从 \(\mathcal{D}\) 中选 expert，路由分布做 mask 重归一化：</p>
+        $$\hat p_t(i) = \begin{cases} \dfrac{p_t(i)}{\sum_{j\in\mathcal{D}} p_t(j)} & \text{if } i\in\mathcal{D} \\ 0 & \text{otherwise}\end{cases}$$
+        <p>FFN 输出 \(\text{FFN}_\text{out}(x_t) = \sum_{i\in\mathcal{R}_t}\hat p_t(i) E_i(x_t) + \sum_{j=1}^{n_s} E_j^{(s)}(x_t)\)。这一简单约束让"语义相近的 token 集中到相同专家"涌现。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 全局负载均衡（解决约束冲突）</strong>
+        <p>关键工程问题：标准的 micro-batch load balancing 鼓励"同文档 token 分散到多个 expert"，与文档级专家池约束<strong>方向相反</strong>，会导致训练不稳定。EMO 的解决方案：采用 global load balancing，把 routing 统计聚合到 data-parallel group 级别。这样 LB 在<strong>跨文档</strong>上鼓励 expert 均匀利用，而文档级约束在<strong>文档内</strong>强制一致性，两者互补。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ 随机化 Pool Size 训练以支持任意子集</strong>
+        <p>固定 \(d\) 训练会让模型只对该 \(d\) 值的子集表现好。EMO 把 \(d\) 当随机变量：每个文档独立采样 \(d \sim \mathcal{U}\{k, ..., n_r\}\)，使模型在预训练期间见过各种 pool size。这样推理时可以任意指定保留多少 expert（25%/12.5%/6%）都有不错性能。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 总损失与架构</strong>
+        <p>总目标 \(\mathcal{L} = \mathcal{L}_\text{CE} + \alpha\mathcal{L}_\text{LB} + \beta\mathcal{L}_\text{RZ}\)，其中 \(\mathcal{L}_\text{LB} = n_r\sum_{i=1}^{n_r}\bar f_i\bar P_i\) 为全局负载均衡损失。架构上基于 OLMoE 改进：加共享 expert、pre-norm 替代 post-norm、移除 QK-norm。1B-active / 14B-total，128 experts (127 routed + 1 shared)，每 token 选 \(k=8\)。在 1T tokens（OLMoE 语料）上从头预训练。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>对比：标准 MoE vs EMO 的 top-18 簇语义</strong>
+        <ul>
+          <li><strong>标准 MoE 的专家簇（按 token 数）：</strong> Word-internal subword 片段 (6.0%)、介词 (5.1%)、抽象名词 (4.8%)、章节符号 (4.6%)、网页元数据 (4.5%)、并列连词 (4.0%)、系动词 (3.8%)... 都是<strong>低层句法/格式</strong>特征。</li>
+          <li><strong>EMO 的专家簇：</strong> 影视/音乐/书评 (5.1%)、个人博客 (4.4%)、网页 boilerplate (4.2%)、健康医学 (4.1%)、垃圾/成人/赌博 (4.1%)、技术支持/IT/Web 开发 (4.1%)、个人叙事 (3.9%)、商业营销 (3.9%)、新闻报道 (3.7%)、源代码 (3.4%)、美国政治 (3.2%)、生物医学研究 (3.1%)、宗教哲学 (3.1%)... 都是<strong>语义域</strong>。</li>
+          <li><strong>实际效果：</strong> 部署 EMO-Math 子模型时只需保留 GSM8K 域专家（top-32 of 128），1B active 不变，整体内存 -75%，准确率从 12.0% → 11.0%（仅降 -1pt）；而标准 MoE 同条件下 13.9% → 4.9%（崩塌 -9pt）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>1T tokens 预训练，1B active / 14B total（128 expert，激活 8）：</p>
+      <table>
+        <thead><tr><th>模型</th><th>训练 tokens</th><th>MC9</th><th>Gen5</th><th>MMLU</th><th>MMLU-Pro</th><th>GSM8K</th></tr></thead>
+        <tbody>
+          <tr><td>OLMoE† (旧架构, 64 experts)</td><td>5T</td><td>63.5</td><td>57.6</td><td>42.8</td><td>18.7</td><td>13.7</td></tr>
+          <tr><td>Reg. MoE (改进架构)</td><td>1T</td><td class="best">63.9</td><td class="best">59.7</td><td>42.4</td><td class="best">19.3</td><td class="best">13.9</td></tr>
+          <tr><td><strong>EMO (Ours)</strong></td><td>1T</td><td>63.1</td><td>57.9</td><td class="best">42.8</td><td>18.5</td><td>12.0</td></tr>
+        </tbody>
+      </table>
+      <p>选择性 expert 使用（MMLU，按域选 top-d experts）：</p>
+      <table>
+        <thead><tr><th>方法</th><th>128 (full)</th><th>64 (50%)</th><th>32 (25%)</th><th>16 (12.5%)</th><th>8 (6.25%)</th></tr></thead>
+        <tbody>
+          <tr><td>Reg. MoE (no fine-tune)</td><td>42.4</td><td>39.4</td><td>30.8</td><td>24.6</td><td>22.7</td></tr>
+          <tr><td><strong>EMO (no fine-tune)</strong></td><td class="best">42.8</td><td class="best">42.5</td><td class="best">41.4</td><td class="best">39.9</td><td class="best">36.1</td></tr>
+          <tr><td>Reg. MoE (fine-tune)</td><td>43.0</td><td>40.5</td><td>34.2</td><td>26.8</td><td>25.2</td></tr>
+          <tr><td><strong>EMO (fine-tune)</strong></td><td class="best">43.6</td><td class="best">43.3</td><td class="best">41.7</td><td class="best">40.1</td><td class="best">37.3</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">关键观察：保留 25% 专家时 EMO 仅降 1pt（42.8→41.4），而标准 MoE 降 12pt（42.4→30.8）；保留 12.5% 时 EMO 降 3pt（→39.9），标准 MoE 降 18pt（→24.6）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>Easy-EP 替代选择策略：</strong> 即使用 SOTA expert pruning 方法 Easy-EP，标准 MoE 仍在小子集崩塌；EMO 对选择策略不敏感，证明<strong>模块化必须在训练期间学到</strong>，而非事后通过精巧的 expert selection 恢复。<strong>少 shot 选 expert：</strong> 选 expert 子集只需 single few-shot example 即可识别 — 部署门槛极低。<strong>局限：</strong> (1) GSM8K 上 EMO 略低于 Reg. MoE（12.0 vs 13.9），即"全模型推理"时损失约 1.4pt，是模块化的代价；(2) 仅在 14B-total 验证，更大规模（如 100B+）行为未知；(3) 文档边界质量直接影响模块化质量，对清洗良好的预训练语料适用，对噪声大的爬取数据可能退化。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇可能影响未来 MoE 部署形态的重要工作。它把"模块化"从一个被动属性（专家自然分化）变成主动设计目标，且实现路径极简——只在路由约束 + LB 上做改动，不动架构、不动数据。最大启示：<strong>对生产部署而言，"selective expert deployment"是真正的杀手锏</strong>——一个 14B EMO 可以根据应用域"切片"出 1.75B (12.5%) 的子模型部署，内存成本骤降，性能仅降 3pt。这对端侧/边缘部署、多租户推理服务都有直接价值。Allen AI + Berkeley 这次又一次给开源社区贡献了一个 paradigm-shifting 工作（已开源 model + code + 可视化）。</p>
+    </div>
+</content>

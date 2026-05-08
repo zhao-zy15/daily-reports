@@ -1,0 +1,95 @@
+  <h2 class="section-title rl">🎯 RL · 强化学习与对齐（3 篇）</h2>
+
+  <div class="paper" id="p5">
+    <h3 class="paper-title">5. POPO: Beyond Negative Rollouts — Positive-Only Policy Optimization with Implicit Negative Gradients</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06650</span>
+      <span>🏛 University of Washington</span>
+      <br>
+      <span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Math Reasoning</span><span class="tag tag-rl">GRPO Alternative</span>
+      <span><a href="https://arxiv.org/abs/2605.06650" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>RLVR（GRPO/DAPO/Dr.GRPO）目前都依赖正负 rollout 配对：把负 rollout 作为推开方向。但负 rollout 的"组合空间巨大"——对一道难题可能有上万种错法，少量采样无法形成有意义的惩罚信号。本文提问：<strong>能否只用正向 rollout 训练 RLVR？</strong> 这一思路有先例（自监督学习中的 BYOL、SimSiam 用纯正样本就能学好表征），但在 LLM RLVR 上从未被验证过。难点是：怎样在不显式给负样本的情况下保留必要的"推开"信号，避免模式坍缩。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 正样本集合定义与自归一化权重</strong>
+        <p>对每个 prompt \(x\)，把 \(G\) 个 rollout 按 verifier 二元结果分成 \(\mathcal{S}_+(x) = \{y: R(x,y)=1\}\) 和 \(\mathcal{S}_-(x) = \{y: R(x,y)=0\}\)。POPO 只用 \(\mathcal{S}_+\)，对每条正样本计算自归一化权重：</p>
+        $$w_\theta(y\mid x) = \frac{\pi_\theta(y\mid x)}{Z_+(x)},\quad Z_+(x) = \sum_{y'\in\mathcal{S}_+(x)} \pi_\theta(y'\mid x)$$
+        <p>这创造了一个 self-competition 局面：<strong>高概率正样本</strong>得到更大权重（强化"自信的对的"），但仍维持 diversity（不会塌到单一答案）。这是从 BYOL stop-gradient 思想借来的。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② Siamese 网络 + EMA 自适应锚</strong>
+        <p>POPO 维护两份策略：可优化的 \(\pi_\theta\) 和提供稳定 anchor 的 Siamese \(\pi_\xi\)。\(\xi\) 通过 EMA 缓慢跟踪 \(\theta\)：</p>
+        $$\xi \leftarrow \tau\xi + (1-\tau)\theta,\ \tau = 0.999$$
+        <p>这避免了纯正样本训练时常见的"自蒸馏崩溃"——模型不会反复强化自己的偏见，而是受到一个"过去的自己（缓慢更新版）"约束。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ 表征空间对齐替代 KL 散度</strong>
+        <p>传统 KL(probability space) 高方差且 token-level 敏感。POPO 改用<strong>语义嵌入空间余弦对齐</strong>：</p>
+        $$\mathcal{L}_\text{sim}(\theta,\phi,\xi) = -\mathbb{E}_{x\sim D}\Bigl[\sum_{y\in\mathcal{S}_+(x)} w_\theta(y\mid x)\cdot\cos\bigl(h_\phi(f_\theta(x,y)),\,\text{sg}(f_\xi(x,y)+\epsilon)\bigr)\Bigr]$$
+        <p>其中 \(f_\theta\)、\(f_\xi\) 是两网络的特征提取器，\(h_\phi\) 是预测头，\(\text{sg}\) 是 stop-gradient。\(\epsilon\) 是 Gaussian 噪声防过拟合。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 隐式负梯度 + 总损失</strong>
+        <p>关键证明（论文 §3.3）：自归一化权重 \(w_\theta\) 因为分母含 \(Z_+\)，对其他正样本求导会产生<strong>对当前正样本的负梯度</strong>——这就是"implicit negative gradient"。也就是说虽然没有显式负样本，正样本之间的 self-competition 提供了类似负样本的推开效果。总损失：</p>
+        $$\mathcal{L}_\text{POPO}(\theta) = -\mathbb{E}_{x\sim D}\Bigl[\sum_{y\in\mathcal{S}_+(x)} w_\theta(y\mid x)\log\pi_\theta(y\mid x)\Bigr] + \alpha\mathcal{L}_\text{sim} + \beta\mathcal{L}_\text{ent}$$
+        <p>其中 \(\mathcal{L}_\text{ent}\) 是 entropy bonus 鼓励探索。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>题目：</strong> "Find the sum of all positive integers \(n\) such that \(n+2\) divides the product \(3(n+3)(n^2+9)\)." (AIME 风格)
+        <ul>
+          <li><strong>3 个正样本（不同推理链都得到正确答案 49）：</strong>
+            <ol>
+              <li>"The answer is 49." — 极简，只给最终答案</li>
+              <li>"Since 3(n+3)(n²+9) modulo n+2 gives 39, n+2 must divide 39, the answer is 49." — 中等步骤</li>
+              <li>"Since n=-2 (mod n+2), n+3=1 and n²+9=13, so 3(n+3)(n²+9)=39. Thus n+2 divide 39, so n=1, 11, 37, and the answer is 49." — 最完整推理</li>
+            </ol>
+          </li>
+          <li><strong>2 个负样本（错误答案）：</strong> "The answer is 11" / "The answer is 37"（在 GRPO 中会作为负梯度）</li>
+          <li><strong>POPO 处理：</strong> 完全不用负样本。3 个正样本中第 3 条最长最详细，POPO 自动赋予最大权重；同时 EMA Siamese 稳住表征空间，防止过度向最详细那条 collapse。</li>
+          <li><strong>结果：</strong> AIME 2025 上 POPO Qwen-Math-7B 达到 36.67%，超 GRPO 的 30.00%（相对提升 22%）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>4 个 base 模型 × 5 个数学 benchmark 上的 Pass@8（粗体为最佳）：</p>
+      <table>
+        <thead><tr><th>Base</th><th>方法</th><th>MATH-500</th><th>AMC23</th><th>AIME24</th><th>AIME25</th><th>Olympiad</th><th>平均</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Qwen-Math-1.5B</td><td>GRPO</td><td>86.20</td><td>75.00</td><td>23.33</td><td>16.25</td><td>50.30</td><td>50.22</td></tr>
+          <tr><td>Dr.GRPO</td><td>86.00</td><td>76.62</td><td>25.18</td><td>17.39</td><td>50.89</td><td>51.22</td></tr>
+          <tr><td><strong>POPO</strong></td><td class="best">86.60</td><td class="best">77.50</td><td class="best">26.67</td><td class="best">23.33</td><td class="best">51.19</td><td class="best">53.06</td></tr>
+          <tr><td rowspan="3">R1-Distill-1.5B</td><td>GRPO</td><td>90.20</td><td>80.00</td><td>30.00</td><td>26.32</td><td>58.61</td><td>57.03</td></tr>
+          <tr><td>Dr.GRPO</td><td>90.40</td><td>83.46</td><td>33.33</td><td>25.84</td><td>58.90</td><td>58.39</td></tr>
+          <tr><td><strong>POPO</strong></td><td class="best">90.80</td><td class="best">85.24</td><td class="best">36.67</td><td class="best">27.86</td><td class="best">59.05</td><td class="best">59.92</td></tr>
+          <tr><td rowspan="3">Qwen-Math-7B</td><td>GRPO</td><td>90.80</td><td>85.50</td><td>43.33</td><td>30.00</td><td>56.38</td><td>61.20</td></tr>
+          <tr><td>DAPO</td><td class="best">91.40</td><td>85.97</td><td>44.76</td><td>32.31</td><td>56.53</td><td>62.19</td></tr>
+          <tr><td><strong>POPO</strong></td><td>90.80</td><td>85.75</td><td>45.13</td><td class="best">36.67</td><td class="best">57.27</td><td class="best">63.12</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">关键发现：在<strong>困难 benchmark（AIME25, Olympiad）</strong>上 POPO 优势最显著（AIME25 +6.67pt vs GRPO），符合"难题负样本组合空间大、惩罚无效"的预测。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>EMA momentum \(\tau\)：</strong> \(\tau=0.999\) 最佳；\(\tau=0.9\) 退化（Siamese 跟得太紧失去 anchor 作用），\(\tau=0.9999\) 也降（更新太慢）。<strong>表征对齐 vs KL：</strong> 用 KL 替代 \(\mathcal{L}_\text{sim}\) 在 AIME25 退化 5pt，证明语义空间余弦对齐对 RLVR 关键。<strong>负面发现：</strong> 在 R1-Distill-7B 上 POPO（66.22）略输 GRPO（66.60）—— 论文坦诚分析：大模型蒸馏后熵急剧下降，on-policy 探索能力受限，此时显式负 rollout 反而提供更多有用信号；POPO 优势在<strong>探索阶段广（base/小模型/难任务）</strong>更明显。<strong>局限：</strong> POPO 不适用于 \(\mathcal{S}_+\) 始终为空的极难问题（base 模型从不答对，需要先 SFT 引导）。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>POPO 为 RLVR 提供了一个全新方向：纯正样本训练。最大启示是<strong>"负样本不是 RLVR 的必要条件"</strong>——通过自归一化权重 + Siamese EMA 即可恢复必要的 contrastive 信号。这与 LLM-1 (REASONMAXXER) 的发现"RL 增益本质是稀疏 token 重排"形成有趣呼应：两者都指向 RLVR 真正起作用的机制比想象中简单。对实践者：当负样本质量低（如难题大量随机错答）时 POPO 可能是更好选择；当负样本含有可学习的结构（如代码越界、特定语法错误）时仍应保留显式负梯度。该方法工程友好（与 GRPO 几乎一样的 rollout 流程），值得集成到现有 TRL pipeline。</p>
+    </div>
+  </div>
+</content>

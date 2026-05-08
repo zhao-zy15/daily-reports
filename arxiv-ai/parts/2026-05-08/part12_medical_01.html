@@ -1,0 +1,84 @@
+  <h2 class="section-title medical">⚕️ Medical · 医学大模型（1 篇）</h2>
+
+  <div class="paper" id="p11">
+    <h3 class="paper-title">11. Eliciting Associations Between Clinical Variables from LLMs via Comparison Questions Across Populations</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06335</span>
+      <span>🏛 University of Freiburg (IMBI / CS / Pneumology / Neurology)</span>
+      <br>
+      <span class="tag tag-medical">Clinical NLP</span><span class="tag tag-medical">Causal Inference</span><span class="tag tag-medical">Knowledge Elicitation</span>
+      <span><a href="https://arxiv.org/abs/2605.06335" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>LLM 的训练语料含大量生物医学文献，原则上应能"知道"临床变量间的关联（如 FEV1 与年龄、EDSS 与脑萎缩）。但<strong>直接问"X 和 Y 在 Z 人群里的相关系数是多少"是不可靠的</strong>：(1) LLM 可能 recall 单篇研究而非聚合知识；(2) 答案数字看似合理但模型在实际决策时未必尊重该关系；(3) sycophancy（迎合用户先入观点）、option-order sensitivity、CoT 后置合理化等问题。本文核心思想：<strong>不要把 LLM 当能自我反思的代理来问，要把它当被测量的实验对象</strong>。从认知科学借用 triplet comparison 方法，用一个统计代理模型从 LLM 的相似性判断中估计相关系数，再通过 prompt 级的环境扰动 + Invariant Causal Prediction (ICP) 提取因果候选父链接。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① Triplet 比较问句构造</strong>
+        <p>对要研究的两个变量 \(X_j, X_k\)，构造三元组（patient 1, 2, 3）：所有 patient 都给定 \(X_j\) 值；只有 patient 3 还给定 \(X_k\) 值。问 LLM "patient 3 更像 patient 1 还是 2？"系统变化 \(X_k^{(3)}\) 极端程度，观察 LLM 决策何时被翻转——决策翻转点的位置编码了 \(X_j\) 和 \(X_k\) 的相关性强度。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 测量误差代理模型 + 逆方差融合</strong>
+        <p>从 measurement error 视角，LLM 把直接测量 \(X_j^{(3)}\) 与从 \(X_k^{(3)}\) 投影出的间接测量 \(X_{j|k}^{(3)} = a_0 + a_1 X_k^{(3)}\) 用逆方差权重融合：</p>
+        $$\hat X_j^{*,(3)} = w_1 X_j^{(3)} + w_2 X_{j|k}^{(3)},\quad w_1 = \frac{v_{j|k}^2}{\sigma_j^2 + v_{j|k}^2},\ w_2 = \frac{\sigma_j^2}{\sigma_j^2 + v_{j|k}^2}$$
+        <p>其中 \(v_{j|k}^2 = \sigma_j^2 + \tau_{j|k}^2\)，\(\tau_{j|k}^2 = s_j^2(1-\rho_{jk}^2)\) 为残差方差。LLM 的二选一决策建模为对 \(\hat X_j^{*,(3)} - X_{j,\text{ref}}\) 的逻辑回归（\(X_{j,\text{ref}} = (X_j^{(1)} + X_j^{(2)})/2\)）：</p>
+        $$P(Y=2\mid X_j^{(3)}, X_k^{(3)}) = h\bigl(\beta_{0,jk}^{(e)} + \beta_{1,jk}^{(e)} X_j^{(3)} + \beta_{2,jk}^{(e)} X_k^{(3)}\bigr)$$
+        <p>关键关系：\(\beta_{2,jk}^{(e)}/\beta_{1,jk}^{(e)} = (w_2/w_1)(s_j/s_k)\rho_{jk}\)，把相关系数和拟合系数比例联系起来。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ 对称估计器消除 nuisance 项</strong>
+        <p>对称化 trick：交换 \(X_j\) 和 \(X_k\) 角色再问一次（query \(\rho_{kj}\) 版本），两次结果的乘积消掉 \(s_j/s_k\) scale 项：</p>
+        $$\frac{\hat\beta_{2,jk}^{(e)}}{\hat\beta_{1,jk}^{(e)}}\cdot\frac{\hat\beta_{2,kj}^{(e)}}{\hat\beta_{1,kj}^{(e)}} \approx \bigl(\rho_{jk}^{(e)}\bigr)^2$$
+        <p>取平方根 + 符号校正 → \(\hat\rho_{jk}^{(e)}\)。Delta method 沿 logistic 拟合的 covariance 矩阵传递不确定性，得到每对变量在每个环境下的标准误 \(\hat\sigma_{\rho,jk}^{(e)}\)。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ Prompt 诱导环境扰动 + ICP 因果识别</strong>
+        <p>通过在 triplet 问句前加"sub-population mean prompt"（如"in COPD patients with mean FEV1=...","in MS patients aged 50+..."）合成多个 environment \(e\)。每个环境得到一组 \(\hat\rho^{(e)}\)。<strong>Invariant Causal Prediction</strong> 原则：若 X 因果影响 Y，则 \(P(Y\mid X)\) 应在不同 environment 下保持稳定（fitted regression coefficients 不显著变化）；spurious correlation 在分布漂移下会破坏。用回归参数检验 invariance，输出一小组 candidate parent links。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>临床场景 1：</strong> COPD 中 FEV1 与年龄的相关性
+        <ul>
+          <li><strong>直接问 GPT-4：</strong> "What is the correlation between FEV1 and age in COPD?" → "约 -0.4"。但更换 prompt phrasing 后答案 -0.3 到 -0.6 不等，<strong>不可信</strong>。</li>
+          <li><strong>Triplet 方法：</strong> 构造 patient 1 (FEV1=2.0L), patient 2 (FEV1=1.0L), patient 3 (FEV1=1.5L 居中, age 给定)；逐渐改变 patient 3 的 age 从 50 → 80，观察 LLM 把 patient 3 归到 1 还是 2 的概率变化。</li>
+          <li><strong>统计估计：</strong> 拟合 logistic regression，按对称估计器得 \(\hat\rho \approx -0.42\)，95% CI [-0.51, -0.32]。<strong>有 CI 的可信估计</strong>。</li>
+          <li><strong>跨人群对比：</strong> 在 prompt 中分别指定 "moderate COPD"、"severe COPD"、"early-stage COPD" 子人群，得到 \(\hat\rho = (-0.35, -0.55, -0.20)\)。差异统计显著 → 该相关性不是 invariant。</li>
+          <li><strong>ICP 输出：</strong> 因为 \(P(\text{age}\mid \text{FEV1})\) 随子人群显著变化，FEV1 不被认定为 age 的因果父节点（合理：年龄是因，FEV1 是果而非反过来）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>两个临床领域的对比：COPD（肺功能 markers）与 Multiple Sclerosis（biomarkers），评估 elicited 相关性的：(a) 平滑性、(b) 跨环境稳定性、(c) 临床可解释性、(d) 统计显著性差异：</p>
+      <table>
+        <thead><tr><th>评估维度</th><th>直接问 LLM</th><th>Triplet 方法</th></tr></thead>
+        <tbody>
+          <tr><td>Prompt 鲁棒性</td><td>差（同一变量对 phrasing 改变 ±0.2）</td><td class="best">高（重测一致）</td></tr>
+          <tr><td>子人群差异</td><td>差异不显著</td><td class="best">差异显著（支持 ICP）</td></tr>
+          <tr><td>临床可解释性</td><td>有时违反临床直觉</td><td class="best">与文献结果对齐</td></tr>
+          <tr><td>统计置信区间</td><td>无</td><td class="best">有 CI（delta method）</td></tr>
+          <tr><td>因果识别能力</td><td>无（只是数字）</td><td class="best">输出小型 candidate parent set</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">论文展示了在 COPD 中 FEV1/FVC 强相关性被稳定恢复（与临床知识吻合），且 ICP 能正确剔除若干 spurious correlation；在 MS 中 EDSS 与脑容量的关系也被识别为环境不变（candidate causal）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>对称估计器必要性：</strong> 不对称地用单方向估计会引入 \(s_j/s_k\) scale bias，对相关系数估计误差最大可达 ±0.15。<strong>采样规模：</strong> 每个三元组取 3 次决策（不一致时再补到 6 次）平衡精度与查询成本。<strong>Delta method 不确定性：</strong> 关键——没有 CI 的相关系数估计无法做 invariance test。<strong>局限：</strong> (1) 仅在 GPT-4 级别模型上验证，小模型的相似性判断可能太噪声以至于 logistic 拟合不收敛；(2) 三元组构造依赖人工指定参考变量分布（需要少量先验）；(3) ICP 是保守方法（只输出 candidate），最终因果验证仍需真实数据。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇方法论上极其精致的医学 NLP 工作。它给出了一个可借鉴的<strong>"把 LLM 当被测量对象"的范式</strong>：通过结构化 comparison 而非直接询问，结合统计代理模型 + 不确定性传播，把 LLM 的隐式知识转化为<strong>可信、有 CI、可做因果推断的定量估计</strong>。对 EHR 检索 / 临床决策支持研究者（特别是用户的 DR.EHR 工作方向），这种方法可作为<strong>验证 LLM 临床知识可靠性</strong>的工具——比如检查 retriever 学到的 patient embedding 是否对应正确的临床变量关联。Freiburg 这个团队（统计方法 + 临床合作）做的这种"严谨的 LLM 知识量化"工作非常值得借鉴，尤其在博士论文的"评估 LLM 临床能力"章节里值得引用。</p>
+    </div>
+  </div>
+</content>

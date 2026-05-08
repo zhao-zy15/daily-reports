@@ -1,0 +1,86 @@
+  <div class="paper" id="p9">
+    <h3 class="paper-title">9. SkillOS: Learning Skill Curation for Self-Evolving Agents</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06614</span>
+      <span>🏛 UIUC, Google Cloud AI Research, MIT</span>
+      <br>
+      <span class="tag tag-agent">Self-Evolving Agent</span><span class="tag tag-agent">Skill Curation</span><span class="tag tag-agent">Procedural Memory</span>
+      <span><a href="https://arxiv.org/abs/2605.06614" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>LLM Agent 当前是"一次性问题求解器"，每个新任务都从零开始，无法从历史交互中累积经验。Anthropic 推出的 SKILL.md 格式给了一个 procedural memory 的载体（YAML frontmatter + Markdown 指令），但<strong>谁来策展这些 skill？</strong> 现有方法要么靠人工策展（Anthropic skills repo）、要么用启发式规则（如 fixed insert/update/delete），都缺乏从下游任务表现学习的 closed-loop 反馈。本文提出 SkillOS：用 RL 训练一个 <strong>skill curator</strong>，学习"何时插入/更新/删除什么 skill"——把 skill 策展本身当作可学的策略。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 双策略架构：Frozen Executor + Trainable Curator</strong>
+        <p>系统包含三件套：(1) <strong>Skill Repo</strong> \(\mathcal{S}_t = \{s_1^t, ..., s_{N_t}^t\}\)，每个 skill 是一个 SKILL.md 文件；(2) <strong>Frozen Agent Executor \(\pi_\mathcal{L}\)</strong>，对当前任务用 BM25 检索 \(\tilde{\mathcal{S}}_t \subseteq \mathcal{S}_t\) 然后求解，产生轨迹 \(\xi_t\)；(3) <strong>Trainable Skill Curator \(\pi_\mathcal{S}\)</strong>（基于 8B LLM），看到 \((x_t, \xi_t)\) 后决定对 Skill Repo 做 insert/update/delete 操作。Executor 不动只用预训好的，Curator 用 RL 训练。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 任务分组训练：把"延迟反馈"变成"分组内对比"</strong>
+        <p>核心创新：<strong>按 skill-relevant task dependencies 把任务分组</strong>。每组 \(\mathcal{G}_m = \{x_{m,1}, x_{m,2}, ..., x_{m,n_m}\}\) 内的任务<strong>语义相关</strong>。训练时每步采样一个 group，从空 Skill Repo 开始，curator 在前几个任务后产出 skill 更新，<strong>评估这些 skill 对 group 内后续任务执行的帮助</strong>——这样把"未来任务表现"作为对当前 curation 决策的奖励信号。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Composite Reward：精细归因 curation 决策</strong>
+        <p>Curation 决策的反馈来源极间接，单靠 task outcome 信号太稀疏。SkillOS 设计 4 部分复合奖励：</p>
+        $$r_\text{curator} = \alpha\cdot r_\text{task} + \beta\cdot r_\text{fc} + \gamma\cdot r_\text{cnt} + \delta\cdot r_\text{comp}$$
+        <ul>
+          <li>\(r_\text{task}\): 后续任务的 outcome（成功率/任务分数）</li>
+          <li>\(r_\text{fc}\): valid function call rate — 反映 skill 内容是否合规可执行</li>
+          <li>\(r_\text{cnt}\): skill content quality — 用 LLM-judge 评估 skill 写得是否清晰</li>
+          <li>\(r_\text{comp}\): Skill Repo compactness — 防止冗余膨胀（重复/低价值 skill 累积）</li>
+        </ul>
+        <p>用 GRPO 优化 \(\pi_\mathcal{S}\)：每个 group 采样 \(K\) 个 curation 轨迹，按 \(r_\text{curator}\) 计算 group-relative advantage。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ Skill 涌现的高层结构</strong>
+        <p>训练后观察：初期 curator 倾向"盲目插入新 skill"；训练 collapse 后 curator 学会<strong>"先尝试 update 已有 skill，再 delete 冗余/低效 skill"</strong>，最终 Skill Repo 演化出层级结构（基础 skill + 组合 skill），单个 skill 也变得更结构化（带 prerequisites、when-NOT-to-use 等明确 section）。这种 emergent meta-skill 不是预设的，是 RL 自然学到的。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong> ALFWorld 中 task group 包含相似的 "用光源检查物体" 系列任务
+        <ul>
+          <li><strong>Task 1：</strong> "Examine mug under desk lamp." Executor 用空 Skill Repo 求解，trajectory 包含 "go to lamp / turn on / hold mug / inspect"。</li>
+          <li><strong>Curator 决策（训练初期）：</strong> 盲目 insert 一个 skill_examine.md 内容只是任务复述。</li>
+          <li><strong>Curator 决策（训练后期）：</strong> insert skill_use_light_source.md 含 YAML frontmatter "Use light source to examine objects" + Markdown sections：(1) Workflow: navigate to light → turn on → hold object near → describe; (2) Prerequisites: light must be reachable, object must be portable; (3) When NOT to use: no light source visible.</li>
+          <li><strong>Task 2：</strong> "Look at pencil with floor lamp." Executor 检索到 skill_use_light_source.md，直接套用，3 步成功（vs 无 skill 时 8 步且失败）。</li>
+          <li><strong>Reward：</strong> Task 2 成功 → \(r_\text{task}\) 大；skill 无冗余且可执行 → \(r_\text{fc}, r_\text{comp}\) 高。Curator 学会"产出可复用的高质量 skill"。</li>
+          <li><strong>消融对比：</strong> 没有 task grouping 时（任务随机出现）curator 难以归因，平均成功率比 SkillOS 低 6-9pt。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>多轮 agent 任务（ALFWorld/WebShop）+ 单轮推理（GSM8K, ARC-Easy 等）综合：</p>
+      <table>
+        <thead><tr><th>设置</th><th>方法</th><th>效果（相对 strongest baseline）</th><th>交互步数</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Qwen2.5-7B Executor</td><td>Memory-free</td><td>baseline</td><td>baseline</td></tr>
+          <tr><td>Strong Memory baseline</td><td>+5.0%</td><td>-2%</td></tr>
+          <tr><td><strong>SkillOS</strong></td><td class="best">+9.8%</td><td class="best">-6.0%</td></tr>
+          <tr><td rowspan="2">Curator 8B vs Gemini-2.5-Pro</td><td>Gemini-2.5-Pro 直接做 curator</td><td>baseline</td><td>—</td></tr>
+          <tr><td><strong>SkillOS 8B curator</strong></td><td class="best">优于 Gemini-2.5-Pro</td><td class="best">—</td></tr>
+          <tr><td>跨 Executor 泛化</td><td>SkillOS curator + Gemini-2.5-Pro executor</td><td class="best">+5.4%</td><td class="best">-3.1%</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">关键发现：(1) 8B curator 击败 Gemini-2.5-Pro 直接 curate，证明 RL 训练的"策展专长"比通用大模型直接调用更有效；(2) 训练好的 curator 跨 executor backbone 泛化（在 Gemini-2.5-Pro 上仍提升 5.4%），证明学到的是<strong>通用 skill 抽象能力</strong>而非过拟合到某个 executor。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>Composite reward 必要性：</strong> 移除 \(r_\text{comp}\) 后 Skill Repo 膨胀（最终含 200+ 冗余 skill），效率下降 18%；移除 \(r_\text{fc}\) 后 ~30% skill 不可执行（含错误 function call）。<strong>Task grouping 必要性：</strong> 随机任务训练 curator，效果比 SkillOS 低 6-9pt——证明<strong>grouping 是把 delayed feedback 转化为可学信号的关键</strong>。<strong>Curator 规模：</strong> 1.5B curator 仅微弱优于无 RL baseline；8B curator 显著最优；更大没收益。<strong>局限：</strong> (1) 需要预先做 task grouping/标注（domain expert work）；(2) BM25 检索可能 miss 语义相关但词汇不同的 skill；(3) 仅在 ALFWorld + WebShop + 部分推理任务验证，更复杂的领域（如代码、医学）需进一步实验。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>SkillOS 是 self-evolving agent 一个奠基性工作（Google Cloud AI Research 主导）。它把"如何累积经验"这一关键问题<strong>形式化为可学习的 RL 策略</strong>，且工程友好（Skill Repo 是人类可读的 Markdown，可审计、可手动编辑）。最大启示：<strong>当下游反馈延迟且间接时，"分组训练 + composite reward"是把弱信号变学习信号的有效范式</strong>，可推广到其他需要长期 credit assignment 的场景（如对话系统、长期规划）。对做 agent 产品的团队，SkillOS 提供了直接可参考的工程蓝图：8B curator + frozen executor 已能在 7B 级别 agent 上跑通完整 self-evolution loop。SKILL.md 格式 + curator RL 这个组合可能成为下一代 agent 平台的标配。</p>
+    </div>
+  </div>
+</content>

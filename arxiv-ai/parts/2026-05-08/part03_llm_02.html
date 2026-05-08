@@ -1,0 +1,80 @@
+  <div class="paper" id="p2">
+    <h3 class="paper-title">2. Efficient Pre-Training with Token Superposition (TST)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06546</span>
+      <span>🏛 Nous Research</span>
+      <br>
+      <span class="tag tag-llm">Pre-training</span><span class="tag tag-llm">Efficiency</span><span class="tag tag-llm">MoE</span>
+      <span><a href="https://arxiv.org/abs/2605.06546" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>LLM 预训练 token 吞吐量与 FLOPs 严重耦合：每多吃一个 token，就得多跑一次完整前向反向。要提升数据吞吐通常需要侵入式修改（比如 H-Net、Byte-Latent Transformer 改架构，或 Multi-Token-Prediction 改输出头），但这些都会改变 inference 行为或语义粒度。本文核心问题是：<strong>能否在不修改最终架构、parallelism、optimizer、tokenizer 的前提下提升预训练数据吞吐？</strong> 已有证据（Hua et al. 2024）显示 subword vs byte-level 的差距主要来自训练 sample 吞吐量，而非表达力，这给了一个突破口：在训练时把多个 token 的 embedding 平均成一个"超级 token"喂给模型。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 输入端：Token 叠加（Bag-of-Token-Embeddings）</strong>
+        <p>把序列长度 L 的 token 序列分成 \(l = L/s\) 个非重叠 s-gram bag，每个 bag 内 \(s\) 个 token embedding 取平均得到一个 "s-token"：</p>
+        $$e'_j = \frac{1}{s}\sum_{i=js}^{(j+1)s-1} e_{t_i}$$
+        <p>关键设计：为保持等-FLOPs 对比公平，TST 阶段把 data sequence length 扩大 \(s\) 倍——同样 FLOPs 下处理 \(s\) 倍 raw token。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 输出端：Multi-hot Cross-Entropy (MCE) 损失</strong>
+        <p>标准 CE 损失为 \(\mathcal{L}_\text{CE}(z,y) = -z_y + \log\sum_{i=1}^V \exp(z_i)\)，在 multi-hot 标签场景下扩展为：</p>
+        $$\mathcal{L}_\text{MCE}(z, \mathbf{y}) = \frac{1}{|\mathbf{y}|}\sum_{y\in\mathbf{y}}\Bigl[-z_y + \log\sum_{i=1}^V\exp(z_i)\Bigr] - \log|\mathbf{y}|$$
+        <p>常数项 \(\log|\mathbf{y}|\) 梯度为 0 可舍去，最终简化为对 bag 中每个目标 token 计算 CE 后求平均：</p>
+        $$\mathcal{L}_\text{MCE}(z, \mathbf{y}) = \frac{1}{|\mathbf{y}|}\sum_{y\in\mathbf{y}}\mathcal{L}_\text{CE}(z, y)$$
+        <p>简化形式可直接复用 PyTorch 高度优化的 CE kernel，工程上无侵入。标签需左移 \(s-1\) 位以保持因果性，确保第 \(t\) 到 \(t+s-1\) 个 s-token 预测下一个 bag \([t+s, t+2s-1]\)。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ 两阶段训练：Superposition + Recovery</strong>
+        <p>仅用 TST 训出来的模型推理输出是"叠加概率"无法采样。所以 TST 引入恢复阶段：定义 step ratio \(r\)（默认 0.3），前 \(rN\) 步用 TST 训练，后 \((1-r)N\) 步切回标准 next-token AR 训练。从 saved checkpoint 完整恢复 standard 训练，TST 代码完全移除避免污染。最终模型架构与 baseline 完全一致（推理时无任何修改）。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 超参扫描：Bag size \(s\) 与比例 \(r\) 的设计原则</strong>
+        <p>论文系统扫描 \(s \in \{1,...,12\}\)、\(r \in \{0, 0.1, ..., 0.6\}\)。发现规律：(a) \(s\) 不宜过大（语义稀释），\(s=8\) 在 270M/600M 模型上 sweet spot；(b) \(r\) 不宜过大（恢复阶段不足导致退化），\(r=0.3\) 是兼顾吞吐与最终质量的最佳点；(c) 大模型（10B-A1B MoE）下 TST 收益更显著，因为 attention/FFN 计算被超 token 摊薄更多。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong> 用 \(s=8\)、\(r=0.3\) 训练 10B-A1B Qwen3-like MoE
+        <ul>
+          <li><strong>Baseline：</strong> 1.05T raw tokens 全程标准 next-token 训练，loss 收敛到 ~2.65。</li>
+          <li><strong>TST：</strong> 前 30% 步数 superposition 阶段 — 输入序列扩 8×，模型实际处理 ~6T equivalent-token 但 FLOPs 仍等于 baseline 的 30%；后 70% 步数 recovery 阶段切回标准训练，吃 1.4T raw tokens。<strong>最终见到的总 raw tokens = 2T，达到与 baseline 相同 loss 仅需 baseline 步数的 40%</strong>。</li>
+          <li><strong>等-loss 比较：</strong> baseline 跑完 1.05T tokens 才到 loss 2.65；TST 在等-loss 处停下来，<strong>总训练时间是 baseline 的 1/2.5 = 40%（2.5× 加速）</strong>。</li>
+          <li><strong>下游评测保真：</strong> ARC-c/ARC-e/BoolQ/HellaSwag/OpenBookQA/PIQA/Winogrande 平均准确率 TST 不退化甚至轻微提升。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>不同模型规模与训练 token 数下 TST vs Baseline（最终 loss / 7-task 平均下游准确率）：</p>
+      <table>
+        <thead><tr><th>模型规模</th><th>Equiv. Tokens</th><th>Baseline Loss</th><th>TST Loss</th><th>Baseline Acc</th><th>TST Acc</th><th>等-loss 加速</th></tr></thead>
+        <tbody>
+          <tr><td>270M</td><td>42B</td><td>3.20</td><td class="best">3.14</td><td>0.444</td><td class="best">0.453</td><td>~1.5×</td></tr>
+          <tr><td>270M</td><td>210B</td><td>3.09</td><td class="best">3.05</td><td>0.467</td><td class="best">0.477</td><td>~1.7×</td></tr>
+          <tr><td>600M</td><td>42B</td><td>3.02</td><td class="best">2.94</td><td>0.485</td><td class="best">0.495</td><td>~1.8×</td></tr>
+          <tr><td>3B (SmolLM3-like)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>~2.0×</td></tr>
+          <tr><td><strong>10B-A1B MoE</strong></td><td>2T (TST) vs 1.05T (B)</td><td>2.65</td><td class="best">2.65</td><td>—</td><td>—</td><td class="best"><strong>2.5×</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>Bag size 敏感性：</strong> \(s=8\) 是 sweet spot，\(s=12\) 会因语义混淆轻微退化（loss +0.02）；\(s=2\) 收益边际下降。<strong>Step ratio 敏感性：</strong> \(r=0\)（纯 baseline）loss 最高，\(r=0.3\) 最低；\(r > 0.5\) 后 recovery 阶段不足导致最终退化。<strong>跨模型族泛化：</strong> 在 SmolLM2、Llama3、Qwen3 风格架构上一致提升。<strong>局限：</strong> (1) 仅在 10B 以下规模 + ≤2T tokens 上验证，超大规模长训练（如 100B+ 模型 / 10T tokens）TST 是否仍有 2.5× 收益尚需验证；(2) 仅适用于密集语言建模任务，对高度结构化数据（如代码）效果未报告；(3) MCE 训练时模型对位置信息敏感度暂时下降，需 recovery 阶段重新校准。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇极简而高 ROI 的预训练效率工作。它的核心洞察—<strong>"训练时压缩输入吞吐 + 后期恢复"</strong>—与 mid-training/multi-stage 趋势完全契合。最大亮点是工程友好性：不动架构、不动 parallelism、不动 optimizer、tokenizer 不变，只在 dataloader 和 loss 上加几行代码就能复现。对自建预训练 pipeline 的团队（哪怕是 70B 级别），TST 是一个低风险、可叠加（与其他效率手段如 FlashAttention、ZeRO 兼容）的"免费午餐"。Nous Research 这种小团队连续放出能落地的预训练效率工作，含金量很高。</p>
+    </div>
+  </div>
+</content>

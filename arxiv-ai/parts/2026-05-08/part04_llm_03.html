@@ -1,0 +1,84 @@
+  <div class="paper" id="p3">
+    <h3 class="paper-title">3. UniPrefill: Universal Long-Context Prefill Acceleration via Block-wise Dynamic Sparsification</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.06221</span>
+      <span>🏛 CASIA, UCAS, WeChat (Tencent)</span>
+      <br>
+      <span class="tag tag-llm">Long-Context</span><span class="tag tag-llm">Inference</span><span class="tag tag-llm">vLLM</span>
+      <span><a href="https://arxiv.org/abs/2605.06221" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>长上下文 LLM 推理的关键瓶颈是 prefill 阶段（quadratic 复杂度的 self-attention）。社区主流方案是稀疏注意力（如 MInference、FlexPrefill 实现 10× 加速），但有两个致命缺陷：(1) <strong>对 hybrid 架构失效</strong>——Qwen3-Next-80B-A3B 这类 linear/full attention hybrid 中 full attention 只占 1/4 层，加速 attention 也只能动 1/4 计算量；(2) <strong>不兼容连续批处理</strong>，难以集成到 vLLM 这类生产级推理引擎。本文目标是设计一个架构无关、与 vLLM 原生兼容的 prefill 加速框架。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① Token 重要性估计（Block-level）</strong>
+        <p>核心观察：next-token 预测仅依赖 \(h_N^{(L)}\)，所以 token \(i\) 的重要性 \(\propto\) 它对最后位置 attention weight。为减小估计方差，用最后 \(n\) 个 query 位置聚合：</p>
+        $$s_i^{(b)} = \frac{1}{n}\sum_{j=N-n+1}^{N} A_{j,i}^{(b)},\quad A_{j,i}^{(b)} = \mathrm{softmax}_i\Bigl(\frac{q_j^{(b)} K^{(b)\top}}{\sqrt{d_k}}\Bigr)$$
+        <p>计算成本仅 \(\mathcal{O}(nNd_k)\)，对 \(n \ll N\) 几乎免费。再聚合到 block 粒度（block size \(G\)）：\(\bar s_g^{(b)} = \frac{1}{G}\sum_{i\in B_g} s_i^{(b)}\)，把 \(N\) 个选择决策降到 \(\lceil N/G\rceil\) 个。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② Top-\(p\) 自适应选择（替代 Top-\(k\)）</strong>
+        <p>按 block 分数降序排列后，保留累计 attention mass 达到阈值 \(p\) 的最小 block 集合：</p>
+        $$\mathcal{S}^{(b)} = \{\pi(1),...,\pi(k^*)\},\ k^* = \min k\ \text{s.t.}\ \frac{\sum_{j=1}^k \bar s_{\pi(j)}^{(b)}}{\sum_g \bar s_g^{(b)}} \geq p$$
+        <p>始终保留首 \(A\) 个 attention sink token + 最后 \(n\) 个 query window token（保因果与数值稳定）。误差上界：</p>
+        $$\bigl\|\Delta h_j^{(b,1)}\bigr\| \leq \Bigl(\sum_{i\in\bar{\mathcal{S}}^{(b)}} A_{j,i}^{(b)}\Bigr) V_\text{max}^{(b)} \leq (1-p)\cdot V_\text{max}^{(b)}$$
+        <p>设 \(p=0.99\) 即丢弃 ≤ 1% attention mass，给出严格的信息论级误差上界。Top-\(p\) 比 top-\(k\) 适应性更强：attention 集中时保留少，扩散时保留多。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Token 级稀疏传播（关键差异 vs SnapKV）</strong>
+        <p>SnapKV 完整跑完 \(N\times N\) prefill 才用 selection 压 KV cache（prefill FLOPs 不变）。UniPrefill 反其道行之：每个 block 计算完 importance 后<strong>立即丢弃低分 token</strong>，让稀疏性向后续所有子层（FFN、GEMM、linear attention）传播。每个 block 实际节省 FLOPs 为 \((1-\rho^{(b)})\cdot M_b\cdot \mathcal{O}(Nd^2)\)，其中 \(\rho^{(b)}\) 为保留率。这正是它能加速 hybrid 架构的关键。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 连续批处理算子 + vLLM 调度集成</strong>
+        <p>实现为支持连续批处理的算子，并扩展 vLLM 的调度策略以支持 prefill-decode co-processing 和 tensor parallel。每层 KV 序列长度通过 \(\Delta r\) 修正注入 forward context，确保 PagedAttention memory allocator 看到的序列长度始终一致——<strong>不修改模型权重，不改 PagedAttention</strong>。这是真正能上生产的工程化设计。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong> Qwen3-Next-80B-A3B（linear/full hybrid，3:1 比例），128K 上下文，batch=4
+        <ol>
+          <li><strong>baseline：</strong> 33,364 tokens/s 全程标准 prefill，full attention 层 quadratic 计算占主导。</li>
+          <li><strong>MInference：</strong> 仅加速 25% full attention 层，整体吞吐 0% 提升（其余 75% linear attention + FFN 没动）。</li>
+          <li><strong>UniPrefill 决策：</strong> 在第 1 层 full attention 用最后 32 个 query 算出 block importance，按 \(p=0.99\) 选择保留 ~30% blocks。</li>
+          <li><strong>稀疏传播：</strong> 后续 3 层 linear attention + FFN 直接在 30% token 上算，节省 70% GEMM。</li>
+          <li><strong>整体加速：</strong> 128K 上 +48% 吞吐（49,732 vs 33,512 tokens/s），TTFT 1.49×。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>RULER 长上下文 benchmark（Llama-3.1-8B-Instruct，全 attention 模型）准确率与 TTFT 加速对比：</p>
+      <table>
+        <thead><tr><th>方法</th><th>4K</th><th>16K</th><th>64K</th><th>128K</th><th>平均</th><th>4K 加速</th><th>128K 加速</th></tr></thead>
+        <tbody>
+          <tr><td>Full Attention (baseline)</td><td>93.78</td><td>86.93</td><td>67.20</td><td>59.51</td><td>79.51</td><td>1.00×</td><td>1.00×</td></tr>
+          <tr><td>SeerAttention</td><td>89.34</td><td>75.23</td><td>43.38</td><td>—</td><td>67.93</td><td>1.23×</td><td>1.64×</td></tr>
+          <tr><td>SlimInfer</td><td>88.23</td><td>79.12</td><td>53.02</td><td>40.11</td><td>68.83</td><td>1.15×</td><td>1.52×</td></tr>
+          <tr><td>MInference</td><td class="best">93.56</td><td>86.01</td><td>67.09</td><td class="best">59.31</td><td class="best">79.25</td><td>0.98×</td><td>1.03×</td></tr>
+          <tr><td>FlexPrefill</td><td class="best">93.63</td><td>85.49</td><td>65.69</td><td>58.63</td><td>78.64</td><td>0.98×</td><td>1.04×</td></tr>
+          <tr><td>XAttention</td><td>93.06</td><td>85.67</td><td>66.18</td><td>56.24</td><td>78.26</td><td>0.99×</td><td>1.02×</td></tr>
+          <tr><td><strong>UniPrefill</strong></td><td>93.18</td><td class="best">86.47</td><td>66.32</td><td>58.38</td><td>78.87</td><td class="best">1.15×</td><td class="best">1.49×</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">UniPrefill 在精度与 MInference/FlexPrefill 相当的前提下，TTFT 加速 1.49×（128K，全 attention 模型）；在 hybrid 架构 Qwen3-Next-80B-A3B 上，UniPrefill 在 128K 上 +48% 吞吐，而 sparse-attention-only 方法几乎无加速。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>Top-p vs Top-k：</strong> 固定 top-k 在 attention 高度集中时浪费保留，扩散时漏掉重要 token；top-p 在所有上下文长度上误差上界一致 \((1-p)V_\text{max}\)，鲁棒性显著更高。<strong>观察窗口 \(n\)：</strong> \(n\) 太小（<8）方差大，太大（>64）计算成本上升，\(n=32\) 是 sweet spot。<strong>Block size \(G\)：</strong> \(G=128\) 在精度与决策开销间最佳。<strong>vLLM 集成开销：</strong> 调度修改增加 <2% 延迟，但 throughput 提升远超此开销。<strong>局限：</strong> (1) RULER 上 4K 短上下文 UniPrefill 加速优于 MInference，但精度略低；(2) 极致稀疏（\(p<0.95\)）会触发"长尾 attention"丢失关键 token。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇<strong>工程含金量极高</strong>的工作（CASIA + Tencent WeChat 合作，已开源到 GitHub）。它正确识别了"hybrid 架构 + 连续批处理"两个被现有工作忽视的关键约束，给出真正能落地到 vLLM 的解决方案。Top-p 自适应选择 + token 级稀疏传播是核心创新，相比 SnapKV 的"事后压 KV"思路代差明显。对部署 80B+ 长上下文模型（128K+）的团队，UniPrefill 是必看工作，可以直接 fork 整合到自家 vLLM fork。论文也展示了一个有价值的研究方向：<strong>未来 LLM 推理优化必须考虑 hybrid 架构与 production scheduler 的双重约束</strong>，纯 attention-centric 的 sparse attention 工作正在边际化。</p>
+    </div>
+  </div>
+</content>

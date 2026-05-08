@@ -1,0 +1,1859 @@
+Large Vision–Language Models Get Lost in Attention
+Gongli Xi 1 2 Ye Tian2 3 Mengyu Yang2 3 Huahui Yi 4 Liang Lin 5 Xiaoshuai Hao 6 Kun Wang4
+Wendong Wang2 3
+Abstract
+Despite the rapid evolution of training paradigms,
+the decoder backbone of large vision–language
+models (LVLMs) remains fundamentally rooted
+in the residual-connection Transformer architec-
+ture. Therefore, deciphering the distinct roles
+of internal modules is critical for understanding
+model mechanics and guiding architectural op-
+timization. While prior statistical approaches
+have provided valuable attribution-based insights,
+they often lack a unified theoretical basis. To
+bridge this gap, we propose a unified framework
+grounded ininformation theory and geometryto
+quantify thegeometric and entropic natureof
+residual updates. Applying this unified frame-
+work reveals a fundamental functional decoupling:
+Attention acts as a subspace-preserving oper-
+atorfocused on reconfiguration, whereasFFNs
+serve as subspace-expanding operatorsdriving
+semantic innovation. Strikingly, further experi-
+ments demonstrate that replacing learned atten-
+tion weights with predefined values (e.g., Gaus-
+sian noise) yields comparable or even superior
+performance across a majority of datasets relative
+to vanilla models. These results expose severe
+misallocation and redundancyin current mech-
+anisms, suggesting that state-of-the-art LVLMs
+effectively “get lost in attention” rather than ef-
+ficiently leveraging visual context. Our code is
+publicly available at this link.
+1School of Cyberspace Security, Beijing University of Posts
+and Telecommunications, Beijing, China 2State Key Laboratory
+of Networking and Switching Technology, Beijing University of
+Posts and Telecommunications, Beijing, China 3School of Com-
+puter Science (National Pilot Software Engineering School), Bei-
+jing University of Posts and Telecommunications, Beijing, China
+4Nanyang Technological University, Singapore5Institute of Infor-
+mation Engineering, Chinese Academy of Sciences, Beijing, China
+6Xiaomi EV , Beijing, China.Xiaoshuai Hao lead this project.
+Correspondence to: Ye Tian <yetian@bupt.edu.cn>, Kun Wang
+<wang.kun@ntu.edu.sg>.
+Proceedings of the 43 rd International Conference on Machine
+Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026
+by the author(s).
+1. Introduction
+Large vision–language models (LVLMs) have rapidly
+evolved from large language models (LLMs) by extend-
+ing Transformer-based sequence modeling to jointly pro-
+cess natural language and visual signals (Vaswani et al.,
+2017). Early vision–language representation learning (e.g.,
+contrastive pretraining) established strong image–text align-
+ment that later LVLMs could leverage as a visual grounding
+interface (Radford et al., 2021). Subsequent LVLMs in-
+creasingly unify pretrained vision encoders with LLM back-
+bones, enabling few-shot multimodal generalization and
+instruction-following behavior at scale (Alayrac et al., 2022;
+Li et al., 2023a; Liu et al., 2023; Hao et al., 2025). In parallel,
+reasoning-oriented paradigms have further endowed these
+models with improved deliberation and problem-solving
+behaviors (Wei et al., 2022; Jaech et al., 2024; Guo et al.,
+2025; Zhang et al., 2025b; Tan et al., 2025). Despite the
+fast pace of architectural and training innovations, the domi-
+nant LVLM family remains fundamentally grounded in the
+Transformer architecture (Vaswani et al., 2017).
+From an interpretability standpoint, the standard Trans-
+former layer is composed of two core submodules, namely
+multi-head self-attention and feed-forward network (FFN),
+and each submodule is wrapped by residual connections,
+so that every submodule produces an additive update that
+is written back into a shared residual stream representa-
+tion (Vaswani et al., 2017; Elhage et al., 2021; Skean et al.,
+2025). A common workinghypothesisis thatattention
+blocks are the primary substrate for in-context reason-
+ing, implementing context-dependent algorithms such as
+induction/copy-based mechanisms (Olsson et al., 2022).
+In contrast,FFNs are often characterized as storing
+and retrieving distributional associations, behaving like
+key–value memories whose activated patterns can induce
+next-token distributions that resemble shallow n-gram con-
+tinuations (Geva et al., 2021; Edelman et al., 2024).
+To probe this modularityhypothesis, attention interpretabil-
+ity work has largely taken astatistical perspectivethat
+treats attention related signals as measurable proxies and
+attributes function via empirical distributions (Zhou et al.,
+2024; Kahardipraja et al., 2025), correlations (Jain & Wal-
+lace, 2019; Abnar & Zuidema, 2020), and controlled inter-
+1
+arXiv:2605.05668v1  [cs.AI]  7 May 2026
+Large Vision–Language Models Get Lost in Attention
+ventions (Serrano & Smith, 2019; Nam et al., 2025). More
+recently, this statistical toolkit has been extended tovisual
+attentionin LVLM decoders, where attention links text to
+visual tokens. Empirical analyses reveal systematic phenom-
+ena such asvisual attention sink(Kang et al., 2025) and
+visual attention drift(Liu et al., 2025; Guan et al., 2026),
+which together indicate that models often under allocate
+attention to truly informative visual evidence. Given these
+advances, LVLM module-level interpretability still lacks a
+unifyinginformation theoretic and geometricframework
+that can characterize, and explicitly contrast, how different
+submodules contribute to representation structure in mul-
+timodal settings. In contrast, the representation analysis
+literature for LLMs already uses such lenses to evaluate
+representation quality across depth (Razzhigaev et al., 2024;
+Wei et al., 2024) and to study joint dynamics (Skean et al.,
+2025; Tian et al., 2023). This gap motivates bringing these
+principled lenses into LVLM analysis to address the miss-
+ing perspective and enable module specific and modality
+grounded comparisons.
+To bridge this theoretical gap, we present a unified frame-
+work grounded ininformation theory and differential
+geometrytoquantify and contrast module-level functional
+contributionsin LVLM residual-stream computation. By
+adopting the manifold hypothesis (Bengio et al., 2013) for
+representation space, we introduce two complementary met-
+rics:Representation Information Discrepancy (RID)and
+Mixing Information Gain (MixIG). These metrics decom-
+pose the contribution of residual updates into two distinct
+geometric effects:innovation, which quantifies external in-
+formation injection that expands the semantic subspace or
+alters spectral complexity, andreconfiguration, which mea-
+sures the entropic redistribution of information within the
+existing support. We conduct extensive experiments across
+15 state-of-the-art LVLMs spanning three dominant archi-
+tectures on a broad suite of multimodal benchmarks. Our
+analysis reveals two profound insights: first, we quantita-
+tively validate a sharp functional decoupling in Transformer
+residual stream computation: attention primarily performs
+entropicreconfigurationthat preserves the existing represen-
+tation support, whereas FFNs dominateinnovationby intro-
+ducing new semantic directions. Building on this division
+of labor, we further diagnose a systemic pathology in cur-
+rent LVLMs: decoder visual attention often fails to perform
+meaningful mixing over question-relevant visual evidence,
+and instead exhibits substantial redundancy, frequently get-
+ting lost in interaction patterns with limited contribution to
+informative updates.
+Our main contributions are summarized as follows:
+• Theoretical Framework:We propose a rigorous formal-
+ism based on the manifold hypothesis to define repre-
+sentational information. We introduce RID and MixIG
+as dual metrics to quantify the geometric and entropic
+impact of residual updates, offering a generalized tool for
+probing representation dynamics.
+• Module-level Interpretability:We provide a quantita-
+tive explanation of the distinct roles within Transformer
+blocks. We demonstrate that Attention and FFNs operate
+in orthogonal regimes—reconfigurationversusinnova-
+tion—thereby substantiating the modularity hypothesis
+with geometric evidence.
+• Empirical Diagnostics:We uncover critical inefficien-
+cies in LVLM designs. Our results highlight that despite
+architectural scaling, current models suffer from severe in-
+formational redundancy in visual processing, suggesting
+that the integration of visual tokens is often computation-
+ally expensive yet informationally sparse.
+2. Related work
+Interpretability of LLMs.A large body of work studies
+what information is encoded in LLM representations and
+where it appears in the network (Belinkov & Glass, 2019).
+Early work uses lightweight linear probes on intermediate
+hidden states (Conneau et al., 2018; Hewitt & Manning,
+2019; Belrose et al., 2023). Subsequent decoding based
+efforts, such as the tuned lens, map hidden states to vocabu-
+lary distributions (Belrose et al., 2023). Alongside probing
+and decoding, sparse feature learning approaches, including
+transcoders (Dunefsky et al., 2024) and sparse autoencoders
+(Cunningham et al., 2023), map representations into a sparse
+and more discrete feature space (Ameisen et al., 2025).
+Module Interpretability.Module interpretability asks
+whether internal Transformer components provide mean-
+ingful explanations of model behavior. For attention, foun-
+dational studies show that raw attention weights can be an
+unreliable attribution signal (Jain & Wallace, 2019; Serrano
+& Smith, 2019; Wiegreffe & Pinter, 2019). To better capture
+how attention-mediated influence accumulates, attention
+rollout and attention flow estimate propagation across layers
+(Abnar & Zuidema, 2020; Kim et al., 2025). More recent
+work moves beyond token-level importance to head-level
+functionality by combining dataset-grounded attribution
+with causal validation (Nam et al., 2025; Kahardipraja et al.,
+2025; Zhou et al., 2024; Du et al., 2025). Complementarily,
+parameter-based approaches infer head functionality with-
+out per-prompt inference traces (Elhelo & Geva, 2025). In
+parallel, module-oriented analyses show that Feed-Forward
+layers can act as key–value memories (Geva et al., 2021;
+Qiu et al., 2024). By contrast, our work provides a unified
+information-theoretic and geometric framework that quan-
+tifies how different residual-stream updates contribute via
+innovation versus reconfiguration, enabling direct, module-
+wise comparison beyond attribution alone.
+Information theory in LLM interpretability.Information-
+2
+Large Vision–Language Models Get Lost in Attention
+S (seq len)
+H (hidden size)
+𝐗∈ℝ!×#
+(a)ResidualStreaminLVLMDecoder
+TransformerLayer𝒍AttentionFFN
+Residual Streams
+𝐗$%&'(= 𝐗!"#+∆𝐗$%%"#+∆𝐗&&"#
+∆𝐗!""#$
+∆𝐗%%#$
+(b)RepresentationInformation(RQ1)
+𝐔×Σ𝐕𝐓×𝐗=𝐔Σ𝐕𝐓
+ℐ𝐗=𝓢𝓧,𝓓𝓧
+Spectrum 𝓢𝓧
+SpectrumComplexity
+Semantic𝓓𝓧
+SubspaceSupport
+(c) Update Metrics (RQ2)𝐗’=𝐗+∆𝐗
+RID(𝐗	|	𝐗’)=∆𝓢𝓧+∆𝓓𝓧
+Innovation. Spectral & Subspace Change
+Reconfiguration.TokenMixing(TME)Change
+MixIG(𝐗	|	𝐗’)=∆TME
+RID	andMixIG
+(d)FunctionalDecoupling(RQ3)Manifold / SupportAttention Update ∆𝐗#$$%&
+Subspace Preserving ReconﬁgurationAttention: High MixIG, low RID
+SubspaceExpandingSemanticInnovation
+FFNUpdate		∆𝐗''%&
+FFN:HighRID,lowMixIG
+ExpandingSupport
+mixingdistribution
+information ℐ𝐗
+Figure 1.Overview of Our Interpretability Framework:(a)the LVLM residual stream;(b)representation information in X, where
+SVD yields Spectrum SX and semantic support DX;(c)update-level effects of ∆X, quantified by RID for innovation and MIXIG
+for reconfiguration;(d)layer-wise functional decomposition, revealing an orthogonal division of labor where attention behaves as a
+subspace-preserving operator and FFNs act as subspace-expanding operators.
+theoretic views frame interpretability in terms of informa-
+tion preservation, compression, and redundancy in represen-
+tations. One line focuses on representation quality evalua-
+tion, using information and geometry motivated measures
+such as entropy, rank based quantities to assess whether
+embeddings preserve task relevant structure (Agrawal et al.,
+2022; Deb & Ogunfunmi, 2025; Li et al., 2025). A second
+line uses these measures for layerwise analyses, aiming to
+characterize how representational properties change across
+the network (Skean et al., 2025; Ali et al., 2025). A third
+line emphasizes compression and redundancy reduction as
+a model level capability that can correlate with performance
+and scaling trends (Wei et al., 2024; Yu et al., 2024; Havrilla
+& Liao, 2024). However, existing information theoretic
+work rarely providesmodule-level interpretabilityfor mod-
+ule itself (Lai et al., 2021), especially in the LVLM setting.
+Overall, we connectmodule-level residual-stream updates
+in LVLMs to information theory and geometry byop-
+erationalizingeach update as an observable innovation–
+reconfiguration decomposition on representations. This
+framework turns prior statistically grounded module-level
+functional attributions into measurable information-flow
+statements, and it reveals that attention scores in current
+LVLMs contain substantial redundancy. Specifically, we re-
+place part of the learned attention scores with random noise
+and find that model performance is largely preserved, even
+though this scoring step is a major computational bottleneck
+in standard self-attention, whose cost scales quadratically
+with sequence length.
+3. A Unified Interpretability Framework for
+the Residual Stream
+In this section, we first introduce the notation and research
+questions in Sec. 3.1. We then formalize representation
+information from an information-theoretic and geometric
+perspective in Sec. 3.2. Finally, in Sec. 3.3, we develop
+quantitative metrics for evaluating residual-stream updates.
+3.1. Preliminaries
+3.1.1. MOTIVATION ANDNOTATION
+Consider an input I, for example, a sequence of visual and
+language tokens. A multi-module neural network maps
+I to a hidden-state matrix X∈R S×H , where S is the
+token length and H is the hidden dimension. Throughout
+the forward pass, the representation is updated via residual
+connections. At each step, a module produces an additive
+update ∆X, yielding Xnew =X old + ∆X. This residual-
+update view raises three progressively refined questions:
+RQ1: How should we quantify the information contained
+in a representationX?
+RQ2: How should we quantify what∆X contributes to X?
+RQ3: How can we use ∆X to analyze and contrast the
+functional roles of different modules?
+Answering these questions provides a principled foundation
+for tracking information flow across layers, characterizing
+when module updates are informative versus redundant,
+and understanding how different modules shape multimodal
+3
+Large Vision–Language Models Get Lost in Attention
+representations during inference. For clarity, we summarize
+the notation used throughout the paper inAppendixTable 3.
+3.1.2. RESIDUALSTREAM ANDATTENTION INLVLMS
+We next specify the LVLM setting and introduce the
+residual-stream view of Transformer decoding.
+Large Vision–Language Models (LVLMs).We consider
+decoder-style LVLMs that process multimodal inputs by
+converting them into a single token sequence. Concretely, an
+image is encoded by a visual encoder and mapped through a
+modality projector into a sequence of visual tokens X(v) ∈
+RSv×H. Textual inputs are tokenized into system and user
+tokens X(s) ∈R Ss×H and X(q) ∈R Sq×H. We denote the
+concatenated input sequence by
+X(c) =
+
+X(s),X (v),X (q)
+∈R Sc×H , S c =S s+Sv+Sq.
+At decoding step t, the model generates an output token yt
+from
+p(yt |X (c),y <t),y <t ={y i}t−1
+i=1,
+where y<t determines the autoregressive context and X(c)
+provides the multimodal conditioning.
+Attention in LVLM decoders.Let the decoder have L
+Transformer layers. At each layer l and decoding step t,
+causal multi-head attention produces a normalized distribu-
+tion over theavailabletokens, i.e., the concatenation of Sc
+context tokens (system, visual, and question tokens) and the
+(t−1) previously generated tokens. We denote the total
+attention domain size by St =S c + (t−1). The attention
+distribution at step t is a l
+t ∈[0,1] St withPSt
+i=1 a l
+t,i = 1.
+Concretely, letting q l
+t ∈R dk be the query at step t and
+Kl
+t ∈R St×dk be the key matrix formed from all available
+tokens up to steptat layerl, we write
+a l
+t = softmax
+Kl
+tq l
+t√dk
+
+,a l
+t ∈[0,1] St ,
+which records, for each decoding step and layer, how the
+decoder allocates attention overavailabletokens.
+Residual StreamFollowing the mathematical interpretation
+of the residual stream in Elhage et al. (2021), we view the
+layerwise hidden states as a residual stream that evolves via
+additive updates from each module. In our notation, the
+representation matrix at layerlsatisfies
+X l+1
+in =X l
+in + ∆X l
+attn + ∆X l
+ffn,X l ∈R S×H .
+3.1.3. THEORETICALFOUNDATIONS
+In this subsection, we introduce our foundational assump-
+tions and the mathematical tools used to characterize a rep-
+resentation matrixX∈R S×H .
+Assumption 3.1(Manifold hypothesis (Bengio et al., 2013)).
+Learned representations often concentrate near a low-
+dimensional structure embedded in a high-dimensional am-
+bient space. This assumption motivates using low-rank
+spectral structure as a meaningful proxy for the effective
+degrees of freedom of X. It also underpins a growing body
+of representation-centric studies in modern deep models
+(Wang et al., 2024a; Basile et al., 2024; Gardinazzi et al.,
+2025; Nishi et al., 2025).
+Definition 3.2(Frobenius norm).ForX∈R S×H ,
+∥X∥F =
+ SX
+s=1
+HX
+h=1
+X2
+s,h
+ 1
+2
+=
+q
+tr(X⊤X) =
+ QX
+i=1
+σ2
+i
+ 1
+2
+.
+It measures the total energy ofXin the ambient space.
+3.2. Geometric Characterization of Representation
+Information on Matrix Manifolds (RQ1)
+In what follows, we progressively answer the three research
+questions posed in Section 3.1.1.RQ1asks:How should
+we quantify the information contained in a representation
+X?To quantify the information in X, we adopt a geometric
+perspective based on the fixed-rank matrix manifold.
+From differential geometry, the set of matrices with rank r,
+Mr ={X∈R S×H : rank(X) =r},
+admits a smooth Riemannian manifold structure (as an em-
+bedded submanifold in the ambient Euclidean space of
+matrices) (Vandereycken, 2013). For any X∈ M r, a
+compact singular value decomposition parameterizes X as
+X=UΣV ⊤ withrpositive singular values:
+Definition 3.3(Singular Value Decomposition (Golub
+& Van Loan, 2013)).For any X∈R S×H , let Q=
+min{S, H}. The SVD ofXis
+X=UΣV ⊤ =
+QX
+i=1
+σiuiv⊤
+i ,
+where U∈R S×Q and V∈R H×Q have orthonormal
+columns, Σ= diag(σ 1, . . . , σQ) with σ1 ≥ · · · ≥σ Q ≥0 ,
+and(u i,v i)are the left and right singular vectors.
+Under this parameterization, X is described by three geo-
+metric objects:
+• Left singular subspace C(X) = span(U)∈Gr(r, S) ,
+capturing association structure in the token space;
+• Right singular subspaceR(X) = span(V)∈Gr(r, H) ,
+capturing semantic directions in the feature space;
+• Singular spectrum Σ∈R r
++, capturing the energy distri-
+bution across principal directions.
+4
+Large Vision–Language Models Get Lost in Attention
+Here Gr(r, n) denotes the Grassmann manifold, the set of
+all r-dimensional linear subspaces of Rn (Absil et al., 2008).
+Motivated by this geometry, we formalize the information
+contained inXas a pair
+I(X) =
+ 
+SX,D X
+
+.
+Here SX denotes theinformation complexity, determined
+by the singular spectrum, and DX denotes theinformation
+support, determined by the left and right subspaces. We
+detail these two components next.
+3.2.1. INFORMATION COMPLEXITY(SPECTRUMS X)
+Based on Theorem F.2 (Eckart & Young, 1936), the singular
+values determine the optimal rank- k approximation error
+and therefore quantify how much of X can be captured by
+its leading principal directions. We thus summarize the
+concentration versus spread of the singular spectrum into an
+effective dimensionality usingeffective rank(eRank):
+Definition 3.4(Rank and Effective rank (Roy & Vetterli,
+2007)).ForXwith singular values{σ i}Q
+i=1, the rank is
+rank(X) =
+{i:σ i >0}
+.
+Let pi =σ i
+P σ be the normalized singular spectrum. We
+define the SpectrumS X of the matrix as its effective rank:
+SX = eRank(X) = exp
+
+−
+QX
+i=1
+pi logp i
+
+.
+This quantity corresponds to thescalecomponent in the
+SVD-based representation, namely the singular spectrum
+Σ.
+3.2.2. INFORMATION SUPPORT(SUPPORTD X)
+This component corresponds to the Grassmann points C(X)
+and R(X) in the manifold parameterization. We view “se-
+mantics” as the linear subspaces occupied by the data in
+the ambient vector spaces; under the manifold hypothesis,
+high-dimensional semantic structure often concentrates near
+low-dimensional subspaces. Concretely, the column space
+C(X) (spanned by U) specifies what semantic categories
+the layer representation can express, while the row space
+R(X) (spanned by V) specifies linear dependency structure
+among tokens. In practice, we parameterize these Grass-
+mann points using the orthonormal bases from SVD via the
+associated orthogonal projectors:
+PC(X) =UU ⊤,P R(X) =VV ⊤,D X = (PC(X),P R(X))
+which uniquely determine the supporting subspaces ofX.
+Discussion.We have thus answeredRQ1by formalizing
+the information contained in a representation X as two com-
+plementary components: the singular spectrum Σ encodes
+how energy is distributed across principal directions and
+thereby quantifies information complexity SX, while the
+orthonormal factors (U,V) determine the supporting sub-
+spaces C(X) = span(U) and R(X) = span(V) , fixing
+the geometric orientation of the representation in token and
+feature spaces and capturing structured semanticsD X.
+3.3. Quantifying the Contribution of an Update∆X
+(RQ2)
+In Section 3.2, we answeredRQ1by defining the informa-
+tion in a representation as I(X) = (S X,D X). We now ad-
+dressRQ2:How should we quantify what ∆X contributes
+to X?Given an additive update X′ =X+∆X , its effect on
+X admits three complementary and collectively exhaustive
+categories under our decomposition:
+1. Spectrum change(change in SX): ∆X reshapes the sin-
+gular spectrum, inducing compression or expansion of the
+effective dimensionality, which reflects how information
+mass is redistributed across principal directions.
+2. Support change(change in DX): ∆X perturbs the col-
+umn and row subspaces, introducing or removing seman-
+tic support directions, namely a geometric shift in what
+the representation can express and how tokens linearly
+depend on one another.
+3. Internal interaction(no external support): ∆X remains
+within the existing support and acts byreconfiguration,
+namely reorganizing and reallocating information already
+present inXwithout injecting new support directions.
+The first two categories reflect external information injection
+that changes complexity or support. The third capturesre-
+configuration, since it reflects internal redistribution within
+the existing information support. We next define measures
+for external information injection and reconfiguration.
+3.3.1. MEASURINGEXTERNALINFORMATION
+INJECTION
+Spectrum change.We quantify the spectrum change by the
+eRank variation, normalized to lie in[0,1].
+∆S(X|X ′) =
+eRank(X′)−eRank(X)
+
+min{S, H} .
+Support innovation.To measure how much new support is
+introduced by ∆X, we use the innovation view from least
+squares, where innovation is the residual after projecting
+onto a reference subspace:
+Definition 3.5(Subspace Innovation).Let U ⊆R d be a lin-
+ear subspace with orthogonal projector PU. For an observa-
+tion y∈R d, the least-squares prediction in U is ˆy=P Uy.
+The innovation is the residual (Hassibi et al., 2000)
+˜y=y− ˆy= (I−P U)y.
+5
+Large Vision–Language Models Get Lost in Attention
+Analogously, we define thesupport innovationof the update
+∆X relative to X as the energy that lies in the orthogonal
+complements of the column and row spaces of X. Let
+PC(X) and PR(X) be the orthogonal projectors onto C(X)
+andR(X). We define
+∆D(X|X ′) =
+(I−P C(X))X′
+F +
+X′(I−P R(X))
+
+F
+2× ∥X ′∥F
+.
+Two-dimensional innovation vector.The two terms
+above capture complementary channels of external infor-
+mation injection. Spectrum change ∆S measures variation
+in effective dimensionality, while support innovation ∆D
+measures novelty in the column and row subspaces. We
+therefore first represent innovation as a two-dimensional
+quantity:
+∆I(X|X ′) =
+ 
+∆S(X|X ′),∆D(X|X ′)
+
+.
+Using either component alone may miss complementary
+cases, such as subspace change with little spectral varia-
+tion. Since both components are normalized to comparable
+ranges, we aggregate them into a scalar summary score,
+defined next.
+Definition 3.6(Representation Information Discrepancy
+(RID)).Given two representation matrices X,X ′ ∈R S×H ,
+we define theRepresentation Information Discrepancyas
+the sum of the spectrum change and the support innovation:
+RID(X|X ′) = ∆S(X|X ′) + ∆D(X|X ′).
+RID measures how a representation changes in spectral
+complexity and subspace novelty, and satisfiesRID∈[0,2]
+(Lemma F.1). Since positional encoding and parameteriza-
+tion effects make RID rarely exactly zero in practice, we
+introduce a tolerance ϵ >0 and treat X′ as information-
+preserving relative to X whenever RID(X|X ′)≈ϵ ; con-
+cretely, we set ϵRoPE = RID
+
+X(RoPE)
+in
+ X(no-RoPE)
+in
+
+, which
+calibrates ϵ to the intrinsic discrepancy induced by Rotary
+Positional Encoding (RoPE) (Su et al., 2024).
+3.3.2. MEASURINGRECONFIGURATION
+Another effect of ∆X isreconfiguration, namely redistribut-
+ing information within the existing support. We measure this
+internal redistribution via a token-to-token mixing entropy.
+Definition 3.7(Token Mixing Entropy (TME)).Given a
+hidden-state matrix X∈R S×H with row vectors xt ∈R H,
+define ˜xt =x t/∥xt∥2 as the unit direction vector. We form
+a token-to-token mixing distribution by mapping pairwise
+token similarities to[0,1]and then row-normalizing
+Pt,j =
+˜x⊤
+t ˜xj+1
+2
+PS
+k=1
+˜x⊤
+t ˜xk+1
+2
+, t, j∈ {1, . . . , S}.
+The Token Mixing Entropy is the average Shannon entropy
+of these distributions:
+TME(X) =− 1
+S
+SX
+t=1
+SX
+j=1
+Pt,j logP t,j.
+TME(X) provides an operational measure of token-level
+interaction by summarizing how broadly each token mixes
+with the rest of the sequence. It constructs a token-to-token
+mixing distribution from pairwise similarity and quantifies
+its uncertainty via entropy, solarger TME indicates more
+diffuse, globally shared interactions, whereas smaller TME
+indicates more concentrated, selective mixing.
+Definition 3.8(Mixing Information Gain (MixIG)).For
+an updated representation X′ =X+ ∆X , we define the
+mixing information gain as the change in token mixing
+entropy:
+MixIG(X|X ′) = TME(X′)−TME(X).
+This quantity captures how strongly the update increases
+or decreases token-to-token mixing, and thus serves as an
+operational measure ofreconfigurationwithin the existing
+information support.
+Discussion.In this section, we answerRQ2with two com-
+plementary metrics: RID and MIXIG. RID quantifiesinno-
+vationby measuring how ∆X changes the representation
+through spectral complexity shifts and support novelty, in-
+dicating external information injection beyond the current
+subspace. MIXIG quantifiesreconfigurationby measuring
+how ∆X reshapes token to token mixing within the exist-
+ing support, capturing internal redistribution of information
+without introducing new support directions.
+4. Redundancy and Misallocation in LVLM
+Visual Attention (RQ3)
+In this section, we build on our theoretical framework to
+answerRQ3:How can we use ∆X to analyze and contrast
+the functional roles of different modules?Through exper-
+iments, we uncover a common pathology in Transformer-
+based LVLMs:models can get lost in attention. We first
+describe the experimental setups in Section 4.1. Then, in
+Section 4.2, we use RID and MIXIG to show that different
+modules exhibit orthogonal functional roles, complementing
+prior statistically grounded interpretability studies (Kang
+et al., 2025; Geva et al., 2021). Finally, in Section 4.3, we re-
+place attention scores with predefined values, and the results
+indicate substantial redundancy in existing LVLM attention.
+4.1. Experimental Setups
+Model settings.We evaluate 15 open-source LVLM vari-
+ants spanning three mainstream architectures. Specifi-
+cally, we consider Qwen-family models (Qwen-2.5-VL
+6
+Large Vision–Language Models Get Lost in Attention
+(Team, 2025), CoF (Wei et al., 2022), Reverse (Wu
+et al., 2025), MM-Eureka (Meng et al., 2025), Orsta
+(Ma et al., 2025b), Ocean-R1 (Ming et al., 2025)),
+LLaV A-1.5-family models (LLaVA-1.5 (Liu et al., 2024a),
+Yi-VL (AI et al., 2024)), and LLaV A-NeXT-family models
+(LLaVA-OneVision (Li et al., 2024b), Mistral-1.6
+andVicuna-1.6(Liu et al., 2024b)).
+Tasks and benchmarks.Our experiments are conducted on
+a broad suite of multimodal benchmarks, including POPE
+(Li et al., 2023b), 3DSRBench (Ma et al., 2025a), Real-
+WorldQA (Visheratin, 2024), MMMU (Yue et al., 2023),
+VMC-Bench (Zhang et al., 2025c), MathVista (Lu et al.,
+2023), and HallusionBench (Guan et al., 2024). Together,
+these benchmarks evaluate LVLM capabilities from basic vi-
+sual perception to advanced multimodal reasoning. Details
+on the benchmarks are provided in the Appendix C.1.
+4.2. Interpreting the Functional Roles of Attention and
+FFN
+FFN:Higher InnovationLower Mixing Gain
+Attention:LowerInnovationHigherMixingGainreverse_3BQwen_2.5_VL_3B
+Vicuna_7BVicuna_13BLLaVA_1.5_7B
+Yi_6BMistral_7BQwen_2.5_VL _32B
+LlaVA_OneVision_7B
+Vicuna_13BLlaVA_OneVision_7BMistral_7BQwen_2.5_VL _32BYi_6B
+LLaVA_1.5_7B
+Vicuna_7B
+Qwen_2.5_VL _3B
+reverse_3BQwen_2.5_VLbasedVariants
+Qwen_2.5_VLbasedVariants
+ModuleAttentionFFN
+ArchitectureQwen-2.5-VLLLaVA-1.5LLaVA-NeXT
+𝜖!"#$
+Figure 2.Model-wise RID and MixIG for Attention and FFN.
+Across architectures and training variants, a clear and consistent
+separation emerges between attention and FFN contributions, indi-
+cating that our framework captures an intrinsic functional distinc-
+tion between the two submodules. Specifically,ϵ RoPE = 0.062.
+To systematically dissect the information dynamics within
+the residual stream, we track the evolution of RID and
+MixIG across all layers l, using a random sample of 1000
+instances from each dataset. We design three comparative
+settings to isolate the contributions of learned architectural
+components versus stochastic interference:
+1. Stochastic Baselines ( Xl
+noise):We introduce two ran-
+domization strategies to validate metric sensitivity and
+isolate learned functional properties: (1)Noise ∆, where
+the attention update is replaced by Gaussian noise match-
+ing the empirical moments of ∆Xattn, serving as a neg-
+ative control to verify the detection of unstructured, off-
+manifold perturbations; (2)Noise QKV, where learned
+weight matrices are replaced by Gaussian initializations,
+serving to demonstrate that the subspace-preserving na-
+ture of attention is a learned behavior, as unoptimized
+linear transformations would otherwise significantly per-
+turb the feature space. In both cases, we match the noise
+mean to that of∆X attn (Theorem F.3).
+2. Attention Contribution:We measure the transition from
+input to post-attention states via RID(Xl
+in |X l
+attn) and
+MixIG(Xl
+in |X l
+attn).
+3. FFN Contribution:We measure the transition from post-
+attention to post-FFN states via RID(Xl
+attn |X l
+ffn) and
+MixIG(Xl
+attn |X l
+ffn).
+The aggregated statistics are shown in Table 1 and Figure 2,
+while layer-wise trajectories are illustrated in Figure 3.
+Table 1.Module-wise RID and MIXIG with qualitative signatures.
+Module RID MixIG Characteristic
+Noise∆ 0.61 -0.80
+NoiseQKV 0.44 -0.50
+Very high RID
+Negative MixIG
+Attention 0.06 0.61 Low RID, High MixIG
+Feed-Forward 0.21 0.02 High RID, Low MixIG
+b)DifferentVariantsa)DifferentArchitectures
+Q: Is there a cow in this image?GT: Yes, the cows are inModel response: No. Early layersMiddle layersLate layers
+Figure 3.Layer-wise RID and MixIG for Attention and FFN.
+More sample visualizations are provided in the Figures 5–10.
+Our observations are as follows:
+Obs ❶.Metric Discriminability and Subspace Sensitivity.
+Table 1 validates our metrics through stochastic baselines.
+Noise ∆ and Noise QKV serve as negative controls for
+testing whether RID and MIXIG can distinguish structured
+7
+Large Vision–Language Models Get Lost in Attention
+Table 2.Benchmark results under different SAP modes. Weboldthe best results and underline the runner-upswithin each model.
+Model / Variant Affected LayersPOPE RWQA 3dSRBenchMMMU VMCBenchHallusionBenchMathVista
+Qwen-2.5-VL-3B / 86.13 59.35 53.46 47.78 72.31 66.97 61.5
++ Vis. Attn. 87.58 61.38 53.94 48.29 72.67 68.66 61.6
++ Patch Comp. 87.47 61.62 54.14 47.88 72.59 69.19 61.7
++ Noise
+[1, 27]
+87.40 60.52 53.85 48.29 72.66 69.09 61.6
+Qwen-2.5-VL-7B / 86.54 65.75 55.6351.7774.34 69.1963.3
++ Vis. Attn. 87.62 66.14 56.60 51.18 74.77 70.98 63.1
++ Patch Comp. 87.73 66.54 56.74 51.32 74.80 71.40 63.1
++ Noise
+[1, 27]
+87.51 66.54 56.56 51.76 74.76 70.35 62.9
+LLaVA-1.5-7B / 74.38 47.71 47.53 34.12 48.71 41.63 21.9
++ Vis. Attn. 75.79 50.20 48.65 34.71 52.23 44.29 23.2
++ Patch Comp. 75.30 50.85 48.96 35.18 52.29 42.42 23.6
++ Noise
+[18, 23]
+75.02 47.58 48.81 35.23 50.70 42.69 22.9
+LLaVA-OneVision-7B / 86.21 56.73 55.54 41.51 66.79 46.94 63.7
++ Patch Comp. 87.78 60.26 57.22 42.76 68.79 47.48 63.7
++ Noise [21, 27] 87.28 59.09 56.72 40.99 67.80 47.03 64.3
+module updates from unstructured perturbations. The sub-
+stantially higher RID and negative MixIG of both baselines
+show that unstructured perturbations are correctly identi-
+fied as off-subspace disruptions with reduced token mixing,
+confirming that the low-RID, positive-MixIG profile of at-
+tention reflects a learned structured update rather than a
+metric artifact.
+Obs ❷. The Orthogonal Roles of Attention and FFN.
+Figure 2 shows a consistent separation between attention
+and FFN across 15 LVLM variants. Attention updates ex-
+hibit negligible innovation (on the order of ϵRoPE) but strong
+reconfiguration, acting as asubspace-preserving operator.
+In contrast, FFN updates exhibit substantial innovation with
+weak reconfiguration, acting as asubspace-expanding op-
+erator. Together, these results quantify a clear division of
+labor: attention primarilycontextualizesexisting informa-
+tion via rearrangement, whereas FFNs primarilycompute
+new semantic features via subspace expansion.
+Obs ❸. Misallocation in visual attention.The layer-wise
+analysis in Figure 3 suggests a heterogeneous role of atten-
+tion across depth: while some layers exhibit pronounced
+reconfiguration (e.g., Layer 0 and layers around40% depth),
+cross-token interactions remain sparse in most layers. Moti-
+vated by this pattern, we further visualize attention-mediated
+cross-patch interactions in Figure 3(b) by linking patch pairs
+whose query–key score ≥0.1 . We model patch interactions
+as a graph and measure the degree share of question-relevant
+regions: this share is substantially lower for incorrect sam-
+ples (4.2%) than for correct ones (13.1%), exposing a sys-
+tematicmisallocationof visual attention in current LVLM
+decoders. We further discuss this analysis in Appendix E.
+Summary.In this section, we validate the discriminabil-
+ity of our metrics (Obs ❶) and confirm a robust module-
+level functional separation across diverse LVLM variants
+(Obs ❷). We further find that attention often fails to allo-
+cate and reorganize information around question-relevant
+visual evidence (Obs ❸). This naturally raises a follow-up
+question:if attention scores exhibit such misallocation, are
+they largely redundant and replaceable?We answer this
+question in the next section via targeted interventions.
+4.3. Replacing Attention Scores with Priors
+𝐀𝐕Softmax
+𝐀#𝐕𝐀#
+Visual Encoder Attention
+Patch Complexity
+Noise
+✖
+𝜀～𝒩0,1
+normalize
+normalize
+𝑨enc=softmax(𝑸enc	𝑲enc!)/𝑑"
+𝑸!"#	𝑲!"#$
+ 𝐀Attention Map / ScoreValueDot Product
+a) Multi-Head Scaled Dot-Product Self-Attention (MHSA)
+b)MHSA Replacement with SharedAttention Prior(SAP)
+Figure 4.MHSA Replacement with Shared Attention Prior.
+Causal masking is still applied after the replacement.
+To further validate that a substantial portion of LVLM at-
+tention computation is redundant, we intervene on the de-
+coder by replacing attention scores in selected layers with
+shared attention prior (SAP). As illustrated in Figure 4,
+we consider three replacement modes:(i) Visual-encoder
+attention, which injects attention maps derived from the
+visual encoder;(ii) Patch complexity, which uses a precom-
+puted patch-wise complexity prior based on within-patch
+color variance and edge-gradient magnitude; and(iii) Noise,
+which substitutes scores with Gaussian noise.Details of
+8
+Large Vision–Language Models Get Lost in Attention
+SAP experimentsare provided in Appendix C.3.
+Table 2 reports the SAP replacement results on three
+backbone families ( Qwen-2.5-VL, LLaVA-1.5, and
+LLaVA-NeXT).Detailed ablations on affected layers and
+heads, as well as experiments on larger models and more
+variants, are provided in Appendix D.
+Obs ❹. Substantial redundancy in LVLM visual atten-
+tion.Across models and benchmarks (Table 2), replacing
+decoder attention scores with these predefined patterns does
+not degrade performance and can even yield improvements.
+This indicates that, for current LVLMs, a large fraction of
+visual-attention scoring is not functionally necessary, reveal-
+ing substantial redundancy in decoder visual attention. This
+observation is consistent with recent visual token pruning
+works (Wen et al., 2025; Zhang et al., 2025a).
+5. Discussion and Conclusion
+We propose a unified theoretical framework for assessing
+how residual-stream updates shape representations in large
+models. Applying it to LVLMs reveals a consistent module-
+level functional separation, where attention primarily sup-
+ports token-level reconfiguration while FFNs drive inno-
+vation, and further diagnoses a pervasive failure mode in
+current decoders: visual attention often misallocates inter-
+action away from question-relevant evidence. Motivated by
+this deficiency, we conduct aproof-of-conceptintervention
+by replacing attention scores in selected layers with sim-
+ple predefined priors, and observe little to no degradation
+in capability, suggesting substantial redundancy in learned
+scoring. Beyond these specific findings, our framework
+and empirical protocol offer a general tool for evaluating
+residual-update mechanisms across model families and mo-
+tivate targeted attention-centric optimization.
+In conclusion, our framework turns LVLM residual updates
+into measurable innovation–reconfiguration dynamics and
+provides evidence that current Transformer-based LVLMs
+canget lost in attention. Future work includes extending the
+analysis to training-time dynamics and leveraging the ob-
+served redundancy to design more efficient attention mech-
+anisms or regularizers that preserve useful mixing while
+reducing unnecessary scoring.
+Impact Statement
+This paper presents work whose goal is to advance the field
+of Large Vision–Language Model Interpretability. There
+are many potential societal consequences of our work, none
+which we feel must be specifically highlighted here.
+References
+Abnar, S. and Zuidema, W. Quantifying attention flow in
+transformers. InProceedings of the 58th Annual Meeting
+of the Association for Computational Linguistics. Associ-
+ation for Computational Linguistics, 2020.
+Absil, P.-A., Mahony, R., and Sepulchre, R.Optimization
+Algorithms on Matrix Manifolds. Princeton University
+Press, 2008.
+Agrawal, K. K., Mondal, A. K., Ghosh, A., and Richards, B.
+α-req: Assessing representation quality in self-supervised
+learning by measuring eigenspectrum decay.Advances
+in Neural Information Processing Systems, 35:17626–
+17638, 2022.
+AI, ., :, Young, A., Chen, B., Li, C., Huang, C., Zhang, G.,
+Zhang, G., Li, H., Zhu, J., Chen, J., Chang, J., Yu, K.,
+Liu, P., Liu, Q., Yue, S., Yang, S., Yang, S., Yu, T., Xie,
+W., Huang, W., Hu, X., Ren, X., Niu, X., Nie, P., Xu, Y .,
+Liu, Y ., Wang, Y ., Cai, Y ., Gu, Z., Liu, Z., and Dai, Z. Yi:
+Open foundation models by 01.ai, 2024.
+Alayrac, J.-B., Donahue, J., Luc, P., Miech, A., Barr, I.,
+Hasson, Y ., Lenc, K., Mensch, A., Millican, K., Reynolds,
+M., et al. Flamingo: a visual language model for few-
+shot learning.Advances in neural information processing
+systems, 35:23716–23736, 2022.
+Ali, R., Caso, F., Irwin, C., and Li`o, P. Entropy-lens: The
+information signature of transformer computations.arXiv
+preprint arXiv:2502.16570, 2025.
+Ameisen, E., Lindsey, J., Pearce, A., Gurnee, W., Turner,
+N. L., Chen, B., Citro, C., Abrahams, D., Carter, S., Hos-
+mer, B., et al. Circuit tracing: Revealing computational
+graphs in language models.Transformer Circuits Thread,
+6, 2025.
+Basile, L., Acevedo, S., Bortolussi, L., Anselmi, F., and
+Rodriguez, A. Intrinsic dimension correlation: uncover-
+ing nonlinear connections in multimodal representations.
+arXiv preprint arXiv:2406.15812, 2024.
+Basile, L., Maiorca, V ., Doimo, D., Locatello, F., and
+Cazzaniga, A. Head pursuit: Probing attention spe-
+cialization in multimodal transformers.arXiv preprint
+arXiv:2510.21518, 2025.
+Basu, S., Grayson, M., Morrison, C., Nushi, B., Feizi, S.,
+and Massiceti, D. Understanding information storage
+and transfer in multi-modal large language models. In
+Advances in Neural Information Processing Systems, vol-
+ume 37, pp. 7400–7426, 2024.
+Belinkov, Y . and Glass, J. Analysis methods in neural
+language processing: A survey.Transactions of the Asso-
+ciation for Computational Linguistics, 7:49–72, 2019.
+9
+Large Vision–Language Models Get Lost in Attention
+Belrose, N., Furman, Z., Smith, L., Halawi, D., Ostrovsky, I.,
+McKinney, L., Biderman, S., and Steinhardt, J. Eliciting
+latent predictions from transformers with the tuned lens.
+arXiv preprint arXiv:2303.08112, 2023.
+Bengio, Y ., Courville, A., and Vincent, P. Representation
+learning: A review and new perspectives.IEEE transac-
+tions on pattern analysis and machine intelligence, 35(8):
+1798–1828, 2013.
+BT, R. et al. Studio encoding parameters of digital television
+for standard 4: 3 and wide-screen 16: 9 aspect ratios.
+International radio consultative committee international
+telecommunication union, Switzerland, CCIR Rep, 2011.
+Chen, L., Li, J., Dong, X., Zhang, P., Zang, Y ., Chen, Z.,
+Duan, H., Wang, J., Qiao, Y ., Lin, D., et al. Are we on the
+right way for evaluating large vision-language models?
+Advances in Neural Information Processing Systems, 37:
+27056–27087, 2024.
+Conneau, A., Kruszewski, G., Lample, G., Barrault, L.,
+and Baroni, M. What you can cram into a single vector:
+Probing sentence embeddings for linguistic properties.
+arXiv preprint arXiv:1805.01070, 2018.
+Cunningham, H., Ewart, A., Riggs, L., Huben, R., and
+Sharkey, L. Sparse autoencoders find highly inter-
+pretable features in language models.arXiv preprint
+arXiv:2309.08600, 2023.
+Deb, M. and Ogunfunmi, T. Information-theoretical analysis
+of a transformer-based generative ai model.Entropy, 27
+(6):589, 2025.
+Du, X., Mo, F., Wen, M., Gu, T., Zheng, H., Jin, H., and
+Shi, J. Multi-turn jailbreaking large language models via
+attention shifting. InProceedings of the AAAI Conference
+on Artificial Intelligence, volume 39, pp. 23814–23822,
+2025.
+Dunefsky, J., Chlenski, P., and Nanda, N. Transcoders find
+interpretable llm feature circuits.Advances in Neural
+Information Processing Systems, 37:24375–24410, 2024.
+Eckart, C. and Young, G. The approximation of one matrix
+by another of lower rank.Psychometrika, 1(3):211–218,
+1936.
+Edelman, E., Tsilivis, N., Edelman, B., Malach, E., and
+Goel, S. The evolution of statistical induction heads:
+In-context learning markov chains.Advances in neural
+information processing systems, 37:64273–64311, 2024.
+Elhage, N., Nanda, N., Olsson, C., Henighan, T., Joseph,
+N., Mann, B., Askell, A., Bai, Y ., Chen, A., Conerly, T.,
+et al. A mathematical framework for transformer circuits.
+Transformer Circuits Thread, 1(1):12, 2021.
+Elhelo, A. and Geva, M. Inferring functionality of attention
+heads from their parameters. InProceedings of the 63rd
+Annual Meeting of the Association for Computational
+Linguistics (Volume 1: Long Papers), pp. 17701–17733,
+2025.
+Fang, J., Jiang, H., Wang, K., Ma, Y ., Shi, J., Wang, X.,
+He, X., and Chua, T.-S. Alphaedit: Null-space con-
+strained knowledge editing for language models. In
+International Conference on Learning Representations,
+2025. URL https://openreview.net/forum?
+id=HvSytvg3Jh.
+Gardinazzi, Y ., Viswanathan, K., Panerai, G., Ansuini, A.,
+Cazzaniga, A., and Biagetti, M. Persistent topologi-
+cal features in large language models. InForty-second
+International Conference on Machine Learning, ICML
+2025, Vancouver, BC, Canada, July 13-19, 2025. OpenRe-
+view.net, 2025. URL https://openreview.net/
+forum?id=qAHnSkHvsm.
+Geva, M., Schuster, R., Berant, J., and Levy, O. Transformer
+feed-forward layers are key-value memories. InProceed-
+ings of the 2021 Conference on Empirical Methods in
+Natural Language Processing, pp. 5484–5495, 2021.
+Golub, G. H. and Van Loan, C. F.Matrix computations.
+JHU press, 2013.
+Goyal, Y ., Khot, T., Summers-Stay, D., Batra, D., and
+Parikh, D. Making the v in vqa matter: Elevating the
+role of image understanding in visual question answer-
+ing. InProceedings of the IEEE conference on computer
+vision and pattern recognition, pp. 6904–6913, 2017.
+Guan, T., Liu, F., Wu, X., Xian, R., Li, Z., Liu, X., Wang,
+X., Chen, L., Huang, F., Yacoob, Y ., Manocha, D., and
+Zhou, T. Hallusionbench: An advanced diagnostic suite
+for entangled language hallucination and visual illusion
+in large vision-language models. InProceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern
+Recognition (CVPR), pp. 14375–14385, June 2024.
+Guan, W., Li, L., Liu, J., Li, B., Fu, P., Fang, C., Hao, X.,
+Ma, C., and Wang, W. Mitigating overthinking in large
+reasoning language models via reasoning path deviation
+monitoring.arXiv preprint arXiv:2603.14251, 2026.
+Guo, D., Yang, D., Zhang, H., Song, J., Zhang, R., Xu, R.,
+Zhu, Q., Ma, S., Wang, P., Bi, X., et al. Deepseek-r1: In-
+centivizing reasoning capability in llms via reinforcement
+learning.arXiv preprint arXiv:2501.12948, 2025.
+Gurari, D., Li, Q., Stangl, A. J., Guo, A., Lin, C., Grauman,
+K., Luo, J., and Bigham, J. P. Vizwiz grand challenge:
+Answering visual questions from blind people. InPro-
+ceedings of the IEEE conference on computer vision and
+pattern recognition, pp. 3608–3617, 2018.
+10
+Large Vision–Language Models Get Lost in Attention
+Hao, X., Zhou, L., Huang, Z., Hou, Z., Tang, Y ., Zhang, L.,
+Li, G., Lu, Z., Ren, S., Meng, X., et al. Mimo-embodied:
+X-embodied foundation model technical report.arXiv
+preprint arXiv:2511.16518, 2025.
+Hassibi, B., Kailath, T., and Sayed, A. H. Linear estimation,
+2000.
+Havrilla, A. and Liao, W. Understanding scaling laws with
+statistical and approximation theory for transformer neu-
+ral networks on intrinsically low-dimensional data.Ad-
+vances in Neural Information Processing Systems, 37:
+42162–42210, 2024.
+Hewitt, J. and Manning, C. D. A structural probe for finding
+syntax in word representations. InProceedings of the
+2019 Conference of the North American Chapter of the
+Association for Computational Linguistics: Human Lan-
+guage Technologies, Volume 1 (Long and Short Papers),
+pp. 4129–4138, 2019.
+Hudson, D. A. and Manning, C. D. Gqa: A new dataset for
+real-world visual reasoning and compositional question
+answering. InProceedings of the IEEE/CVF conference
+on computer vision and pattern recognition, pp. 6700–
+6709, 2019.
+Jaech, A., Kalai, A., Lerer, A., Richardson, A., El-Kishky,
+A., Low, A., Helyar, A., Madry, A., Beutel, A., Car-
+ney, A., et al. Openai o1 system card.arXiv preprint
+arXiv:2412.16720, 2024.
+Jain, S. and Wallace, B. C. Attention is not explanation.
+arXiv preprint arXiv:1902.10186, 2019.
+Kahardipraja, P., Achtibat, R., Wiegand, T., Samek, W., and
+Lapuschkin, S. The atlas of in-context learning: How
+attention heads shape in-context retrieval augmentation.
+arXiv preprint arXiv:2505.15807, 2025.
+Kang, S., Kim, J., Kim, J., and Hwang, S. J. See what you
+are told: Visual attention sink in large multimodal models.
+arXiv preprint arXiv:2503.03321, 2025.
+Kembhavi, A., Salvato, M., Kolve, E., Seo, M., Hajishirzi,
+H., and Farhadi, A. A diagram is worth a dozen images.
+InEuropean conference on computer vision, pp. 235–251.
+Springer, 2016.
+Kim, J., Kang, S., Park, J., Kim, J., and Hwang, S. J. In-
+terpreting attention heads for image-to-text information
+flow in large vision-language models.arXiv preprint
+arXiv:2509.17588, 2025.
+Kim, Y ., Yim, M., and Song, K. Y . Tablevqa-bench: A
+visual question answering benchmark on multiple table
+domains.arXiv preprint arXiv:2404.19205, 2024.
+Kobayashi, G., Kuribayashi, T., Yokoi, S., and Inui, K.
+Analyzing feed-forward blocks in transformers through
+the lens of attention maps. InInternational Conference
+on Learning Representations, 2024. URL https://
+openreview.net/forum?id=mYWsyTuiRp.
+Lai, Q., Li, Y ., Zeng, A., Liu, M., Sun, H., and Xu, Q. Infor-
+mation bottleneck approach to spatial attention learning.
+arXiv preprint arXiv:2108.03418, 2021.
+Li, B., Ge, Y ., Ge, Y ., Wang, G., Wang, R., Zhang, R.,
+and Shan, Y . Seed-bench: Benchmarking multimodal
+large language models. InProceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition,
+pp. 13299–13308, 2024a.
+Li, B., Zhang, Y ., Guo, D., Zhang, R., Li, F., Zhang, H.,
+Zhang, K., Zhang, P., Li, Y ., Liu, Z., et al. Llava-
+onevision: Easy visual task transfer.arXiv preprint
+arXiv:2408.03326, 2024b.
+Li, J., Li, D., Savarese, S., and Hoi, S. Blip-2: Bootstrapping
+language-image pre-training with frozen image encoders
+and large language models. InInternational conference
+on machine learning, pp. 19730–19742. PMLR, 2023a.
+Li, W., Tang, R., Li, C., Zhang, C., Vulic, I., and Søgaard, A.
+Lost in embeddings: Information loss in vision-language
+models.arXiv preprint arXiv:2509.11986, 2, 2025.
+Li, Y ., Du, Y ., Zhou, K., Wang, J., Zhao, X., and Wen,
+J.-R. Evaluating object hallucination in large vision-
+language models. InProceedings of the 2023 Conference
+on Empirical Methods in Natural Language Processing,
+pp. 292–305, Singapore, December 2023b. Association
+for Computational Linguistics. doi: 10.18653/v1/2023.
+emnlp-main.20. URL https://aclanthology.
+org/2023.emnlp-main.20/.
+Lin, T., Maire, M., Belongie, S., Bourdev, L., Girshick,
+R., Hays, J., Perona, P., Ramanan, D., Doll ´ar, P., and
+Zitnick, C. L. Microsoft coco: Common objects in
+context. In Fleet, D. J., Pajdla, T., Schiele, B., and
+Tuytelaars, T. (eds.),Computer Vision – ECCV 2014,
+volume 8693 ofLecture Notes in Computer Science,
+pp. 740–755, Cham, 2014. Springer. doi: 10.1007/
+978-3-319-10602-1 48. URL https://doi.org/
+10.1007/978-3-319-10602-1_48.
+Liu, C., Xu, Z., Wei, Q., Wu, J., Zou, J., Wang, X. E., Zhou,
+Y ., and Liu, S. More thinking, less seeing? assessing
+amplified hallucination in multimodal reasoning models.
+arXiv preprint arXiv:2505.21523, 2025.
+Liu, H., Li, C., Wu, Q., and Lee, Y . J. Visual instruction tun-
+ing.Advances in neural information processing systems,
+36:34892–34916, 2023.
+11
+Large Vision–Language Models Get Lost in Attention
+Liu, H., Li, C., Li, Y ., and Lee, Y . J. Improved baselines
+with visual instruction tuning. InProceedings of the
+IEEE/CVF conference on computer vision and pattern
+recognition, pp. 26296–26306, 2024a.
+Liu, H., Li, C., Li, Y ., Li, B., Zhang, Y ., Shen, S.,
+and Lee, Y . J. Llava-next: Improved reason-
+ing, ocr, and world knowledge, January 2024b.
+URL https://llava-vl.github.io/blog/
+2024-01-30-llava-next/.
+Liu, Z., Lin, Y ., Cao, Y ., Hu, H., Wei, Y ., Zhang, Z., Lin,
+S., and Guo, B. Swin transformer: Hierarchical vision
+transformer using shifted windows. InProceedings of the
+IEEE/CVF international conference on computer vision,
+pp. 10012–10022, 2021.
+Lu, P., Mishra, S., Xia, T., Qiu, L., Chang, K.-W., Zhu,
+S.-C., Tafjord, O., Clark, P., and Kalyan, A. Learn to
+explain: Multimodal reasoning via thought chains for
+science question answering.Advances in Neural Infor-
+mation Processing Systems, 35:2507–2521, 2022.
+Lu, P., Bansal, H., Xia, T., Liu, J., Li, C., Hajishirzi,
+H., Cheng, H., Chang, K.-W., Galley, M., and Gao,
+J. Mathvista: Evaluating mathematical reasoning of
+foundation models in visual contexts.arXiv preprint
+arXiv:2310.02255, 2023.
+Ma, W., Chen, H., Zhang, G., Chou, Y .-C., Chen, J.,
+de Melo, C., and Yuille, A. 3dsrbench: A comprehensive
+3d spatial reasoning benchmark. InProceedings of the
+IEEE/CVF International Conference on Computer Vision,
+pp. 6924–6934, 2025a.
+Ma, Y ., Du, L., Shen, X., Chen, S., Li, P., Ren, Q., Ma,
+L., Dai, Y ., Liu, P., and Yan, J. One rl to see them
+all: Visual triple unified reinforcement learning.arXiv
+preprint arXiv:2505.18129, 2025b.
+Marino, K., Rastegari, M., Farhadi, A., and Mottaghi, R.
+Ok-vqa: A visual question answering benchmark requir-
+ing external knowledge. InProceedings of the IEEE/cvf
+conference on computer vision and pattern recognition,
+pp. 3195–3204, 2019.
+Masry, A., Do, X. L., Tan, J. Q., Joty, S., and Hoque, E.
+Chartqa: A benchmark for question answering about
+charts with visual and logical reasoning. InFindings of
+the association for computational linguistics: ACL 2022,
+pp. 2263–2279, 2022.
+Mathew, M., Karatzas, D., and Jawahar, C. Docvqa: A
+dataset for vqa on document images. InProceedings
+of the IEEE/CVF winter conference on applications of
+computer vision, pp. 2200–2209, 2021.
+Mathew, M., Bagal, V ., Tito, R., Karatzas, D., Valveny,
+E., and Jawahar, C. Infographicvqa. InProceedings
+of the IEEE/CVF Winter Conference on Applications of
+Computer Vision, pp. 1697–1706, 2022.
+Meng, F., Du, L., Liu, Z., Zhou, Z., Lu, Q., Fu, D., Shi, B.,
+Wang, W., He, J., Zhang, K., Luo, P., Qiao, Y ., Zhang, Q.,
+and Shao, W. Mm-eureka: Exploring visual aha moment
+with rule-based large-scale reinforcement learning, 2025.
+URLhttps://arxiv.org/abs/2503.07365.
+Meng, K., Bau, D., Andonian, A., and Belinkov, Y . Locating
+and editing factual associations in GPT. InAdvances in
+Neural Information Processing Systems, volume 35, pp.
+17359–17372, 2022.
+Meng, K., Sen Sharma, A., Andonian, A., Belinkov, Y .,
+and Bau, D. Mass-editing memory in a transformer. In
+International Conference on Learning Representations,
+2023. URL https://openreview.net/forum?
+id=MkbcAHIYgyS.
+Ming, L., Li, Y ., Chen, S., Xu, J., Zhou, Z., and
+Chen, W. Ocean-r1: An open and generalizable large
+vision-language model enhanced by reinforcement learn-
+ing. https://github.com/VLM-RL/Ocean-R1,
+2025. Accessed: 2025-04-03.
+Mishra, A., Shekhar, S., Singh, A. K., and Chakraborty, A.
+Ocr-vqa: Visual question answering by reading text in
+images. In2019 international conference on document
+analysis and recognition (ICDAR), pp. 947–952. IEEE,
+2019.
+Nam, A., Conklin, H., Yang, Y ., Griffiths, T., Cohen, J.,
+and Leslie, S.-J. Causal head gating: A framework for
+interpreting roles of attention heads in transformers.arXiv
+preprint arXiv:2505.13737, 2025.
+Nishi, K., Ramesh, R., Okawa, M., Khona, M., Tanaka,
+H., and Lubana, E. S. Representation shattering in
+transformers: A synthetic study with knowledge edit-
+ing. InForty-second International Conference on Ma-
+chine Learning, ICML 2025, Vancouver, BC, Canada,
+July 13-19, 2025. OpenReview.net, 2025. URL https:
+//openreview.net/forum?id=BKOeyZal0x.
+Olsson, C., Elhage, N., Nanda, N., Joseph, N., DasSarma,
+N., Henighan, T., Mann, B., Askell, A., Bai, Y ., Chen,
+A., et al. In-context learning and induction heads.arXiv
+preprint arXiv:2209.11895, 2022.
+Pertuz, S., Puig, D., and Garcia, M. A. Analysis of focus
+measure operators for shape-from-focus.Pattern Recog-
+nition, 46(5):1415–1432, 2013.
+Qiu, Z., Huang, Z., Huang, Y ., and Fu, J. Empirical study
+on updating key-value memories in transformer feed-
+forward layers.arXiv preprint arXiv:2402.12233, 2024.
+12
+Large Vision–Language Models Get Lost in Attention
+Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G.,
+Agarwal, S., Sastry, G., Askell, A., Mishkin, P., Clark, J.,
+et al. Learning transferable visual models from natural
+language supervision. InInternational conference on
+machine learning, pp. 8748–8763. PmLR, 2021.
+Razzhigaev, A., Mikhalchuk, M., Goncharova, E., Os-
+eledets, I., Dimitrov, D., and Kuznetsov, A. The shape
+of learning: Anisotropy and intrinsic dimensions in
+transformer-based models. InFindings of the Associ-
+ation for Computational Linguistics: EACL 2024, pp.
+868–874, 2024.
+Roy, O. and Vetterli, M. The effective rank: A measure of
+effective dimensionality. In2007 15th European signal
+processing conference, pp. 606–610. IEEE, 2007.
+Schwenk, D., Khandelwal, A., Clark, C., Marino, K., and
+Mottaghi, R. A-okvqa: A benchmark for visual ques-
+tion answering using world knowledge. InEuropean
+conference on computer vision, pp. 146–162. Springer,
+2022.
+Serrano, S. and Smith, N. A. Is attention interpretable?
+arXiv preprint arXiv:1906.03731, 2019.
+Singh, A., Natarajan, V ., Shah, M., Jiang, Y ., Chen, X.,
+Batra, D., Parikh, D., and Rohrbach, M. Towards vqa
+models that can read. InProceedings of the IEEE/CVF
+conference on computer vision and pattern recognition,
+pp. 8317–8326, 2019.
+Skean, O., Arefin, M. R., Zhao, D., Patel, N., Naghiyev, J.,
+LeCun, Y ., and Shwartz-Ziv, R. Layer by layer: Uncov-
+ering hidden representations in language models.arXiv
+preprint arXiv:2502.02013, 2025.
+Su, J., Ahmed, M., Lu, Y ., Pan, S., Bo, W., and Liu, Y .
+Roformer: Enhanced transformer with rotary position
+embedding.Neurocomputing, 568:127063, 2024.
+Tan, H., Ji, Y ., Hao, X., Lin, M., Wang, P., Wang, Z., and
+Zhang, S. Reason-rft: Reinforcement fine-tuning for
+visual reasoning.arXiv e-prints, pp. arXiv–2503, 2025.
+Team, Q. Qwen2.5-vl, January 2025. URL https://
+qwenlm.github.io/blog/qwen2.5-vl/.
+Tian, Y ., Wang, Y ., Zhang, Z., Chen, B., and Du, S. Joma:
+Demystifying multilayer transformers via joint dynamics
+of mlp and attention.arXiv preprint arXiv:2310.00535,
+2023.
+Vandereycken, B. Low-rank matrix completion by rieman-
+nian optimization.SIAM Journal on Optimization, 23(2):
+1214–1236, 2013. doi: 10.1137/110845768.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,
+L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. At-
+tention is all you need.Advances in neural information
+processing systems, 30, 2017.
+Visheratin. Realworldqa. https://huggingface.
+co/datasets/visheratin/realworldqa,
+2024. Accessed: 2025-11-21.
+Wang, H., Zhang, J., and Ma, Q. Exploring intrinsic dimen-
+sion for vision-language model pruning. InForty-first
+International Conference on Machine Learning, 2024a.
+Wang, K., Pan, J., Shi, W., Lu, Z., Ren, H., Zhou, A., Zhan,
+M., and Li, H. Measuring multimodal mathematical
+reasoning with math-vision dataset.Advances in Neu-
+ral Information Processing Systems, 37:95095–95169,
+2024b.
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi,
+E., Le, Q. V ., Zhou, D., et al. Chain-of-thought prompting
+elicits reasoning in large language models.Advances in
+neural information processing systems, 35:24824–24837,
+2022.
+Wei, L., Tan, Z., Li, C., Wang, J., and Huang, W. Diff-erank:
+A novel rank-based metric for evaluating large language
+models.Advances in Neural Information Processing
+Systems, 37:39501–39521, 2024.
+Wen, Z., Gao, Y ., Li, W., He, C., and Zhang, L. Token prun-
+ing in multimodal large language models: Are we solving
+the right problem?arXiv preprint arXiv:2502.11501,
+2025.
+Wiegreffe, S. and Pinter, Y . Attention is not not explanation.
+arXiv preprint arXiv:1908.04626, 2019.
+Wu, T.-H., Lee, H., Ge, J., Gonzalez, J. E., Darrell, T., and
+Chan, D. M. Generate, but verify: Reducing hallucination
+in vision-language models with retrospective resampling.
+arXiv preprint arXiv:2504.13169, 2025.
+Yao, Y ., Zhang, N., Xi, Z., Wang, M., Xu, Z., Deng, S., and
+Chen, H. Knowledge circuits in pretrained transformers.
+InAdvances in Neural Information Processing Systems,
+volume 37, 2024.
+Yin, K. and Steinhardt, J. Which attention heads matter for
+in-context learning? InProceedings of the 42nd Interna-
+tional Conference on Machine Learning, volume 267 of
+Proceedings of Machine Learning Research, pp. 72428–
+72461. PMLR, 2025. URL https://proceedings.
+mlr.press/v267/yin25e.html.
+Yu, W., Yang, Z., Li, L., Wang, J., Lin, K., Liu, Z., Wang,
+X., and Wang, L. Mm-vet: Evaluating large multi-
+modal models for integrated capabilities.arXiv preprint
+arXiv:2308.02490, 2023.
+13
+Large Vision–Language Models Get Lost in Attention
+Yu, Y ., Buchanan, S., Pai, D., Chu, T., Wu, Z., Tong, S.,
+Bai, H., Zhai, Y ., Haeffele, B. D., and Ma, Y . White-box
+transformers via sparse rate reduction: Compression is
+all there is?Journal of Machine Learning Research, 25
+(300):1–128, 2024.
+Yue, X., Qu, G., Chen, X., et al. MMMU: A mas-
+sive multi-discipline multimodal understanding and rea-
+soning benchmark for expert AGI.arXiv preprint
+arXiv:2311.16502, 2023.
+Zhang, Q., Cheng, A., Lu, M., Zhang, R., Zhuo, Z., Cao, J.,
+Guo, S., She, Q., and Zhang, S. Beyond text-visual atten-
+tion: Exploiting visual cues for effective token pruning in
+vlms. InProceedings of the IEEE/CVF International Con-
+ference on Computer Vision, pp. 20857–20867, 2025a.
+Zhang, S., Hao, X., Tang, Y ., Zhang, L., Wang, P., Wang,
+Z., Ma, H., and Zhang, S. Video-cot: A comprehensive
+dataset for spatiotemporal understanding of videos based
+on chain-of-thought. InProceedings of the 33rd ACM In-
+ternational Conference on Multimedia, pp. 12745–12752,
+2025b.
+Zhang, Y ., Su, Y ., Liu, Y ., Wang, X., Burgess, J., Sui, E.,
+Wang, C., Aklilu, J., Lozano, A., Wei, A., Schmidt, L.,
+and Yeung-Levy, S. Automated generation of challeng-
+ing multiple-choice questions for vision language model
+evaluation. InProceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition (CVPR), pp.
+29580–29590, June 2025c.
+Zhou, Z., Yu, H., Zhang, X., Xu, R., Huang, F., Wang, K.,
+Liu, Y ., Fang, J., and Li, Y . On the role of attention
+heads in large language model safety.arXiv preprint
+arXiv:2410.13708, 2024.
+14
+Large Vision–Language Models Get Lost in Attention
+A. Notations
+We summarize the notation used throughout this paper in Table 3.
+Table 3.Notations.
+Notation Description
+X∈RS×H Hidden-state / residual-stream representation matrix with token lengthSand hidden sizeH
+Xnew,Xold,∆XUpdated representation, pre-update representation, and the additive residual update,Xnew=Xold+ ∆X
+Xlin,X lattn,X lffn Layer-lresidual-stream states: layer input, post-attention state, and post-FFN state
+∆Xlattn,∆Xlffn Module-wise residual updates at layerl:∆Xlattn=Xlattn−Xlin,∆Xlffn=Xlffn−Xlattn
+X=UΣV⊤ Singular value decomposition (SVD) ofXwith orthonormal factorsU,Vand singular spectrumΣ
+I(X) = SX,DX
+ Representation information, decomposed into spectrum complexitySXand supportDX
+C(X),R(X)Column space and row space ofX(Grassmann points)
+span(U),span(V)Left and right singular subspaces induced by SVD factorsUandV
+PU Orthogonal projector onto a subspaceU
+∆S(X|X′),∆D(X|X′)Spectrum change and support innovation when transitioning fromXtoX′
+RID(X|X′)Representation Information Discrepancy, measuring update-induced innovation via spectrum change plus support innovation
+TME(X)Token Mixing Entropy, an entropy-based measure of token-to-token mixing inX
+MixIG(X|X′)Mixing Information Gain, defined asTME(X ′)−TME(X)to quantify reconfiguration
+Q,K,V,AQuery, key, value, and attention weights (attention distribution / matrix)
+X(rope)
+in ,X(no-rope)
+in Layer-input representations with RoPE positional encoding enabled vs. disabled (for calibrating intrinsic discrepancy)
+B. Comparison with Prior Work
+Prior module-level interpretability studies have largely relied on attribution, tracing, or component-specific functional
+analyses. For attention, this line examines whether attention weights faithfully explain predictions, how attention-mediated
+influence propagates across layers, or which heads implement specific functions (Jain & Wallace, 2019; Serrano & Smith,
+2019; Wiegreffe & Pinter, 2019; Abnar & Zuidema, 2020). For FFNs, prior work shows that feed-forward layers can behave
+as key–value memories that associate textual patterns with output distributions (Geva et al., 2021). These approaches are
+valuable for localizing where a behavior or stored pattern appears. In contrast, our framework asks a different question:
+how does each module transform the shared residual stream? We therefore characterize updates at the representation level
+through innovation and reconfiguration, rather than assigning a behavior to a specific token, head, neuron, or memory slot.
+This difference also changes the diagnostic perspective. Prior methods are often strongest at identifying what function is
+present in a model, such as token attribution, head functionality, or stored associations. For example, causal tracing and
+editing methods localize factual associations in feed-forward modules (Meng et al., 2022; 2023; Fang et al., 2025), circuit
+analyses identify knowledge-related pathways (Yao et al., 2024), and head-level studies characterize which attention heads
+matter for in-context learning (Yin & Steinhardt, 2025). In multimodal settings, related work further studies where visual and
+textual information is stored and transferred across MLLM components (Basu et al., 2024), while FFN analyses examine how
+feed-forward blocks reshape contextualization patterns (Kobayashi et al., 2024). Our framework instead diagnoses what is
+insufficient or excessive in a residual update itself. RID asks whether a module injects new representational structure through
+spectral or subspace change, while MIXIG asks whether a module meaningfully redistributes token-level information. Thus,
+innovation and reconfiguration are not direct substitutes for memory, retrieval, or attribution; they are update-level properties
+of the residual stream. This makes the analysis actionable, because weak innovation or weak reconfiguration can be directly
+linked to a module, layer, or intervention target.
+The resulting conclusions are therefore complementary to prior work rather than redundant with it. For FFNs, memory-based
+interpretations explain how parameters can store and retrieve patterns, whereas our analysis measures how the FFN update
+changes representation geometry regardless of whether the source is parametric memory or contextual computation. For
+attention, circuit-level studies explain what algorithms attention can implement, whereas our claim concerns the visual side
+of current LVLM decoders: many attention updates show limited useful visual reconfiguration, and their score computation
+can often be replaced by simple priors without harming performance. In this sense, our work shifts the focus from identifying
+existing functions to diagnosing residual-stream deficiencies, revealing that current LVLMs do not consistently convert
+expensive visual attention scoring into necessary output-discriminative information flow.
+15
+Large Vision–Language Models Get Lost in Attention
+C. Details
+C.1. Dataset Details
+Our experiments are conducted on a suite of benchmarks that probe complementary capabilities, spanning basic visual
+perception through advanced multimodal reasoning and robustness, including 3D and spatial reasoning, real-world ques-
+tion answering, multidisciplinary knowledge, general-purpose multimodal understanding, mathematical reasoning, and
+hallucination-related robustness. Detailed descriptions are provided below.
+POPE(Li et al., 2023b). POPE is a diagnostic benchmark forobject hallucinationin LVLMs, it contains9,000questions
+split into three complementary subsets (random, popular, adversarial) to stress different hallucination modes. We conduct
+the experiments in Section 4.2 on POPE.
+3DSRBench(Ma et al., 2025a). 3DSRBench targets3D and spatial reasoningby evaluating whether a model can infer
+geometric relations beyond surface-level recognition. It includes1,500visual QA problems spanning diverse 3D reasoning
+skills (e.g., relative depth, viewpoint-dependent relations, and compositional spatial constraints). The dataset is intended to
+separate “seeing” from “reasoning in 3D space” under multimodal inputs.
+RealWorldQA(Visheratin, 2024). RealWorldQA evaluatesreal-world visual question answeringon everyday imagery,
+emphasizing practical robustness rather than curated or synthetic settings. It contains765real-world images paired with
+questions, covering varied scenes and conditions that commonly challenge LVLM grounding.
+MMMU(Yue et al., 2023). MMMU is a large-scale benchmark formultidisciplinary multimodal understanding and
+reasoning, spanning many academic domains. It contains11,500+questions across30subjects, covering both knowledge-
+intensive understanding and higher-level reasoning with visual inputs. Because evaluation on the full test set is restricted, we
+follow the widely adopted protocol in prior work and conduct our experiments on thevalidationsplit (900 samples).
+VMC-Bench(Zhang et al., 2025c). VMC-Bench evaluatesgeneral multimodal understandingwith an emphasis on
+challenging, automatically constructed multiple-choice questions. It transforms 20 widely-used VQA datasets into a unified
+multiple-choice benchmark. These datasets can be broadly categorized to assess general capabilities of VLMs (VQAv2
+(Goyal et al., 2017), OKVQA (Marino et al., 2019), MMVet (Yu et al., 2023), VizWiz (Gurari et al., 2018), A-OKVQA
+(Schwenk et al., 2022), MMStar (Chen et al., 2024), SEEDBench (Li et al., 2024a)), reasoning capabilities (MathVision
+(Wang et al., 2024b), GQA (Hudson & Manning, 2019), MMMU (Yue et al., 2023), RealWorldQA (Visheratin, 2024),
+MathVista (Lu et al., 2023), ScienceQA (Lu et al., 2022)), OCR tasks (OCRVQA (Mishra et al., 2019), TextVQA (Singh
+et al., 2019)), and document and chart understanding (DocVQA (Mathew et al., 2021), InfoVQA (Mathew et al., 2022),
+ChartQA (Masry et al., 2022), TableVQABench (Kim et al., 2024), AI2D (Kembhavi et al., 2016)).
+VMC-Bench contains9,018questions and is used to stress-test model discrimination among closely competing options.
+MathVista(Lu et al., 2023). MathVista focuses onvisual mathematical reasoning, requiring models to combine perception
+(reading diagrams, charts, or scenes) with mathematical problem solving. It contains5,141QA instances covering a wide
+range of math-reasoning skills grounded in visual context. Because the official MathVista test evaluation is not publicly
+available, we conduct our experiments on thetestminisplit (1,000 samples).
+HallusionBench(Guan et al., 2024). HallusionBench is a targeted benchmark forhallucination-related robustness,
+separating failures caused by visual misperception (illusion-like cases) from those caused by language priors. It contains
+1,129image–question pairs constructed to systematically elicit hallucination behaviors under controlled conditions.
+C.2. Experimental Details
+Dataset settings.For each benchmark, we follow a consistent evaluation protocol across all models. Specifically, we feed
+every image–question pair from the dataset to the model under the same input formatting and inference configuration, and
+compute the corresponding task metric using the official evaluation script whenever available.
+Model settings.Within each model category, we adopt a unified inference setup to ensure fair comparison. We group the
+evaluated LVLMs into three categories.
+(i) General-purpose LVLMs.This category includes Qwen-2.5-VL, LLaVA-1.5, Yi, LLaVA-OneVision,
+Mistral-1.6, and Vicuna-1.6. For these models, we directly input the dataset image–question pair using their
+default chat templates.
+16
+Large Vision–Language Models Get Lost in Attention
+(ii) Vision-query optimized LVLMs.This category includes Reverse and CoF. For these models, we follow the inference
+and prompting settings specified in their respective papers to reproduce their intended evaluation protocol.
+(iii) Reasoning-oriented LVLMs.This category includes MM-Eureka, Orsta, and Ocean-R1. For these models,
+we append an explicit reasoning trigger to encourage open-ended deliberation, and extract the final prediction from the
+<answer>tags in the generated output.
+Reasoning-trigger prompt
+You FIRST think about the reasoning process as an internal monologue and then provide the final answer. The reasoning process
+MUST BE enclosed within<think> </think>tags. The final answer MUST BE in<answer> </answer>tags.
+Generation hyperparameters.We use the following decoding parameters for all experiments, and keep all unspecified
+options at their default values:
+max new tokens= 1024,output attentions=True,return dict in generate=True.
+Evaluation details.We follow the official evaluation protocols of each dataset and reportaccuracyas the primary metric.
+For open-ended outputs (e.g., from reasoning-style models), we parse the model’s prediction from the content enclosed by
+the<think>tag and use it as the final answer for scoring.
+C.3. SAP Details
+This appendix provides implementation details for the SAP intervention in Sec. 4.3, including (i) the three SAP modes and
+(ii) how we select affected layers and heads for each architecture.
+SAP modes.Shared Attention Prior (SAP) replaces the original attention scores with a lightweight prior that is computed
+once per input and then shared across selected layers and heads, requiring substantially less computation than per-layer
+score estimation. We instantiate three SAP modes:
+(i) Visual-encoder attention.Since the vision encoder is trained with vision-centric objectives (e.g., hierarchical vision
+encoders such as Swin Transformer (Liu et al., 2021)), we replace decoder attention scores with the last-layer attention maps
+from the visual encoder as a natural alignment prior. Note that the visual tokens used by the decoder may be merged relative
+to the encoder output (e.g., spatial merge size=2 in Qwen-style encoders (Team, 2025)), so we align resolutions
+by average pooling the encoder attention over each m×m merged block (with m=spatial merge size) before
+substitution.
+(ii) Patch complexity.We compute a low-cost patch prior from the input image using the decoder patch size. For each patch
+p, we first convert RGB to grayscale (BT et al., 2011)
+g(u, v) = 0.299R(u, v) + 0.587G(u, v) + 0.114B(u, v),
+then define an efficient gradient-magnitude statistic via mean absolute finite differences:
+Gx(p) = 1
+HW ′
+HX
+u=1
+W−1X
+v=1
+g(u, v+ 1)−g(u, v)
+, G y(p) = 1
+H ′W
+H−1X
+u=1
+WX
+v=1
+g(u+ 1, v)−g(u, v)
+,
+grad(p) =G x(p) +G y(p),var(p) = Var
+ 
+g(u, v)
+
+, c(p) = grad(p) + var(p).
+Here H and W denote the patch height and width (in pixels), and we set H ′ =H−1 and W ′ =W−1 to match the valid
+ranges of the finite differences. Intuitively,grad(p) summarizes local edge strength within the patch (Pertuz et al., 2013),
+while var(p) measures within-patch intensity dispersion; we combine them as c(p) and use {c(p)} as a patch-wise attention
+prior.
+(iii) Noise.We directly sample a Gaussian tensor with the same shape as the target attention scores and substitute it as the
+prior.
+17
+Large Vision–Language Models Get Lost in Attention
+Selecting layers and heads.We choose affected layers and heads via ablations (see Appendix D) for each architecture.
+Layers are selected by depth order (contiguous ranges), while heads are selected by ranking theirnon-visualattention mass.
+Concretely, let Al,h
+b,t,i denote the normalized attention weight at layer l, head h, batch item b, for query position t over key
+positioni. Let the visual-token span be[v start, vend). We define the non-visual index set
+N={1, . . . , v start −1} ∪ {v end, . . . , Sc}.
+Using the last query position t=−1 (the current decoding step), we score each head by the negative mean non-visual mass:
+sh =− 1
+B|N |
+BX
+b=1
+X
+i∈N
+Al,h
+b,−1,i.
+We rank heads by sh and select a percentile band (e.g., [0.0,0.3] ) per chosen layer; for heads within this band, we
+replace their attention scores with the shared SAP prior. Our head-selection strategy is motivated by the empirically
+supportedhead specializationhypothesis in multimodal Transformers: different heads and layers tend to preferentially route
+modality-specific signals (e.g., visual vs. textual attributes) (Basile et al., 2025). To better decouple visual interactions from
+text-dominated routing effects, we rank heads by theirnon-visualattention mass and intervene on a chosen percentile range,
+so that the replacement primarily targets heads that allocate relatively less probability to non-visual tokens.
+D. Additional Results
+In this section, we use VMC-Bench (Zhang et al., 2025c), which provides a comprehensive evaluation of LVLMs along five
+dimensions: General, Reasoning, OCR, Math, and Doc&Chart.
+D.1. Ablation Studies for SAP
+We conduct ablations across all models; except that the mode ablation is already reported in Table 2, we focus here on
+ablating (i) the affected layers and (ii) the affected heads.
+Table 4.Ablation Study onAttention Heads(Part I): Evaluation of General Perception and Reasoning Capabilities across Different
+Parameter Settings. The default configurations for each model is highlighted in bold red.
+General Reasoning
+Model Heads VQAv2VizWizOKVQAMMVetA-OKVQAMMStarSEED SciQA RWQAMMMUGQA
+Qwen-2.5-VL-7B[0.0, 0.3] 83.56 82.60 84.94 71.22 78.82 59.86 74.81 80.32 53.21 54.09 81.42
+[0.3, 0.6] 90.51 87.99 90.12 73.38 86.35 63.18 79.01 83.48 59.40 55.77 85.57
+[0.6, 0.9] 89.35 87.50 89.63 71.94 84.24 62.00 78.0284.3957.34 55.53 83.62
+[0.2, 0.8] 89.58 86.76 88.64 72.66 84.00 61.28 79.75 84.16 58.72 53.12 84.84
+[0.0, 1.0] 84.72 87.50 84.9475.5479.76 57.48 76.05 81.00 55.96 50.96 79.71
+LLaVA-1.5-7B [0.0, 0.3] 67.13 64.22 74.57 46.76 67.76 34.44 56.54 56.5637.61 36.5464.06
+[0.3, 0.6] 71.30 66.91 80.25 55.40 71.06 35.63 60.99 59.73 36.93 36.54 69.19
+[0.6, 0.9] 68.52 67.16 79.01 49.64 68.24 32.78 59.01 58.60 36.70 34.62 67.24
+[0.2, 0.8] 71.30 72.06 81.73 53.24 73.41 38.24 63.46 56.79 36.24 35.10 70.17
+[0.0, 1.0] 66.44 67.89 76.05 46.76 66.59 31.59 53.58 50.68 36.47 33.17 60.88
+LLaVA-OV-7B [0.0, 0.3] 51.16 57.11 62.96 47.48 58.35 41.57 51.36 51.81 42.66 35.34 55.75
+[0.3, 0.6] 83.33 85.29 88.15 68.35 85.88 52.97 77.04 81.67 54.13 43.27 84.60
+[0.6, 0.9] 83.80 84.56 87.16 67.6386.82 52.02 76.54 81.00 55.96 42.3184.60
+[0.2, 0.8] 84.72 83.82 84.69 64.75 86.82 49.17 79.26 77.60 56.42 41.83 82.89
+[0.0, 1.0] 31.71 31.37 31.11 23.02 31.06 28.98 29.38 32.81 29.36 29.09 31.05
+The head ablation results are reported in Tables 4 and 5. Overall, intervening on mid-quantile heads consistently outperforms
+modifying either tail, while the models are more sensitive to perturbations on the lower-quantile heads. Under our head
+partition criterion, these lower-quantile heads primarily attend to non-visual (text) tokens; altering them therefore disrupts
+textual representations and degrades performance. For reference, we highlight the default affected-head setting for each
+architecture in red in the tables.
+The layer ablation results are reported in Tables 6 and 7. We observe that LVLMs are highly sensitive to interventions in early
+layers, whereas perturbing middle or late layers typically causes only minor changes. For instance, for LLaVA-1.5-7B,
+18
+Large Vision–Language Models Get Lost in Attention
+Table 5.Ablation Study onAttention Heads(Part II): Performance Analysis on Document/Chart and OCR Task. The default configurations
+are highlighted in bold red. A VG represents the overall average across all benchmarks, including Table 4.
+Math Doc & Chart OCR
+Model Heads Vista Vision DocVQA Table ChartQA InfoVQA AI2D TextVQA OCRVQA A VG
+Qwen-2.5-VL-7B[0.0, 0.3] 51.49 32.36 72.61 66.22 74.77 55.53 72.89 93.03 83.16 70.35
+[0.3, 0.6] 53.96 34.38 77.06 72.07 79.59 59.22 77.22 95.28 91.71 74.76
+[0.6, 0.9] 53.47 33.48 75.95 70.72 78.67 57.8377.68 95.73 94.04 74.06
+[0.2, 0.8] 53.96 33.26 72.61 70.27 79.36 58.76 77.45 93.93 94.04 73.86
+[0.0, 1.0] 55.4532.13 69.27 62.39 74.77 53.92 73.58 91.69 92.75 70.98
+LLaVA-1.5-7B [0.0, 0.3] 22.77 25.39 34.30 25.68 26.61 30.41 43.28 55.96 65.03 46.78
+[0.3, 0.6] 25.74 28.54 37.19 29.05 32.34 29.95 41.91 61.35 67.36 49.87
+[0.6, 0.9] 29.7026.97 38.31 27.93 30.28 29.2643.96 61.12 68.91 48.90
+[0.2, 0.8] 25.25 26.97 38.75 29.50 32.80 31.80 42.82 63.37 70.98 50.70
+[0.0, 1.0] 26.7330.34 33.85 27.70 28.6732.9541.91 60.67 68.13 47.05
+LLaVA-OV-7B [0.0, 0.3] 45.05 29.66 47.88 35.81 40.37 33.41 43.51 52.36 61.66 47.26
+[0.3, 0.6] 51.49 30.79 71.49 47.75 60.09 46.54 65.83 87.42 89.90 67.80
+[0.6, 0.9] 53.4729.66 72.8348.4256.6547.47 66.29 87.42 90.67 67.76
+[0.2, 0.8] 49.01 28.99 73.05 45.50 54.13 46.77 63.55 85.17 87.56 66.29
+[0.0, 1.0] 31.68 22.25 33.63 26.80 32.57 31.11 27.56 31.69 36.53 30.14
+Table 6.Ablation Study onAffected Layers(Part I): Evaluation of General Perception and Reasoning Capabilities across Different Layer
+Configurations. The default settings are highlighted in bold red.
+General Reasoning
+Model Layers VQAv2VizWiz OKVQAMMVetA-OKVQAMMStarSEED SciQA RWQA MMMU GQA
+LLaVA-1.5-7B[2, 7] 46.30 42.40 49.88 41.73 47.53 31.83 42.22 38.69 28.21 28.12 46.45
+[2, 13] 36.81 34.31 39.26 28.78 32.47 26.37 30.86 36.20 30.73 23.80 35.21
+[6, 11] 58.33 51.96 61.23 44.60 56.24 28.27 43.21 43.89 27.29 32.93 47.19
+[12, 17] 68.52 68.87 73.58 46.04 67.06 32.54 57.04 52.71 35.09 35.34 63.57
+[14, 25] 71.30 66.42 77.78 49.64 70.35 34.68 60.99 58.37 38.30 36.0671.88
+[18, 23] 71.30 72.06 81.73 53.24 73.41 38.24 63.46 56.79 36.24 35.10 70.17
+[18, 29] 72.9265.93 79.51 47.48 70.35 34.44 58.77 57.69 36.24 34.62 70.42
+[22, 31] 67.82 68.14 77.53 47.48 67.76 31.35 59.51 57.24 36.70 36.54 66.99
+[24, 29] 69.91 66.18 77.28 45.32 70.82 33.02 63.2158.60 39.6834.62 68.22
+LLaVA-OV-7B [0, 6] 65.97 68.14 70.12 44.60 65.41 40.86 56.05 66.06 43.12 35.58 71.64
+[0, 13] 59.95 60.78 62.72 40.29 58.82 40.38 54.32 59.73 33.49 30.77 60.64
+[7, 13] 82.87 81.62 83.95 61.87 86.35 47.9877.2878.28 54.13 40.14 80.44
+[14, 20] 84.03 87.01 86.91 63.31 86.59 48.93 75.80 80.09 52.29 42.07 82.15
+[14, 27] 83.33 83.09 86.42 64.0387.06 52.9776.30 81.0054.59 43.99 85.82
+[21, 27] 83.33 85.29 88.15 68.35 85.88 52.97 77.04 81.67 54.13 43.27 84.60
+19
+Large Vision–Language Models Get Lost in Attention
+Table 7.Ablation Study onAffected Layers(Part II): Performance Analysis on Document/Chart Understanding and OCR Task. The
+default settings are highlighted in bold red.
+Math Doc & Chart OCR
+Model Layers Vista Vision DocVQA Table ChartQA InfoVQA AI2D TextVQA OCRVQA A VG
+LLaVA-1.5-7B [2, 7] 25.25 24.27 30.51 27.25 26.83 29.72 32.57 44.04 43.01 36.34
+[2, 13] 28.71 28.76 25.17 23.42 27.75 23.27 28.02 38.88 31.61 30.52
+[6, 11] 27.23 26.52 35.63 24.77 24.3134.1037.13 48.31 52.85 40.30
+[12, 17] 23.76 27.42 34.52 29.50 26.15 31.80 38.95 60.45 65.54 46.92
+[14, 25] 25.74 27.42 37.4231.9828.67 31.34 42.82 61.80 66.58 49.48
+[18, 23] 25.25 26.97 38.75 29.50 32.80 31.80 42.82 63.37 70.98 50.70
+[18, 29] 28.71 28.54 41.4329.50 26.15 28.80 42.14 62.47 65.80 49.10
+[22, 31] 35.15 30.11 40.09 31.31 29.59 31.11 42.60 60.90 68.65 49.33
+[24, 29] 28.22 24.27 37.19 27.0333.2630.6545.10 59.10 67.36 48.95
+LLaVA-OV-7B [0, 6] 37.13 27.42 49.89 38.06 44.95 31.80 51.71 64.27 68.13 52.05
+[0, 13] 37.62 28.09 44.99 32.21 35.55 36.87 46.01 55.51 68.39 47.36
+[7, 13] 53.96 30.11 71.94 42.57 50.4647.2464.24 84.72 87.31 65.37
+[14, 20] 54.46 28.31 73.50 46.62 52.52 43.32 64.69 84.49 88.86 66.30
+[14, 27] 49.50 27.42 71.94 45.72 58.94 45.16 65.15 87.4289.12 66.95
+[21, 27] 51.49 30.79 71.49 47.75 60.09 46.54 65.83 87.42 89.90 67.80
+intervening on Layers 1–7 reduces accuracy by 13%, while intervening on Layers 22–31 incurs only a 0.5% drop. This
+pattern further supports a pervasive issue in current LVLMs: a substantial fraction of decoder attention computation is
+redundant.
+D.2. Extending SAP to Other Architectures and Larger Variants
+Table 8 shows that head-percentile interventions yield consistent, model-dependent optima across Qwen-2.5-VL variants
+under the same affected-layer range ([1,27] ). In particular, mid-percentile heads (e.g., [0.3,0.6] ) are frequently the best-
+performing choice for several variants, while extreme ranges can be substantially less stable for some models. Overall, these
+results indicate that the sensitivity of SAP-style interventions is structured rather than uniform across heads, motivating
+architecture-aware head selection in subsequent experiments.
+Table 8.Head ablation on Qwen-2.5-VL architecture variants (affected layers fixed to [1,27] on the decoder). Each column reports
+VMC accuracy under a head percentile interval[h min, hmax]; the best setting per model isbolded.
+Model [0.0, 0.3] [0.3, 0.6] [0.6, 0.9] [0.2, 0.8] [0.0, 1.0]
+CoF-rl-model-7b 0.5670.6370.631 0.613 0.461
+CoF-sft-model-7b 0.558 0.640 0.634 0.595 0.415
+MM-Eureka-Qwen-32B 0.7270.706 0.676 0.457 0.161
+MM-Eureka-Qwen-7B 0.531 0.623 0.627 0.436 0.151
+OceanR1 7B Instruct 0.6390.594 0.499 0.248 0.086
+Orsta-7B 0.537 0.604 0.599 0.309 0.087
+Qwen2.5-VL-32B-Instruct0.8270.8290.828 0.816 0.791
+reverseqwen25vl 0.001 0.001 0.003 0.001 0.007
+E. Layer-wise Attention Tracing
+Tracing cross-patch interactions.We provide a visualization tool to trace layer-wise visual interactions from decoder
+attention. For each layer l, we construct a visual interaction graph G(l) = (V,E (l)) over visual patches (Abnar & Zuidema,
+2020), where V={1, . . . , S v} indexes visual tokens and edges are induced by thresholded visual-to-visual attention. Let
+A(l) ∈[0,1] S×S denote the head-averaged attention matrix at layer l (after averaging over heads). Restricting to the visual
+block yieldsA (l)
+vv ∈[0,1] Sv×Sv. We include a directed edgej→iwhenever
+A(l)
+vv(i, j)≥τ, τ= 0.1,
+20
+Large Vision–Language Models Get Lost in Attention
+interpretingA (l)
+vv(i, j)as patchiattending to patchj.
+Constructing key regions from COCO instance annotations.To operationalize question-relevant visual evidence,
+we leverage the fact that POPE samples are drawn from MSCOCO images and thus inherit COCO instance-level object
+annotations with localization information (e.g., bounding boxes) (Lin et al., 2014). For each POPE query, we identify the
+referenced object category and retrieve its annotated bounding box(es). After applying the same image preprocessing as
+the LVLM (e.g., resizing and patchification into ath ×t w visual grid), we map each bounding box to a set of visual patch
+indices by marking all patches whose spatial support intersects the box. The union of these patches forms the key-patch
+set K ⊆ V={1, . . . , S v}, which we use below to quantify how much of the layer-wise visual interaction graph is routed
+through question-relevant regions.
+Key-region degree ratio.For each layer, we treat G(l) as the visual interaction graph and quantify how much interaction
+mass is routed through question-relevant regions. Let K ⊆ V be the set of key patches that correspond to question-relevant
+visual evidence. Define the key-region degree ratio as
+ρ(l) =
+{(j→i)∈ E (l) :i∈ Korj∈ K}
+
+|E(l)| .
+We randomly sampled 100 correctly answered cases and 100 incorrectly answered cases, and computedρ (l) for each case;
+see Figures 5–10 for case studies. Averaged across samples, the key-region degree ratio is4.2% for incorrect answers versus
+13.1% for correct answers, indicating that failures are associated with substantially weaker attention-mediated interaction
+around question-relevant visual evidence, consistent with systematic misallocation of visual attention.
+F. Theorem and Proofs
+Lemma F.1(Range of∆S,∆D, and RID).ForX,X ′ ∈R S×H , we have∆S(X|X ′)∈[0,1]and∆D(X|X ′)∈[0,1].
+Consequently,RID(X|X ′)∈[0,2].
+Proof.SinceeRank(Z)∈[1,min{S, H}]for anyZ, we have0≤ |eRank(X ′)−eRank(X)| ≤min{S, H}, hence
+∆S(X|X ′) =
+eRank(X′)−eRank(X)
+
+min{S, H} ∈[0,1].
+Let P be any orthogonal projector. Then I−P is also an orthogonal projector and is non-expansive: ∥(I−P)Z∥ F ≤ ∥Z∥ F
+and∥Z(I−P)∥ F ≤ ∥Z∥ F . Applying this withP=P C(X) andP=P R(X) yields
+(I−P C(X))X′
+F +
+X′(I−P R(X))
+
+F ≤2∥X ′∥F .
+Therefore, under the normalization by2∥X ′∥F ,
+∆D(X|X ′) =
+(I−P C(X))X′
+F +
+X′(I−P R(X))
+
+F
+2∥X′∥F
+∈[0,1].
+Finally,RID = ∆S+ ∆DgivesRID(X|X ′)∈[0,2].
+Theorem F.2(Eckart–Young–Mirsky Theorem (Eckart & Young, 1936)).Let X have SVD as in Definition 3.3. For any
+k≤Q, define the rank-ktruncation
+Xk =
+kX
+i=1
+σiuiv⊤
+i .
+ThenX k solves the best rank-kapproximation problem under the Frobenius norm:
+Xk ∈arg min
+rank(Y)≤k
+∥X−Y∥ F .
+21
+Large Vision–Language Models Get Lost in Attention
+Theorem F.3(Expectation Equivalence under Attention Noise Injection).Scenario 1: random QKV.Consider an
+attention head with N key-value pairs. Let Qnoise, Knoise, Vnoise be the random Gaussian replacements for the original query,
+key, value matrices, where each has the same mean and variance as the original Q, K, V respectively. The attention output
+in scenario (1) (replacingQ, K, Vby noise) for a single query can be written as a weighted sum of the value vectors:
+Ynoise =
+NX
+i=1
+ai v(noise)
+i ,
+wherev (noise)
+i is thei-th row ofV noise anda i is the attention weight for keyigiven by the softmax:
+ai = exp
+ 
+(q(noise))⊤k(noise)
+i /
+√
+d
+
+PN
+j=1 exp
+ 
+(q(noise))⊤k(noise)
+j /
+√
+d
+ ,
+with q(noise) the query vector and k(noise)
+i the i-th key (row of Knoise). By construction of the softmax,PN
+i=1 ai = 1 for any
+realization. Under the assumption that the random keys (k(noise)
+1 , . . . , k(noise)
+N ) are i.i.d. (making all key positions statistically
+symmetric), the attention weights {ai} are an exchangeable set. In particular, by symmetry we have E[ai] = 1
+N for each i.
+Now taking expectation ofY noise (over the randomQ noise, Knoise, Vnoise) and using the law of total expectation, we get:
+E[Ynoise] =E
+h NX
+i=1
+ai v(noise)
+i
+i
+=E
+h
+E
+ NX
+i=1
+ai v(noise)
+i |V noise
+i
+.
+Conditioning on the random values Vnoise ={v (noise)
+i }N
+i=1, the attention weights are independent of Vnoise and still satisfy
+E[ai |V noise] = 1
+N . Thus
+E
+h NX
+i=1
+ai v(noise)
+i
+ Vnoise
+i
+=
+NX
+i=1
+E[ai |V noise]v (noise)
+i = 1
+N
+NX
+i=1
+v(noise)
+i .
+The right-hand side is simply the average of the N i.i.d. random value vectors. Therefore, its expectation is the mean of the
+Vnoise distribution:
+E[Ynoise] =E
+h 1
+N
+NX
+i=1
+v(noise)
+i
+i
+=E[v (noise)
+i ] =µ V ,
+whereµ V denotes the mean of the originalV(andV noise) distribution.
+Scenario 2: random ∆. In scenario (2), where we directly replace the final attention output with Gaussian noise of the same
+distribution as the true Y=AV (with A the attention matrix), the injected output Ydirect is a Gaussian random vector with
+mean set to µY , the mean of the original attention output. Typically, if the original model’s parameters are approximately
+zero-mean (as is common in weight initialization), the distribution of the true attention output Y will have mean µY ≈0 . In
+our case above, we found µY =µ V , since the attention mechanism produces a convex combination of the values. Under the
+assumption that the original attention output’s meanµY equals µV (which holds, for example, if weights are zero-centered
+so that queries and keys induce no bias in attention, or more generally under the symmetry argument given), we have
+E[Ydirect] =µ Y =µ V =E[Y noise].
+Thus, the mean of the noise-injected output in scenario (1) is the same as the mean of the direct noise output in scenario (2).
+In other words, both replacement strategies produce outputs with the same expected mean.
+Theorem F.4(Manifold Coincidence Theorem for RID).We aim to show that if RID(X|X ′) = 0 , then X and X ′
+share the same manifold structure – in particular,X ′ lies in the same underlying subspace as X with equivalent spectral
+complexity. By the definition ofRepresentation Information Discrepancy (RID), we have
+RID(X|X ′) = ∆S(X|X ′) + ∆D(X|X ′).
+The condition RID(X|X ′) = 0 necessitates that both non-negative components vanish: ∆S(X|X ′) = 0 and
+∆D(X|X ′) = 0.
+22
+Large Vision–Language Models Get Lost in Attention
+Firstly, the condition∆S(X|X ′) = 0implies the invariance of the spectral complexity as measured by the effective rank.
+Since the effective rank serves as a continuous proxy for the number of active degrees of freedom, its conservation indicates
+that the intrinsic dimensionality of the representation remains unchanged. Under the manifold hypothesis characterizing X,
+this implies that the algebraic rank is preserved, i.e., rank(X ′) = rank(X) =r . Consequently, both matrices reside within
+the same fixed-rank manifold geometryM r.
+Secondly, ∆D(X|X ′) = 0 signifies that X ′ introduces no newinformation supportrelative to X. By the definition of
+support innovation, the projection residuals must be zero:
+(I−P C(X) )X ′
+F = 0,
+X ′ (I−P R(X))
+
+F = 0,
+where PC(X) and PR(X) are the orthogonal projectors onto the column spaceC(X) and row space R(X) of X, respectively.
+These conditions are algebraically equivalent to:
+C(X ′)⊆ C(X),R(X ′)⊆ R(X).
+Having established that rank(X ′) = rank(X) =r , it follows that dim(C(X ′)) = dim(C(X)) =r . A fundamental result
+in linear algebra states that if a subspace V is contained in a subspace W of the same finite dimension, then V=W .
+Therefore, we conclude:
+C(X ′) =C(X),R(X ′) =R(X).
+This proves that X ′ shares exactly the same left and right singular vector subspaces as X, meaning theinformation support
+is identical:D X ′ =D X. Combined with the unchanged spectrum (SX ′ =S X), we have
+I(X ′) = (S X ′,D X ′) = (S X ,D X) =I(X).
+In conclusion, when RID(X|X ′) = 0, X ′ contains no new representation information compared to X. Geometrically, X
+and X ′ coincide in the manifold parameterization: they possess the same rank and occupy the same supporting subspaces.
+Thus, X and X ′ share one manifold space, differing only by an internal reconfiguration of information within that shared
+subspace.
+Q: Is there a cow in this image?GT: Yes, the cows are inModel response: No. 
+Figure 5.Case 1.Layer-wise visual attention tracing. Only layer 23 exhibits cross-patch interactions within the key region (cows).
+23
+Large Vision–Language Models Get Lost in Attention
+Q: Is there a surfboard in … ?GT: Yes, the surfboard is inModel response: No. 
+Figure 6.Case 2.Layer-wise visual attention tracing. Layer 23 and 26 exhibit cross-patch interactions within the key region (surfboard).
+Q: Is there a person in …?GT: Yes, the person is inModel response: No. 
+Figure 7.Case 3.Layer-wise visual attention tracing. Layer 16 and 17 exhibit cross-patch interactions within the key region (person).
+Q: Is there a laptop in …?GT: Yes, the laptop is inModel response: No. 
+Figure 8.Case 4.Layer-wise visual attention tracing. Layer 20-24 exhibit cross-patch interactions within the key region (laptop).
+24
+Large Vision–Language Models Get Lost in Attention
+Q: Is there a trafﬁc light in …?GT: Yes, the trafﬁc light is inModel response: No. 
+Figure 9.Case 5.Layer-wise visual attention tracing. Layer 23 and 24 exhibit cross-patch interactions within the key region (traffic light).
+Q: Is there a suitcase in …?GT: Yes, the suitcase is inModel response: No. 
+Figure 10.Case 6.Layer-wise visual attention tracing. Layer 20, 22 and 23 exhibits cross-patch interactions within the key region
+(suitcase).
+25

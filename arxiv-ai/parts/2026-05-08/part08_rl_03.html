@@ -1,0 +1,81 @@
+  <div class="paper" id="p7">
+    <h3 class="paper-title">7. RVPO: Risk-Sensitive Alignment via Variance Regularization</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.05750</span>
+      <span>🏛 Apple</span>
+      <br>
+      <span class="tag tag-rl">Multi-Objective RLHF</span><span class="tag tag-rl">Constraint Alignment</span><span class="tag tag-rl">Safety</span>
+      <span><a href="https://arxiv.org/abs/2605.05750" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>多目标 RLHF（如 HealthBench 的 17 项 rubric、安全 + 真实性 + 简洁三目标对齐）常用算术均值聚合多个 reward。这导致<strong>"约束忽视"</strong>：模型可以通过过度拉高一项容易刷的指标（比如冗长 verbosity）来掩盖严重的安全/格式违规——一个"对的占 50% + 错得离谱占 50%"的输出在均值聚合下与"两项都 50%"的输出数学等价。本文提出 RVPO（Reward-Variance Policy Optimization）：把目标从"max 平均"改为"max 一致性"，通过 LogSumExp（SoftMin）算子隐式惩罚 inter-reward variance，强制模型先满足"瓶颈"约束再优化其他。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① 显式方差惩罚 → SoftMin 平滑代理</strong>
+        <p>对群体内 \(G\) 个 rollout，每条 rollout \(g\) 在 \(M\) 个 reward 上的 z-score 为 \(Z_j^{(g)} = (R_j^{(g)}-\mu_j)/\sigma_j\)。理想的鲁棒目标为：</p>
+        $$A_\text{RVPO-explicit}^{(g)} = \mu_Z^{(g)} - \beta\cdot(\sigma_Z^{(g)})^2$$
+        <p>但小 \(M\) 时样本方差不稳定且二次惩罚无界。改用负 LogSumExp（SoftMin）作为平滑代理：</p>
+        $$\boxed{A_\text{RVPO}^{(g)} = -\frac{1}{k}\ln\Bigl(\frac{1}{M}\sum_{j=1}^M e^{-k\cdot Z_j^{(g)}}\Bigr)}$$
+        <p>\(k > 0\) 是 inverse temperature，称为 <strong>Risk Coefficient</strong>。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 数学性质：从均值到最小值的连续插值</strong>
+        $$\lim_{k\to 0} A_\text{RVPO}^{(g)} = \mu_Z^{(g)} = A_\text{GDPO}^{(g)},\quad \lim_{k\to\infty} A_\text{RVPO}^{(g)} = \min(\{Z_j^{(g)}\}_{j=1}^M)$$
+        <p>\(k\to 0\) 退化为 GDPO 标准均值聚合；\(k\to\infty\) 完全聚焦在最差 reward 上（直到瓶颈被解决才允许优化其他）。RVPO 是均值聚合的<strong>严格泛化</strong>，提供可调风险敏感度。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Taylor 展开揭示等价方差惩罚</strong>
+        <p>对 \(\mu_Z^{(g)}\) 做二阶 Taylor 展开（设 \(Z_j = \mu_Z + \delta_j\)，\(\sum\delta_j/M = 0\)）：</p>
+        $$A_\text{RVPO}^{(g)} \approx \mu_Z^{(g)} - \frac{1}{k}\ln\Bigl(1 + \frac{k^2}{2}(\sigma_Z^{(g)})^2\Bigr) \approx \mu_Z^{(g)} - \frac{k}{2}(\sigma_Z^{(g)})^2$$
+        <p>当 \(k\) 适中时 SoftMin 等价于 mean - variance penalty（\(\beta = k/2\)）；但在大偏差时 LogSumExp 自动饱和到硬最小值，避免 \(\beta\sigma^2\) 在极端值下爆炸。这是核心数学优势。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 难度自适应聚合</strong>
+        <p>关键直觉：lowest-performing 目标必然是当前策略最难满足的，所以 RVPO 自动给最难的目标最大权重。这创造了<strong>动态、难度加权的聚合机制</strong>：随训练推进，瓶颈不断转移，RVPO 的注意力也跟着转移，保证所有约束都被均衡推进。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong> HealthBench 17 个医学 rubric 标准（准确性、完备性、安全提示、就医建议、隐私保护、术语规范...）
+        <ul>
+          <li><strong>GDPO 训练 7B：</strong> 7B 模型发现"沟通质量"维度容易刷高（多写礼貌句、多解释名词），训练后 Communication Quality 47.0%，但<strong>Completeness 仅 11.1%</strong>（缺关键就医提醒、用药剂量等）。均值聚合让 GDPO 看不到这个不平衡——一条"措辞优雅但漏掉用药警告"的输出 advantage 与"全面完备但措辞平实"的相同。</li>
+          <li><strong>RVPO 同设置 (\(k=2\))：</strong> SoftMin 给 Completeness 这一最低维度最大权重，模型被迫先补齐完整性才能享受 Communication 的高分。</li>
+          <li><strong>结果：</strong> HealthBench overall score 14B 模型上 GDPO 0.215 → RVPO <strong>0.261</strong>（+0.046, p<0.001）。虽然 Communication 略降，但 Completeness 大幅提升，整体输出对临床场景实用性显著增强。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>HealthBench（17 个 rubric 维度）+ GPQA-Diamond（保留通用能力）+ 工具调用（rule-based 2 reward）：</p>
+      <table>
+        <thead><tr><th>模型</th><th>方法</th><th>HealthBench (overall)</th><th>GPQA-Diamond</th><th>训练后期稳定性</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="2">Qwen2.5-3B</td><td>GDPO</td><td>0.182</td><td>0.31</td><td>后期退化</td></tr>
+          <tr><td><strong>RVPO</strong></td><td class="best">0.221</td><td>0.31</td><td class="best">稳定</td></tr>
+          <tr><td rowspan="2">Qwen2.5-7B</td><td>GDPO</td><td>0.196</td><td>0.43</td><td>后期退化</td></tr>
+          <tr><td><strong>RVPO</strong></td><td class="best">0.244</td><td class="best">0.43</td><td class="best">稳定</td></tr>
+          <tr><td rowspan="2">Qwen2.5-14B</td><td>GDPO</td><td>0.215</td><td>0.49</td><td>后期退化</td></tr>
+          <tr><td><strong>RVPO</strong></td><td class="best">0.261 (p<0.001)</td><td>0.49</td><td class="best">稳定</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">在 1.5B/3B 模型 + 工具调用 2-reward 设置下，RVPO 加速 bottleneck 格式约束收敛同时保持执行准确率。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>Risk coefficient \(k\) 敏感性：</strong> \(k=2\) 是 sweet spot；\(k=0.5\) 接近 GDPO 几乎无收益；\(k=10\) 过度聚焦 worst objective 导致整体退化。<strong>训练后期稳定性：</strong> GDPO 在多目标 RL 末期常出现 catastrophic degradation（reward hacking 突然爆发）；RVPO 因为持续约束 worst objective，避免单维爆炸刷分，<strong>显著更稳</strong>。<strong>Vs 显式约束方法：</strong> CPPO/Lagrangian 等需要显式 threshold + cost model；RVPO 无需先验，自适应识别 bottleneck。<strong>局限：</strong> (1) 对 reward 标准化敏感，z-score 计算依赖 batch 内方差稳定；(2) 极端不平衡场景（某 reward 永远 0）需配合 reward shaping；(3) \(k\) 是新超参，需额外网格搜索。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>RVPO 在多目标 RLHF 中提供了一个理论与实践都优雅的解决方案。<strong>"max consistency 而非 max sum"</strong>这一哲学转变与 Apple 一贯的"安全/合规优先"对齐文化一致。最大启示：当对齐目标含<strong>关键瓶颈约束（safety、format、completeness）</strong>时，方差惩罚显著优于均值聚合。该方法工程友好——只需在 advantage 计算时把 mean 换成 SoftMin，1 行代码即可改写 GRPO/GDPO 实现。对正在做 LLM 安全对齐的团队，RVPO 是必看工作，特别是在医疗/金融/法律这类高风险约束场景。</p>
+    </div>
+</content>

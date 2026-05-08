@@ -1,0 +1,90 @@
+  <h2 class="section-title mm">🌐 Multimodal · 多模态大模型（1 篇）</h2>
+
+  <div class="paper" id="p12">
+    <h3 class="paper-title">12. Large Vision-Language Models Get Lost in Attention (ICML 2026)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-07 · arXiv:2605.05668</span>
+      <span>🏛 BUPT, Nanyang Tech Univ., Xiaomi EV</span>
+      <br>
+      <span class="tag tag-multimodal">LVLM</span><span class="tag tag-multimodal">Interpretability</span><span class="tag tag-multimodal">ICML 2026</span>
+      <span><a href="https://arxiv.org/abs/2605.05668" target="_blank">arXiv ↗</a></span>
+    </div>
+
+    <div class="module">
+      <h4>📖 背景与动机</h4>
+      <p>LVLM（LLaVA、Qwen-VL 等）的 decoder 仍然是基于 residual-connection Transformer。社区对 attention 与 FFN 的功能分工有个流行假设：<strong>"attention 负责 in-context reasoning，FFN 负责存储 distributional knowledge"</strong>。这个假设背后缺乏统一理论框架，多数解释性工作都是统计 attribution 视角。本文提出基于<strong>信息论 + 几何</strong>的统一框架，量化 residual update 的几何与信息熵性质，揭示 attention 与 FFN 的真实功能解耦。震撼发现：<strong>用预定义的 Gaussian noise 替换 attention 学到的权重，性能在大多数数据集上持平甚至更好</strong>——证明当前 LVLM 的 attention 大量冗余，"在注意力中迷失"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">🔬 核心方法详解</h4>
+      <div class="submodule">
+        <strong class="sub-title">① Residual Stream 视角与三个 RQ</strong>
+        <p>把每个 Transformer 层 \(X^{l+1}_\text{in} = X^l_\text{in} + \Delta X^l_\text{attn} + \Delta X^l_\text{ffn}\) 视为对共享 residual stream 的加性 update。论文围绕三个 RQ 展开：(RQ1) 如何量化 representation 中的信息？(RQ2) 一次 update 引起的变化如何度量？(RQ3) attention vs FFN 在功能上有何本质差异？</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">② 信息表征双指标：Spectrum + Semantic Support</strong>
+        <p>基于 manifold hypothesis，对表征矩阵 \(X\in\mathbb{R}^{S\times H}\) 做 SVD 分解 \(X = U\Sigma V^\top\)，定义：</p>
+        <ul>
+          <li><strong>Spectrum \(\mathcal{S}_X\)</strong>：奇异值集合，刻画表征的 effective rank（低维流形维度）</li>
+          <li><strong>Semantic Support \(\mathcal{D}_X\)</strong>：右奇异向量张成的子空间，刻画表征的"语义方向"</li>
+          <li><strong>Token Mixing TME(X)</strong>：刻画 token 间信息混合程度（如熵或 token 相似度矩阵）</li>
+        </ul>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">③ Update 度量：RID + MixIG</strong>
+        <p>对一次 update \(X \to X'\) 定义两个度量：</p>
+        $$\boxed{\text{RID}(X\mid X') = \Delta\mathcal{S}_X + \Delta\mathcal{D}_X}\quad\text{（Innovation: spectral & subspace change）}$$
+        $$\boxed{\text{MixIG}(X\mid X') = \Delta\text{TME}}\quad\text{（Reconfiguration: token mixing change）}$$
+        <p>RID 衡量 update 是否扩展了语义子空间（"创新"），MixIG 衡量是否重新配置 token 间关系（"重排"）。两者构成正交分析维度。</p>
+      </div>
+      <div class="submodule">
+        <strong class="sub-title">④ 关键结论：Attention 是 Subspace-Preserving，FFN 是 Subspace-Expanding</strong>
+        <p>跨架构（Qwen2.5-VL、LLaVA-1.5、LLaVA-NeXT）测量得到一致模式：</p>
+        <ul>
+          <li><strong>Attention update：</strong> RID 低（0.06）+ MixIG 高（0.61）→ <strong>保子空间但重排 token mixing</strong>。意味着 attention 不引入新语义维度，只在已有子空间内做 token 间信息流动。</li>
+          <li><strong>FFN update：</strong> RID 高（0.21）+ MixIG 低（0.02）→ <strong>扩展子空间但不重排 token</strong>。意味着 FFN 才是引入新语义信息的地方。</li>
+          <li><strong>Noise control：</strong> 用 Gaussian noise 替代 attention update（matched moments），RID 高但 MixIG 负——明显与真实 attention 差异巨大，证明真实 attention 是<strong>学习得到的子空间保留行为</strong>，不是随机的。</li>
+        </ul>
+        <p>这与流行假设"attention = reasoning, FFN = memory"完全相反——本文发现 <strong>FFN 才是新信息的注入口，attention 只是在做 reconfiguration</strong>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>🔍 深度案例</h4>
+      <div class="example-box">
+        <strong>实验：</strong> "Is there a cow in this image?" GT="Yes, the cows are in..."（图片含奶牛）
+        <ul>
+          <li><strong>Vanilla LVLM 决策：</strong> 输出 "No"（错误）。逐层分析 RID/MixIG。</li>
+          <li><strong>Early layer：</strong> attention RID ≈ 0.05（视觉 token 表征仍在原子空间），FFN RID 较高（开始注入"动物/草地"等语义）。</li>
+          <li><strong>Middle layer：</strong> attention MixIG 极高（reconfiguration 高峰：把视觉 token 的信息混合到文本 token 上下文），FFN 继续扩展支持。</li>
+          <li><strong>Late layer：</strong> attention RID 仍极低，但 MixIG 接近饱和——attention 已"无事可做"却仍在消耗大量算力。</li>
+          <li><strong>Gaussian noise 替换实验：</strong> 用 Gaussian noise 替换中后层 attention scores（保持模长矩量匹配）→ 输出"Yes, the cows..."，性能反而提升。说明<strong>attention 的精细学习权重在中后层是冗余的</strong>，noise 已足够触发 FFN 的语义提取。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">📊 实验结果</h4>
+      <p>Module-wise RID/MixIG 度量（跨多个 LVLM 架构均值）：</p>
+      <table>
+        <thead><tr><th>Module</th><th>RID</th><th>MixIG</th><th>定性特征</th></tr></thead>
+        <tbody>
+          <tr><td>Noise Δ (Gaussian, 控制)</td><td>0.61</td><td>-0.80</td><td>极高 RID + 负 MixIG（破坏性）</td></tr>
+          <tr><td>Noise QKV (随机权重控制)</td><td>0.44</td><td>-0.50</td><td>中 RID + 负 MixIG</td></tr>
+          <tr><td><strong>Attention</strong></td><td class="best">0.06</td><td class="best">0.61</td><td>低 RID + 高 MixIG（subspace-preserving reconfiguration）</td></tr>
+          <tr><td><strong>FFN</strong></td><td class="best">0.21</td><td class="best">0.02</td><td>高 RID + 低 MixIG（subspace-expanding innovation）</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd">"Get lost in attention"实验：将学习到的 attention 权重替换为 Gaussian noise（保持范数与统计矩匹配），在多个 VQA/captioning benchmark 上：(1) 大多数数据集性能持平 vanilla LVLM；(2) 某些数据集甚至<strong>超过 vanilla</strong>。证明 LVLM 在 attention 计算上严重 misallocation。论文已被 ICML 2026 录用。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⚙️ 消融与讨论</h4>
+      <p><strong>跨架构鲁棒性：</strong> Qwen2.5-VL / LLaVA-1.5 / LLaVA-NeXT 上一致观察到 attention=subspace-preserving / FFN=subspace-expanding，证明这是<strong>Transformer 架构内在性质</strong>而非特定模型偶然。<strong>Layer-wise 趋势：</strong> Early layer attention 偶尔 RID 较高（视觉 token 还在向语言子空间投影），mid-late layer attention 几乎全是 reconfiguration。<strong>Noise 替换的边界：</strong> 替换 early layer attention 会显著退化（视觉对齐还没完成），仅替换 mid-late 层最有效。<strong>计算意义：</strong> Attention 的 \(O(N^2)\) 复杂度在 mid-late 层冗余 — 这给 attention 替换/简化（如 Mamba/RWKV）提供了 LVLM 场景的强证据。<strong>局限：</strong> (1) 仅在 LVLM 上验证，纯 LLM 上是否同样规律未测；(2) Gaussian noise 替换实验需精确 moment matching，工程上不直接 trivial；(3) 没有给出"如何设计更好的 attention"的具体方案，只是诊断。</p>
+    </div>
+
+    <div class="module">
+      <h4>💡 结论与启发</h4>
+      <p>这是一篇思想极其干净的 ICML 2026 工作。它把 Transformer 解释性从"统计 attribution"推进到"信息几何度量"，并给出可能挑战社区共识的强结论：<strong>"attention 主导 reasoning"很可能是错的</strong>。最大启示：(1) <strong>大量 attention 计算被浪费</strong>，这给了 LVLM 模型压缩 / 推理加速 / linear attention 替代极强的理论合法性；(2) <strong>FFN 才是新信息注入口</strong>——这与近期 MoE 工作（如本期 LLM-4 EMO）发现 FFN expert 编码语义模块化高度一致；(3) RID/MixIG 这套度量框架可以扩展到分析其他模块（如 RoPE、QK-norm、shared expert）的功能定位。Xiaomi EV 参与的工作显示出工业界对 LVLM 推理效率的关注。对正在做 VLM/LVLM 的研究者，本文是必读，可能直接影响下一代 LVLM 架构设计方向。</p>
+    </div>
+</content>
