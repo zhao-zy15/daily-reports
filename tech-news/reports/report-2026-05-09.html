@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技与财经每日动态 · 2026-05-09</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a14; --surface: #12121f; --surface2: #1a1a2e;
+            --border: #2a2a44; --text: #e8e8f0; --text2: #9898b8;
+            --accent: #38bdf8; --accent2: #818cf8; --gold: #f59e0b;
+            --red: #ef4444; --green: #22c55e; --purple: #a78bfa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+        .report-header {
+            text-align: center; padding: 40px 30px; margin-bottom: 32px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 20px; border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+        .report-header::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .report-header h1 {
+            font-size: 2.2rem; margin-bottom: 8px; position: relative;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .report-header .date { font-size: 1.1rem; color: var(--text2); position: relative; }
+        .report-header .stats {
+            display: flex; justify-content: center; gap: 24px; margin-top: 16px;
+            font-size: 0.9rem; color: var(--text2); position: relative;
+        }
+        .report-header .stats span { background: rgba(56,189,248,0.1); padding: 4px 14px; border-radius: 20px; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--accent); text-decoration: none; font-size: 0.9rem;
+            margin-bottom: 20px; padding: 8px 16px;
+            background: var(--surface); border-radius: 8px; border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .back-link:hover { background: var(--accent); color: white; }
+        .section { margin-bottom: 36px; }
+        .section-title {
+            font-size: 1.5rem; font-weight: 700; margin-bottom: 20px;
+            padding-bottom: 12px; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title .icon { font-size: 1.6rem; }
+        .news-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 24px; margin-bottom: 18px;
+            transition: all 0.3s; position: relative;
+        }
+        .news-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56,189,248,0.08); }
+        .news-card.top5 { border-left: 4px solid var(--gold); }
+        .news-card h3 { font-size: 1.15rem; margin-bottom: 10px; color: #fff; }
+        .news-card h3 .rank {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 8px; margin-right: 8px;
+            font-size: 0.85rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), #d97706); color: #000;
+        }
+        .news-card .meta {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 0.82rem;
+        }
+        .news-card .tag {
+            padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 500;
+        }
+        .tag-ai { background: rgba(56,189,248,0.15); color: var(--accent); }
+        .tag-bio { background: rgba(34,197,94,0.15); color: var(--green); }
+        .tag-robot { background: rgba(167,139,250,0.15); color: var(--purple); }
+        .tag-video { background: rgba(245,158,11,0.15); color: var(--gold); }
+        .tag-auto { background: rgba(239,68,68,0.15); color: var(--red); }
+        .tag-earnings { background: rgba(34,211,238,0.15); color: #22d3ee; }
+        .tag-vc { background: rgba(236,72,153,0.15); color: #ec4899; }
+        .news-card .source { font-size: 0.78rem; color: var(--text2); }
+        .news-card p { color: var(--text); font-size: 0.95rem; margin-bottom: 10px; }
+        .news-card .highlight {
+            background: rgba(245,158,11,0.08); border-left: 3px solid var(--gold);
+            padding: 10px 14px; border-radius: 6px; margin: 10px 0; font-size: 0.9rem;
+        }
+        .news-card a.news-link {
+            display: inline-block; color: var(--accent); font-size: 0.85rem;
+            text-decoration: none; margin-top: 8px;
+            border-bottom: 1px dashed var(--accent); padding-bottom: 1px;
+        }
+        .news-card a.news-link:hover { color: var(--accent2); }
+        .vertical-header {
+            background: linear-gradient(90deg, var(--surface2), transparent);
+            padding: 12px 16px; border-left: 4px solid var(--accent);
+            margin: 24px 0 14px; border-radius: 0 8px 8px 0;
+            font-size: 1.1rem; font-weight: 600; color: var(--accent);
+        }
+        .footer {
+            text-align: center; padding: 30px; margin-top: 40px;
+            border-top: 1px solid var(--border); color: var(--text2); font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../index.html" class="back-link">← 返回科技与财经导航</a>
+
+    <header class="report-header">
+        <h1>🚀 科技与财经每日动态</h1>
+        <div class="date">2026年5月9日 · 周六 · 17:30 UTC+8</div>
+        <div class="stats">
+            <span>📊 7 大垂直赛道</span>
+            <span>📰 21 条深度追踪</span>
+            <span>⏱ 严格 24h 时效</span>
+        </div>
+    </header>
+
+    <!-- ==================== Top 5 核心焦点 ==================== -->
+    <section class="section">
+        <h2 class="section-title"><span class="icon">🌟</span>核心焦点 · Top 5 深度解析</h2>
+
+        <div class="news-card top5">
+            <h3><span class="rank">1</span>AI 万亿估值俱乐部同日开门：DeepSeek 首轮融资 500 亿元，Anthropic 拟融 500 亿美元估值冲 1 万亿</h3>
+            <div class="meta">
+                <span class="tag tag-vc">创投融资</span>
+                <span class="source">📰 腾讯财经 / 财联社 / 新浪财经 · 2026-05-09</span>
+            </div>
+            <p>5 月 9 日，两条重磅融资消息同日刷屏：① 坚持免费的 DeepSeek 正寻求首轮融资最高 500 亿元人民币，整体估值有望突破 3500 亿元（约 450 亿美元），创始人梁文锋计划个人最高出资 200 亿元，若达成将创中国 AI 公司单轮融资最高纪录；② 美国头部 Anthropic 正考虑筹集至多 500 亿美元新资金，估值有望接近 1 万亿美元，将反超 OpenAI 成全球估值最高 AI 公司。Anthropic 此前刚与 SpaceX 敲定 22 万颗 GPU / 300 兆瓦算力协议，并在谷歌云基建上豪掷 2000 亿元级。</p>
+            <div class="highlight">
+                💡 <strong>产业/资本影响</strong>：AI 行业正式进入"万亿估值 × 百亿美元单轮"时代。头部模型厂商从"比拼模型能力"升级到"争夺算力+资金"双护城河，中小厂商融资窗口急剧收窄。中美头部厂商估值差距从 5 倍迅速缩小到 2 倍，国产闭源（Kimi 200 亿美元）+ 开源（DeepSeek 450 亿美元）双轨路线已成型。与此同时，软银以 OpenAI 股权抵押融资的计划因贷款方对估值存虑而遇挫，目标规模从 100 亿砍至 60 亿美元——折射资本市场对 AI 估值"泡沫/实质"的分歧加剧。
+            </div>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯财经：陆家嘴财经早餐 2026-05-09</a><br>
+            <a class="news-link" href="https://deepseek.csdn.net/69febaa354b52172bc72a884.html" target="_blank">🔗 CSDN AI产业动态日报：Anthropic 估值逼近 1 万亿美元</a>
+        </div>
+
+        <div class="news-card top5">
+            <h3><span class="rank">2</span>苹果 × 英特尔达成历史性代工协议：被"踢"出 6 年后，英特尔重返库克阵营</h3>
+            <div class="meta">
+                <span class="tag tag-earnings">科技巨头 / 半导体</span>
+                <span class="source">📰 新浪财经 / 国际电子商情 / 网易科技 · 2026-05-09</span>
+            </div>
+            <p>据《华尔街日报》5 月 8 日披露、5 月 9 日由新浪财经等国内媒体证实：苹果与英特尔已达成初步协议，英特尔将代工生产部分苹果设备所用芯片，苹果则保留芯片自主设计权，模式与台积电合作路径相似。此次合作历经超一年的密集谈判。受该消息催化，英特尔股价近一个月翻倍，5 月 9 日单日大涨 14.8%，费城半导体指数创历史新高。这是苹果 2020 年全面转向自研 M 系列芯片、放弃英特尔 CPU 之后，双方时隔 6 年首次重启代工合作。</p>
+            <div class="highlight">
+                💡 <strong>产业/资本影响</strong>：此次合作并非单纯商业决策，而是"美国政府强势推动、苹果供应链避险、英特尔代工复兴"三重叠加的产物。对台积电形成直接威胁——苹果长期占台积电营收 25% 以上；对英伟达、AMD 则是利好（减少对台积电先进节点的抢产压力）。美国半导体产业链"回流"迎来标志性事件。费城半导体指数当日涨超 4% 创新高，康宁因与英伟达长期合作涨 5%。
+            </div>
+            <a class="news-link" href="https://finance.sina.com.cn/stock/usstock/c/2026-05-09/doc-inhxfhtv2025644.shtml" target="_blank">🔗 新浪财经：英特尔与苹果达成协议</a><br>
+            <a class="news-link" href="https://www.esmchina.com/news/14161.html" target="_blank">🔗 国际电子商情：苹果向英特尔敞开大门，台积电"失宠"</a>
+        </div>
+
+        <div class="news-card top5">
+            <h3><span class="rank">3</span>中国脑机接口双里程碑同落：强脑科技 20 亿融资创行业纪录，博睿康 NEO 全球首款侵入式 BCI 获批上市</h3>
+            <div class="meta">
+                <span class="tag tag-bio">脑机接口</span>
+                <span class="source">📰 新浪财经 / 21世纪经济报道 · 2026-05-08</span>
+            </div>
+            <p>5 月 8 日双重重磅：① 强脑科技（BrainCo）完成约 20 亿元人民币融资，创下全球脑机接口领域仅次于 Neuralink 的单笔融资纪录，资金将用于核心技术攻关、量产落地和非侵入式设备的规模化应用，公司确立"五年至十年助百万残障者重返社会"目标；② 中银证券援引数据称，博睿康 NEO 系统正式获批上市，成为全球首款侵入式脑机接口医疗器械，完成"实验室—临床试验—注册上市"全流程。此外 IT 桔子数据显示，2026 年前 4 个月脑机接口赛道融资总额 94 亿元，已超过 2025 年全年。</p>
+            <div class="highlight">
+                💡 <strong>产业/资本影响</strong>：脑机接口正重演 2023-2024 年大模型赛道的"资本+政策"双击行情。非侵入式（强脑代表）与侵入式（博睿康代表）两条路线同时商业化跑通——前者面向残障康复普惠市场（智能仿生手已获美国 FDA 认证、正进浙江医保试点），后者面向医疗器械高壁垒市场。马斯克同日宣布 Neuralink 2026 年将启动"大规模生产"并转向高度自动化外科手术——中美侵入式 BCI 正式进入"量产比拼"阶段。
+            </div>
+            <a class="news-link" href="https://k.sina.cn/article_7857201856_1d45362c0019057agq.html" target="_blank">🔗 新浪脑机接口热点小时报：强脑科技 20 亿融资</a><br>
+            <a class="news-link" href="https://finance.sina.com.cn/wm/2026-05-08/doc-inhxewcz2120760.shtml" target="_blank">🔗 财富在线：脑机接口 2026 两大里程碑</a><br>
+            <a class="news-link" href="https://www.21jingji.com/article/20260508/herald/70bdd5571252c5446c649265eb8a316c.html" target="_blank">🔗 21 世纪经济报道：94 亿资金、两条技术路线、五座城市</a>
+        </div>
+
+        <div class="news-card top5">
+            <h3><span class="rank">4</span>小米汽车启用全新子品牌"寻天"（SKYNOMAD），剑指 20-45 万元增程 SUV 市场</h3>
+            <div class="meta">
+                <span class="tag tag-auto">自动驾驶 / 出行</span>
+                <span class="source">📰 新浪财经 / 腾讯新闻 / IT之家 · 2026-05-07~09</span>
+            </div>
+            <p>5 月 7 日小米汽车正式确认：其首款增程式 SUV 将归属全新独立子品牌"寻天"（英文名 SKYNOMAD），车尾与方向盘将采用 SKYNOMAD 专属 Logo，不再使用小米主品牌标识，计划于 2026 年下半年正式发布。IT 之家同步查询显示，小米科技早在 2023 年 4 月 3 日就注册了"寻天"商标，国际分类第 12 类运输工具直接对应汽车、电动汽车品类。寻天旗下昆仑系列规划 3 款增程 SUV：昆仑 10（小五座家用）、昆仑 20（大五座）等，覆盖 20-45 万元市场；曼岛系列则面向露营/越野。</p>
+            <div class="highlight">
+                💡 <strong>产业/资本影响</strong>：小米汽车一年内从 SU7 单品爆款升级为"多品牌矩阵"，直接对标理想、问界、方程豹的增程路线。SU7 的纯电高性能定位与"寻天"的家用+户外形成互补，避免了同品牌内部大五座与小五座的产品线打架。更关键的是——雷军此举意在向资本市场讲"小米汽车 ≠ 小米手机的延伸，而是独立汽车集团"的故事，为 2027 年前小米汽车分拆上市铺路。
+            </div>
+            <a class="news-link" href="https://finance.sina.com.cn/stock/estate/integration/2026-05-08/doc-inhxcusp7788282.shtml" target="_blank">🔗 新浪财经：小米汽车启用"寻天"子品牌</a><br>
+            <a class="news-link" href="https://www.ithome.com/0/948/283.htm" target="_blank">🔗 IT之家：小米注册多枚"寻天""SKYNOMAD"商标</a>
+        </div>
+
+        <div class="news-card top5">
+            <h3><span class="rank">5</span>AI 国家标准三弹齐发：三部门印发智能体实施意见 + 能源 AI 双向赋能 + 终端智能化分级国标</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型 / 政策监管</span>
+                <span class="source">📰 国家网信办 / 工信部 / 国家能源局 · 2026-05-09</span>
+            </div>
+            <p>5 月 9 日同日三部委重磅政策齐发：① 国家网信办、国家发改委、工信部联合印发《智能体规范应用与创新发展实施意见》，提出安全可控、创新驱动等 4 方面举措，并规划科学研究、提振消费等 19 个典型应用场景；② 《人工智能终端智能化分级》系列国家标准出台，明确移动终端、汽车座舱、智能眼镜等多种智能终端的智能化概念与等级划分，为苹果 / 华为 / 小米等厂商提供统一的"智能分级"话术基础；③ 国家能源局联合多部门部署 29 项重点任务，保障百万千瓦级算力设施能源供给，促进算力与电力高效协同。</p>
+            <div class="highlight">
+                💡 <strong>产业/资本影响</strong>：中国 AI 治理正式从"框架构建"进入"制度执行"阶段。智能体实施意见首次把"智能体"从学术词汇拔高为国家战略词汇，并与 DeepSeek、Kimi 们的"开源智能体操作系统"战略形成上层呼应；AI 终端分级国标将为 2026 下半年的智能手机、智能眼镜发布会提供新的"分级营销"维度（类似 5G 当年的"SA/NSA"）；AI+能源协同则提前布局 2028-2030 年 GW 级 AI 数据中心的电力供应矛盾——工信部 6G 试验频率批复亦同日出炉，形成"算力+电力+通信"三位一体产业叙事。
+            </div>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：陆家嘴财经早餐 · 智能体顶层设计出炉</a>
+        </div>
+    </section>
+
+    <!-- ==================== 前沿快讯 ==================== -->
+    <section class="section">
+        <h2 class="section-title"><span class="icon">📍</span>前沿快讯 · 七大赛道</h2>
+
+        <!-- 大模型与基础AI -->
+        <div class="vertical-header">🧠 大模型与基础AI</div>
+
+        <div class="news-card">
+            <h3>阶跃星辰完成近 25 亿美元融资，StepAudio 2.5 Realtime 上线</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型</span>
+                <span class="source">📰 澎湃新闻 / 第一财经 · 2026-05-08</span>
+            </div>
+            <p>5 月 8 日阶跃星辰官宣完成近 25 亿美元融资，已拆除红筹架构加速赴港 IPO，香港投资管理公司、华勤技术、中兴通讯等参投；同日发布 StepAudio 2.5 Realtime 实时语音大模型，可自定义人设，在情商与智商上双重进阶，瞄准"真人级深度感知"——国产语音 Agent 进入高阶情感交互阶段。</p>
+            <a class="news-link" href="https://www.yicai.com/news/103171717.html" target="_blank">🔗 第一财经：阶跃星辰发布 StepAudio 2.5 Realtime</a>
+        </div>
+
+        <div class="news-card">
+            <h3>Redis 之父为 DeepSeek V4 打造专用推理引擎，Mac 也能跑 1.6T MoE 大模型</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型</span>
+                <span class="source">📰 CSDN AI 产业日报 · 2026-05-09</span>
+            </div>
+            <p>传奇开源作者 Antirez（Redis 之父）宣布为 DeepSeek V4 打造专用推理引擎，首次实现 Mac 电脑本地运行 DeepSeek V4（1.6T MoE），大幅降低高端模型的推理硬件门槛。配合 DeepSeek Token 价格已降至国际竞品 1/20，国产大模型正在重写"开源+推理成本"游戏规则。</p>
+            <a class="news-link" href="https://deepseek.csdn.net/69febaa354b52172bc72a884.html" target="_blank">🔗 CSDN：DeepSeek V4 专用推理引擎</a>
+        </div>
+
+        <div class="news-card">
+            <h3>Anthropic 发布"内省适配器"论文，AI 隐藏动机发现率提升 4 倍</h3>
+            <div class="meta">
+                <span class="tag tag-ai">大模型 / 可解释性</span>
+                <span class="source">📰 Anthropic 官方博客 · 2026-05-08</span>
+            </div>
+            <p>Anthropic 最新论文提出"内省适配器"（Introspection Adapter）技术，可让大模型主动揭示自身的推理过程与潜在偏差，将隐藏动机的发现率提升 4 倍以上。这一成果降低了大模型"不可解释"的长期瓶颈，为模型在金融、医疗等强监管场景的落地铺平合规之路。</p>
+            <a class="news-link" href="https://deepseek.csdn.net/69febaa354b52172bc72a884.html" target="_blank">🔗 CSDN：Anthropic 内省适配器论文</a>
+        </div>
+
+        <!-- 脑机接口与生物科技 -->
+        <div class="vertical-header">🧬 脑机接口与生物科技</div>
+
+        <div class="news-card">
+            <h3>Neuralink 宣布 2026 启动"大规模生产"，转向高度自动化外科手术</h3>
+            <div class="meta">
+                <span class="tag tag-bio">脑机接口</span>
+                <span class="source">📰 财富在线 / 新浪财经 · 2026-05-08</span>
+            </div>
+            <p>马斯克宣布 Neuralink 将于 2026 年启动脑机接口设备的"大规模生产"，并转向高度自动化外科植入流程。此举标志着侵入式 BCI 从"单体临床"进入"量产可及"阶段，与同日中国博睿康 NEO 系统获批上市形成中美双强并跑态势。</p>
+            <a class="news-link" href="https://finance.sina.com.cn/wm/2026-05-08/doc-inhxewcz2120760.shtml" target="_blank">🔗 财富在线：Neuralink 大规模生产</a>
+        </div>
+
+        <div class="news-card">
+            <h3>Motif Neurotech 获 FDA 首批临床许可，神经调控 BCI 治疗进入实操</h3>
+            <div class="meta">
+                <span class="tag tag-bio">脑机接口</span>
+                <span class="source">📰 Rice News · 2026-04-28（持续发酵）</span>
+            </div>
+            <p>基于美国莱斯大学研究孵化的 Motif Neurotech 获得 FDA 临床许可，将启动其首个治疗性 BCI 临床试验。继 Neuralink、Synchron 之后，全球第三家高侵入式 BCI 公司进入人体临床，BCI 应用场景从"运动重建"扩展到"神经调控治疗"。</p>
+            <a class="news-link" href="https://news.rice.edu/news/2026/brain-computer-interface-based-rice-research-wins-fda-approval-first-clinical-trial" target="_blank">🔗 Rice News：Motif Neurotech 获 FDA 临床批准</a>
+        </div>
+
+        <!-- 具身智能与机器人 -->
+        <div class="vertical-header">🤖 具身智能与机器人</div>
+
+        <div class="news-card">
+            <h3>普渡机器人完成近 10 亿元融资，估值突破 100 亿</h3>
+            <div class="meta">
+                <span class="tag tag-robot">机器人</span>
+                <span class="source">📰 新华社经参网 / 每经 · 2026-04-29 持续发酵</span>
+            </div>
+            <p>商用服务机器人龙头普渡机器人（Pudu Robotics）完成近 10 亿元新一轮融资，投后估值突破 100 亿元，累计融资超 20 亿元。由龙岗金控、亚投资本联合领投，北汽产投、蓝思科技等参投，资金重点投入具身智能研发、全球市场与规模化产能。</p>
+            <a class="news-link" href="http://jjckb.xinhuanet.com/20260429/dcde8558ba794109882124f5e97f1090/c.html" target="_blank">🔗 新华社经参网：普渡机器人 10 亿融资</a>
+        </div>
+
+        <div class="news-card">
+            <h3>无界动力完成天使++轮融资累计超 2 亿美元，拿下 5 亿元海外订单</h3>
+            <div class="meta">
+                <span class="tag tag-robot">具身智能</span>
+                <span class="source">📰 环球网科技 / 新京报 · 2026-05-08</span>
+            </div>
+            <p>通用具身智能机器人公司无界动力官宣新一轮天使+轮融资，远景科技、北京市人工智能产投基金入局，红杉、线性、高瓴等老股东跟投。公司自研首代机器人平台已进入客户场景实际应用，与多家国内外头部企业达成战略合作，同步启动海外部署。</p>
+            <a class="news-link" href="https://tech.huanqiu.com/article/4QMlOers6tj" target="_blank">🔗 环球网：无界动力完成天使+轮融资</a>
+        </div>
+
+        <div class="news-card">
+            <h3>A 股机器人概念集体爆发，"机器人穿衣"成新兴细分赛道</h3>
+            <div class="meta">
+                <span class="tag tag-robot">机器人</span>
+                <span class="source">📰 CSDN AI 产业日报 · 2026-05-09</span>
+            </div>
+            <p>5 月 9 日 A 股商业航天、机器人题材股集体大涨；同期"机器人穿衣"成产业新亮点——专门为人形机器人提供外观设计、防护材料、定制化外壳的细分企业涌现，标志机器人产业链从"动力+算法"扩展到"外观+交互"的二级市场，为传统消费电子代工厂带来新订单窗口。</p>
+            <a class="news-link" href="https://deepseek.csdn.net/69febaa354b52172bc72a884.html" target="_blank">🔗 CSDN：机器人"穿衣"成新兴产业</a>
+        </div>
+
+        <!-- 视频与多模态生成 -->
+        <div class="vertical-header">🎬 视频与多模态生成</div>
+
+        <div class="news-card">
+            <h3>阿里 HappyHorse 5 月全面商用，视频生成市场"三国杀"定型</h3>
+            <div class="meta">
+                <span class="tag tag-video">视频生成</span>
+                <span class="source">📰 36Kr / 新浪财经 · 2026-04-28 持续</span>
+            </div>
+            <p>阿里于 4 月 10 日正式认领神秘模型 HappyHorse，4 月 27 日逐步开放 API 测试，5 月起正式商用。它与 4 月 16 日发布的世界模型 Happy Oyster（可生成 3 分钟沉浸式视频+可交互 3D 场景）形成组合拳，叠加字节 Seedance 2.0 与快手可灵 3.0，国产视频生成市场 OpenAI Sora 关停后正式形成"三国杀"格局。</p>
+            <a class="news-link" href="https://www.36kr.com/p/3785131781681924" target="_blank">🔗 36Kr：阿里 Happyhorse 正式入场</a>
+        </div>
+
+        <div class="news-card">
+            <h3>OpenAI 发布 Codex Chrome 扩展，AI 编程能力下沉浏览器</h3>
+            <div class="meta">
+                <span class="tag tag-ai">多模态 / 编程</span>
+                <span class="source">📰 CSDN AI 产业日报 · 2026-05-09</span>
+            </div>
+            <p>OpenAI 将 Codex（AI 编程能力）集成到 Chrome 浏览器，用户可在任何网页场景直接调用 AI 生成/修改代码。这是继同日 GPT-Realtime-2 语音模型后的又一产品下沉动作，OpenAI 正从"API 平台"向"全场景 AI 操作层"转型，直接对标 Anthropic 的 Claude Code。</p>
+            <a class="news-link" href="https://deepseek.csdn.net/69febaa354b52172bc72a884.html" target="_blank">🔗 CSDN：OpenAI Codex Chrome 扩展</a>
+        </div>
+
+        <!-- 自动驾驶与出行 -->
+        <div class="vertical-header">🚗 自动驾驶与出行</div>
+
+        <div class="news-card">
+            <h3>吉利据传与福特达成协议，收购其西班牙瓦伦西亚工厂装配线</h3>
+            <div class="meta">
+                <span class="tag tag-auto">新能源汽车</span>
+                <span class="source">📰 搜狐汽车 · 2026-05-06</span>
+            </div>
+            <p>中国吉利汽车与美国福特就收购后者位于西班牙瓦伦西亚工厂的一条装配线达成协议（双方未正式确认，但业内人士称"基本敲定"）。这是继吉利领克在欧洲销量突破后，国产车企首次在欧洲直接获取成熟产能，将显著加速欧洲本地化生产步伐、规避欧盟反补贴关税。</p>
+            <a class="news-link" href="https://www.sohu.com/a/1018967553_121124371" target="_blank">🔗 搜狐汽车：吉利据传收购福特西班牙装配线</a>
+        </div>
+
+        <div class="news-card">
+            <h3>"游心"正式发布：千里科技打造 20-40 万"全 AI 汽车品牌"</h3>
+            <div class="meta">
+                <span class="tag tag-auto">智能汽车</span>
+                <span class="source">📰 搜狐汽车 · 2026-05-02</span>
+            </div>
+            <p>5 月 2 日，全新年轻化智能汽车品牌"游心"（Pallade）正式发布，定位"全 AI 汽车品牌"，主打 20-40 万元区间，面向拒绝被定义的年轻一代。品牌由吉利系千里科技孵化，是继小米寻天、东风奕派之后 2026 年第三个主打"AI 优先"的全新汽车品牌。</p>
+            <a class="news-link" href="https://www.sohu.com/a/1018967553_121124371" target="_blank">🔗 搜狐汽车：游心 Pallade 品牌发布</a>
+        </div>
+
+        <!-- 科技巨头与财报 -->
+        <div class="vertical-header">🏢 科技巨头与财报</div>
+
+        <div class="news-card">
+            <h3>台积电 4 月营收 4107 亿新台币同比+17.5%，1-4 月累计破 1.54 万亿</h3>
+            <div class="meta">
+                <span class="tag tag-earnings">半导体财报</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>台积电公布 4 月合并营收 4107.26 亿新台币，同比增长 17.5%；1-4 月累计 1.54 万亿新台币，同比增长 29.9%，延续 AI 需求强势。但同日苹果英特尔代工协议曝光，为"台积电先进节点一家独大"叙事蒙上变数。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：台积电 4 月营收</a>
+        </div>
+
+        <div class="news-card">
+            <h3>丰田索尼财报不佳：丰田新财年净利润预降 22%，索尼 Q4 净利润同比-63% 推 30 亿美元回购</h3>
+            <div class="meta">
+                <span class="tag tag-earnings">日系巨头</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>丰田汽车受中东冲突影响，预计新财年净利润减少 22%（连续 3 年下滑）；索尼第四财季净利润同比下降 63%，同日宣布 30 亿美元股票回购计划。叠加任天堂 Switch 2 多国售价上调+新财年净利润预降 26.9%，日本消费电子+汽车三巨头集体承压。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：日企三连衰</a>
+        </div>
+
+        <div class="news-card">
+            <h3>国内首台"双核"原子量子计算机发布，6G 试验频率获批</h3>
+            <div class="meta">
+                <span class="tag tag-earnings">硬科技</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>国内首台双核原子量子计算机发布，量子处理器从"单核"升级为"双核"，为投资组合优化、新药研发等高端算力自主化提供关键支撑；同日工信部向 IMT-2030（6G）推进组批复 6GHz 频段 6G 试验频率——算力+通信双条硬科技主线迎来政策加速。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：双核量子 + 6G 频率</a>
+        </div>
+
+        <!-- 创投与融资 -->
+        <div class="vertical-header">💰 创投与融资</div>
+
+        <div class="news-card">
+            <h3>Cerebras 重启 IPO：晶圆级芯片"英伟达挑战者"估值目标 266 亿美元</h3>
+            <div class="meta">
+                <span class="tag tag-vc">IPO</span>
+                <span class="source">📰 百家号财经 / 元器数科 · 2026-05-05~07</span>
+            </div>
+            <p>AI 芯片新秀 Cerebras Systems 于 5 月 4 日更新招股书正式启动上市路演，发行区间 115-125 美元、发行 2800 万股，可募资 35 亿美元，目标估值 266.2 亿美元。半年前（2025 年 10 月）Cerebras 曾主动撤回 IPO，本次重启正值全球 AI 基建投资高峰，其晶圆级引擎芯片（WSE）在推理场景对英伟达形成错位竞争。</p>
+            <a class="news-link" href="http://m.metax4d.com.cn/toxic/0507/article_907759.shtml" target="_blank">🔗 元器数科：Cerebras 重启 IPO 估值超 266 亿美元</a>
+        </div>
+
+        <div class="news-card">
+            <h3>昆仑芯启动科创板上市辅导，推进"A+H"双重上市</h3>
+            <div class="meta">
+                <span class="tag tag-vc">IPO / 芯片</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>百度旗下 AI 芯片公司昆仑芯正式启动科创板上市辅导，由中金公司担任辅导机构，同时港股上市进程正常推进。昆仑芯是国产 AI 推理芯片第一梯队，此次 A+H 双重上市将为国产算力自主化提供重要资本弹药，也是继寒武纪、海光后第三家冲击科创板的 AI 芯片头部公司。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：昆仑芯 A+H 上市</a>
+        </div>
+
+        <div class="news-card">
+            <h3>软银 OpenAI 股权抵押融资遇挫：目标规模从 100 亿美元砍至 60 亿</h3>
+            <div class="meta">
+                <span class="tag tag-vc">创投融资</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>软银以 OpenAI 股权作为抵押品的融资计划遭遇滑铁卢，贷款方对 OpenAI 估值存疑，目标规模从 100 亿美元砍至 60 亿美元。这是 2026 年以来首次对"AI 万亿估值"叙事提出的实质性信号——当 Anthropic 新一轮估值冲 1 万亿美元时，资本市场对 AI 估值泡沫的警惕开始浮现。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：软银 OpenAI 股权抵押融资遇挫</a>
+        </div>
+    </section>
+
+    <!-- ==================== 宏观关联 ==================== -->
+    <section class="section">
+        <h2 class="section-title"><span class="icon">📊</span>宏观 & 市场关联</h2>
+        <div class="news-card">
+            <h3>A 股维持天量成交 3 万亿连三日，电池/半导体回调；成品油年内第七涨</h3>
+            <div class="meta">
+                <span class="tag tag-earnings">市场观察</span>
+                <span class="source">📰 腾讯新闻 · 2026-05-09</span>
+            </div>
+            <p>5 月 9 日上证指数微跌报 4179.95 点，市场成交额 3.08 万亿元连续三日破 3 万亿；电池、半导体产业链回调，创新药、光伏、AI 算力走弱；机器人+商业航天概念爆发。同日 4 月新开户数 249.13 万户环比减少 45.86%，成品油年内第七涨（92 号汽油每升+0.25 元）。伊朗霍尔木兹冲突升级，布油重回 100 美元/桶上方。</p>
+            <a class="news-link" href="https://news.qq.com/rain/a/20260509A01H3M00" target="_blank">🔗 腾讯新闻：陆家嘴财经早餐 · A 股市场回顾</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>📍 数据来源：新浪财经 / 腾讯新闻 / 第一财经 / 澎湃新闻 / 21世纪经济报道 / 36Kr / IT之家 / CSDN AI 产业日报 / 环球网 / 新华社经参 / Rice News 等</p>
+        <p>⏱ 报告时效：严格过去 24 小时内发生的事件（2026-05-08 至 2026-05-09）</p>
+        <p>🔗 所有信源 URL 均可点击打开，数据可追溯</p>
+        <p>🤖 由 WorkBuddy 自动化任务生成 | automation-2 | 2026-05-09 17:30</p>
+    </footer>
+</div>
+</body>
+</html>
