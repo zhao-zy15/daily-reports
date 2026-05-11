@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股港股收盘总结 · 2026-05-11</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #0a0a1a; color: #e0e0f0; line-height: 1.7; min-height: 100vh;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+        .report-header {
+            text-align: center; padding: 40px 30px; margin-bottom: 30px;
+            background: linear-gradient(135deg, #1a1a3e 0%, #2d1a4e 50%, #1a2a4e 100%);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);
+            position: relative; overflow: hidden;
+        }
+        .report-header::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(239,68,68,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 50%, rgba(59,130,246,0.08) 0%, transparent 50%);
+        }
+        .report-header h1 {
+            font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; position: relative;
+            background: linear-gradient(135deg, #f87171, #fbbf24, #60a5fa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .report-header .subtitle { color: #a0a0c0; font-size: 1.05rem; position: relative; }
+        .report-header .date-badge {
+            display: inline-block; margin-top: 12px; padding: 6px 20px;
+            background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 20px; color: #fbbf24; font-size: 0.9rem; font-weight: 600; position: relative;
+        }
+        .section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 1.4rem; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.08);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title .icon { font-size: 1.5rem; }
+        .card {
+            background: linear-gradient(135deg, #12122a, #1a1a3a);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+            padding: 24px; margin-bottom: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .index-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .index-table th {
+            background: rgba(255,255,255,0.05); padding: 12px 16px;
+            text-align: left; font-weight: 600; font-size: 0.9rem; color: #a0a0c0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .index-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.95rem; }
+        .index-table tr:hover { background: rgba(255,255,255,0.03); }
+        .up { color: #f87171; font-weight: 600; }
+        .down { color: #4ade80; font-weight: 600; }
+        .neutral-val { color: #fbbf24; font-weight: 600; }
+        .trend-card {
+            background: linear-gradient(135deg, #12122a, #1a1a3a);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 0; margin-bottom: 16px;
+            overflow: hidden; display: flex;
+            transition: transform 0.2s, box-shadow 0.2s; position: relative;
+        }
+        .trend-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .trend-bar { width: 6px; flex-shrink: 0; }
+        .trend-bar.bullish { background: linear-gradient(to bottom, #ef4444, #f87171); }
+        .trend-bar.bearish { background: linear-gradient(to bottom, #22c55e, #4ade80); }
+        .trend-bar.neutral-bar { background: linear-gradient(to bottom, #f59e0b, #fbbf24); }
+        .trend-bar.pick-bar { background: linear-gradient(to bottom, #3b82f6, #60a5fa); }
+        .trend-content { padding: 20px 24px; flex: 1; }
+        .trend-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+        }
+        .stock-name { font-size: 1.2rem; font-weight: 700; }
+        .stock-code { color: #a0a0c0; font-size: 0.85rem; margin-left: 8px; }
+        .trend-badge { padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+        .trend-badge.bullish-badge { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .trend-badge.bearish-badge { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+        .trend-badge.neutral-badge { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+        .pick-badge {
+            position: absolute; top: 12px; right: 16px;
+            padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;
+            background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);
+        }
+        .price-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px; margin-bottom: 14px;
+            background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px;
+        }
+        .price-item { font-size: 0.85rem; }
+        .price-item .label { color: #a0a0c0; display: block; margin-bottom: 2px; }
+        .price-item .value { font-weight: 600; }
+        .info-block { margin-bottom: 12px; font-size: 0.92rem; }
+        .info-block strong { color: #fbbf24; margin-right: 6px; }
+        .stars { color: #fbbf24; font-size: 1rem; letter-spacing: 2px; }
+        .key-points { background: rgba(59,130,246,0.06); border-left: 3px solid #60a5fa; padding: 14px 18px; border-radius: 8px; margin: 14px 0; }
+        .key-points h4 { color: #60a5fa; margin-bottom: 10px; font-size: 1rem; }
+        .key-points ul { list-style: none; padding-left: 0; }
+        .key-points li { padding: 4px 0 4px 20px; position: relative; font-size: 0.92rem; }
+        .key-points li::before { content: '▸'; position: absolute; left: 0; color: #60a5fa; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 14px 0; }
+        .summary-item {
+            background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .summary-item .label { color: #a0a0c0; font-size: 0.82rem; margin-bottom: 6px; }
+        .summary-item .value { font-size: 1.15rem; font-weight: 700; }
+        .news-list { list-style: none; padding-left: 0; }
+        .news-list li { padding: 10px 0 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.04); position: relative; font-size: 0.92rem; }
+        .news-list li:last-child { border-bottom: none; }
+        .news-list li::before { content: '◆'; position: absolute; left: 0; color: #f59e0b; font-size: 0.8rem; top: 12px; }
+        .footer { text-align: center; padding: 30px 0 10px; color: #6b6b8a; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px; }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.72rem; margin-right: 6px; background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.25); }
+        .tag-red { background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.25); }
+        .tag-green { background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.25); }
+        .tag-yellow { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<div class="report-header">
+    <h1>📊 A股港股收盘总结</h1>
+    <div class="subtitle">沪指放量破4200点 · 两市3.57万亿连续4日3万亿+ · 半导体存储+创新药双主线 · 港股窄幅震荡</div>
+    <div class="date-badge">2026-05-11（周一）16:30</div>
+</div>
+
+<!-- 大盘总结 -->
+<div class="section">
+    <div class="section-title"><span class="icon">📈</span>今日大盘总结</div>
+    <div class="card">
+        <p style="margin-bottom: 14px; color: #c0c0d0;">周一A股迎来<strong style="color:#f87171">放量普涨、指数集体创阶段新高</strong>的强势行情。沪指+1.08%/4225.02一举突破4200点整数关口，深成指+2.16%/15899.30，<strong style="color:#f87171">创业板指+3.50%/3928.97续创近11年新高</strong>，科创50飙升+4.65%/1716.69续刷年内高点；北证50小幅回吐-0.70%。<strong style="color:#fbbf24">两市成交3.57万亿，连续4日突破3万亿创年内放量峰值</strong>，超3100只个股飘红。<strong style="color:#f87171">硬科技主线全面爆发</strong>：半导体/算力硬件再度成绝对主线（存储芯片、GPU、CPO方向领涨），创新药午后快速反弹（南新制药20%涨停带动），稀土、光伏、商业航天全面活跃；海运、黄金、锂矿题材回吐。<strong style="color:#fbbf24">北向资金净流入42.68亿连续9日加仓，累计净流入超400亿</strong>。港股窄幅震荡分化：恒指+0.05%/26406.84，恒生科技+0.07%/5106.40基本横盘。9只自选股3涨1平5跌：宁德时代+2.08%（A股科技牛旗帜）、美团+0.36%反弹、小米+0.06%/优必选+0.09%微涨企稳；阿里-3.67%（高位获利回吐）、快手-2.55%、蜜雪-2.02%、腾讯-1.49%、泡泡玛特-0.42%下跌。整体表现：<strong style="color:#f87171">A股硬科技狂欢 vs 港股科网调整</strong>背离明显。</p>
+        <table class="index-table">
+            <thead>
+                <tr><th>指数</th><th>收盘点位</th><th>涨跌幅</th><th>当日振幅</th><th>成交额</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>上证指数</strong></td><td>4225.02</td><td class="up">+1.08%</td><td>1.04%</td><td>1.58万亿</td></tr>
+                <tr><td><strong>深证成指</strong></td><td>15899.30</td><td class="up">+2.16%</td><td>1.92%</td><td>1.95万亿</td></tr>
+                <tr><td><strong>创业板指</strong></td><td>3928.97</td><td class="up">+3.50%</td><td>3.69%</td><td>9228亿</td></tr>
+                <tr><td><strong>科创50</strong></td><td>1716.69</td><td class="up">+4.65%</td><td>3.52%</td><td>1830亿</td></tr>
+                <tr><td><strong>北证50</strong></td><td>1426.31</td><td class="down">-0.70%</td><td>—</td><td>268亿</td></tr>
+                <tr><td><strong>沪深300</strong></td><td>4982（估）</td><td class="up">≈+1.40%</td><td>—</td><td>—</td></tr>
+                <tr><td><strong>恒生指数</strong></td><td>26406.84</td><td class="up">+0.05%</td><td>0.79%</td><td>1701亿港元</td></tr>
+                <tr><td><strong>恒生科技</strong></td><td>5106.40</td><td class="up">+0.07%</td><td>1.25%</td><td>281亿港元</td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.85rem;color:#888aa0;margin-top:8px;">数据来源：新浪财经实时行情接口（hq.sinajs.cn），收盘时间2026-05-11 15:00（A股）/ 16:08（港股）。两市成交3.57万亿据中新经纬/央视财经收评。</p>
+    </div>
+</div>
+
+<!-- 板块热点 -->
+<div class="section">
+    <div class="section-title"><span class="icon">🔥</span>板块热点复盘</div>
+    <div class="card">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="label">🚀 今日主线①</div>
+                <div class="value" style="color:#f87171">半导体存储/GPU/CPO</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">存储芯片板块单日+4%（成交近1500亿/换手3.1%）。半导体设备与材料领涨而非纯算力，资金对国产替代信心提升。光通信、PCB、电源、液冷同步活跃。</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">🚀 今日主线②</div>
+                <div class="value" style="color:#f87171">创新药午后爆发</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">南新制药20cm涨停领涨，凯普生物+10%+，沃森生物、上海谊众、君实生物、万泰生物、华海药业跟涨。创新药ETF广发(515120)成交2.69亿。Q1医药生物业绩+5%反转延续。</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">🚀 今日主线③</div>
+                <div class="value" style="color:#f87171">稀土+光伏+商业航天</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">稀土永磁板块全面活跃，光伏（隆基/通威/天合）多股大涨，商业航天概念延续强势。AI算力链高速光模块+液冷接力CPO。</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">📉 调整板块①</div>
+                <div class="value" style="color:#4ade80">海运/黄金/锂矿</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">中远海能、招商轮船等海运回吐前期涨幅；贵金属板块（紫金/山东黄金）回调；锂矿（赣锋/天齐）跟随上游周期股调整。</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">📉 调整板块②</div>
+                <div class="value" style="color:#4ade80">港股科网</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">恒生科技横盘+0.07%，但成分股分化明显：阿里-3.67%（前周累涨大单获利回吐）、快手-2.55%、腾讯-1.49%。A股科技与港股科技走势背离。</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">💰 资金面</div>
+                <div class="value neutral-val">3.57万亿放量</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">连续第4个交易日突破3万亿；北向净流入42.68亿连续9日加仓（累计400亿+）；杠杆资金两融余额逼近2.8万亿。</div>
+            </div>
+        </div>
+        <div class="key-points">
+            <h4>📊 资金流向（5月11日Wind/选股通统计）</h4>
+            <ul>
+                <li><strong>主力净流入概念</strong>：半导体设备、存储芯片、创新药、稀土永磁、商业航天、AI算力</li>
+                <li><strong>主力净流出</strong>：海运、黄金、锂矿、白酒、传统消费</li>
+                <li><strong>北向资金</strong>：今日净流入<span class="up">+42.68亿</span>（连续9日加仓，累计400亿+），资金聚焦寒武纪/海光/澜起科技等算力龙头</li>
+                <li><strong>南向资金</strong>：港股盘面震荡偏弱，南向预估小幅净流入（具体数据待官方披露）</li>
+                <li><strong>涨停潮分布</strong>：科创板>创业板>主板，硬科技结构性主导，无中军板块虹吸</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 重大消息 -->
+<div class="section">
+    <div class="section-title"><span class="icon">📰</span>重大盘中消息</div>
+    <div class="card">
+        <ul class="news-list">
+            <li><strong style="color:#f87171">阿里千问App与淘宝全面打通</strong>：5月11日，阿里官宣"千问与淘宝全面打通"——用户打开千问App与AI对话即可完成淘宝商品挑选、对比及下单购买；打开淘宝App点击"千问AI"入口可调用AI能力辅助决策。AI+电商深度融合落地，长期看好阿里"AI驱动用户体验+广告/电商货币化"的双轮逻辑。但今日股价高位回调-3.67%，短期获利兑现。</li>
+            <li><strong style="color:#f87171">A股创业板/科创板放量新高</strong>：周一两市成交3.57万亿连续4日3万亿+，科创50+4.65%，创业板指+3.50%/3928点续创近11年新高。沪指+1.08%突破4200点整数关口。北向资金连续9日加仓累计400亿+，外资明确表态看好A股中期行情。</li>
+            <li><strong style="color:#f87171">创新药板块午后异动</strong>：5月11日午后创新药概念股快速反弹，南新制药(688189) 20cm涨停，凯普生物(300639)涨超13%，沃森生物、上海谊众、君实生物、万泰生物、华海药业跟涨。Q1医药生物板块净利+5%反转，叠加创新药BD出海2026Q1已接近2025全年四成。</li>
+            <li><strong style="color:#fbbf24">半导体存储/GPU链全面爆发</strong>：5月11日10:08存储芯片板块指数+4%/成交1489亿/换手3.10%。半导体设备和材料领涨而非纯算力——资金对国产替代信心进一步提升。光通信、PCB、电源、液冷同步活跃。算力芯片龙头海光信息此前已突破8000亿市值续创历史新高，寒武纪重新逼近1900元股王位置。</li>
+            <li><strong style="color:#fbbf24">中芯国际本周关键节点</strong>：中芯国际(688981)发行股份购买资产事项5月11日上会审议，收购中芯北方股权，是半导体产业链国资整合的关键案例。短期或催化国产芯片代工链整体估值修复。今日中芯国际A股+1.84%/122.52元。</li>
+            <li><strong style="color:#fbbf24">4月CPI/PPI数据预披露窗口</strong>：本周国家统计局将公布4月CPI、PPI及社融、M2数据，检验通胀回升及内需回暖情况，影响货币政策预期。市场普遍预期4月CPI同比+0.2%（环比改善），PPI同比降幅收窄。社融存量增速料维持在8.5%-9%区间。</li>
+            <li><strong style="color:#fbbf24">柏基投资重仓中国股票</strong>：5月10日披露：全球长期投资巨头柏基投资(Baillie Gifford)Q1中国股票持仓显著加仓，宁德时代、阿里巴巴、拼多多、百济神州等头部公司位列重仓榜单。机构外资中长期信心持续修复。</li>
+            <li><strong style="color:#fbbf24">两市连续4日3万亿成交</strong>：A股放量大涨+北向加仓+杠杆资金两融余额逼近2.8万亿，市场情绪进入"主升浪+结构牛"共振阶段。但科创50单日+4.65%短期透支风险加大，需警惕高位股回调。</li>
+            <li><strong style="color:#4ade80">港股A股科技股走势背离</strong>：A股科创板50大涨4.65%/算力链全线爆发，但港股恒生科技仅+0.07%基本横盘，阿里-3.67%/快手-2.55%/腾讯-1.49%。背离原因：港股缺乏纯算力标的，资金被A股寒武纪/海光等独家品种吸走。</li>
+            <li><strong style="color:#fbbf24">特朗普中东行将至/油价回落</strong>：5月12-15日特朗普将访问沙特/卡塔尔/阿联酋，主导地区"和平协议"。Brent原油已从前期高点回落至95美元附近，预计本周中东事件密集催化。</li>
+        </ul>
+    </div>
+</div>
+
+<!-- 市场情绪 -->
+<div class="section">
+    <div class="section-title"><span class="icon">📊</span>市场情绪指标</div>
+    <div class="card">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="label">涨跌家数</div>
+                <div class="value up">3100+ / ~2000</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">上涨：下跌 ≈ 1.55:1，普涨格局但分化仍在</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">涨停/跌停</div>
+                <div class="value up">~120 / ~10</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">涨停超120家创近月新高，高位股延续度增强</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">两市成交额</div>
+                <div class="value up">3.57万亿</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">连续4日3万亿+，单日放量约5000亿，主升浪标志</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">北向资金</div>
+                <div class="value up">+42.68亿</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">连续9日净流入，累计400亿+，外资明确加仓</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">两融余额</div>
+                <div class="value up">≈2.78万亿</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">逼近2.8万亿历史关口，杠杆资金积极加仓硬科技</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">市场情绪</div>
+                <div class="value up">主升+结构牛</div>
+                <div style="margin-top:6px;font-size:0.85rem;color:#a0a0c0">情绪极度活跃但分化加大，警惕高位股调整</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 自选股分析 -->
+<div class="section">
+    <div class="section-title"><span class="icon">⭐</span>9只自选股·收盘分析</div>
+
+    <!-- 1. 腾讯控股 -->
+    <div class="trend-card">
+        <div class="trend-bar neutral-bar"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">腾讯控股</span><span class="stock-code">0700.HK</span></div>
+                <div class="trend-badge neutral-badge">震荡</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">465.00</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">464.40</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">471.20 / 463.60</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-1.49%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">129.55亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>港股科网股全线分化，腾讯受阿里大跌3.67%情绪带动跟跌。Q1财报预披露窗口逼近（5月14日左右），市场对游戏（无新版号催化）+广告（消费弱）+金融科技（监管）三大主业增速保持谨慎。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近10个交易日在460-490区间反复震荡，5/9-5/11连续3日围绕465-470收敛。技术面看是健康的横盘整理，但情绪面缺乏催化剂，等待Q1财报指引方向。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 460 / 455；压力位 471 / 488</div>
+            <div class="info-block"><strong>机构目标价：</strong>中金 580港元（增持）；摩根士丹利 525港元；高盛 510港元（中性）</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 等待财报后方向选择</div>
+        </div>
+    </div>
+
+    <!-- 2. 阿里巴巴 -->
+    <div class="trend-card">
+        <div class="trend-bar bearish"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">阿里巴巴-W</span><span class="stock-code">9988.HK</span></div>
+                <div class="trend-badge bearish-badge">看空（短期获利兑现）</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">136.80</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">133.90</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">137.60 / 133.30</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-3.67%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">132.26亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>📰 <span style="color:#f87171">重大利好！</span>5月11日官宣"千问与淘宝全面打通"——千问App+淘宝App双向集成购物+AI能力。但前周五累涨10%+后高位获利兑现压力集中释放。市场对AI变现路径仍需时间验证。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近半月从120涨至139（涨幅~16%）后首次大幅回调。技术面MACD顶背离形成，KDJ高位死叉。中期"AI+电商+云"基本面利好已部分Price-in，需消化获利盘。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 130 / 127；压力位 137 / 141</div>
+            <div class="info-block"><strong>机构目标价：</strong>高盛 160港元；摩根大通 145港元；中金 152港元（增持）</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 短期回调中期向好，130附近可关注</div>
+        </div>
+    </div>
+
+    <!-- 3. 美团 -->
+    <div class="trend-card">
+        <div class="trend-bar neutral-bar"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">美团-W</span><span class="stock-code">3690.HK</span></div>
+                <div class="trend-badge neutral-badge">震荡偏强</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">83.10</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">84.35</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">84.80 / 82.40</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+0.36%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">24.86亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>港股科网整体调整中相对抗跌，外卖龙头地位稳固。市场关注本地生活竞争格局企稳后利润释放节奏。京东外卖竞争边际趋缓。</div>
+            <div class="info-block"><strong>趋势判断：</strong>80-90区间连续3个月震荡蓄势，5/8起企稳反弹形态确立。RSI回到50中性，量能温和回升。等待Q1财报（预计5月底）业绩确认+618大促催化。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 80 / 75；压力位 90 / 95</div>
+            <div class="info-block"><strong>机构目标价：</strong>摩根士丹利 120港元（增持）；中金 110港元；高盛 105港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 底部区域+催化明确+估值不贵</div>
+        </div>
+    </div>
+
+    <!-- 4. 蜜雪冰城 -->
+    <div class="trend-card">
+        <div class="trend-bar bearish"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">蜜雪冰城</span><span class="stock-code">2097.HK</span></div>
+                <div class="trend-badge bearish-badge">看空（短期）</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">287.60</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">281.80</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">287.80 / 279.40</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-2.02%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">1.12亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>港股新消费板块全面调整中跌幅居中。蜜雪近1月在273-300区间反复，280成为重要心理支撑。茶饮行业Q2旺季消费数据有待验证，市场分歧加大。</div>
+            <div class="info-block"><strong>趋势判断：</strong>4月低点273附近形成阶段双底，但5月反弹力度乏力。MACD出现死叉迹象，量能持续萎缩，反映多空分歧加大。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 280 / 273（年内重要低点）；压力位 295 / 310</div>
+            <div class="info-block"><strong>机构目标价：</strong>摩根大通 380港元；中金 350港元；招商证券（香港）330港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 等待273支撑确认或Q2旺季数据催化</div>
+        </div>
+    </div>
+
+    <!-- 5. 宁德时代 -->
+    <div class="trend-card">
+        <div class="trend-bar bullish"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">宁德时代</span><span class="stock-code">300750.SZ</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">440.00</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">446.10</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">450.51 / 435.10</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+2.08%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">152亿元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>A股锂电产业链龙头继续走强。柏基投资Q1披露重仓宁德时代（已加仓），外资长期信心持续修复。固态电池+钠电池+凝聚态三大技术路径储备充足。市值约2.04万亿，A股第三大权重。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近月在430-460区间高位震荡蓄势。4/14盘中创432.49新高、5/6+5.50%创460历史新高后高位整固。基本面（Q1净利+48.52%）+技术面（高位旗形）+资金面（外资+杠杆）三共振。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 435 / 420；压力位 460（前高） / 480</div>
+            <div class="info-block"><strong>机构目标价：</strong>中信证券 580元（强烈推荐）；中金 540元；摩根士丹利 510元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span> 锂电+储能+固态绝对龙头</div>
+        </div>
+    </div>
+
+    <!-- 6. 泡泡玛特 -->
+    <div class="trend-card">
+        <div class="trend-bar neutral-bar"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">泡泡玛特</span><span class="stock-code">9992.HK</span></div>
+                <div class="trend-badge neutral-badge">震荡</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">169.70</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">167.40</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">171.30 / 164.00</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-0.42%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">34.66亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>5/8段永平"全仓换泡泡"催化+3.64%后高位整固。北美单店300万美元/月+欧洲LABUBU 3.0+回购15亿等长期逻辑不变。Q1业绩预告催化窗口5月底。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近月在159-175区间高位震荡，5/8/9连续两日围绕168整理。短期受港股新消费整体调整压制，但中期"全球IP+情绪消费"主线坚挺。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 164 / 159；压力位 175 / 180（历史新高）</div>
+            <div class="info-block"><strong>机构目标价：</strong>高盛 230港元（首推）；摩根士丹利 205港元；中金 195港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 长期IP出海+段永平背书</div>
+        </div>
+    </div>
+
+    <!-- 7. 小米集团 -->
+    <div class="trend-card">
+        <div class="trend-bar neutral-bar"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">小米集团-W</span><span class="stock-code">1810.HK</span></div>
+                <div class="trend-badge neutral-badge">震荡企稳</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">31.52</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">31.70</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">32.00 / 31.08</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+0.06%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">35.82亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>港股科网震荡中表现抗跌微涨0.06%，与阿里-3.67%/快手-2.55%形成鲜明对比。SU7/YU7销量持续强势，AI玻璃业务（5/8发布）开拓新增长曲线，估值底部企稳。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近月在29-33区间窄幅震荡，5/9/11连续2日反弹企稳。技术面RSI从超卖回升至中性区域，MACD红柱小幅放大。基本面"手机+车+IoT+AI"四轮驱动稳健。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 29 / 28.8；压力位 33 / 35</div>
+            <div class="info-block"><strong>机构目标价：</strong>摩根士丹利 45港元（增持）；高盛 42港元；中金 40港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 底部企稳+催化丰富</div>
+        </div>
+    </div>
+
+    <!-- 8. 快手 -->
+    <div class="trend-card">
+        <div class="trend-bar bearish"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">快手-W</span><span class="stock-code">1024.HK</span></div>
+                <div class="trend-badge bearish-badge">看空（短期获利）</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">52.95</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">51.60</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">53.05 / 50.20</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-2.55%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">60.06亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>5/8因可灵AI+电商超预期暴涨9.4%后正常获利兑现。机构上调目标价至60+。Q1财报临近披露（约5月20日），关注可灵AI ARR突破1亿美元+电商GMV兑现节奏。</div>
+            <div class="info-block"><strong>趋势判断：</strong>突破52前期压力位后回踩，量能依然温和（60亿）。短期回调正常，但若Q1财报超预期可能延续上行。中期"可灵AI+电商+广告"三轮驱动逻辑成立。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 50 / 47；压力位 53 / 56 / 60</div>
+            <div class="info-block"><strong>机构目标价：</strong>高盛 65港元；摩根大通 60港元（上调）；中金 58港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 短期回调中期向好</div>
+        </div>
+    </div>
+
+    <!-- 9. 优必选 -->
+    <div class="trend-card">
+        <div class="trend-bar neutral-bar"></div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">优必选</span><span class="stock-code">9880.HK</span></div>
+                <div class="trend-badge neutral-badge">震荡企稳</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">114.40</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">113.50</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">114.90 / 110.30</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+0.09%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">5.69亿港元</span></div>
+            </div>
+            <div class="info-block"><strong>盘中关键事件：</strong>人形机器人量产倒计时催化延续，A股机器人板块（三花、拓普、埃斯顿）持续活跃。5/7+4.08%+5/8+3.28%后两日小幅整固。市场重新审视量产兑现节奏。</div>
+            <div class="info-block"><strong>趋势判断：</strong>近月105-120区间高位震荡，5/8拉升至113后整固。RSI回到中性，MACD红柱减弱。等待量产里程碑+订单放量催化。</div>
+            <div class="info-block"><strong>关键技术位：</strong>支撑位 108 / 100；压力位 119 / 130</div>
+            <div class="info-block"><strong>机构目标价：</strong>摩根士丹利 145港元；中信里昂 135港元；招商证券 125港元</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 人形机器人量产β品种</div>
+        </div>
+    </div>
+</div>
+
+<!-- 精选推荐 -->
+<div class="section">
+    <div class="section-title"><span class="icon">📌</span>每日精选推荐 · 8只左侧布局个股</div>
+    <div class="card" style="margin-bottom:20px;">
+        <p style="color:#c0c0d0;font-size:0.95rem;">⚠️ 严格遵守"左侧布局+中期趋势初期"原则：禁止追涨连板妖股；优先估值低位+基本面反转+催化明确（1-4周）的标的。当前主升浪科技狂欢中，特意避开寒武纪/海光信息/南新制药/澜起科技等已极致拉升的右侧标的；聚焦CPO/算力链中尚未充分定价的次新龙头、医药左侧、稀土与新能源左侧、机器人产业链上游。</p>
+    </div>
+
+    <!-- 1. 沪电股份 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">沪电股份</span><span class="stock-code">002463.SZ</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">110.00</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value neutral-val">108.68</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">110.80 / 105.58</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value neutral-val">-0.03%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">76.08亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>AI服务器/数据中心PCB龙头，Q1业绩预增50%+。今日高开低走但收盘基本持平（-0.03%），同行胜宏科技已涨至196.28元（+0.4亿成交），沪电相对滞涨明显，估值仍处于AI硬件链中等水平（PE~30x）。深度绑定英伟达/AMD/华为算力服务器订单，订单能见度延伸至2027年。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>本周Q1财报（5/13-15）业绩兑现；H100/B200交付高峰；CPO渗透率提升带动高速PCB需求。</div>
+            <div class="info-block"><strong>风险提示：</strong>客户集中度高；铜价等原材料波动；CPO/光通信高位回调拖累。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 2. 君实生物 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">君实生物</span><span class="stock-code">688180.SH</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">39.47</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">42.08</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+6.91%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">11.33亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>国产PD-1拓益+JS113双管线全球化推进，与外资授权合作（BMS+礼来）兑现节奏明确。Q1医药生物业绩反转+5%+BD出海2026年Q1已达2025全年四成。今日午后跟随创新药板块跟涨+6.91%（凯普生物+10%，南新制药20cm涨停）。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>5月底AACR/ASCO学术会议；JS113海外Phase III里程碑；BD授权额度提升。</div>
+            <div class="info-block"><strong>风险提示：</strong>研发管线失败风险；医保谈判降价压力；融资稀释风险。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 3. 药明康德 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">药明康德</span><span class="stock-code">603259.SH</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">106.65</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">108.72</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+1.80%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">57.79亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>CXO左侧布局核心标的。前期受美国生物安全法案压制，估值大幅杀至历史底部。Q1业绩反转信号明确（CRDMO双轮驱动），美国《生物安全法》立法风险持续淡化。机构持仓回流明显。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>Q1季报披露在即；美国生物安全法案缓和；创新药BD出海热潮带动CDMO订单。</div>
+            <div class="info-block"><strong>风险提示：</strong>地缘政策反复；美国客户订单不确定性；汇率波动。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 4. 韦尔股份 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">韦尔股份</span><span class="stock-code">603501.SH</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">100.08</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">101.38</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+2.22%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">33.12亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>国产CIS图像传感器龙头，手机+车规双驱动。相比海光信息/寒武纪/澜起科技已极致拉升，韦尔股份估值合理（PE~35x）+股价位于100元中位区域，是半导体设计链的"左侧高确定性"品种。与小米/华为/比亚迪绑定深度。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>Q1车规CIS订单放量；小米SU7/YU7销量超预期带动车规出货；旗舰手机OV50系列发布。</div>
+            <div class="info-block"><strong>风险提示：</strong>消费电子需求疲软；车规CIS竞争加剧；存货跌价风险。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 5. 金山办公 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">金山办公</span><span class="stock-code">688111.SH</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">270.05</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">272.91</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">274.34 / 267.21</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+0.61%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">29.86亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>WPS AI国产Office龙头。AI+SaaS左侧标的，2024-2025年已大幅调整后估值合理（PS~14x）。今日+0.61%窄幅走稳，不参与算力链狂欢但量能温和。WPS AI付费转化加速，B端政企订单恢复，C端订阅用户突破3000万。被市场遗忘但基本面持续兑现。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>WPS AI 3.0版本发布；信创Office渗透率提升；Q1订阅收入超预期。</div>
+            <div class="info-block"><strong>风险提示：</strong>AI模型竞争激烈；ToC订阅增速放缓；估值修复需要时间。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 6. 三花智控 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">三花智控</span><span class="stock-code">002050.SZ</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">51.74</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value down">51.21</span></div>
+                <div class="price-item"><span class="label">最高/最低</span><span class="value">51.89 / 50.93</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value down">-0.93%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">92.65亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>人形机器人核心零部件龙头（机电关节+热管理）+全球空调热管理寡头。今日小幅回调-0.93%但量能维持高位（92.65亿活跃度居前），属于强势中的健康调整。深度绑定特斯拉Optimus供应链（机电关节模组NRE+SOP订单），墨西哥工厂2026Q4投产。机器人板块5/8主力净流入第一，三花是首推β品种。基本面（空调+新能源车）稳健提供安全边际。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>5月底Q1财报；Optimus 2026下半年量产启动；墨西哥工厂进度更新。</div>
+            <div class="info-block"><strong>风险提示：</strong>Optimus量产节奏不及预期；空调主业增长放缓；汇率波动。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 7. 法拉电子 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">法拉电子</span><span class="stock-code">600563.SH</span></div>
+                <div class="trend-badge bullish-badge">看多</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">123.81</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">128.70</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+4.63%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">15.11亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>薄膜电容龙头。新能源车+光伏逆变器+储能+AI电源四重需求驱动。AI电源（液冷+UPS+服务器电源）需求爆发，公司是宁德/比亚迪/阳光/华为电源核心供应商。前期股价已突破年线但相对算力链高位股仍滞涨。今日+4.63%结构性优势显现。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>Q1财报披露；AI服务器电源高景气；储能装机环比加速；新能源车4月销量。</div>
+            <div class="info-block"><strong>风险提示：</strong>原材料BOPP膜价格波动；储能价格战；新增产能爬坡风险。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+
+    <!-- 8. 比亚迪 -->
+    <div class="trend-card">
+        <div class="trend-bar pick-bar"></div>
+        <div class="pick-badge">🔥 精选推荐</div>
+        <div class="trend-content">
+            <div class="trend-header">
+                <div><span class="stock-name">比亚迪</span><span class="stock-code">002594.SZ</span></div>
+                <div class="trend-badge neutral-badge">震荡</div>
+            </div>
+            <div class="price-row">
+                <div class="price-item"><span class="label">开盘</span><span class="value">100.02</span></div>
+                <div class="price-item"><span class="label">收盘</span><span class="value up">100.44</span></div>
+                <div class="price-item"><span class="label">涨跌幅</span><span class="value up">+0.42%</span></div>
+                <div class="price-item"><span class="label">成交额</span><span class="value">48.13亿元</span></div>
+            </div>
+            <div class="info-block"><strong>推荐理由：</strong>全球新能源车销量冠军。4月销量再创新高，海外销量占比突破20%。腾势/方程豹/仰望品牌矩阵打开高端市场。柏基投资Q1披露重仓加仓。当前100元附近相对2026年初下跌幅度近30%，估值进入历史低位区域（PE~18x）。</div>
+            <div class="info-block"><strong>核心催化剂：</strong>5月销量公布（5/15左右）；海外（巴西/泰国/欧洲）销量超预期；Q2全新车型发布；储能业务拆分上市预期。</div>
+            <div class="info-block"><strong>风险提示：</strong>国内价格战延续；海外贸易摩擦（欧盟关税）；产能利用率压力。</div>
+            <div class="info-block"><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- 明日展望 -->
+<div class="section">
+    <div class="section-title"><span class="icon">🔮</span>明日（5/12 周二）展望</div>
+    <div class="card">
+        <div class="key-points">
+            <h4>📌 关键观察点</h4>
+            <ul>
+                <li><strong>沪指4200点能否站稳</strong>：今日突破后回踩验证4200整数关口是否成有效支撑。若放量站稳则打开4300空间。</li>
+                <li><strong>科创50连涨节奏</strong>：单日+4.65%短期透支，关注高位算力链（寒武纪/海光/澜起）是否出现获利兑现，警惕板块回吐。</li>
+                <li><strong>4月CPI/PPI数据</strong>：本周公布（5/12-13预期）。若CPI回升超预期（>0.3%同比）+PPI改善则进一步打开货币宽松预期。</li>
+                <li><strong>中芯国际上会审议</strong>：5/11上会通过后或催化半导体国资整合板块进一步行情。</li>
+                <li><strong>港股科网修复</strong>：阿里大跌3.67%/快手-2.55%是否企稳。腾讯Q1财报（约5/14）+阿里财报临近窗口。</li>
+                <li><strong>特朗普中东行</strong>：5/12-15访问沙特/卡塔尔/阿联酋，关注地缘事件催化（油气/军工/航运）。</li>
+            </ul>
+        </div>
+        <div class="key-points" style="background:rgba(239,68,68,0.06);border-left:3px solid #f87171;">
+            <h4 style="color:#f87171">⚠️ 风险提示</h4>
+            <ul>
+                <li>科创50单日+4.65%+连续放量3.57万亿，短期顶部信号需警惕（量价背离/分时跳水）</li>
+                <li>北证50已连续两日跑输（-0.70%），中小盘补跌风险加大</li>
+                <li>港股A股科技股走势背离（A股+4.65% vs 港股+0.07%），需关注资金回流港股</li>
+                <li>美10年期国债收益率回升至4.45%，全球流动性边际收紧风险</li>
+                <li>本周中美关税谈判窗口/4月经济数据双重事件，市场分歧加大</li>
+            </ul>
+        </div>
+        <div class="key-points" style="background:rgba(34,197,94,0.06);border-left:3px solid #4ade80;">
+            <h4 style="color:#4ade80">💡 操作策略</h4>
+            <ul>
+                <li><strong>主升浪期持仓为主</strong>：北向+杠杆+成交量三共振下，明确主升浪+结构牛信号，<strong>不轻易降仓</strong>。</li>
+                <li><strong>避免追涨</strong>：寒武纪/海光信息/澜起科技等已极致拉升标的暂避，等待健康回踩。</li>
+                <li><strong>关注左侧低位补涨</strong>：CXO/医药/光伏左侧；机器人产业链上游（三花/拓普）；AI电源（法拉/沪电）。</li>
+                <li><strong>港股逢低布局</strong>：阿里130附近、腾讯460附近、美团82-83附近为分批建仓窗口。</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    📊 数据来源：新浪财经实时行情接口、东方财富、雪球、Wind、中证网、央视财经收评<br>
+    生成时间：2026-05-11 16:30 · 仅供研究参考，不构成投资建议 · 市场有风险，投资需谨慎
+</div>
+
+</div>
+</body>
+</html>
