@@ -1,0 +1,88 @@
+  <article class="paper" id="p6">
+    <h3 class="paper-title">RL-2 · dGRPO: Combining On-Policy Optimization and Distillation for Long-Context Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Instituto Superior Técnico, Instituto de Telecomunicações, ELLIS Unit Lisbon</span>
+      <span>👤 Miguel Moura Ramos, Duarte M. Alves, André F. T. Martins</span>
+      <span><a href="https://arxiv.org/abs/2605.12227" target="_blank">arXiv:2605.12227</a></span>
+      <br><span class="tag tag-rl">RL</span><span class="tag tag-rl">GRPO</span><span class="tag tag-rl">Long-Context</span><span class="tag tag-rl">Distillation</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>把 LLM 适配到长上下文 (≥32K) 推理任务有三类后训练方法，各有缺陷：(1) <strong>SFT/KD</strong> 是 off-policy，在长 horizon 下严重 exposure bias 且无法从模型自身错误中恢复；(2) <strong>GRPO</strong>（on-policy RLVR）正确对齐生成分布，但奖励稀疏 → 长链反传梯度方差大、样本效率低；(3) <strong>OPD（On-Policy Distillation）</strong>给 dense 的 token-level 监督，但无法直接优化任意 reward。本文动机：让一个方法同时具备<strong>on-policy + dense 信号 + reward objective</strong>，专门用于长上下文推理。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 后训练策略全景表（论文 Table 1）</strong>
+        <table>
+          <thead><tr><th>方法</th><th>On-policy</th><th>Dense Signal</th><th>Reward Objective</th><th>Exposure Bias</th></tr></thead>
+          <tbody>
+            <tr><td>SFT / KD</td><td>✗</td><td>✓</td><td>✗</td><td>High</td></tr>
+            <tr><td>OPD</td><td>✓</td><td>✓</td><td>✗</td><td>Reduced</td></tr>
+            <tr><td>GRPO</td><td>✓</td><td>✗</td><td>✓</td><td>Low</td></tr>
+            <tr><td class="best">dGRPO（本文）</td><td class="best">✓</td><td class="best">✓</td><td class="best">✓</td><td class="best">Low</td></tr>
+          </tbody>
+        </table>
+        <p>"四项全占"是论文的核心定位差异。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Token-level MDP + GRPO group advantage</strong>
+        <p>把生成形式化为 token-level MDP \((\mathcal{S},\mathcal{A},r,\mathcal{T})\)。GRPO 在一组 \(G\) 条 trajectory 上计算 group-relative advantage：</p>
+        $$ A_i \;=\; \frac{R_i - \mathrm{mean}_j R_j}{\mathrm{std}_j R_j} $$
+        <p>但奖励 \(R\) 仅在轨迹尾部可得，token-level 无 dense signal。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ dGRPO 损失：GRPO + OPD 双目标融合</strong>
+        <p>dGRPO 在每个 token \(t\) 上叠加一个 KL-to-teacher 的 dense 项：</p>
+        $$ \mathcal{L}_{\text{dGRPO}} \;=\; \mathcal{L}_{\text{GRPO}}(A_i)\;+\;\beta \cdot \mathbb{E}_t\Bigl[\mathrm{KL}\!\bigl(\pi_\theta(\cdot|s_t)\,\|\,\pi_{\text{teacher}}(\cdot|s_t)\bigr)\Bigr] $$
+        <p>关键：teacher 的概率分布在<strong>当前 student 采样的 on-policy state</strong> \(s_t\) 上 query，避免了 SFT 的 off-policy mismatch。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ LongBlocks 合成数据集 + 两阶段训练 recipe</strong>
+        <p>论文配套发布 <strong>LongBlocks</strong>——合成的长上下文训练集，含 multi-hop reasoning、contextual grounding、long-form generation 三类。Recipe：<strong>Stage 1</strong> SFT cold-start（or KD warm-start，论文消融两者）→ <strong>Stage 2</strong> dGRPO 强化。论文证明跳过 Stage 1 直接 RL-Zero（dGRPO from base）会陷入更差的 short/long-context trade-off，验证 Stage 1 的稳定化作用。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>RULER 128K 任务：从 11.0 拉到 44.5</strong>
+        <ul>
+          <li><strong>设置</strong>：base model = Qwen3-1.7B（Yang et al., 2025），benchmark = RULER（多任务长上下文 retrieval/reasoning），分别测试 4K-128K。</li>
+          <li><strong>关键观察</strong>：Qwen3-1.7B 在 128K 几乎崩溃（11.0%）；dGRPO recipe 把 128K 性能拉到 <strong>44.5%（4× 提升）</strong>。</li>
+          <li><strong>整体平均</strong>：RULER avg 从 64.5 → 74.8（+10.3）。</li>
+          <li><strong>不损害 short context</strong>：4K 任务 87.4 → 88.3（持平且略有提升）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>RULER（论文 Table 3）：</p>
+      <table>
+        <thead><tr><th>Model</th><th>Avg.</th><th>4K</th><th>8K</th><th>16K</th><th>32K</th><th>64K</th><th>128K</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen3-1.7B (base)</td><td>64.5</td><td>87.4</td><td>84.2</td><td>81.0</td><td>72.0</td><td>51.5</td><td>11.0</td></tr>
+          <tr><td class="best">Qwen3-1.7B + SFT + dGRPO (本文)</td><td class="best">74.8</td><td class="best">88.3</td><td class="best">85.4</td><td class="best">84.7</td><td class="best">80.4</td><td class="best">65.6</td><td class="best">44.5</td></tr>
+        </tbody>
+      </table>
+      <p>论文还报告 ∞Bench 与 LongBench 上的一致性提升，并在 short/long-context Pareto frontier 上击败更大的 LLaMA-3.2-3B、Gemma3-4B、Qwen3-4B + YaRN。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) RL-Zero（直接 dGRPO 不做 SFT cold-start）→ short/long trade-off 变差；(b) GRPO（去掉蒸馏项）→ 奖励上升但生成 noisy，在很多任务上不收敛；(c) OPD（去掉 reward 项）→ 短上下文保留但长上下文增益不够；(d) cold-start 用 SFT 还是 KD：论文 C.5 给出消融，差距小但 KD 略稳；(e) short/long 数据混合比：C.4 给出最优 ratio。<strong>局限</strong>：dGRPO 需要 high-quality teacher（论文用 Qwen3-32B 教 Qwen3-1.7B），teacher quality 决定上限；LongBlocks 是合成数据，与真实长文档任务的 domain gap 待验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>dGRPO 给出了"reward + dense supervision + on-policy"三全的优雅 recipe，且最大亮点是<strong>不牺牲短上下文性能的同时把 128K 性能拉到 4×</strong>——这正是工业界长上下文 RL 训练最关心的问题。值得在 OpenAI / Anthropic / Qwen 类长上下文 RL pipeline 中复用。LongBlocks 数据集开放后将进一步降低长上下文 RL 的入门门槛。</p>
+    </div>
+  </article>

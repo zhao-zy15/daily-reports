@@ -1,0 +1,86 @@
+  <h2 class="section-title medical">⚕️ Medical（Medical LLMs）</h2>
+
+  <article class="paper" id="p11">
+    <h3 class="paper-title">Medical-1 · MedHopQA: A Disease-Centered Multi-Hop Reasoning Benchmark for LLM Biomedical QA</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 NIH National Library of Medicine, UIUC, U. Michigan Medical School</span>
+      <span>👤 Rezarta Islamaj, Robert Leaman, Joey Chan, ... Zhiyong Lu et al. (16 authors)</span>
+      <span><a href="https://arxiv.org/abs/2605.12361" target="_blank">arXiv:2605.12361</a></span>
+      <br><span class="tag tag-medical">Medical</span><span class="tag tag-medical">Benchmark</span><span class="tag tag-medical">Multi-Hop QA</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>现有生物医学 QA benchmark（MedQA、MedMCQA、PubMedQA、MMLU-med）存在四大顽疾：(i) <strong>多选题格式</strong>让模型可以通过模式匹配蒙对，无法区分推理与记忆；(ii) <strong>性能饱和</strong>，SOTA LLM 在 MedQA 已超 95%；(iii) <strong>训练数据污染</strong>，USMLE 题、PubMed 摘要、印度医学入学题广泛存在于 LLM 预训练；(iv) <strong>推理深度有限</strong>，多为单跳事实回忆。本文提出 MedHopQA，专为<strong>2-hop 多跳生物医学推理</strong>设计的 disease-centered 基准。配套有 BioCreative IX 共享任务。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 三大设计约束（Design Principles）</strong>
+        <p>每个 question 必须满足：</p>
+        <ul>
+          <li><strong>(a) 至少 2-hop 结构</strong>：答案信息分布在 ≥2 篇 Wikipedia 文档中，单文档检索不足以答题。</li>
+          <li><strong>(b) Open-ended 自由文本答案</strong>：不允许选择题——避免选项排除法的捷径。</li>
+          <li><strong>(c) Synonym-inclusive gold annotation</strong>：每个金标答案附带所有词汇 / 概念等价同义词（来自医学 ontology），避免因用词不同被误判错。</li>
+        </ul>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Seed Page 选择（Wikipedia 作为来源）</strong>
+        <p>Wikipedia 普遍出现在 LLM 预训练语料里——<strong>这是有意的设计</strong>：任何需要跨 Wikipedia 文档合成的题目，本质上测试的就是模型的<strong>组合推理能力</strong>（因为单文档事实已被记住）。1300 个独立 Wikipedia 疾病种子页构成 dataset 基础。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 数据生成 Pipeline：AI 辅助 + 人工核验</strong>
+        <p>多阶段 pipeline：(1) 选 2 个 seed 页（必须有显式医学关联）；(2) AI 生成候选 question；(3) 验证 2-hop 性（answer 不能直接在任一单页找到）；(4) 收集 synonyms 并由专家审核；(5) answer-type 分类（yes/no, disease, gene/protein, chemical/drug, chromosome 等）。论文 Figure 1 给出完整 framework。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ LLM-as-Judge 评估协议</strong>
+        <p>评估时给 LLM 仅 question + short instruction prompt，<strong>不提供 Wikipedia 源文档</strong>——隔离 retrieval 能力，纯粹测试 model 内部知识 + 推理。Final answer 通过<strong>同义词字典</strong>匹配 gold answer。论文规则化了 yes/no、entity-based、free-text 三类评分逻辑。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>2-hop 例题示意（论文示意）</strong>
+        <ul>
+          <li><strong>Page A</strong>: "Tay-Sachs disease" 提到该病由 HEXA 基因缺陷导致。</li>
+          <li><strong>Page B</strong>: "HEXA gene" 提到 HEXA 位于 15 号染色体。</li>
+          <li><strong>Question</strong>: "On which chromosome is the gene mutated in Tay-Sachs disease located?"</li>
+          <li><strong>Gold answer</strong>: "15" / "chromosome 15" / "15q23.2-q24.1"（含同义形式）。</li>
+          <li><strong>2-hop 必要性</strong>：单看 Page A 不能给染色体号；单看 Page B 不能链回疾病。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>四个前沿 LLM（zero-shot，不给文档）：</p>
+      <table>
+        <thead><tr><th>Model</th><th>Overall Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td>GPT-4o</td><td>~66.3%（区间下界）</td></tr>
+          <tr><td>Claude Sonnet 4.5</td><td>区间中值</td></tr>
+          <tr><td>Gemini 2.5 Pro</td><td>区间中值</td></tr>
+          <tr><td class="best">GPT-5.1</td><td class="best">~83.4%（区间上界）</td></tr>
+        </tbody>
+      </table>
+      <p>论文摘要明示总体 accuracy 范围为 66.3% - 83.4%。Performance 在 chemical / anatomical 类最强，disease / gene-protein 类最弱（细粒度语义区分）。<strong>未饱和 + 大区间</strong>——这正是好 benchmark 该有的样子。</p>
+      <p>数据集组成：1300 unique Wikipedia 疾病页；Disease 21.3%、Gene/Protein 11.8%、Chemical/Drug 8.4%、Chromosome 8.7%、Yes/No 30%。近三分之三的疾病具有多 category 标签（如 neurological + metabolic + genetic）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>讨论：(a) 验证了 multi-hop 必要性——把 question 单文档化后 accuracy 明显上升，说明 2-hop 确实是难点；(b) 同义词字典对评估稳定性至关重要——纯 exact match 会低估模型 10-15 pp；(c) BioCreative IX 共享任务（NLM 主办）参与团队的结果与作者团队评估趋势一致，验证了 benchmark 的 reproducibility。<strong>局限</strong>：(i) Wikipedia 偶有过时或不准确条目；(ii) 2-hop 是固定深度，对 3+ hop reasoning 不直接覆盖；(iii) 评估依赖 LLM-as-Judge 或字典匹配，复杂 free-text 答案可能仍有歧义。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>MedHopQA 是 NLM 牵头、生物医学 NLP 社区"打破 benchmark 饱和"的标志性工作。<strong>核心创新</strong>不在算法，而在<strong>评估学</strong>——用 multi-hop + open-ended + synonym 三重约束让 frontier LLM 重新落到 66-83% 区间，给 reasoning evaluation 留出真正的判别空间。配合 BioCreative IX 共享任务和开放发布，预计将成为下一代医学 LLM（Med-PaLM 4、ClinicalBERT-LLM）的标准评估之一。这对我的清华博士论文 CliniQ / DR.EHR 工作有直接借鉴价值——多跳 + open-ended 也正是 EHR retrieval 应该走的方向。</p>
+    </div>
+  </article>

@@ -1,0 +1,88 @@
+  <article class="paper" id="p12">
+    <h3 class="paper-title">Medical-2 · MedMemoryBench: Benchmarking Agent Memory in Personalized Healthcare</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Zhejiang University, Ant Group, Alibaba Group</span>
+      <span>👤 Yihao Wang, Haoran Xu, Renjie Gu, Yixuan Ye, ... Jinjie Gu (13 authors)</span>
+      <span><a href="https://arxiv.org/abs/2605.11814" target="_blank">arXiv:2605.11814</a></span>
+      <br><span class="tag tag-medical">Medical</span><span class="tag tag-medical">Agent Memory</span><span class="tag tag-medical">Healthcare</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>蚂蚁集团（Ant Group）运营着一个服务<strong>数千万 active 用户</strong>的健康管理 agent。在生产环境中观察到：(i) 现有 agent memory benchmark（LoCoMo、LongMemEval、MemoryAgentBench 等）都是 open-domain 对话，<strong>无法捕捉医疗高 stakes 复杂度</strong>；(ii) 真实部署中"missed retrieval"和"over-retrieval"频繁发生；(iii) 静态 evaluation 协议无法反映"动态记忆累积"。本文出于工业一手痛点，构建首个面向<strong>个性化健康 agent 记忆</strong>的压力测试 benchmark。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Human-Agent 协作数据合成 pipeline</strong>
+        <p>合成 ~2,000 sessions / 16,000 interaction turns 的长时医疗轨迹。基于临床有依据的<strong>合成患者原型</strong>（patient archetypes）：人口学 + 既往史 + 用药 + 检验结果。LLM 生成对话流，专家审核所有关键医疗事实 ground truth。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② "Evaluate-While-Constructing"（流式评估）协议</strong>
+        <p>不同于传统"先构建完整记忆再评估"，本文提出流式协议：每 \(\Delta = 10\) 个 session 触发一次 checkpoint 评估：</p>
+        $$ \text{StreamEval}(p,\Delta) = \bigcup_{k=1}^{\lfloor N/\Delta \rfloor} \mathrm{Evaluate}(M_{k\Delta},\;Q_{k\Delta}) $$
+        <p>且 query 的所有 source knowledge points 必须在 checkpoint 之前出现，<strong>防止 future information leakage</strong>：</p>
+        $$ \forall q\in Q_t:\;\max\{\text{session\_id}(kp) : kp \in \mathrm{src}(q)\} \leq t $$
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 六大查询类型（Query Types）</strong>
+        <p>论文设计了 6 类 query 测试不同 memory 能力：(EEM) Event Extraction &amp; Memorization、(TLA) Temporal Logic &amp; Aggregation、(SUA) State Update Awareness、(MQ) Medical Q&amp;A、(IG) Information Grounding、(MCD) Multi-Cycle Diagnosis。每类专门考察记忆 system 的一种 failure mode。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Memory Saturation 现象的形式化</strong>
+        <p>论文形式化并系统研究了"<strong>memory saturation</strong>"——持续信息流入会主动降级 retrieval / reasoning robustness。在 Efficient（纯医疗轨迹）和 Mixed（注入 auxiliary 噪声 session）两种 setting 下，发现所有 11 个主流记忆方法都在 Mixed setting 下显著掉点，揭示噪声 resilience 是关键短板。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>SUA（State Update Awareness）问题示例</strong>
+        <ul>
+          <li><strong>Session 1</strong>: 患者报告每天服用 metformin 500mg。</li>
+          <li><strong>Session 5</strong>: 医生调整剂量到 1000mg。</li>
+          <li><strong>Session 15</strong>: Agent 被问"患者当前的 metformin 剂量是多少？"</li>
+          <li><strong>错误答案</strong>: 500mg（基于 Session 1，未更新）。</li>
+          <li><strong>正确答案</strong>: 1000mg。</li>
+          <li><strong>评测结果</strong>：MemOS Efficient setting SUA accuracy 仅 66%；Mixed setting 进一步降到 58%——saturation 把它打掉。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>论文 Table 2 主结果 (Efficient / Mixed 平均 response accuracy，越高越好)：</p>
+      <table>
+        <thead><tr><th>方法类型</th><th>Method</th><th>Avg. Eff.</th><th>Avg. Mix.</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Unstructured</td><td>Long-Context</td><td>51.58</td><td>38.75</td></tr>
+          <tr><td>BM25</td><td>34.70</td><td>28.86</td></tr>
+          <tr><td>Embedding</td><td>42.15</td><td>40.78</td></tr>
+          <tr><td rowspan="3">Graph-Structured</td><td>GraphRAG</td><td>33.65</td><td>32.03</td></tr>
+          <tr><td>HippoRAG-v2</td><td>33.69</td><td>28.96</td></tr>
+          <tr><td>ReMem</td><td>33.93</td><td>32.78</td></tr>
+          <tr><td rowspan="4">Flat-Extracted</td><td>Mem0</td><td>39.20</td><td>35.83</td></tr>
+          <tr><td>A-Mem</td><td>44.84</td><td>29.27</td></tr>
+          <tr><td class="best">MemOS</td><td class="best">48.16</td><td class="best">40.98</td></tr>
+          <tr><td>MemRL</td><td>46.37</td><td>37.45</td></tr>
+        </tbody>
+      </table>
+      <p>核心观察：(1) <strong>所有方法 Mixed 都掉点</strong>——saturation 普遍存在；(2) 最强方法（MemOS）也只到 48 分（满分 100），<strong>未饱和</strong>；(3) 图结构方法不一定胜过 flat extraction，违反直觉；(4) 长上下文 + LLM 检索表现意外不错——说明长 context 模型本身就是某种 implicit memory。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>关键观察：(a) 复杂医疗推理（MCD multi-cycle diagnosis）所有方法都低于 35%——这是 frontier；(b) Mixed 与 Efficient 差距越大说明噪声 robustness 越差，A-Mem 差距 15+ 点暴露其在生产环境的脆弱性；(c) 6 类 query 中 IG 和 MCD 是最大 bottleneck。<strong>局限</strong>：(i) 数据是合成而非真实临床（隐私限制）；(ii) "patient archetype"无法覆盖所有 corner case；(iii) 评估依赖 LLM judge，复杂临床判断的可信度需要更多验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>MedMemoryBench 把"工业生产 agent 在跑什么坑"做成了学术 benchmark——这是工业 AI 团队对学界最大的贡献之一。<strong>"Memory Saturation"</strong>作为现象首次被形式化，让 agent memory 社区从"对话记得多少"转向"压力下还记得几成"。论文已开源数据 + benchmark (github.com/AQ-MedAI/MedMemoryBench)，对所有医疗 agent 研究者直接可用。对清华俞声实验室与 DR.EHR 研究的启发：EHR retrieval 同样应进入"streaming evaluation"和"saturation aware"的范式。</p>
+    </div>
+  </article>

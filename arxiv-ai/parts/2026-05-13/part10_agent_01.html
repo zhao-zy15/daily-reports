@@ -1,0 +1,92 @@
+  <h2 class="section-title agent">🤖 Agent（LLM Agent）</h2>
+
+  <article class="paper" id="p9">
+    <h3 class="paper-title">Agent-1 · OLIVIA: Online Learning via Inference-time Action Adaptation for ReAct Agents</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-11</span>
+      <span>🏛 UC San Diego, UIUC, Adobe Research</span>
+      <span>👤 Sheldon Yu, Junda Wu, Xintong Li, ... Jiawei Han, Jingbo Shang, Julian McAuley</span>
+      <span><a href="https://arxiv.org/abs/2605.11169" target="_blank">arXiv:2605.11169</a></span>
+      <br><span class="tag tag-agent">Agent</span><span class="tag tag-agent">ReAct</span><span class="tag tag-agent">Online Learning</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>部署后的 LLM agent 在重复任务流（tool calls、API 编排、企业工作流）中会遇到相似的 decision state，但<strong>静态 prompt 不学习</strong>——同样的错误反复犯，浪费 budget。已有 inference-time adaptation 方法（reflection、CLIN 记忆增强）通过修改 prompt context 间接调整行为，但它们：(i) 没有<strong>显式 decision layer</strong>对候选 action 打分；(ii) 不能表达 uncertainty；(iii) 难以从 step-level feedback 做 online update。本文提出 OLIVIA：把 ReAct agent 的最后一层 action selection 视为 contextual linear bandit，做轻量 online RL。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① ReAct Action Selection 形式化为 Contextual Linear Bandit</strong>
+        <p>每个 step 的 hidden state 作为 context \(x_t \in \mathbb{R}^d\)（来自<strong>冻结的 LLM</strong>），候选 action 集合 \(\mathcal{A}_t\)。Reward 由 verifier / 环境给出。论文证明在 LLM 输出层下，action 价值的<strong>线性近似</strong>是合理的：</p>
+        $$ \hat r(x_t,a) \;=\; \langle \theta, \phi(x_t,a)\rangle $$
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Hidden-State Decision Layer + LLM-aligned Initialization</strong>
+        <p>构建一个<strong>轻量的可训练打分层</strong>（线性 head），初始化用 LLM 自身在该任务的输出概率（softmax logits）作为初始 \(\theta_0\)。这保证 cold-start 时不丢弃 LLM 的先验知识，online update 只是在其上做<strong>residual 校正</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ UCB 探索（LinUCB）</strong>
+        <p>每步选择 action 时不是贪心 argmax，而是用 LinUCB 加置信带：</p>
+        $$ a_t^* \;=\; \arg\max_{a}\Bigl[\hat r(x_t,a) \;+\; \alpha\sqrt{\phi(x_t,a)^\top A_t^{-1} \phi(x_t,a)}\Bigr] $$
+        <p>其中 \(A_t = \sum_{s\le t}\phi_s\phi_s^\top + \lambda I\)。这给 agent 显式的 exploration mechanism——遇到不确定 action 会尝试，而不是反复犯错。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Step-Level Feedback + Online Update</strong>
+        <p>每步执行后从 environment 拿到 reward，做 ridge regression closed-form 在线更新 \(\theta_{t+1}\)：</p>
+        $$ \theta_{t+1} = (X_t^\top X_t + \lambda I)^{-1} X_t^\top r_t $$
+        <p>这是 \(O(d^3)\) 的轻量更新（\(d\) 是 hidden dim，可降维），完全不动 backbone LLM 参数。整个 agent 像一个"装了 RL controller 的 frozen 大脑"。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>ToolBench：从 ReAct 0.520 提升到 OLIVIA 0.585（+12.5% relative）</strong>
+        <ul>
+          <li><strong>设置</strong>：Qwen3-4B 作为 backbone，episode stream 持续到来；初始 100 episode 用作 warm-up，后续在线调整。</li>
+          <li><strong>Static baseline (ReAct)</strong>：F1 = 0.520（每 episode 独立、无学习）。</li>
+          <li><strong>CLIN（episodic memory）</strong>：F1 = 0.553，渐进改进但慢。</li>
+          <li><strong>OLIVIA</strong>：F1 = <strong>0.585</strong>，收敛更快、更高，纯靠 step-level reward 自适应。</li>
+          <li><strong>合成数据集 sanity check</strong>：用线性奖励的 \(\theta^*\) ground-truth bandit 验证；OLIVIA cumulative regret 和参数估计误差 \(\|\hat\theta_t - \theta^*\|_2^2\) 都收敛得最快——证明<strong>不是巧合而是真的恢复了 reward 结构</strong>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>4 个基准（ToolBench、TaskBench、TaskBench-MM、BFCL）× 2 个 backbone（Qwen3-4B、Mistral-7B），F1 macro：</p>
+      <table>
+        <thead><tr><th>Backbone</th><th>方法</th><th>ToolBench</th><th>TaskBench</th><th>TaskBench-MM</th><th>BFCL</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6">Qwen3-4B</td><td>CoT</td><td>0.211</td><td>0.030</td><td>0.031</td><td>0.082</td></tr>
+          <tr><td>BM25</td><td>0.353</td><td>0.116</td><td>0.127</td><td>0.181</td></tr>
+          <tr><td>ReAct</td><td>0.520</td><td>0.174</td><td>0.162</td><td>0.272</td></tr>
+          <tr><td>Bandit</td><td>0.348</td><td>0.155</td><td>0.126</td><td>0.242</td></tr>
+          <tr><td>CLIN</td><td>0.553</td><td class="best">0.211</td><td>0.170</td><td>0.307</td></tr>
+          <tr><td class="best">OLIVIA (本文)</td><td class="best">0.585</td><td>0.205</td><td class="best">0.178</td><td class="best">0.366</td></tr>
+          <tr><td rowspan="6">Mistral-7B</td><td>CoT</td><td>0.142</td><td>0.036</td><td>0.064</td><td>0.107</td></tr>
+          <tr><td>BM25</td><td>0.353</td><td>0.116</td><td>0.127</td><td>0.181</td></tr>
+          <tr><td>ReAct</td><td>0.386</td><td>0.178</td><td>0.146</td><td>0.281</td></tr>
+          <tr><td>Bandit</td><td>0.348</td><td>0.155</td><td>0.126</td><td>0.242</td></tr>
+          <tr><td>CLIN</td><td>0.394</td><td>0.193</td><td>0.127</td><td>0.324</td></tr>
+          <tr><td class="best">OLIVIA (本文)</td><td class="best">0.420</td><td class="best">0.208</td><td class="best">0.207</td><td class="best">0.352</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) 关闭 LLM-aligned init（随机 \(\theta_0\)）→ 收敛慢；(b) 关闭 UCB 用 \(\epsilon\)-greedy → 收敛慢且 final F1 略低；(c) exploration coefficient \(\alpha\)：在合理区间稳定，过小欠探索、过大过度探索都不好；(d) reward 设计（dense vs sparse step reward）：dense 收敛更快。<strong>局限</strong>：(i) 假设 action 价值的<strong>线性近似</strong>合理——对极端非线性任务可能失效；(ii) 需要 step-level reward signal，对 long-horizon sparse-reward agent 适用度有限；(iii) 不更新 backbone，长期改进上限受限于 backbone 表达能力。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>OLIVIA 给出了 <em>"frozen LLM + 显式可学 decision layer"</em>这条 deployment-friendly 的路径——既不动 backbone（避免 GPU 训练），又有真正的<strong>online learning + uncertainty quantification</strong>。这与"prompt tuning"和"全参数微调"形成正交补充，对企业级 agent 部署（每天数百万次调用）极为现实。论文的另一价值是在 4 个 benchmark + 2 个 backbone 上做了完整对照，统计严谨。</p>
+    </div>
+  </article>

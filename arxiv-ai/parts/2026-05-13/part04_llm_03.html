@@ -1,0 +1,81 @@
+  <article class="paper" id="p3">
+    <h3 class="paper-title">LLM-3 · Solve the Loop: Attractor Models for Language and Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 University of Southern California</span>
+      <span>👤 Jacob Fein-Ashley, Paria Rashidinejad</span>
+      <span><a href="https://arxiv.org/abs/2605.12466" target="_blank">arXiv:2605.12466</a></span>
+      <br><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Looped Transformer</span><span class="tag tag-llm">Reasoning</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>Looped Transformer / Universal Transformer 通过权重共享 + 循环细化潜在表征带来语言建模和推理增益，但有三大顽疾：(i) 显存随循环深度 \(T\) 线性增长（BPTT 全展开）；(ii) 训练高度不稳定；(iii) 推理深度被锁死，无法对难题"多想几步"。CoT 通过显式 token 写出"思考过程"绕开这些问题，但被迫把 thinking 路由到离散 token 通道——即使其本质应当是潜在表征的 refinement。<strong>Attractor Models</strong> 提出："让循环成为模型可以学会内化的计算"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Backbone + Attractor 双模块架构</strong>
+        <p>(a) <strong>Backbone</strong>（非循环 Transformer）一次前向给出初始嵌入提议 \(\hat z_0\)；(b) <strong>Attractor module</strong> \(g_\phi\) 求解不动点（fixed point）：</p>
+        $$ z^* \;=\; g_\phi(z^*,\; \hat z_0) $$
+        <p>解出 \(z^*\) 后再解码为 token 概率分布。这是 DEQ（Deep Equilibrium）思路与 Looped Transformer 的合流。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 隐式微分（Implicit Differentiation）—— 训练显存与深度无关</strong>
+        <p>训练时不展开循环，只对不动点方程求隐式雅可比：</p>
+        $$ \frac{\partial z^*}{\partial \theta} \;=\; (I - J_g)^{-1}\,\frac{\partial g_\phi}{\partial \theta} \bigg|_{z=z^*} $$
+        <p>用 Neumann 级数 / 线性 CG 求解。<strong>训练显存仅取决于 \(z^*\) 大小，与有效循环深度无关</strong>——这是 looped Transformer 此前最大痛点的根本性突破。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Equilibrium Internalization（均衡内化）— 论文亮点现象</strong>
+        <p>论文发现一个全新现象：<strong>fixed-point 训练会把 backbone 的初始 embedding \(\hat z_0\) 拉近不动点 \(z^*\)</strong>。因此推理时即使<strong>跳过 attractor solver</strong>（只用 backbone 一次前向），性能下降轻微。这意味着模型学会了"内化"循环——把"应当反复细化的事"在单次前向中就做掉。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 自适应推理深度（Adaptive Inference）</strong>
+        <p>因 attractor 是 contraction 算子，推理时按收敛误差 \(\|z^{(k+1)}-z^{(k)}\|<\epsilon\) 自适应停止。<strong>难题多迭代、易题少迭代</strong>，且若开启 equilibrium internalization 则可直接 0 步迭代——给了 latency-quality 的多种 deployment 选项。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>Sudoku-Extreme：27M Attractor vs 万亿前沿模型</strong>
+        <ul>
+          <li><strong>训练设定</strong>：仅用 ~1000 个 Sudoku-Extreme example，模型仅 27M 参数。</li>
+          <li><strong>结果</strong>：<strong>Sudoku-Extreme 91.4% / Maze-Hard 93.1%</strong>（论文摘要明示）。</li>
+          <li><strong>对比基线</strong>：Claude / GPT-o3 等 frontier 模型在这些 hard reasoning 任务上"完全失败"（论文原文："fail completely"）；专门的 recursive reasoner（如 TRM）在同等参数量级"collapse at larger sizes"。</li>
+          <li><strong>启示</strong>：可学习的不动点细化是 small-data + small-model + hard-reasoning 三难场景的解。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>语言建模（Pareto improvement vs 标准 Transformer 和 stable looped baselines）：</p>
+      <table>
+        <thead><tr><th>设置</th><th>Attractor 提升幅度</th><th>对比对象</th></tr></thead>
+        <tbody>
+          <tr><td>Lambada perplexity</td><td class="best">最高 −46.6%</td><td>同尺寸 Transformer</td></tr>
+          <tr><td>Downstream accuracy</td><td class="best">最高 +19.7%</td><td>同尺寸 Transformer</td></tr>
+          <tr><td>770M Attractor vs 1.3B Transformer</td><td class="best">超越（且对方训练 2× tokens）</td><td>FLOPs frontier</td></tr>
+          <tr><td>Sudoku-Extreme</td><td class="best">91.4% (27M, ~1000 ex.)</td><td>Claude / GPT-o3 失败</td></tr>
+          <tr><td>Maze-Hard</td><td class="best">93.1% (27M)</td><td>Claude / GPT-o3 失败</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) 关闭 equilibrium internalization → 推理时必须保留 solver，latency 翻倍但精度无明显损失；(b) 用全展开 BPTT 训练 → 显存爆炸 OOM 且训练发散；(c) attractor 模块过浅 → contraction 不成立、无法收敛。<strong>局限</strong>：CG 内迭代引入 ~20-40% 推理 latency；attractor 存在性 / 唯一性需 contraction 正则；当前实验主要在中小模型，超大规模（70B+）可扩展性待验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>把 DEQ 思想正式引入语言推理 backbone 是 2025-2026 年迭代细化派路线的一个里程碑。<strong>"Equilibrium Internalization"</strong>是本文最有趣的发现——它暗示循环 / 反复 reasoning 可以被压缩进单次前向计算，这对推理 LLM 的部署有直接价值。对 frontier 推理任务（数独、迷宫等）的"小模型暴打大模型"结果尤其惊艳。</p>
+    </div>
+  </article>

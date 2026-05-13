@@ -1,0 +1,82 @@
+  <h2 class="section-title rl">🎯 RL（LLM RL &amp; Alignment）</h2>
+
+  <article class="paper" id="p5">
+    <h3 class="paper-title">RL-1 · Breaking Winner-Takes-All: Cooperative Policy Optimization Improves Diverse LLM Reasoning (GCPO)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Sun Yat-sen University (ISEE Lab)</span>
+      <span>👤 Haoxuan Chen, Tianming Liang, Wei-Shi Zheng, Jian-Fang Hu</span>
+      <span><a href="https://arxiv.org/abs/2605.11461" target="_blank">arXiv:2605.11461</a></span>
+      <br><span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">GRPO</span><span class="tag tag-rl">Diversity</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>GRPO（Group Relative Policy Optimization）已成为 RLVR 训练 LLM 推理的主流，但被实证发现存在<strong>"exploration collapse"</strong>：模型在提升 pass@1 的同时把概率质量集中到少数同质化的推理模式上，丧失多解能力。现有解法（熵正则化、diversity bonus）只是叠加奖励，<strong>没有改变 winner-takes-all 的本质</strong>——rollouts 之间仍是相互竞争而非协作。本文换思路：把"分组"重新定义为"团队协作"，让每个 rollout 因其对团队覆盖度的贡献被奖励。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 团队价值：奖励加权语义嵌入的 Determinantal Volume</strong>
+        <p>定义一组 \(G\) rollouts \(\{x_1,\dots,x_G\}\) 的语义嵌入 \(\phi(x_i)\) 与奖励 \(r_i \in \{0,1\}\)（验证器给出）。Team value 是<strong>正确且非冗余</strong>样本所张成的子空间体积：</p>
+        $$ V(\mathcal{G}) \;=\; \det\!\bigl(\Phi^\top \mathrm{diag}(r_1,\dots,r_G)\,\Phi\bigr) $$
+        <p>这是 DPP（Determinantal Point Process）的标准构造——只有正确（\(r_i=1\)）且彼此<strong>不平行</strong>的 rollouts 才贡献体积。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Shapley-based 成员价值（边际贡献）</strong>
+        <p>把团队奖励 \(V(\mathcal{G})\) 重新分配给每个 rollout：用<strong>平均边际贡献</strong>（Shapley value）：</p>
+        $$ \phi_i \;=\; \mathbb{E}_{S\subseteq \mathcal{G}\setminus\{i\}}\bigl[V(S\cup\{i\}) - V(S)\bigr] $$
+        <p>解读：rollout \(i\) 加入子集 \(S\) 时带来多少新覆盖。冗余 rollouts 边际贡献为 0，被自然惩罚。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 奖励守恒（Reward Conservation）</strong>
+        <p>论文证明 Shapley 重分配满足 \(\sum_i \phi_i = V(\mathcal{G})\)（task-level reward budget 守恒）。这意味着 GCPO 不引入额外奖励 inflation，仅<strong>重新切蛋糕</strong>——把同样的奖励池更倾斜给非冗余正确 rollout。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 大组规模的 Shapley 估计（Permutation Estimator + 增量 logdet）</strong>
+        <p>精确 Shapley 是 \(O(2^G)\)，论文用 permutation 采样 + 增量 log-determinant 更新（\(O(G \log G)\) per step）实现。Table 3 显示 GCPO 单步训练时间 320.6s，相对 GRPO 的 316.9s 仅多 3.7s（+1.2%）——计算 overhead 可忽略。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>AIME 数学题：4 个 rollouts 的协作打分</strong>
+        <ul>
+          <li><strong>问题</strong>：求 \(\int_0^1 \frac{\ln(1+x)}{x}\,dx\)。</li>
+          <li><strong>4 个 rollouts</strong>：(A) 级数展开 → 0.8225（正确）；(B) Beta 函数法 → 0.8225（正确）；(C) 同 (A) 几乎逐字复制 → 0.8225（正确但冗余）；(D) 数值积分 → 0.79（错误）。</li>
+          <li><strong>GRPO 处理</strong>：A、B、C 都得满分 advantage，D 被惩罚 → 概率质量大量分配到"级数展开"路径。</li>
+          <li><strong>GCPO 处理</strong>：团队体积只计 A、B 张成的 2D 子空间；C 边际贡献 ≈ 0 被惩罚，D 因 \(r=0\) 不贡献体积。<strong>奖励倾向 A 和 B 而非 C</strong>，自然激励多路径。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>AIME 2025（Pass@1 + computational overhead，论文 Table 3）：</p>
+      <table>
+        <thead><tr><th>Method</th><th>Time/step (s)</th><th>AIME25 Pass@1 (%)</th><th>vs. GRPO</th></tr></thead>
+        <tbody>
+          <tr><td>GRPO</td><td>316.9</td><td>33.3</td><td>—</td></tr>
+          <tr><td>DIVER (Hu et al., 2025)</td><td>320.5 (+3.6)</td><td>44.2</td><td>+10.9</td></tr>
+          <tr><td class="best">GCPO (本文)</td><td class="best">320.6 (+3.7)</td><td class="best">49.0</td><td class="best">+15.7</td></tr>
+        </tbody>
+      </table>
+      <p>论文还报告 GCPO 在 self-BLEU、self-ROUGE、Distinct-n、LLM-as-Judge diversity 等多样性指标上全面超越 GRPO/DIVER，验证"准确率 + 多样性双提升"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) 把 determinant volume 换成简单 sum-of-rewards → 等价于 GRPO，效果回退；(b) 把 Shapley 重分配换成 leave-one-out → 性能介于 GRPO 与 GCPO 之间，验证 Shapley 比 LOO 更精细；(c) 语义 extractor 用不同模型（Sentence-BERT vs LLM 自身 embedding）→ 影响很小，方法 robust。<strong>局限</strong>：(i) determinant + Shapley 在大组（G≥32）下虽然有 \(O(G\log G)\) 近似，但 wall-time 仍随组大小增长；(ii) 对 open-ended generation（无 verifiable reward）扩展性待研究。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>GCPO 把"组内竞争"换成"组内协作"，是 RLVR 探索-崩塌问题的一记漂亮重击。<strong>方法层面</strong>：DPP + Shapley 是组合优化经典工具，作者把它们装配到 RL-LLM pipeline 里，工程开销极小（+1.2% 训练时间）；<strong>结果层面</strong>：AIME25 Pass@1 +15.7 是过去半年 RLVR 算法层最大的单论文提升之一。预计后续 deepseek-r2 / qwen3-reasoner 类公开复现会快速集成此机制。</p>
+    </div>
+  </article>

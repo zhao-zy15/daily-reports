@@ -1,0 +1,78 @@
+  <article class="paper" id="p2">
+    <h3 class="paper-title">LLM-2 · TICSE: Training-Inference Consistent Segmented Execution for Long-Context LLMs</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Inner Mongolia University</span>
+      <span>👤 Xianpeng Shang, Jiang Li, Zehua Duo, Qianyi Cai, Xiangdong Su</span>
+      <span><a href="https://arxiv.org/abs/2605.11744" target="_blank">arXiv:2605.11744</a></span>
+      <br><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Long-Context</span><span class="tag tag-llm">Training</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>主流推理高效长上下文方案（StreamingLLM、SnapKV、H2O 等）都只在<strong>推理时</strong>采用 bounded-context / segment-level 执行，<strong>训练时仍是 full-context attention</strong>。这种"训练-推理不对称"导致两个隐患：(i) 模型训练时见到的状态分布与推理时不同（exposure mismatch），长 context 下分布漂移加剧；(ii) 训练梯度依赖完整 attention 状态，但推理时片段执行无法访问，state-transition 语义不一致。本文动机：把训练和推理统一在<strong>同一段级 forward 语义</strong>下。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Training-Inference Forward Identity（TIF Identity）</strong>
+        <p>把整段 context 切成长度 \(s\) 的段 \(\{S_1, S_2, \dots, S_T\}\)。每段 forward 时只允许访问<strong>携带 KV 状态</strong>（carried KV from previous segment, \(C_{i}\)）+ 当前段自身的 KV。论文证明在此语义下，训练和推理走的是<strong>同一条 forward 路径</strong>：</p>
+        $$ h_i \;=\; \mathrm{Attn}\!\bigl(Q_{S_i},\; \mathrm{KV}(S_i)\,\cup\,C_{i-1}\bigr) $$
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Inference-Consistent Truncated BPTT</strong>
+        <p>梯度只通过 carried-KV interface 反向传播一段，即<strong>截断 BPTT 深度 \(=1\)</strong>。论文证明：在 TIF identity 成立时，TBPTT(深度=1) 给出的梯度<strong>正是</strong>真实段级 forward 目标的精确梯度，不存在 truncation bias。这避免了 segment-level 训练常见的"梯度近似"问题。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Head- &amp; Layer-Sparse 长程检索</strong>
+        <p>架构层面：把所有 head 划分为两类——大多数 head 是 <em>local-continuity</em> head（只访问 carried KV），少量 head 是 <em>long-range retrieval</em> head（可访问 forward-only retrieval prefix \(R_i\)）。layer 维度同样稀疏选择。这给出了"少量 head 兜底全局检索 + 多数 head 处理局部连续性"的结构化稀疏。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ RoPE Re-indexing for Prefix Concatenation</strong>
+        <p>当 forward-only retrieval prefix \(R_i\) 与当前段 KV 拼接时，RoPE 位置编码必须重映射，否则相对位置错乱。论文给出闭式重映射：</p>
+        $$ \text{pos}_{R_i,j}^{\text{new}} \;=\; \text{pos}_{S_i,0} - (|R_i| - j) $$
+        <p>这保证检索 token 在概念上"紧贴当前段之前"，无需重新训练 RoPE。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>32K context, 段长 s=4K：训练显存 vs 全注意力</strong>
+        <ul>
+          <li><strong>Full-context</strong>：完整 32K KV 必须驻留显存训练，单个 head peak ≈ 32K × d_head × bf16 × layers，A100 80GB 仅能 batch=1。</li>
+          <li><strong>TICSE 训练</strong>：单段只见 4K + carried 4K = 8K KV 驻留，<strong>峰值显存降低约 6×</strong>。</li>
+          <li><strong>推理时</strong>：与训练完全对齐，每段同样 8K，无 mismatch。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>论文报告"approximately 6× lower peak memory"且在长上下文 benchmark 上"performance comparable to full-context attention"。具体 baseline 数字（StreamingLLM / SnapKV / H2O 对比）在 PDF 实验表中，但在我们提取的 HTML5 文本中未完整呈现。</p>
+      <table>
+        <thead><tr><th>方法</th><th>训练 attention</th><th>推理 attention</th><th>训练-推理一致</th><th>峰值显存</th></tr></thead>
+        <tbody>
+          <tr><td>Full-context</td><td>Full</td><td>Full</td><td>✓</td><td>1.0×</td></tr>
+          <tr><td>StreamingLLM</td><td>Full</td><td>Bounded</td><td>✗</td><td>~1.0×</td></tr>
+          <tr><td>SnapKV</td><td>Full</td><td>Sparse</td><td>✗</td><td>~1.0×</td></tr>
+          <tr><td class="best">TICSE (本文)</td><td class="best">Segmented</td><td class="best">Segmented</td><td class="best">✓</td><td class="best">~0.17× (6× 下降)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) 去掉 long-range head → long-doc QA 召回率下降；(b) 去掉 RoPE re-indexing → 拼接位置噪声导致 perplexity 上升。<strong>局限</strong>：当前论文 14 页摘要重点是"训练显存"和"训练-推理一致性"，对端到端 throughput 数字没有完整披露；具体超长（>1M）context 的扩展性需进一步实验。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>TICSE 把"训练-推理对称"重新作为长上下文 LLM 的一等公民设计原则。这是与 StreamingLLM/SnapKV 等"推理时打补丁"路线的根本不同——它要求训练时就接受"看不到完整 context"的事实。对未来 1M-10M context 模型的训练范式有直接借鉴意义。</p>
+    </div>
+  </article>

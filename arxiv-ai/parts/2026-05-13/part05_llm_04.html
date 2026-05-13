@@ -1,0 +1,81 @@
+  <article class="paper" id="p4">
+    <h3 class="paper-title">LLM-4 · Latent Chain-of-Thought Improves Structured-Data Transformers</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-11</span>
+      <span>🏛 University of Michigan</span>
+      <span>👤 Carson Dudley, Samet Oymak</span>
+      <span><a href="https://arxiv.org/abs/2605.11262" target="_blank">arXiv:2605.11262</a></span>
+      <br><span class="tag tag-llm">LLM</span><span class="tag tag-llm">Tabular</span><span class="tag tag-llm">Time Series</span><span class="tag tag-llm">Latent CoT</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>结构化数据预测（表格 / 时间序列）的 SoTA 已经是 Transformer 类（TabPFN、Chronos、TimesFM、Moirai 等），但与语言建模不同：表格 / 时序的 Transformer 几乎都是<strong>一次前向直接出预测</strong>，没有"再思考"的机制。语言建模中 Chain-of-Thought 把"思考"展开为 token 显式写出，但结构化数据没有这种 token 输出通道。问题：能否给结构化数据 transformer 引入<strong>潜在</strong> CoT，让它在做出预测前进行多轮潜在 refinement？</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Feedback Token 反馈机制</strong>
+        <p>给 transformer 配一个轻量 MLP 反馈头：第一遍 forward 后取出预测位置的 hidden state \(h^{(1)}\)，过 MLP 压缩为<strong>反馈 token</strong> \(\tilde h\)，将其拼接到原始输入末尾，再走第二遍 forward。重复 \(R\) 轮：</p>
+        $$ \tilde h^{(r)} = \mathrm{MLP}\bigl(h_{\text{pred}}^{(r)}\bigr),\quad x^{(r+1)} = [x^{(r)};\,\tilde h^{(r)}] $$
+        <p>关键：反馈 token 是<strong>潜在向量</strong>而非离散 token，因此不消耗结构化数据的输入 schema。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 与 Looped Transformer 的关键区别</strong>
+        <p>Looped Transformer 共享权重做 \(R\) 次前向但<strong>没有显式反馈 token</strong>——它只是在隐藏状态上做循环。本文的核心 ablation 是把 latent CoT 与 looped baseline 对比：两者都共享权重、相同 FLOPs，但 latent CoT 有显式 feedback token。<strong>结果：feedback token 至关重要</strong>（见实验）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 控制变量训练：从 0 训练（Train from Scratch）</strong>
+        <p>为隔离 latent CoT 的贡献，论文不使用预训练 foundation model，而是<strong>从零训练每个 transformer</strong>。比较三组基线：(i) 无循环、同深度；(ii) 同 FLOPs 但更深的非循环 transformer（隔离"是否只是更多算力的功劳"）；(iii) 同权重共享的 looped baseline（隔离 feedback token 本身的贡献）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 自适应深度选择</strong>
+        <p>每个数据集用 validation 选最优 \(R \in \{1,2,4\}\)，记为 "Best CoT"；looped 同样选最优 \(R\)，记为 "Best Looped"。这避免了"固定 \(R\)" 的过拟合或欠拟合争议。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>LTSF-9 时间序列 + OpenML 27 表格数据集</strong>
+        <ul>
+          <li><strong>实验范围</strong>：LTSF-9 的 9 个时序 forecasting 数据集 + OpenML 27 个表格分类数据集（来自 TabPFN evaluation）。</li>
+          <li><strong>Latent CoT 改进</strong>：时序上 9 个数据集中 <strong>8 个</strong>击败 same-depth baseline（quantile loss 平均 +10.99%）；表格上 27 个中 <strong>22 个</strong>击败 baseline（accuracy 平均 +5.31 pp）。</li>
+          <li><strong>消融对比</strong>：与 depth-matched deeper baseline 比 → 时序 +21.01%、表格 +4.75%（说明 gains 不是堆 FLOPs 带来的）。</li>
+          <li><strong>关键消融</strong>：与 looped baseline 比 → 时序 +7.74%、表格 +3.82%，证明<strong>"CoT token + recurrence 缺一不可"</strong>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <table>
+        <thead><tr><th>Domain</th><th>Method</th><th>Avg. Rank ↓</th><th>Wins vs. Baseline</th><th>Avg. Gain vs. Baseline ↑</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4">Time series (LTSF-9)</td><td>Baseline</td><td>2.9</td><td>—</td><td>—</td></tr>
+          <tr><td>Deeper</td><td>3.6</td><td>3 / 9</td><td>−8.28%</td></tr>
+          <tr><td class="best">Best CoT</td><td class="best">1.6</td><td class="best">8 / 9</td><td class="best">+10.99%</td></tr>
+          <tr><td>Best Looped</td><td>1.9</td><td>6 / 9</td><td>+3.01%</td></tr>
+          <tr><td rowspan="4">Tabular (OpenML 27)</td><td>Baseline</td><td>3.0</td><td>—</td><td>—</td></tr>
+          <tr><td>Deeper</td><td>2.9</td><td>15 / 27</td><td>+0.53%</td></tr>
+          <tr><td class="best">Best CoT</td><td class="best">1.6</td><td class="best">22 / 27</td><td class="best">+5.31%</td></tr>
+          <tr><td>Best Looped</td><td>2.5</td><td>17 / 27</td><td>+1.44%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>固定深度扫描（\(R \in \{1,2,4,8\}\)）：时序所有深度都击败 baseline，gain ~5.7%-6.5%，无明显趋势；depth-8 用 train@\(R{=}4\) + eval@\(R{=}8\) 实现，证明 CoT 深度具有一定 evaluation-time 可扩展性。<strong>局限</strong>：(i) 当前 \(R\) 仅探到 4-8，未测试更深；(ii) gains 在小数据集上更显著，对大表格收益减小；(iii) feedback token MLP 引入额外参数，深度匹配实验中已对齐 FLOPs，但 parameter count 略多于 looped。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>这项工作回答了 looped transformer 时代的关键问题：<strong>"是循环带来的提升，还是显式反馈 token 带来的提升？"</strong> 实验明确指向后者——同样权重共享，加上 feedback token 才解锁了真正的 latent reasoning。这对结构化数据 foundation model（TabPFN-v3、Chronos-v2 等）的下一代设计有直接启发：在 backbone 中引入 latent CoT 反馈通道，可能是低成本通用提升路径。</p>
+    </div>
+  </article>

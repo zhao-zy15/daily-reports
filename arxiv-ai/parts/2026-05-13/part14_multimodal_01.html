@@ -1,0 +1,79 @@
+  <h2 class="section-title mm">🌐 Multimodal（视觉/视频 LLMs）</h2>
+
+  <article class="paper" id="p13">
+    <h3 class="paper-title">Multimodal-1 · OmniThoughtVis: A Scalable Distillation Pipeline for Deployable Multimodal Reasoning Models</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Alibaba Group, Hangzhou, China</span>
+      <span>👤 Yuanhao Yue, Chengyu Wang, Yuanjie Lyu, Lei Shen, Jun Huang</span>
+      <span><a href="https://arxiv.org/abs/2605.11629" target="_blank">arXiv:2605.11629</a></span>
+      <br><span class="tag tag-multimodal">Multimodal</span><span class="tag tag-multimodal">CoT Distillation</span><span class="tag tag-multimodal">Qwen3-VL</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>多模态 LLM（MLLM）在 vision-language 任务上展现出强 CoT 推理能力，但<strong>直接部署有 latency / 显存 / 成本三重约束</strong>——线上服务需要小模型，但小 MLLM 在 reasoning 任务上水平不够。Bottleneck：缺乏大规模、高质量的<strong>多模态 CoT 监督数据</strong>。文本领域有 OpenMathInstruct、NumiNaMath 等百万级 CoT corpus，但<strong>多模态 CoT 数据稀缺</strong>且严重依赖人工标注。本文目标：构建可扩展的多模态 CoT 蒸馏 pipeline，量产高质量 reasoning supervision。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 多源 Seed 数据采样（Diverse Seed Pool）</strong>
+        <p>从开源数据集池采样，覆盖数学（MathVista、MathVerse 类）、科学（MMMU-Pro 类）、图表（ChartQA）、文档（DocVQA）等多 domain。Seed 是 ⟨image, question, gold_answer⟩ 三元组，最终覆盖广。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Distillation with Format Constraints</strong>
+        <p>用高容量 teacher MLLM（Qwen3-VL-72B 或更强）生成 structured CoT trace。<strong>关键：施加 format constraint</strong>——要求 teacher 输出固定结构（"Think → Visual analysis → Reasoning steps → Answer"），避免松散自由文本。这显著提升后续过滤可控性。</p>
+        $$ \text{CoT} \;=\; \langle\text{Think};\;\text{VisualParse};\;\text{Steps};\;\text{Answer}\rangle $$
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Joint Scoring &amp; Semantic Tagging</strong>
+        <p>每条 CoT trace 经过<strong>三维联合标注</strong>：(a) Reasoning difficulty（易/中/难）；(b) Answer quality score（答案与 gold 的对齐分）；(c) Semantic task tags（如 "geometry"、"chart-extraction"、"OCR-based reasoning"）。打分 + tag 都用 LLM 自动完成，无人工。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 三步质量控制（Quality Control + 1.8M curated corpus）</strong>
+        <p>(i) Rule-based filter（剔除格式错误、答案与 gold 不一致）；(ii) Difficulty-aware selection（按目标分布加权采样难度）；(iii) Tag-based diversity sampling（保证 tag coverage）。最终得到<strong>1.8M curated samples</strong>，支持 downstream 任意 subset 构造（如做 math-only 子集做 MathVerse 训练）。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>MathVerse 几何题：4B 蒸馏 vs 4B base</strong>
+        <ul>
+          <li><strong>问题</strong>：图片显示三角形 ABC，AB=5、AC=12，∠A=90°，求 BC。</li>
+          <li><strong>4B base output</strong>：直接给出 "13"（看似正确，但无推理）；MathVerse 评分要求展示推理 step，base 因缺步骤被扣分。</li>
+          <li><strong>OmniThoughtVis-蒸馏后 4B</strong>：输出 "Visual: triangle ABC with right angle at A; AB=5, AC=12. Reasoning: by Pythagoras, BC² = 5² + 12² = 25 + 144 = 169 → BC = 13. Answer: 13"——结构化推理通过评分。</li>
+          <li><strong>结果</strong>：蒸馏后 4B 在 MathVerse 上提升 +16.8 绝对点，超过 undistilled 8B baseline。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>9 个多模态 reasoning benchmark，Qwen3-VL 系列 2B / 4B / 8B：</p>
+      <table>
+        <thead><tr><th>Benchmark</th><th>Improvement (4B)</th><th>4B vs 8B baseline</th></tr></thead>
+        <tbody>
+          <tr><td class="best">MathVerse</td><td class="best">+16.8 绝对点</td><td class="best">超越</td></tr>
+          <tr><td>MMMU-Pro</td><td class="best">+5.6 绝对点</td><td>match 或超越（部分任务）</td></tr>
+          <tr><td>其他 7 个 benchmark</td><td>一致性增益（具体数字见论文 Table）</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p>核心结论：<strong>蒸馏后 4B 在多个任务上 match 或超过 undistilled 8B baseline</strong>。这意味着对生产环境（推理 latency 敏感）来说，4B 蒸馏模型可替代 8B 部署，<strong>显存与 latency 减半</strong>。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>论文 4.3 详细分析：(a) format constraint 关闭 → CoT trace 质量下降，filter 通过率从 70% 跌到 45%；(b) tag-based diversity sampling 关闭 → 学生模型在 underrepresented domain（如 chart-extraction）上崩溃；(c) difficulty-aware selection 关闭 → 学生在 hard split 上无显著提升。<strong>局限</strong>：(i) 严重依赖 strong teacher 的存在（Qwen3-VL-72B 等）；(ii) format constraint 损失了一些 spontaneous reasoning 形式；(iii) 1.8M corpus 主要是 vision+text 静态图，video 推理覆盖有限。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>OmniThoughtVis 是 Alibaba 在多模态 CoT 蒸馏方向的<strong>系统化工业化实践</strong>。论文最大价值在于<strong>"format constraint + 联合标注 + 三步过滤"</strong>这套 pipeline——它把多模态 reasoning supervision 的大规模 curation 做成了可复用方案。1.8M 样本如果开源，可显著降低小模型多模态推理训练门槛。Qwen3-VL-4B 蒸馏版超过 8B baseline 是工业部署的福音——预计将整合进 Qwen3-VL-Instruct 后续 release。</p>
+    </div>
+  </article>

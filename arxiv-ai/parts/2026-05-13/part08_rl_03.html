@@ -1,0 +1,79 @@
+  <article class="paper" id="p7">
+    <h3 class="paper-title">RL-3 · FG-ExPO: Frontier-Guided Exploration-Prioritized Policy Optimization via Adaptive KL and Gaussian Curriculum</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 OPPO AI Center</span>
+      <span>👤 Mingxiong Lin, Zhangquan Gong, Maowen Tang, Qian Li, ... Kai Tang, Haonan Lu</span>
+      <span><a href="https://arxiv.org/abs/2605.11403" target="_blank">arXiv:2605.11403</a></span>
+      <br><span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">KL</span><span class="tag tag-rl">Curriculum</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>近年 GRPO 改进多集中在 advantage normalization / clipping schedule / loss reduction，作者指出有两个被严重忽视的"先天缺陷"：(i) <strong>固定 KL 系数 \(\beta\)</strong> 在模型表现差时过度约束探索、表现好时过度放松；(ii) <strong>均匀题目采样</strong>浪费——简单题（模型几乎都对，\(p \approx 1\)）和难题（几乎全错，\(p \approx 0\)）的 group advantage 都接近零，<strong>只有中等难度题（\(p \approx 0.5\)）才有最强的梯度信号</strong>。两个问题本质相同：GRPO 没能把"探索预算"分配到 frontier 上。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Accuracy-Conditioned KL Scaling (AKL)</strong>
+        <p>把固定 KL 系数 \(\beta\) 替换为<strong>批均准确率 \(\bar p\) 的平滑非线性函数</strong>：</p>
+        $$ \beta(\bar p) \;=\; \beta_0 \cdot \sigma\bigl(\alpha\cdot(\bar p - \tau)\bigr) $$
+        <p>其中 \(\sigma\) 是 sigmoid。当 \(\bar p\) 低（模型挣扎）→ \(\beta\) 小，放松 reference 锚使策略可以大幅偏离；当 \(\bar p\) 高（模型已善胜任）→ \(\beta\) 大，收紧锚以抑制过拟合到当前奖励 shortcut。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Gaussian Curriculum Sampling (GCS)</strong>
+        <p>题库 \(Q = \{q_i\}\) 每个 \(q_i\) 实时维护一个移动准确率估计 \(\hat p_i\)。采样权重为以 \(p\approx 0.5\) 为中心的高斯：</p>
+        $$ w_i \;\propto\; \exp\!\Bigl(-\tfrac{(\hat p_i - 0.5)^2}{2\sigma^2}\Bigr) $$
+        <p>这把训练计算集中到"frontier"——模型刚刚开始能解的题。简单题和不可解题的采样权重被自然压低。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 联合训练算法（FG-ExPO）</strong>
+        <p>每个 RL step：(a) 按 GCS 分布采 batch；(b) GRPO rollout + 组内 advantage 估计；(c) 用 AKL 当前 \(\beta(\bar p)\) 计算 KL 罚项；(d) 反传 + 更新 \(\hat p_i\)。两组件相加，几乎无额外算力开销。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 为何更高 pass@k？</strong>
+        <p>FG-ExPO 把"探索预算"留在 frontier 上 → 策略保留对多种正确路径的概率，因此 pass@32 比 pass@1 提升更明显。论文摘要明确：<strong>"disproportionately larger gains on pass@32 over pass@1"</strong>——这是 exploration 而非 exploitation 提升的直接证据。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>AIME 2025 上的 pass@32 跳跃</strong>
+        <ul>
+          <li><strong>Base</strong>：DeepSeek-R1-Distill-Qwen-1.5B + GRPO，AIME 2025 pass@32 = <strong>63.33%</strong></li>
+          <li><strong>FG-ExPO</strong>：同 base 模型 + 两组件改动，pass@32 = <strong>76.67%（+13.34 绝对点）</strong></li>
+          <li><strong>8B 模型</strong>：Qwen3-8B-Base + FG-ExPO，6 个 competitive benchmark 上 pass@32 平均 +2.66；pass@1 增益较小（说明并非简单 exploitation）</li>
+          <li><strong>训练开销</strong>：AKL 和 GCS 都是 \(O(1)\) overhead，wall-time 几乎与 GRPO 持平。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>实验在 DeepSeek-R1-Distill-Qwen-1.5B 和 Qwen3-8B-Base 上，覆盖 6 个 competitive benchmark（AIME 2024/2025、MATH-500、Minerva、Olympiad 等，论文 Table 2）：</p>
+      <table>
+        <thead><tr><th>Model</th><th>Benchmark</th><th>Metric</th><th>GRPO</th><th class="best">FG-ExPO</th><th>Δ</th></tr></thead>
+        <tbody>
+          <tr><td>DeepSeek-R1-Distill-Qwen-1.5B</td><td>AIME 2025</td><td>pass@32</td><td>63.33%</td><td class="best">76.67%</td><td class="best">+13.34</td></tr>
+          <tr><td>Qwen3-8B-Base</td><td>6 benchmark avg</td><td>pass@32</td><td>—</td><td class="best">—</td><td class="best">+2.66</td></tr>
+          <tr><td>Qwen3-8B-Base</td><td>6 benchmark avg</td><td>pass@1</td><td>—</td><td>—</td><td>< pass@32 提升</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融：(a) 只用 AKL → 较 GRPO 部分提升；(b) 只用 GCS → 部分提升；(c) 两者结合 → 最大提升。这说明<strong>KL 自适应与课程采样是互补的</strong>，分别解决"什么时候探索 vs 收敛"和"在哪里探索"两个正交问题。<strong>局限</strong>：(i) AKL 的 \(\sigma\)/\(\tau\) 超参需调（论文给出经验值）；(ii) 移动准确率估计在小 batch 下噪声大，对超小数据集可能不稳；(iii) 当前实验主要在数学推理 benchmark，对代码、科学问答等其他 RLVR 任务的泛化待验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>FG-ExPO 是一个"两行代码改 GRPO"的工程优化：AKL 改 KL 系数 + GCS 改采样权重，几乎不增加计算开销。但它精准击中了 GRPO 设计中两个常被忽视的盲点——<strong>KL 锚定的时机问题</strong>和<strong>课程采样问题</strong>。对工业 RLVR pipeline 极具参考价值，预计很快被纳入 Verl / OpenRLHF 等开源框架。OPPO AI Center 来势汹汹，本年度已在 RLVR 方向贡献多篇 SOTA-level 论文。</p>
+    </div>
+  </article>

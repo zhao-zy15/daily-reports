@@ -1,0 +1,83 @@
+  <h2 class="section-title llm">🧠 LLM（Pure Text LLMs）</h2>
+
+  <article class="paper" id="p1">
+    <h3 class="paper-title">LLM-1 · FibQuant: Universal Vector Quantization for Random-Access KV-Cache Compression</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 POSTECH</span>
+      <span>👤 Namyoon Lee, Yongjune Kim</span>
+      <span><a href="https://arxiv.org/abs/2605.11478" target="_blank">arXiv:2605.11478</a></span>
+      <br><span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV-Cache</span><span class="tag tag-llm">Quantization</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>长上下文推理已经从"算力问题"转向"显存带宽问题"——KV cache 在 batch、层、头、context 长度多个维度同步膨胀，每个 decoding step 都要被全量重读。当前主流的旋转-标量量化（rotation-then-scalar，例如 QuaRot/TurboQuant）做法是先做 Haar 旋转 + 存归一化模长，再对每个坐标独立做 1bit/2bit 标量量化。问题：旋转之后的 \(k\) 维相邻坐标块<strong>不是独立同分布的乘积源</strong>，而是单位球面上的 spherical-Beta 分布；标量编码丢弃了这个几何结构，因此在 sub-1bit/coord 区间（如 \(b=2\), 8× 压缩）失效。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 几何洞察：spherical-Beta 才是真实源分布</strong>
+        <p>归一化把激活映射到单位球面后，Haar 旋转再施加。论文证明：经此变换后，任意 \(k\) 个连续坐标的联合分布是<strong>球面 Beta 分布</strong>（spherical-Beta），且径向（\(r\)）与角向（\(\hat u\)）独立。这意味着标量量化必然次优，因为它没有匹配径向的 Beta 密度。</p>
+        $$ p(r,\hat u) = p_{\text{Beta}}(r;\alpha,\beta)\cdot \text{Unif}(\hat u\!\in\!S^{k-1}) $$
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 径向-角向解耦码本（Radial-Angular Codebook）</strong>
+        <p>径向用 Beta 分位点（Beta-quantile radii）构造 \(L_r\) 个半径层，使每层等概率（量化密度匹配源密度）；角向在每个 \(k\)-1 维子球上铺设 Fibonacci / Roberts-Kronecker 拟均匀（quasi-uniform）方向格，避免随机采样造成的覆盖空洞。最终码本大小 \(M = L_r \cdot L_\theta\)，rate \(R = (\log_2 M)/k\) bits/coord，支持 sub-1bit 操作点（如 \(b=0.5\)）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Lloyd-Max 多重启精修</strong>
+        <p>初始码本 \(\mathcal{C}_0\) 经多次随机扰动后用 Lloyd-Max 迭代收敛到局部最优；最终选 NMSE 最低的一份作为 production 码本。整套构造与具体模型/层无关——一次构造，全模型通用（universal）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 理论保证（Cell-Shaping × Density-Matching 分解）</strong>
+        <p>论文证明在匹配率 \(R\) 下，向量码相对其标量乘积特化的 distortion 改进可分解为两个高率渐近因子：</p>
+        $$ \text{Gain}(R) \;=\; \underbrace{G_{\text{shape}}^{(k)}}_{\text{格胞形状增益}} \;\cdot\; \underbrace{G_{\text{density}}^{(k)}}_{\text{密度匹配增益}} $$
+        <p>这给出了"为何向量码在低 rate 域 strictly dominate 标量码"的封闭形式解释。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>k=2 维例子：5× → 34× 压缩 frontier</strong>
+        <ul>
+          <li><strong>输入</strong>：GPT-2 small 单层 KV cache，head_dim=64。把 64 维拆成 32 个 \(k=2\) 块。</li>
+          <li><strong>FibQuant 码本</strong>：\(L_r=4\) 个 Beta-分位半径 + \(L_\theta=4\) 个 Fibonacci 方向 ⇒ \(M=16\)，rate \(R=2\) bits/vector = 1 bit/coord。</li>
+          <li><strong>结果</strong>：相对 fp16，存储 5× 压缩、平均 attention cosine \(\overline{\cos}_{\text{attn}}=0.99\)；进一步降至 \(b=0.47\) 时压缩 34×，\(\overline{\cos}_{\text{attn}}\)仍保 0.95。</li>
+          <li><strong>对比</strong>：TurboQuant 在 \(b=2\) 时 cosine 已掉到 0.95 以下，且不支持 fractional rate。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>GPT-2 small（KV cache distortion）：</p>
+      <table>
+        <thead><tr><th>Method</th><th>bits/coord</th><th>压缩比</th><th>\(\overline{\cos}(x,\hat x)\)↑</th><th>NMSE(dB)↓</th><th>\(\overline{\cos}_{\text{attn}}\)↑</th></tr></thead>
+        <tbody>
+          <tr><td>TurboQuant</td><td>4</td><td>4×</td><td>0.996</td><td>−20.40</td><td>0.998</td></tr>
+          <tr><td>TurboQuant</td><td>3</td><td>5.3×</td><td>0.984</td><td>−14.79</td><td>0.993</td></tr>
+          <tr><td>TurboQuant</td><td>2</td><td>8×</td><td>0.926</td><td>−7.92</td><td>0.951</td></tr>
+          <tr><td class="best">FibQuant</td><td class="best">2</td><td class="best">8×</td><td class="best">0.976</td><td class="best">−14.41</td><td class="best">0.989</td></tr>
+          <tr><td class="best">FibQuant</td><td class="best">0.47</td><td class="best">34×</td><td class="best">—</td><td class="best">—</td><td class="best">0.95</td></tr>
+        </tbody>
+      </table>
+      <p>TinyLlama-1.1B 端到端 perplexity：4× 压缩下与 fp16 差距仅 0.10 PPL；在 \(b=2\)（8×）时，PPL 比标量 TurboQuant 低 <strong>3.6×</strong>——后者在此率点开始崩溃。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融 1：去掉 Beta-quantile 径向（改为均匀半径）→ NMSE 退化 ≈3 dB；消融 2：去掉 Fibonacci 角向（改为随机方向）→ low-rate 域 NMSE 退化更严重。<strong>局限</strong>：当前实验主要在 GPT-2/TinyLlama 1.1B 量级；超大模型（70B+）和 GQA/MQA 变体的实测尚未完成。Random-access 解码额外引入码本查表开销（~5% latency），但显存带宽收益足以覆盖。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>FibQuant 提供了 KV cache 量化的<strong>几何正确</strong>解法——把"先旋转、再独立量化每坐标"升级为"匹配旋转后真实分布的向量码"。这是该领域近一年来第一篇在 sub-1bit/coord 区间仍保持 attention 保真的工作。对长上下文 LLM 推理（如 1M 上下文）极具实用价值——KV cache 不再是显存瓶颈。</p>
+    </div>
+  </article>

@@ -1,0 +1,82 @@
+  <article class="paper" id="p10">
+    <h3 class="paper-title">Agent-2 · HHD: Hindsight Hint Distillation — Scaffolded Reasoning for SWE Agents from CoT-free Answers</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12</span>
+      <span>🏛 Tsinghua University</span>
+      <span>👤 Shengjie Wang, Guanghe Li, Zonghan Yang, Yang Gao</span>
+      <span><a href="https://arxiv.org/abs/2605.11556" target="_blank">arXiv:2605.11556</a></span>
+      <br><span class="tag tag-agent">Agent</span><span class="tag tag-agent">SWE</span><span class="tag tag-agent">Self-Distillation</span><span class="tag tag-agent">ICML</span>
+    </div>
+
+    <div class="module">
+      <h4>1️⃣ 背景与动机</h4>
+      <p>SWE Agent（如 OpenHands、SWE-Agent）训练数据来源主要是 GitHub pull-request commits，<strong>它们是 CoT-free ⟨question, answer⟩ 对</strong>——只有问题描述和最终代码 patch，没有"思考过程"。直接对 patches 做监督学习等价于"死记硬背 final diff"，模型学不到 generalizable 问题求解策略。本文受人类教学启发：好老师在学生犯错时给<strong>定向 hint</strong> 而非直接答案。HHD = 让模型自己 rollout 失败，再用 hindsight（事后知道答案）合成 hint，scaffold 出成功 trajectory，然后 self-distill。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">2️⃣ 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 失败轨迹采样（Failed Self-Rollouts）</strong>
+        <p>给定 \((q, a^*)\) 对（问题 + 黄金答案），让当前 student model \(\pi_\theta\) 做 \(N\) 次 ReAct-style rollout：</p>
+        $$ \tau_i \sim \pi_\theta(\cdot | q),\quad i=1,\dots,N $$
+        <p>用 verifier 评估 \(\tau_i\) 是否成功；只保留<strong>失败轨迹</strong> \(\mathcal{T}_{\text{fail}} = \{\tau_i : \text{verifier}(\tau_i)=0\}\)。这些是 student 的"自然错误"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Hindsight Hint Synthesis（事后提示合成）</strong>
+        <p>对每条失败 \(\tau_i\)，借助 teacher LLM（或同一 model 的 hindsight prompt）<strong>已知答案 \(a^*\) 的前提下</strong>反向分析：</p>
+        $$ h_i \;=\; \text{HintGen}(q,\,a^*,\,\tau_i,\,\text{failure analysis}) $$
+        <p>hint 是简短、抽象的策略提示（如 "先复现 bug、再 localize 到 module"），而非直接给出答案。这模拟了"老师看完作业再给 hint"的认知过程。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Scaffolded On-Policy Rollout</strong>
+        <p>把 hint \(h_i\) 注入 prompt 重新 rollout：</p>
+        $$ \tau_i' \sim \pi_\theta(\cdot | q,\,h_i) $$
+        <p>由于 hint 是策略级提示，rollout 仍是 on-policy（model 自己采样动作）。验证器筛出 successful scaffolded trajectory \(\tau_i'^{\,*}\)。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Self-Distillation（去除 hint 蒸馏）</strong>
+        <p>关键最后一步：把 successful trajectory \(\tau_i'^{\,*}\)<strong>剥离 hint 部分</strong>，仅用 \((q,\tau_i'^{\,*})\) 做 SFT。这让 student 在<strong>没有 hint</strong> 的情况下也能复现成功推理路径。学会的是 strategy，不是单次回答。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>3️⃣ 深度案例</h4>
+      <div class="example-box">
+        <strong>SWE-bench Verified：从 RFT 2% 到 HHD 8%</strong>
+        <ul>
+          <li><strong>失败 baseline trajectory</strong>（论文附录 B.1）：student 先匆忙读了一两个文件，跳过 reproduce 阶段直接修改了 wrong module → 卡在 local optima。</li>
+          <li><strong>HHD 生成 hint</strong>："Phase 1 应先复现 bug 而非定位代码"。</li>
+          <li><strong>Scaffolded trajectory</strong>（附录 B.2）：student 在 hint 引导下，经历 4 个阶段 — Exploration & Localization → Reproduction → Implementation → Verification — 顺利解决问题。</li>
+          <li><strong>蒸馏后</strong>：去掉 hint 喂回 student SFT；新问题上 student 自发遵循"先复现-再修改-再验证"流程。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">4️⃣ 实验结果</h4>
+      <p>SWE-bench Verified + Multilingual（OpenHands 框架，论文摘要 + Comparison 节）：</p>
+      <table>
+        <thead><tr><th>方法</th><th>SWE-bench Verified Δ</th><th>SWE-bench Multilingual (OOD)</th><th>是否需要 CoT 数据</th></tr></thead>
+        <tbody>
+          <tr><td>Iterative RFT</td><td>+2%（左右）</td><td>较小</td><td>否</td></tr>
+          <tr><td>Trajectory Synthesis</td><td>~2%</td><td>较小</td><td>否</td></tr>
+          <tr><td class="best">HHD (本文)</td><td class="best">+8% 绝对</td><td class="best">最大增益</td><td class="best">否（只需 ⟨q,a⟩）</td></tr>
+        </tbody>
+      </table>
+      <p>关键泛化结果：HHD 不在 multilingual 上训练，但在 SWE-bench Multilingual 上取得最大 OOD 增益——证明蒸馏出来的是<strong>策略</strong>而非数据点记忆。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">5️⃣ 消融与讨论</h4>
+      <p>消融（论文 4.5）：(a) 去掉 hindsight，让模型自由生成 hint → 提升大幅下降（hindsight 包含的 ground-truth 信息至关重要）；(b) 不剥离 hint 直接蒸馏 → 学到的是"看到 hint 才能答"，泛化差；(c) 不筛失败轨迹，对所有 rollout 都生成 hint → 学到无用 hint，效果下降。<strong>局限</strong>：(i) 需要 verifier；(ii) hint 生成依赖另一个 LLM；(iii) 当前在 SWE 域，对开放问答 / 数学的扩展待验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>6️⃣ 结论与启发</h4>
+      <p>HHD 是把"自我反思 + 自蒸馏 + hindsight 信息"三件事合一的 elegant 设计。<strong>"剥离 hint 再蒸馏"</strong>是关键步——它把<strong>策略</strong>而不是<strong>答案</strong>转移给了 student。<strong>+8% 绝对 vs +2% baseline</strong> 是 SWE agent 训练领域过去半年最显著的单论文进步之一。对开源 SWE agent（OpenHands、SWE-Agent）的下游 self-improvement 直接适用。论文已投 ICML 2026。</p>
+    </div>
+  </article>
