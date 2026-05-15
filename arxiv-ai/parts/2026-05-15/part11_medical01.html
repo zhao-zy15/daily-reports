@@ -1,0 +1,106 @@
+  </div>
+
+  <h2 class="section-title medical">⚕️ Medical</h2>
+
+  <div class="paper" id="p11">
+    <h3 class="paper-title">Medical-1 · RealICU: Do LLM Agents Understand Long-Context ICU Data? A Hindsight-Annotated Benchmark</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 Technical University of Munich, LMU Munich, Imperial College London</span>
+      <span><a href="https://arxiv.org/abs/2605.13542" target="_blank">arXiv:2605.13542</a></span>
+      <br>
+      <span class="tag tag-medical">Medical</span>
+      <span class="tag tag-medical">ICU</span>
+      <span class="tag tag-medical">Benchmark</span>
+      <span class="tag tag-medical">长上下文</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>ICU 是医院最信息密集的场景之一：化验、生命体征、药物、护理记录、影像报告每小时刷新。AI co-pilot 价值巨大，但<strong>现有 ICU benchmark 的根本缺陷是把"医生记录的实际操作"当作 ground truth</strong>——这忽略了一个临床现实：医生在床旁的决策是基于"当时不完整的信息"做出的，<strong>真正最优的操作往往要回过头来看才清楚</strong>。把 LLM 强行学医生的实际操作就是在"奖励模仿不完美的人类行为"。本文提出 RealICU：一个由资深 ICU 医生<strong>带"事后视角"（hindsight）</strong> 重新标注的 benchmark，并伴随一个新 agent 系统 ICU-Evo，作为长程 ICU 决策支持的全新测试床。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 四项临床任务（与 30 位医生协同设计）</strong>
+        <p>作者咨询 30+ 位 board-certified ICU 临床医生，归纳出 ICU co-pilot 的四类核心能力：</p>
+        <ul>
+          <li><strong>Patient Status</strong>：评估病情整体趋势（改善 / 稳定 / 恶化），细分到 hemodynamics / oxygenation / inflammation / organ function；</li>
+          <li><strong>Acute Problems</strong>：识别当前主要急性问题（如 INFECTION、SEPTIC SHOCK、LACTIC ACIDOSIS）；</li>
+          <li><strong>Action Recommendation</strong>：给出推荐操作清单（NOREPINEPHRINE 0.15μg/kg/min、LR 500mL 等）；</li>
+          <li><strong>Red Flags</strong>：警示<strong>不应做的</strong>操作（aggressive diuresis 在脓毒症时会恶化休克；β-blocker 会抑制代偿）；评估指标 HRR@5（Hazardous Recommendation Ratio）越低越好。</li>
+        </ul>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Hindsight-Annotated 数据：Gold + Scale</strong>
+        <p><strong>RealICU-Gold</strong>：基于 MIMIC-IV 选择代表性 ICU 入住，资深医生<strong>看完整个住院全程后</strong>，对每个 6 小时窗口做四项任务的标注。这与"床旁实时决策"形成对照：医生标注时拥有 hindsight 信息，因此标签代表"理想最优操作"而非"实际操作"。</p>
+        <p><strong>RealICU-Scale</strong>：手工标注昂贵稀疏。引入 <strong>Oracle</strong>（一个在同样 hindsight 条件下工作的 LLM 评估器），将其与医生共识 F1 验证为 ≥0.895，再用它密集标注 11,862 个窗口，得到 Scale 子集用于大规模评估。这是"用 LLM 协助 LLM evaluator"的可信构造方法。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ ICU-Evo：结构化记忆 agent 系统</strong>
+        <p>作为参考 agent，作者提出 ICU-Evo，含三个子 agent + 一个预测器：</p>
+        <ul>
+          <li><strong>Working Memory</strong> $M^{\text{work}}_t$ 与 <strong>Trend Memory</strong> $M^{\text{trend}}_t$：滚动维护短期 / 长期生理趋势；</li>
+          <li><strong>Assessment Agent $A_{\text{assess}}$</strong>：每 $k_a$ 个窗口生成 trajectory summary $z_t$ 与 critical events $e_t$：</li>
+        </ul>
+        <p>$$(z_t, e_t)=A_{\text{assess}}\!\big(M^{\text{work}}_{t-k_a:t},\,M^{\text{trend}}_{t-k_a:t}\big)$$</p>
+        <ul>
+          <li><strong>Insight Agent $A_{\text{insight}}$</strong>：每 $k_i$ 个窗口提出关于患者特异性 pattern 的假设 $h_t$（如"该患者对升压药反应弱于群体平均"），用支持证据 $e_s$ 与反证 $e_r$ 评分接受/拒绝：</li>
+        </ul>
+        <p>$$M^{\text{insight}}_t=A_{\text{insight}}\!\big(M^{\text{insight}}_{t-1}, M^{\text{event}}_{t-k_i:t}\big),\;\text{accept }h_t\text{ if }s(h_t)>r(h_t)$$</p>
+        <ul>
+          <li><strong>Predictor $f^{(k)}$</strong>：在四项任务上 prompted LLM，基于完整 memory state 与静态患者上下文输出预测，与 agent 解耦，便于公平比较 backbone。</li>
+        </ul>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 评估协议</strong>
+        <p>同 backbone 下三种 baseline 与 ICU-Evo 比较：(a) full-context（喂入全部历史 token）、(b) local-window（仅当前 6h 窗口）、(c) RAG（PubMedBERT 嵌入检索 top-5 窗口）。指标：Acc/F1（Patient Status）、Hit@5/Recall@5（Acute Problems / Action Rec）、HRR@5↓（Red Flags 越低越好）。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：脓毒症患者的"床旁 vs 事后视角"标签差异</h4>
+      <div class="example-box">
+        <strong>真实场景</strong>：MIMIC-IV 中一位多脏器功能不全的脓毒症患者，住 ICU 第 18-24 小时窗口。
+        <ol>
+          <li><strong>床旁实际操作（被既往 benchmark 当 ground truth）</strong>：医生当时给了 etomidate 做插管诱导。原因：信息不全，未注意到该患者已经有肾上腺皮质功能不全风险；</li>
+          <li><strong>Hindsight 标签（RealICU 的）</strong>：从全程回看，etomidate 在脓毒症患者中加重肾上腺抑制，造成后续 6 小时 vasopressor 难以撤除。所以这是 <strong>Red Flag action</strong>；正确推荐应是 ketamine 或 propofol；</li>
+          <li><strong>差异意义</strong>：在传统 benchmark 上，模型答 etomidate 会被打 ✓（模仿了真实医生）；但在 RealICU 上会被记入 HRR@5 增加分母（推荐了危险操作）。这从根本上改变了 LLM ICU 应用的安全评估范式；</li>
+          <li><strong>当前 frontier 模型表现</strong>：Gemini-3.1-pro + ICU-Evo 仍有 HRR@5 = 0.300（30% 推荐里含至少一个 Red Flag），GPT-5.4 + ICU-Evo 更高至 0.473——<strong>当前 LLM 仍在 ICU 高风险场景持续推荐危险操作</strong>。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（RealICU-Gold）</h4>
+      <table>
+        <thead><tr><th>Backbone × System</th><th>Patient Status Acc.</th><th>Acute Problems Hit@5</th><th>Action Rec. Hit@5</th><th>Red Flags HRR@5 ↓</th></tr></thead>
+        <tbody>
+          <tr><td>Gemini-3.1-pro · Full-ctx</td><td>0.298</td><td>0.486</td><td>0.259</td><td>0.137</td></tr>
+          <tr><td>Gemini-3.1-pro · RAG</td><td>0.402</td><td>0.596</td><td>0.496</td><td>0.216</td></tr>
+          <tr><td class="best">Gemini-3.1-pro · ICU-Evo</td><td class="best">0.459</td><td class="best">0.823</td><td class="best">0.676</td><td>0.300</td></tr>
+          <tr><td>GPT-5.4 · Full-ctx</td><td>0.294</td><td>0.510</td><td>0.404</td><td>0.298</td></tr>
+          <tr><td>GPT-5.4 · RAG</td><td>0.288</td><td>0.599</td><td>0.480</td><td>0.234</td></tr>
+          <tr><td class="best">GPT-5.4 · ICU-Evo</td><td class="best">0.312</td><td class="best">0.867</td><td class="best">0.676</td><td>0.473</td></tr>
+          <tr><td>Qwen3-235B · ICU-Evo</td><td>0.253</td><td>0.600</td><td>0.526</td><td>0.117</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键发现：(a) 结构化记忆（ICU-Evo）一致地把 Acute Problems Hit@5 提到 0.82-0.87，相比 RAG 提升 +20-26pt；(b) Patient Status 即使 Gemini-3.1-pro + ICU-Evo 仍只达 0.459，远未"破解"该任务；(c) HRR@5 在最强配置仍为 0.30+，意味着 LLM 推荐里至少 30% 含危险动作——这是 ICU 部署的硬安全门槛。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>分析：(1) <strong>Disease group</strong>：Cardiovascular 与 GI/Hepatic（病程长、轨迹明显）受益于结构化记忆最多（ICU-Evo 在 6/7 指标领先）；Respiratory & Sepsis（流程驱动、protocol-heavy）反而 RAG 在 Action Rec 上偶尔领先 ICU-Evo——指南类操作仍是检索友好任务；(2) <strong>Predictor backbone scaling</strong>：从 Qwen3-235B → GPT-5.4 → Gemini-3.1-pro，Patient Status 仅从 0.253 提到 0.459，远低于一般 NLP 任务的 backbone gain，说明<strong>"长程因果医学推理"是真瓶颈</strong>；(3) <strong>Oracle 评估器一致性</strong>：F1 ≥ 0.895，验证了 hindsight LLM 标注可作为可信的 large-scale 标注源。<strong>局限</strong>：(a) 数据集仅基于 MIMIC-IV（美国 Beth Israel 医院），跨国家/多中心泛化未验；(b) 单次实验，未报告跨长 trajectory 方差；(c) 仅文本数据，未含影像、波形等多模态。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>RealICU 给医学 LLM 评测带来了一个根本性范式更新：<strong>用"事后正确"而非"实时实际"做 ground truth</strong>，这与 LLM 推理能力评估的方向一致——我们要测的是模型的 reasoning，不是它能否模仿人类的不完美决策。Red Flags HRR 这一负向安全指标尤其重要，作为现实部署 ICU AI 的硬门槛。从研究方法论看，本文展示了 hindsight + LLM Oracle + 医生小样本黄金集的三层验证体系，可推广到其他高风险序列决策场景（如金融交易复盘、自动驾驶事故 root-cause）。这与赵政昀博士研究的电子病历检索（CliniQ + DR.EHR）方向高度互补：CliniQ 关注"找到对的信息"，RealICU 关注"做出对的决策"，二者拼合即一个完整的临床 AI 决策支持评估闭环。这是 TUM + LMU + Imperial 多机构联合的高质量医学 LLM 论文，值得医学 NLP 团队持续关注。</p>
+    </div>
+  </div>
+

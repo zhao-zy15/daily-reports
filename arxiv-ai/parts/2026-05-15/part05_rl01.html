@@ -1,0 +1,92 @@
+  </div>
+
+  <h2 class="section-title rl">🎯 RL & Alignment</h2>
+
+  <div class="paper" id="p5">
+    <h3 class="paper-title">RL-1 · CIPO: Learning from Failures with Correction-Oriented Policy Optimization</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 Chinese Academy of Sciences (ISCAS), UCAS, Xiaohongshu</span>
+      <span><a href="https://arxiv.org/abs/2605.14539" target="_blank">arXiv:2605.14539</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">RLVR</span>
+      <span class="tag tag-rl">GRPO</span>
+      <span class="tag tag-rl">推理</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>RLVR（基于可验证奖励的强化学习）已是主流 LLM 推理 post-training 范式（GRPO/RLOO/DAPO 等），但<strong>奖励是二值的、稀疏的</strong>：失败轨迹得 0 分、成功得 1 分，<strong>所有失败都被一视同仁地"压制"</strong>。这忽略了一个事实：失败轨迹有 logical flaws、intermediate inconsistencies、minor final-step miscalculations 等异质错误模式，其中"差一点对"的轨迹其实承载了最多可挖掘的学习信号。本文要回答：能不能把失败轨迹从"被惩罚的对象"<strong>转化为"指导改进的方向性信号"</strong>？</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 双数据流：Base Stream + Correction Stream</strong>
+        <p>每个训练步同时维护两条 rollout 流：</p>
+        <ul>
+          <li><strong>Base Stream</strong>：标准 on-policy rollout，给 query $x$，从 $\pi_\theta(\cdot|x)$ 采样 $m$ 条轨迹 $y_i$；</li>
+          <li><strong>Correction Stream</strong>：把失败轨迹 $y_{\text{fail}}$ 与原 query 拼起来作为新 prompt $x_{\text{rep}}=\text{Concat}(x, y)$，再让模型从 $\pi_\theta(\cdot|x_{\text{rep}})$ 生成 $n$ 条 refinement rollout $y'_i$。如果 $y'$ 答对了，那条 $(y_{\text{fail}}\!\to\!y')$ 链接就成了"如何从这种错误纠正回正确解"的可学习梯度路径。</li>
+        </ul>
+        <p>组合 GRPO 目标：</p>
+        <p>$$J_{\text{CIPO}}(\theta)=J_{\text{GRPO}}^{\text{base}}(\theta)+\lambda\cdot J_{\text{GRPO}}^{\text{correction}}(\theta)$$</p>
+        <p>两个目标的 advantage 在各自 group 内独立标准化，避免相互干扰。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Adaptive Replay Ratio</strong>
+        <p>不加节制地学失败会导致 distribution shift。CIPO 维护一个动态 replay ratio $\rho_t\in[\rho_{\min},\rho_{\max}]$ 控制 base/correction 比例：当模型在最近的"recycled successful samples"上表现下降，说明已学的能力在退化，则增大 $\rho_t$（多回放成功轨迹）；反之放更多注意力在 correction 上。这是一个简单的"保命"反馈环。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Risk-Averse Reward Shaping</strong>
+        <p>对 correction stream 引入风险厌恶奖励：如果 refinement $y'$ 仍然失败，相比 base stream 的失败给更大的负奖励，因为这意味着"模型连自己的错误都纠正不了"——这是 capability regression 的强信号。形式化为：$r_{\text{correction}}(y')=r_{\text{verify}}(y')-\beta\cdot\mathbb 1[y'\text{ fails}]$，$\beta>0$ 显式惩罚二次失败。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Difficulty-Aware Trajectory Preference</strong>
+        <p>第三个机制：选择哪些 $y_{\text{fail}}$ 进入 correction stream。CIPO 优先挑选"接近边界"的失败——具体做法是计算同一 query 下 $m$ 条 base rollout 中 success ratio 在 $(0, 1)$ 内（既有成功也有失败）的 query，从这些"中等难度" query 的失败轨迹中采样进入 correction，避免在 0 success（太难）或全 success（太易）上浪费 correction 算力。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：AIME24 上的"差一点对"轨迹纠错</h4>
+      <div class="example-box">
+        <strong>场景</strong>：Qwen3-4B 在 AIME24 一道几何题上的训练片段。
+        <ol>
+          <li><strong>Vanilla GRPO 视角</strong>：8 条 rollout，5 错 3 对。5 条失败轨迹都被同样压制，但其中 1 条仅在最后一步把 $\sqrt{7}/2$ 算成 $\sqrt{14}/4$，另 1 条却在第二步就用错定理。GRPO 给出相同的负梯度，浪费了"差一点对"轨迹的精细信息；</li>
+          <li><strong>CIPO 视角</strong>：取那条"差一点对"的失败 $y_{\text{fail}}$，构造 prompt $x_{\text{rep}}=\text{原题} + \text{该失败轨迹}$，让模型生成 8 条 refinement。其中 6 条成功识别了"$\sqrt{7}/2$ 的最后一步错误"并给出正确答案，2 条仍失败；</li>
+          <li>这 8 条 correction rollout 的 group-relative advantage 给出明确梯度：把"识别最后一步算错"的能力作为正信号强化；2 条二次失败的轨迹被 risk-averse shaping 进一步加权惩罚；</li>
+          <li><strong>结果</strong>：训 500 步后，AIME24 pass@1 从 23.54% → <strong>47.50%</strong>（GRPO 同条件下 42.08%），AIME25 从 21.04% → <strong>44.90%</strong>（GRPO 35.73%），AIME 系列绝对涨了 22-24pt，比 GRPO 多 5-9pt。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Qwen3-4B 数学 + Seed-Coder-8B 代码）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>AIME24</th><th>AIME25</th><th>AMC23</th><th>MATH500</th><th>Olympiad</th><th>Math Avg</th><th>LCBv6</th><th>LeetCode</th></tr></thead>
+        <tbody>
+          <tr><td>Initial（base）</td><td>23.54</td><td>21.04</td><td>66.02</td><td>82.20</td><td>47.70</td><td>46.82</td><td>24.12</td><td>69.16</td></tr>
+          <tr><td>PRIME (RLOO)</td><td>48.65</td><td>40.42</td><td>85.31</td><td>91.20</td><td>57.63</td><td>62.88</td><td>26.65</td><td>69.43</td></tr>
+          <tr><td>GRPO (BS=128)</td><td>42.08</td><td>35.73</td><td>85.55</td><td>90.02</td><td>57.63</td><td>59.83</td><td>29.45</td><td>76.23</td></tr>
+          <tr><td>GRPO (BS=256)</td><td>40.42</td><td>33.44</td><td>84.06</td><td>90.00</td><td>58.96</td><td>59.66</td><td>29.32</td><td>75.93</td></tr>
+          <tr><td class="best">CIPO（本文）</td><td class="best">47.50</td><td class="best">44.90</td><td class="best">89.61</td><td class="best">92.00</td><td class="best">59.70</td><td class="best">64.38 (+4.55)</td><td class="best">30.33</td><td class="best">78.21</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">CIPO 在 AIME25 上甚至超过了 PRIME (44.90 vs 40.42)，并在所有 6 个数学子集和 2 个代码 bench 上一致领先 GRPO 同条件版本。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>CIPO 在 pass@K 上同样领先（AIME24 pass@32 从 60.00% → ~70%+），说明它<strong>不是只把概率密度集中</strong>，而是真正扩大了模型的解题面，提升了 intrinsic reasoning 能力。三个机制的消融（论文 Appendix）都重要：移除 adaptive replay 训练后期会出现性能回退；移除 risk-averse shaping 学到的纠正能力会"过拟合"导致 base rollouts 退步；移除 difficulty-aware 选择会浪费大量 correction rollout 在已经全对/全错的 query 上。<strong>局限</strong>：(a) correction stream 把每步 rollout 量翻一倍，训练成本增加 ~2×；(b) 当前未与多 turn agent 场景结合（仅 single-turn QA）；(c) 只在 4B/8B 规模验证，更大模型上 risk-averse $\beta$ 是否需要重调未知。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>CIPO 的核心哲学是<strong>"失败不是负样本，而是 prompt"</strong>——把失败轨迹拼回 prompt 后再 rollout，使得模型从"消除错误"被动学习转为"主动纠错"主动学习。这对 RLVR 范式有两个重要启发：(1) 失败轨迹中蕴含的"how to correct"信息远比"this is wrong"信号丰富；(2) Self-correction 能力可以在不引入 verifier/critic LLM 的前提下、纯 on-policy 学到。对工业 RLHF/RLVR 团队的直接启发是：在已有 GRPO 训练管线上插入一个 correction stream（双 rollout），即可在 AIME 难题集上获得 5-9pt 的额外收益，性价比高。该工作已被中科院软件所 + 小红书联合署名，应是面向 ICLR/ICML 的强投稿。</p>
+    </div>
+  </div>
+

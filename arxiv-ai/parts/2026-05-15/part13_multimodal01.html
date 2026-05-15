@@ -1,0 +1,100 @@
+  </div>
+
+  <h2 class="section-title mm">🌐 Multimodal</h2>
+
+  <div class="paper" id="p13">
+    <h3 class="paper-title">Multimodal-1 · Video2GUI: Synthesizing 12M GUI Interaction Trajectories from Internet Videos</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 Peking University, Xiaomi LLM-Core, Renmin University of China</span>
+      <span><a href="https://arxiv.org/abs/2605.14747" target="_blank">arXiv:2605.14747</a></span>
+      <br>
+      <span class="tag tag-multimodal">Multimodal</span>
+      <span class="tag tag-multimodal">GUI Agent</span>
+      <span class="tag tag-multimodal">数据合成</span>
+      <span class="tag tag-multimodal">VLM</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>GUI agent（浏览器、桌面、移动）是 multimodal LLM 重要落地方向，但泛化受限于<strong>训练数据规模与多样性</strong>。已有数据集（MIND2WEB 137 个网站、AndroidControl 833 个应用、AITW 357 个 mobile 环境）规模有限且依赖人工标注，难覆盖真实世界 1500+ 应用场景。<strong>互联网上有海量教学视频</strong>（YouTube 上 5 亿+ 视频含大量 software tutorial），但要把它们转化为有 grounding 的 GUI 操作轨迹有两大难关：(1) 海量视频里如何高效筛选高质量 GUI tutorial？(2) 如何把视频中的鼠标点击 / 键盘输入精确<strong>映射到屏幕坐标</strong>？本文 Video2GUI 给出端到端管线，最终发布 <strong>WildGUI</strong>：12M 轨迹 / 124M 图像 / 1500+ 应用，迄今最大开源 GUI 预训练数据集。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 阶段 1：粗到细的视频筛选（500M → 4.16M）</strong>
+        <p><strong>Meta Info Filtering</strong>：先用 video metadata（标题、描述、关键词）做廉价文本筛选。从 500M YouTube 视频元数据出发，作者用 DeepSeek-V3 标注 10K 样本得到 GUI-relevant 训练集，fine-tune Qwen2.5-7B 分类头做大规模推断；得到 ~20M 候选。</p>
+        <p><strong>Video Quality Scoring</strong>：对内容做细粒度评估，用 Qwen2.5-Omni（多模态评分模型）从三维度打分：(a) <strong>Topic Relevance</strong>（是否真在教 GUI 操作）、(b) <strong>Instruction Clarity</strong>（讲解是否清晰连贯）、(c) <strong>Screen Recording Quality</strong>（视觉清晰、完整、稳定）。Gemini 3 Pro 在 200 小时视频上做种子标注，fine-tune 出 omnimodal scorer 应用到全部 20M 视频，最终保留 <strong>4.16M 高质量视频 / 30 万小时内容</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 阶段 2：Trajectory Extraction（视频 → 结构化轨迹）</strong>
+        <p>从原始视频 $V$ 抽取指令-轨迹对 $\{(u, e)^{(i)}\}$，每条 $e=\{(a_t, o_t, r_t)\}$ 含 action 类型、 时间戳、参数、推理 rationale。流程：</p>
+        <ul>
+          <li>用 ASR + caption 模型抽取 narration 与时间戳；</li>
+          <li>用 VLM 在视频帧上识别 high-level <strong>task instruction</strong>（"how to add a chart in Excel"）；</li>
+          <li>切分为 atomic action（click / type / drag）+ timestamps + 视觉 rationale；</li>
+          <li>每条 action 关联 3 个候选关键帧（action 前 / 中 / 后）。</li>
+        </ul>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 阶段 3：Action Space Grounding（视频 → 屏幕坐标）</strong>
+        <p>这是最难的一步。VideoAgentTrek 等已有方法依赖低层视觉 cue（如鼠标光标位置），噪声大且对无光标 mobile 视频失效。Video2GUI 的方案是：对每个 action，用 VLM 在 3 个候选帧中尝试 <strong>spatial grounding</strong>（输入"用户在点击 'File' 菜单"，输出 bbox）。<strong>选第一个能产出有效 grounding 的帧</strong>作为最终监督信号。手工核验 200 个采样 action 显示该策略 <strong>≥95% 准确率</strong>。这是把 VLM 的 grounding 能力<em>用作 ground-truth-free 标注器</em>，规避了"鼠标可见性"假设。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 阶段 4：两阶段 Agent Training Strategy</strong>
+        <p><strong>Stage 1</strong>：在 WildGUI 12M 轨迹上做 continual pre-training（CPT），让模型获得 GUI 元素识别 + action grounding 的通用能力；</p>
+        <p><strong>Stage 2</strong>：在 high-quality 任务特定 supervised post-training（SFT）数据集上做精调，学习严格的 action 输出格式与多步 planning。CPT (Stage 1) 是 Video2GUI 数据的核心受益场景。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Mimo-VL-7B + WildGUI 在 GUI Grounding 上的飞跃</h4>
+      <div class="example-box">
+        <strong>场景</strong>：开源 Mimo-VL-7B（Xiaomi 自研）在 ScreenSpot-Pro 与 OSWorld-G 两大 GUI grounding bench 上的表现。
+        <ol>
+          <li><strong>无 WildGUI 预训练</strong>：Mimo-VL-7B 在 ScreenSpot-Pro Avg 41.2%，在 OSWorld-G Avg 54.7%；</li>
+          <li><strong>+ WildGUI Stage 1 CPT</strong>：ScreenSpot-Pro Avg <strong>56.9% (+15.7pt 绝对提升)</strong>；OSWorld-G Avg <strong>67.6% (+12.9pt)</strong>；</li>
+          <li>这一 +15.7pt 跃迁<strong>已超过参数更大的 Qwen3-VL-32B (54.9%)</strong>、UI-TARS-72B (38.1%)，仅次于闭源 Seed1.5-VL (60.9%)；</li>
+          <li><strong>更激进对比</strong>：Qwen2.5-VL-7B 原始 ScreenSpot-Pro 仅 26.8%（一个相对早期 VLM），+ WildGUI 后跃升到 41.9%（+15.1pt），OSWorld-G 从 27.3% 飙到 53.7% (+26.4pt)。这证明 Video2GUI 数据对"<strong>GUI 弱底座</strong>"的提升甚至更显著；</li>
+          <li><strong>Online benchmark</strong>：在 AndroidWorld 真实环境，Mimo-VL-7B 基础 16.4% → Stage 2 only 23.3% → Stage 1+2 完整 Pipeline <strong>31.9% (近 2× 基础)</strong>；OSWorld 也提升至 12.3%。证明 offline 视频蒸馏数据能泛化到 online open-ended 环境。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（GUI Grounding）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>ScreenSpot-Pro Avg</th><th>OSWorld-G Avg</th></tr></thead>
+        <tbody>
+          <tr><td>Gemini-2.5-Pro</td><td>11.4</td><td>45.2</td></tr>
+          <tr><td>Seed1.5-VL（闭源）</td><td>60.9</td><td>62.9</td></tr>
+          <tr><td>GTA1-7B</td><td>50.1</td><td>55.1</td></tr>
+          <tr><td>UI-Venus-7B</td><td>50.8</td><td>58.8</td></tr>
+          <tr><td>OpenCUA-7B</td><td>50.0</td><td>55.3</td></tr>
+          <tr><td>GUI-Owl-7B</td><td>54.9</td><td>55.9</td></tr>
+          <tr><td>UI-TARS-72B</td><td>38.1</td><td>57.1</td></tr>
+          <tr><td>Qwen3-VL-32B</td><td>54.9</td><td>60.6</td></tr>
+          <tr><td>Qwen2.5-VL-7B（base）</td><td>26.8</td><td>27.3</td></tr>
+          <tr><td>Qwen2.5-VL-7B + WildGUI</td><td>41.9 (+15.1)</td><td>53.7 (+26.4)</td></tr>
+          <tr><td>Mimo-VL-7B（base）</td><td>41.2</td><td>54.7</td></tr>
+          <tr><td class="best">Mimo-VL-7B + WildGUI</td><td class="best">56.9 (+15.7)</td><td class="best">67.6 (+12.9)</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">+ WildGUI 后的 Mimo-VL-7B 在 OSWorld-G 上 67.6% 已超过 Seed1.5-VL (62.9%) 与 Qwen3-VL-32B (60.6%)；7B 模型超过 32B+ 闭源同行，<strong>数据规模而非模型规模成为 GUI agent 性能瓶颈</strong>。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>仅 Stage 1（CPT）</strong> vs <strong>仅 Stage 2（开源 SFT）</strong>：AndroidWorld 上分别 ~25% / 23.3%，互不可替代；二者结合 31.9% 才是真正最优；(2) <strong>Video Quality Scoring 移除</strong>（仅 metadata 筛选）：训练数据噪声变大，downstream 损失 ~5pt，证明 omnimodal scorer 是关键；(3) <strong>Action Grounding 候选帧 1 → 3</strong>：1 帧准确率 ~78%、3 帧 ~95%；多帧投票是高准确率关键。<strong>局限</strong>：(a) WildGUI 仅 YouTube 来源，国内应用 (微信、抖音、淘宝) 比例有限；(b) Action grounding 仅支持 click / type / drag，对 scroll/zoom/multi-touch 等 complex gesture 还需扩展；(c) 视频帧 → action 时间戳对齐误差 ~200ms，对 fast-paced 操作（连续点击）可能漏 action。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>Video2GUI 是 GUI agent 领域的<strong>"数据规模法则"工程实证</strong>：用极少手工标注 + 三个 LLM/VLM 模型（DeepSeek-V3 标分类、Gemini 3 Pro 标质量、VLM 做 grounding）就能从 5 亿原始视频蒸出 12M 高质量轨迹。其哲学价值在于"<strong>互联网视频本身就是 GUI agent 训练语料</strong>"——只要有合适的筛选与 grounding 管线。对赵政昀博士在 IPO ECM 投行场景下的启发是：当前 ECM 工作中也有大量 SOP 视频（招股书审核流程、Excel 模型搭建录屏），同样的 video → trajectory 蒸馏管线可生成定制 ECM agent 的训练数据。这是 PKU + 小米 LLM-Core 的高价值合作产出，论文同时发布数据集与代码（项目页 weiminxiong.github.io/Video2GUI），对开源 GUI agent 社区是直接利好。</p>
+    </div>
+

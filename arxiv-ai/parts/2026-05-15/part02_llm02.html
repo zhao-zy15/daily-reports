@@ -1,0 +1,83 @@
+  <div class="paper" id="p2">
+    <h3 class="paper-title">LLM-2 · EndPrompt: Efficient Long-Context Extension via Terminal Anchoring</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 Nankai University, Baidu, Shanghai Jiao Tong University</span>
+      <span><a href="https://arxiv.org/abs/2605.14589" target="_blank">arXiv:2605.14589</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">长上下文</span>
+      <span class="tag tag-llm">RoPE</span>
+      <span class="tag tag-llm">位置编码</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>把 LLM 的上下文从 8K 扩到 64K，传统做法是<strong>真在 64K 长度上微调</strong>——内存与算力随长度二次增长，多数中小团队无法复现。退而求其次的"chunk + 跳过位置索引"方法（Positional Skip-Embedding 等）虽然便宜，但把连续语义切成几段拼接，会破坏文本的连贯性，让模型学到一种"虚假的远距离相关"。本文要解决的问题是：能不能<strong>只用短训练序列（≤8K）</strong>，在<strong>不破坏语义连续性</strong>的前提下，让 LLM 学到 64K 内的所有相对位置？</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 终端锚定（Terminal Anchoring）的两段式构造</strong>
+        <p>给定一段长度为 $a$ 的短上下文 $x=(x_0,\ldots,x_{a-1})$ 与一段长度为 $b$ 的"终端 prompt" $e=(e_0,\ldots,e_{b-1})$，把它们物理拼接为 $y=(x_0,\ldots,x_{a-1},e_0,\ldots,e_{b-1})$，物理长度仅 $a+b\!\ll\!L$。但<strong>位置索引</strong>被打到目标长度 $L$ 的两端：</p>
+        <p>$$p_\ell=\begin{cases}\ell, & 0\le\ell<a \\ L-b+(\ell-a), & a\le\ell<a+b\end{cases}$$</p>
+        <p>这样模型同时看到两类相对距离：(a) 段内 token 间的<strong>近距离</strong>（0 到 $a-1$），(b) 跨段 token 间的<strong>长距离</strong>（接近 $L$）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 与 RoPE / Position Interpolation 的耦合</strong>
+        <p>在 RoPE 下 token $\ell$ 的旋转角是 $\theta_\ell=p_\ell\cdot\theta_{\text{base}}$，两段索引方案让 query-key 内积自然出现长距离 $\Delta p\approx L\!-\!b$ 的旋转项。配合 Position Interpolation 把所有 $p_\ell$ 缩放到原 8K 窗口内：$\hat p_\ell=p_\ell\cdot\frac{8K}{L}$，使旋转角始终落在预训练分布内，避免 OOD 角度。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Bernstein 不等式给出的"光滑性"保证</strong>
+        <p>论文用 Bernstein 不等式刻画 PI 后注意力函数 $A(\Delta)$ 关于相对距离 $\Delta$ 的 Lipschitz 光滑性：观察到的 $\Delta\in\{0..a\}\cup\{L-b..L-1\}$ 在 PI 缩放下变成稠密的 $[0,8K]$ 子区间，再叠加 Transformer 跨头共享权重的归纳偏置，未观察到的中间距离的注意力外推被严格控制在一个紧致带宽内。理论上证明：<strong>稀疏的两端监督就足以约束整个 $A(\cdot)$ 函数空间</strong>，无需稠密长序列采样。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 训练流程</strong>
+        <p>每 step 仅前向 $a+b$ 个 token（典型 $a=8K, b=512$，物理长度 8.5K），但模型实际上"接触"了 64K 的相对位置编码空间。loss 用标准 next-token CE：$\mathcal L=-\sum_\ell\log p_\theta(y_\ell\mid y_{<\ell},p_\ell)$。在 1B token 语料上微调即可；显存约束等价于 8K 训练，相比真 64K 训练节省一个数量级的算力。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：为什么 chunk-based 方法失败而 EndPrompt 不会</h4>
+      <div class="example-box">
+        <strong>对比实验场景</strong>：扩展 LLaMA-2-7B 上下文 8K→64K，在 RULER 的 NIAH_M3（多针穿插检索）任务上看 attention 行为。
+        <ol>
+          <li><strong>Positional Skip-Embedding</strong>（chunk-based 基线）：把同一段连贯文本切成 8 块，每块独立打位置索引并训练。结果：模型学到的注意力对块边界产生异常聚集，对真实长距离语义无效（NIAH_M3 仅 51.92%，与未训练时几乎无差）；</li>
+          <li><strong>Full-length FT</strong>（在 64K 训练）：NIAH_M3 = 56.20%，但训练显存约 EndPrompt 的 8 倍；</li>
+          <li><strong>EndPrompt（本文）</strong>：物理长度 8K + 512 token 终端 prompt，位置索引打到 [0, 8K] ∪ [63.5K, 64K]。NIAH_M3 = <strong>62.92%</strong>，比 Full FT 还高 6.7pt，并且短文段语义连贯没被切碎。</li>
+        </ol>
+        <strong>关键差异</strong>：chunk-based 方法把"短-长"距离都打进了同一段连续文本里，导致模型学到的远距离 attention 实际上对应着"段间漂移"的虚假信号；EndPrompt 让长距离仅通过终端 prompt 这一个明确的"锚点"出现，模型清楚地分离了"局部连续语义"与"远距离锚定"两类信号。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果</h4>
+      <table>
+        <thead><tr><th>方法</th><th>RULER avg.</th><th>LongBench avg.</th><th>LongBench Code Completion</th></tr></thead>
+        <tbody>
+          <tr><td>Positional Skip-Embedding</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>LongLoRA</td><td>72.95</td><td>36.84</td><td>45.86</td></tr>
+          <tr><td>LCEG</td><td>72.24</td><td>36.61</td><td>46.86</td></tr>
+          <tr><td>Full-length Fine-Tuning</td><td>69.23</td><td>35.63</td><td>47.86</td></tr>
+          <tr><td class="best">EndPrompt（本文）</td><td class="best">76.03 (+3.08 vs LongLoRA)</td><td class="best">38.30</td><td class="best">66.48 (+18.6 vs LCEG)</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">在 NIAH_M3、VT、FWE 这些"复杂位置依赖"子任务上 EndPrompt 优势最大（VT 82.00 vs LongLoRA 65.70；FWE 83.53 vs LongLoRA 58.17），代码补全更是从 ~46 拉升到 66.48。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融实验在 RULER 上做了三种切片：(1) <strong>底座模型</strong>：LLaMA-3-8B 76.03 → Mistral-7B-v0.3 68.39 → LLaMA-2-7B 45.82，说明方法对预训练质量敏感；(2) <strong>扩展长度</strong>：ET-32K 76.45 / ET-96K 75.61 / ET-128K 72.82，扩到 96K 仍稳，128K 略掉点；(3) <strong>训练 token 量</strong>：ET-2.0B 75.61 / ET-1.0B 76.03 / ET-0.5B 74.72，0.5B token 已经达到 98% 性能。<strong>局限</strong>：(a) 终端 prompt 长度 $b$ 是超参，未自适应；(b) 当 $L$ 远超 8K（>16×）时 PI 引入的旋转角变形会变大，需要更精细的尺度调度；(c) 评测仍以英文为主，多语种长文档表现未充分验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>EndPrompt 提出的"<strong>稀疏两端位置监督</strong>"挑战了"长上下文必须用长序列训练"的主流假设：在 RoPE + PI 框架下，只要 (a) 保留语义连续的短段、(b) 在末端加一个 anchor，模型就能从 8K 训练样本中学出 64K 范围的相对位置依赖。对工程团队的直接启示是：<strong>把 64K 微调降级为 8K + 512 token anchor 的微调，显存与时间双降一个数量级</strong>。这一思想还可推广到 GUI Agent / 代码长文件场景，作"局部连续 + 远距离锚定"的位置编码协议设计。</p>
+    </div>
+  </div>
+

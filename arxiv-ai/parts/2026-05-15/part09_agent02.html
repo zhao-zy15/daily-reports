@@ -1,0 +1,93 @@
+  <div class="paper" id="p9">
+    <h3 class="paper-title">Agent-2 · EvoLib: Test-Time Learning with an Evolving Library</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 Microsoft Research</span>
+      <span><a href="https://arxiv.org/abs/2605.14477" target="_blank">arXiv:2605.14477</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">Test-Time Learning</span>
+      <span class="tag tag-agent">技能库</span>
+      <span class="tag tag-agent">自监督</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>现实部署中 LLM 几乎都是<strong>黑盒</strong>（无法 fine-tune），又往往<strong>缺乏 ground-truth feedback</strong>（无 reward 函数 / 测试用例）。已有 test-time learning (TTL) 方法多依赖梯度更新（不适用于闭源 API）或外部监督（不适用于现实未知答案任务）；test-time scaling (TTS) 如 Best-of-N、Self-Consistency 又把每个问题独立处理，跨问题<strong>知识无积累</strong>。本文 EvoLib 旨在两难之间走一条新路：用<strong>自监督的"技能库"演化</strong>让 LLM 在跨任务流上不断成长，参数不动、无需外部监督。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 问题表述与库结构</strong>
+        <p>Agent 状态为 $(\Phi, \mathcal K)$：$\Phi$ 是 frozen LLM，$\mathcal K$ 是知识抽象库（带权集合）。任务流 $\{x_1,x_2,\ldots,x_T\}$，每步：</p>
+        <p>$$\{z_{t-1}\}\sim\mathrm{Sample}(\mathcal K_{t-1}, x_t)$$</p>
+        <p>$$\tilde y_t\sim P_\Phi(\cdot\mid x_t,\{z_{t-1}\})$$</p>
+        <p>$$\{z_t\}=\mathrm{Extract}(x_t,\tilde y_t),\;\mathcal K_t=\mathrm{Update}\big(\mathcal K_{t-1},(x_t,\tilde y_t,\{z_{t-1}\},\{z_t\})\big)$$</p>
+        <p>抽象有两类：<strong>modular skills</strong>（编程任务=函数；推理任务=带解的子问题；agentic 任务=带 workflow 的子任务）和 <strong>reflective insights</strong>（错误模式 / 启发式策略）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 自监督的 Sample-Solve-Extract 循环</strong>
+        <p>不依赖外部 reward。每个 task 上，Agent 先从库里检索相关 abstraction 拼到 prompt，让 $\Phi$ 生成解 $\tilde y_t$；从 $\tilde y_t$ 中蒸馏新 abstraction（使用一个固定的 extraction prompt：identify reusable function、sub-task、insight）。无 ground-truth 即可执行——通过模型自评估和多样化采样代替外部 verifier。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Information Gain 权重 + Future IG 演化机制</strong>
+        <p>核心创新：每个 abstraction $z$ 在库里持有一个权重 $w(z)$，它由两部分构成：</p>
+        <p>$$w(z)=\mathrm{IG}(z)+\beta\cdot\mathrm{FutureIG}(z)$$</p>
+        <ul>
+          <li><strong>$\mathrm{IG}(z)$（Immediate Information Gain）</strong>：在 $z$ 被 sample 进 prompt 时观察到的解题质量提升（用模型 self-evaluation 估计，如 verifier 自洽性、log-likelihood 提升）；</li>
+          <li><strong>$\mathrm{FutureIG}(z)$（Future Information Gain）</strong>：$z$ 触发新 abstraction 生成的程度——一个 skill 越能被改写、组合、扩展，它的 long-term value 越高。</li>
+        </ul>
+        <p>这是论文最巧妙的一步：不仅奖励"<em>立刻有用</em>"的 skill，还奖励"<em>能孵化更多可复用 skill</em>"的 skill。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Consolidation：把碎片合并为通用抽象</strong>
+        <p>定期对库进行 consolidation：找语义相似/功能重复的 abstractions，让 LLM 自己 merge 成更通用版本。例如 task 1 抽出"detect cycles in directed graph using DFS"，task 5 抽出"check graph connectivity with BFS"，consolidation 后合成"graph traversal utilities (DFS/BFS)"。这一过程让 instance-specific skill 演化为 general、reusable 的 abstraction。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：BigCodeBench Hard 上的技能演化</h4>
+      <div class="example-box">
+        <strong>场景</strong>：GPT-4o 解决 148 道 BigCodeBench Hard 编程题，按顺序流式呈现。
+        <ol>
+          <li><strong>Task 1（CSV 数据清洗）</strong>：模型解决，extract 出 skill <code>handle_missing_with_median(df)</code>，IG 权重 ~0.3；</li>
+          <li><strong>Task 12（Time-series fillna）</strong>：sample 该 skill 进 prompt，得 hint "use median imputation"，解题质量提升，IG 权重提升至 0.5；同时 extract 出 <code>resample_and_impute(df, freq)</code>；</li>
+          <li><strong>Task 30（数据 ETL pipeline）</strong>：库内 4 个相关 skills 被 sample，模型组合使用并解出题；trigger consolidation：4 个 skill 被合并为更通用的 <code>data_clean_pipeline(df, config)</code>，原 4 个 skill 权重转入新 abstraction；</li>
+          <li><strong>Task 80（pandas 复杂 ETL + 时序）</strong>：直接 sample <code>data_clean_pipeline</code>，开箱即用；</li>
+          <li><strong>结果</strong>：BigCodeBench Hard pass rate <strong>从 base 29.7% → EvoLib 40.8%（+11.1pt）</strong>，超过 Best-of-N (37.2%) 与 RSA (31.7%)；GPT-4o + EvoLib 甚至超过 leaderboard 上更强的 Gemini-Exp-1206 (40.5%)。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果</h4>
+      <table>
+        <thead><tr><th>方法</th><th>HMMT (Math)</th><th>BigCodeBench</th><th>LiveCodeBench v6</th><th>ScienceWorld Success</th><th>PDDL Success</th></tr></thead>
+        <tbody>
+          <tr><td>Base sampling</td><td>57.0</td><td>29.7</td><td>58.8</td><td>53.3</td><td>62.8</td></tr>
+          <tr><td>Best-of-N</td><td>74.2</td><td>37.2</td><td>67.5</td><td>—</td><td>—</td></tr>
+          <tr><td>RSA</td><td>67.2</td><td>31.7</td><td>70.0*</td><td>—</td><td>—</td></tr>
+          <tr><td>ExpRAG</td><td>60.2</td><td>25.0</td><td>51.3</td><td>51.1</td><td>39.4</td></tr>
+          <tr><td>Dynamic Cheatsheet</td><td>66.7</td><td>35.8</td><td>65.0</td><td>55.9</td><td>65.0</td></tr>
+          <tr><td class="best">EvoLib（本文）</td><td class="best">77.4*</td><td class="best">40.8*</td><td class="best">70.0*</td><td class="best">57.4</td><td class="best">72.8*</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">* = 与第二名相比 paired t-test p&lt;0.05 显著。EvoLib 在 5 项 benchmark 上全部排名第一或并列第一。在 token-efficient 维度，EvoLib 在预算减半时仍领先 +6-16%（BigCode）/+3-6%（LiveCode），是真正的高性价比 TTL 方案。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>移除 FutureIG</strong>：库无法识别"种子型 skill"，consolidation 频率下降，HMMT 性能损失 ~5pt；(2) <strong>不做 consolidation</strong>：库膨胀严重，sample 时检索质量下降，pass rate 退步；(3) <strong>从 raw trajectory memory 而非 abstraction</strong>：检索到的内容冗余且不可组合，相比 abstraction 形式损失 ~3-7pt；(4) <strong>continual learning task ordering 敏感性</strong>：DC 等 linear update 类方法对任务顺序极敏感（+/− 5pt 取决于顺序），EvoLib 因为有 consolidation 几乎不受顺序影响。<strong>局限</strong>：(a) 库 size 增长后 sample 检索成本上升，需 hierarchical indexing；(b) self-evaluation 估计 IG 时仍可能 reward hack（模型为讨好自己）；(c) 评测主要在英文 STEM/code 任务，开放域、低资源场景效果未充分验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>EvoLib 把 test-time learning 从"参数微调"框架彻底解放出来，重新定义为<strong>"abstraction 库的演化"</strong>。其核心创新 Future Information Gain 是一个少有的"<strong>面向未来效用</strong>"的奖励信号——这呼应了人类学习中"具有迁移潜力的概念优于一次性技巧"的直觉。对工业 agent 团队（特别是用 GPT-4o / Claude / Gemini 闭源 API 的应用层）的启发是：<strong>不微调模型也能实现持续学习</strong>，关键是把"会话级 prompt"升级为"演化的技能库"。在 SWE 类 agent、Claude Code 这类长链路 agent 系统中，这套机制可作为"agent 长期记忆层"的核心范式实现。</p>
+    </div>
+  </div>
+

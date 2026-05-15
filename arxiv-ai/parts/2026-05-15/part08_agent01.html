@@ -1,0 +1,90 @@
+  </div>
+
+  <h2 class="section-title agent">🤖 Agent</h2>
+
+  <div class="paper" id="p8">
+    <h3 class="paper-title">Agent-1 · Self-Pruned KV Attention: Learning When to Write by Predicting Future Utility</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 Meta FAIR, CentraleSupélec</span>
+      <span><a href="https://arxiv.org/abs/2605.14037" target="_blank">arXiv:2605.14037</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">长上下文</span>
+      <span class="tag tag-agent">KV Cache</span>
+      <span class="tag tag-agent">Memory</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>在现代 test-time compute 与 agentic 推断范式下，LLM 一次会话可能产生 100K+ token 的轨迹（多轮工具调用、长 reasoning、retrieval-augmented 上下文）。瓶颈不再是 compute，而是 KV cache 的<strong>内存占用与读带宽</strong>——每个新 token 都要读完整 KV，长序列导致 GPU memory traffic 爆炸。已有方案（GQA / MLA 共享 KV、QUEST / DeepSeek Sparse Attention 读时稀疏）要么写时仍存全量，要么需特定查询结构。本文 SP-KV 是另一条路：让模型自己<strong>在写入时就预测每个 KV 是否值得长期保留</strong>，硬剪枝、动态压缩比，对 agent 长 trajectory 友好。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Key-wise Utility 预测</strong>
+        <p>在 layer $l$、key-head $k$、token 位置 $s$ 上，用一个 2-layer MLP $f^{l,k}_\theta$ 从隐藏状态 $h^l_s$ 预测 utility 分数：</p>
+        <p>$$u^{l,k}_s=\sigma\big(f^{l,k}_\theta(h^l_s)\big)\in(0,1)$$</p>
+        <p>推断时通过阈值 $\tau$ 二值化得到门控 $z_s=\mathbb 1[u_s\ge\tau]$：$z_s=0$ 表示这个 KV 不进入持久 cache（除非在 sliding window 内）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Sliding-Window + Gated Global Attention</strong>
+        <p>始终保留最近 $w=128$ 个 token 的局部因果窗口（保护短程依赖），更早的 token 仅当 $z_s=1$ 时才进入全局 attention：</p>
+        <p>$$g_{t,s}=\begin{cases}0, & z_s=1\;\lor\;\mathbb 1_{\text{win}}(t,s) \\ -\infty, & \text{otherwise}\end{cases},\;B_{t,s}=M_{\text{causal}}(t,s)+g_{t,s}$$</p>
+        <p>$$o_t=\sum_s\mathrm{softmax}\!\Big(\frac{\langle q_t, k_s\rangle}{\sqrt d}+B_{t,s}\Big)v_s$$</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Phase 1：Soft Gated Training（保留可微性）</strong>
+        <p>训练时 thresholding 不可微。SP-KV 把 $\log u_s$ 直接加进 attention mask bias：$\tilde g_s=\log u_s$。$u_s\to 0$ 等价于 $-\infty$ mask（被屏蔽），$u_s\to 1$ 等价于 mask 0（完全开放）。所有 utility gate 在初始化时 logit 拉到大正数（默认全开放），<strong>用 vanilla next-token prediction loss 一统训练</strong>，无任何稀疏化辅助 loss——稀疏化作为 NTP loss 自然产物涌现。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Phase 2：Threshold-Aware Hard Gating + 块跳跃 kernel</strong>
+        <p>在 cosine schedule 的最后 25%，冻结 utility predictor 权重，把 gate 用阈值 $\tau$ 二值化。为避免突变带来的优化不稳，500 步线性 anneal：</p>
+        <p>$$\tilde u=(1-\alpha)u+\alpha\cdot\mathbb 1[u\ge\tau],\;\alpha:0\to 1$$</p>
+        <p>训练-推断对齐后，作者修改 FlashAttention-3 加入<strong>块跳跃优化</strong>：以 64-token 粒度预计算稀疏 mask，对全零 KV 块直接 skip TMA load 与 MMA 计算。结果：1.6B-8.1B 模型上 Phase 2 ($\tau=0.7$) wall-clock throughput 达到 full-attention baseline 的 <strong>82-90%</strong>，但 KV cache 大小压缩 3-10×。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Agent 长 trajectory 上的动态压缩</h4>
+      <div class="example-box">
+        <strong>场景</strong>：Llama-style 8.1B 模型处理一条 32K token 的 agent trajectory（含 10 次工具调用、多次 retrieval 注入）。
+        <ol>
+          <li><strong>Full Attention baseline</strong>：32K × 32 layers × 8 KV heads × 128 dim × 2 (K+V) ≈ <strong>2.1 GB KV cache</strong>，每生成 1 个新 token 都要读完整 cache，bandwidth bound；</li>
+          <li><strong>SP-KV $\tau=0.7$</strong>：模型自己学到——retrieved 段落和工具结果中只有<strong>关键摘要 token（如 "result: 42", "error: timeout"）</strong>被打高 utility，中间填充 token（"the next thing to do is..."）被打低 utility 自然剪掉；最终 keep 比例在 $\rho\approx 0.10\sim 0.30$ 之间动态变化（越长越压缩），cache 压缩约 5-7×；</li>
+          <li><strong>性能</strong>：在 NIAH（多针检索）、RULER 长上下文 QA 上对比 full-attention baseline 几乎无下降（&lt;1pt 差异），但 decoding throughput 提升 ~2×；</li>
+          <li><strong>意外发现</strong>：SP-KV 学到的 head-level utility pattern 揭示了"<strong>有些 attention head 天生就是 local，有些天生就是 global</strong>"——把高 average utility 的 head 设为 global、其他设为 local，得到的混合架构在同 KV 预算下超过传统 interleaved global-local layout。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果</h4>
+      <table>
+        <thead><tr><th>模型规模</th><th>Phase 1 训练吞吐（vs FA-3 基线）</th><th>Phase 2 推断吞吐（$\tau=0.7$）</th><th>动态压缩比</th><th>下游性能损失</th></tr></thead>
+        <tbody>
+          <tr><td>1.6B</td><td>62%</td><td>90%</td><td>3-10×（动态）</td><td>~0pt</td></tr>
+          <tr><td>3.2B</td><td>61%</td><td>87%</td><td>3-10×</td><td>~0pt</td></tr>
+          <tr><td>5.1B</td><td>60%</td><td>84%</td><td>3-10×</td><td>&lt;1pt</td></tr>
+          <tr><td>8.1B</td><td>60%</td><td>82%</td><td>3-10×</td><td>&lt;1pt</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">动态压缩：长序列压缩比更高（32K-64K 通常 7-10×；2K-4K 仅 3×）。注意 Phase 2 吞吐虽然只是 baseline 的 82-90%，但 KV cache 体积只有 1/5，<strong>支持 5× 更长的序列</strong>或 5× 更大的 batch；这才是真正的 throughput-equivalent gains。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>移除 sliding window</strong>：模型完全靠 utility predictor 的能力，短程依赖被破坏，PPL 大幅劣化；(2) <strong>不做 Phase 2 hard gating</strong>：训练-推断 mismatch 严重，推断时强制阈值会带来 1-2pt 性能损失；(3) <strong>预测粒度 token-level vs head-level vs layer-level</strong>：token-level（per-key）效果最好但最贵，head-level 是性能/复杂度最佳折衷；(4) <strong>从随机初始化训练</strong>：可行但比 continued-pretraining 收敛慢约 1.5×。<strong>局限</strong>：(a) 当前方案仅对 standard MHA / GQA 适用，对 MLA 等结构需要重做；(b) Phase 2 的块跳跃 kernel 是 Hopper GPU 专属优化，老 GPU 性能优势会缩水；(c) utility predictor 增加了少量参数（每层 2 层 MLP），约 +1% 总参数。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SP-KV 把 KV cache 优化从"<strong>读时稀疏</strong>"推进到"<strong>写时剪枝</strong>"——这是 long-context agent 系统的根本不同：写时压缩才能彻底解放 GPU 内存。论文的另一个隐藏价值是用 utility 分布作为"<strong>架构探针</strong>"，自动发现哪些 attention head 该 global / 哪些该 local，从而设计出更优的 hybrid attention 拓扑。Meta FAIR 的这项工作直接对标 agentic test-time-compute 趋势：在 Claude Code 类长 agent trajectory 中，5× KV cache 压缩意味着同硬件下能 hold 5× 更长的会话或 5× 并发。开源工业团队部署长 agent 推断时应将 SP-KV 列入考虑清单，特别是 longer reasoning loops（IMO solver、SWE-bench 修复任务）这种 trajectory 自然分层的场景。</p>
+    </div>
+  </div>
+

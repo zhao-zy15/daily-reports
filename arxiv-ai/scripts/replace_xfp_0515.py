@@ -1,0 +1,52 @@
+"""Single-paper retry for 2605.14005 (Mistletoe) replacing XFP."""
+import json
+import time
+import urllib.request
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+DATE = "2026-05-15"
+DATA_DIR = Path(f"/Users/seanzyzhao/WorkBuddy/daily-reports/arxiv-ai/data/{DATE}")
+
+existing = json.loads((DATA_DIR / "verified.json").read_text())
+
+aid = "2605.14005"
+sect = "llm"
+
+ns = {"a": "http://www.w3.org/2005/Atom",
+      "arxiv": "http://arxiv.org/schemas/atom"}
+
+url = f"http://export.arxiv.org/api/query?id_list={aid}"
+print(f"Fetching {aid}...")
+for attempt in range(5):
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        data = urllib.request.urlopen(req, timeout=45).read().decode("utf-8")
+        break
+    except Exception as e:
+        print(f"  attempt {attempt+1}: {e}")
+        time.sleep(20 + attempt * 10)
+
+root = ET.fromstring(data)
+entry = root.find("a:entry", ns)
+title = entry.findtext("a:title", default="", namespaces=ns).strip()
+published = entry.findtext("a:published", default="", namespaces=ns).strip()
+updated = entry.findtext("a:updated", default="", namespaces=ns).strip()
+summary = entry.findtext("a:summary", default="", namespaces=ns).strip()
+authors = [a.findtext("a:name", namespaces=ns) for a in entry.findall("a:author", ns)]
+affs = [a.findtext("arxiv:affiliation", namespaces=ns) for a in entry.findall("a:author", ns)]
+affs = [x for x in affs if x]
+pdf_url = None
+for link in entry.findall("a:link", ns):
+    if link.get("title") == "pdf":
+        pdf_url = link.get("href")
+print(f"  title: {title[:80]}")
+print(f"  published: {published}")
+existing.append({
+    "section": sect, "id": aid, "title": title, "published": published,
+    "updated": updated, "summary": summary, "authors": authors, "affs": affs,
+    "pdf_url": pdf_url,
+})
+
+(DATA_DIR / "verified.json").write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+print(f"Total verified: {len(existing)}")

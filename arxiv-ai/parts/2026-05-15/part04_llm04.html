@@ -1,0 +1,88 @@
+  <div class="paper" id="p4">
+    <h3 class="paper-title">LLM-4 · Mistletoe: Stealthy Acceleration-Collapse Attacks on Speculative Decoding</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 Harbin Institute of Technology Shenzhen, Tsinghua University, Huawei</span>
+      <span><a href="https://arxiv.org/abs/2605.14005" target="_blank">arXiv:2605.14005</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">推测解码</span>
+      <span class="tag tag-llm">对抗安全</span>
+      <span class="tag tag-llm">推断系统</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>推测解码（Speculative Decoding）依赖一个"小 drafter"批量草拟 token，再由 target 大模型并行 verify，加速比由"平均接受长度 $\tau$"决定。EAGLE-3 等先进系统在 GSM8K/HumanEval 上常稳定提供 5–7× 加速。但<strong>这种加速比本身可被攻击吗？</strong> 已有对抗攻击聚焦于改变模型最终输出，从未触及"加速机制"这一新攻击面。本文提出 Mistletoe：通过附加 16 token 左右的对抗后缀，使 drafter 草稿的 acceptance 率坍塌 (5.95→2.79)、加速比从 5×+ 退到 1.83×，<strong>但用户看到的最终回答语义几乎不变</strong>——典型的"DoS-on-acceleration"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 威胁模型与约束优化目标</strong>
+        <p>固定 target $M_\theta$ 与 drafter $D_\phi$，攻击者把 clean prompt $x$ 拼上短 suffix $\delta\in\mathcal V^m$ 得到 $x_\delta=x\oplus\delta$。Mistletoe 将攻击形式化为 constrained discrete optimization：</p>
+        <p>$$\max_{\delta\in\mathcal V^m}\;L_{\text{rej}}(x,\delta)\quad\text{s.t.}\;L_{\text{sem}}(x,\delta)\le\epsilon$$</p>
+        <p>$L_{\text{rej}}$ 提升 drafter 草稿在 target 上的"surprisal"（拒绝概率），$L_{\text{sem}}$ 用 KL 散度约束 target 输出分布漂移：$L_{\text{sem}}=\sum_t\mathrm{KL}(\pi_\theta(\cdot|x)\,\|\,\pi_\theta(\cdot|x_\delta))$，确保用户最终拿到的 token 序列保持可读。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Target-side Draft-Token Surprisal</strong>
+        <p>核心拒绝 loss 用 target 在 drafter 提议位置上的 surprisal：</p>
+        <p>$$L_{\text{rej}}=\sum_t\;\mathbb E_{\hat y_i^{(t)}\sim\rho_\phi(\cdot|x_\delta,Y^{(t)})}\big[-\log\pi_\theta(\hat y_i^{(t)}\mid x_\delta,Y^{(t)},\hat y_{<i}^{(t)})\big]$$</p>
+        <p>直觉：$\rho_\phi$ 草拟的 token 在 $\pi_\theta$ 下越"出乎意料"，越会被 verify 拒。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Null-Space 投影解耦两个目标</strong>
+        <p>"压低草稿被接受率"与"保持 target 语义"是冲突方向，作者建立局部线性化：用 $J_{\text{sem}}=\nabla_\delta L_{\text{sem}}$ 作为语义约束的雅可比，构造正交投影器</p>
+        <p>$$P_{\mathcal N}=I-J_{\text{sem}}^\top\big(J_{\text{sem}}J_{\text{sem}}^\top+\xi I\big)^{-1}J_{\text{sem}}$$</p>
+        <p>把拒绝梯度 $g_{\text{rej}}=\nabla_\delta L_{\text{rej}}$ 投影到 $\mathcal N$（语义约束的零空间）：$g_{\text{rej}}^{\mathcal N}=P_{\mathcal N}g_{\text{rej}}$。在标量 KL 约束下，这退化为高效的 rank-one 操作，开销可忽略。</p>
+        <p>最终更新方向 $g_{\text{final}}=-g_{\text{sem}}+\lambda g_{\text{rej}}^{\mathcal N}$，先把 KL 漂移拉回可行域，再沿"不破坏语义"的方向施加拒绝压力。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 离散搜索 + KL-bound veto</strong>
+        <p>把连续梯度 $g_{\text{final}}$ 映射到 token 离散空间（top-k 候选 + greedy coordinate descent），每步对每个 suffix 位置选 $\arg\max$；最后加一道 <strong>KL-bound veto</strong>：若新 suffix 使 $L_{\text{sem}}>\epsilon$，直接丢弃。这保证可行性始终成立。Mistletoe 算法收敛后产出一段 16 token 的 ASCII 噪声 suffix（如"? : \ e ..."），看似乱码，实则精确瞄准了 drafter 与 target 的 mismatch surface。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：EAGLE-3 上的"加速崩塌"</h4>
+      <div class="example-box">
+        <strong>场景</strong>：Vicuna-13B + EAGLE-3 推测解码，输入 GSM8K 数学题。
+        <ol>
+          <li><strong>Clean prompt</strong> "Sarah has 5 apples..."：drafter 草拟 7 个 token，target 一次性 accept 6 个。$\tau=5.95$，端到端加速比 5.47×；</li>
+          <li><strong>+ Mistletoe suffix</strong>（16 token，仅在 prompt 末尾追加）："Sarah has 5 apples... &lt;adv&gt;? : \ e # ! @ ^ ...&lt;/adv&gt;"。drafter 在 suffix 影响下产出和 target 高概率分布偏离的 token；target verify 时几乎全部拒绝；</li>
+          <li>结果：每轮平均 accept 数从 5.95 → <strong>2.79</strong>（−53%），加速比从 5.47× → <strong>1.83×</strong>（−66%）；</li>
+          <li>但用户拿到的最终答案"Sarah has 8 apples now."与 clean 输出<strong>完全相同</strong>，PPL 几乎不变（可读性正常）；</li>
+          <li>实战意义：攻击者向云推断 API 注入 16 个看似乱码的 token，让该用户的算力消耗翻倍，但服务端 alarm 不会触发（因为输出未异常）。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Vicuna-13B 多框架对比）</h4>
+      <table>
+        <thead><tr><th>推测解码方法</th><th>MT-bench Speed-up（clean→attacked）</th><th>HumanEval τ（clean→attacked）</th><th>GSM8K Speed-up（clean→attacked）</th></tr></thead>
+        <tbody>
+          <tr><td>Medusa</td><td>3.26× → 1.48×</td><td>2.83 → 2.16</td><td>3.39× → 1.46×</td></tr>
+          <tr><td>Hydra</td><td>4.09× → 2.04×</td><td>3.80 → 3.10</td><td>4.29× → 1.72×</td></tr>
+          <tr><td>EAGLE</td><td>3.16× → 1.67×</td><td>4.32 → 3.95</td><td>3.66× → 1.69×</td></tr>
+          <tr><td>EAGLE-2</td><td>3.95× → 1.60×</td><td>5.42 → 3.55</td><td>4.84× → 2.62×</td></tr>
+          <tr><td class="best">EAGLE-3</td><td class="best">5.18× → 2.38×</td><td class="best">7.08 → 3.99</td><td class="best">5.47× → 1.83×</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">在 5 种主流 SD 框架 × 3 个数据集上，加速比平均下降 ~50%，τ 平均下降 ~40%。最强 EAGLE-3 在 GSM8K 上加速比从 5.47× 直接坍塌到 1.83×。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>组件消融（GSM8K, EAGLE-3）：(1) <strong>仅 $L_{\text{rej}}$，无 KL 约束</strong>：speed-up 从 5.47× 降到 3.30×、τ 从 5.95 降到 3.41，但 PPL 暴涨——直接破坏输出，不再 stealthy；(2) <strong>仅 $L_{\text{sem}}$</strong>：仅做 KL 扰动，攻击力很弱（speed-up 仅降到 4.47×）；(3) <strong>Null-space 投影完整版</strong>：兼得两者，是唯一同时拿下"加速崩塌 + 输出可读"的配置。<strong>局限</strong>：(a) 攻击需要白盒梯度（黑盒迁移性未充分验证）；(b) 防御方向作者已指出可在 verify 端引入"draft-target 一致性 anomaly detector"；(c) 当前仅针对模型级 SD，对 lookahead-decoding 等无 drafter 的方案不适用。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>Mistletoe 把 LLM 安全研究从"输出对抗"扩展到了"加速机制对抗"——这是一个全新的攻击面。对推断服务商的直接启示是：<strong>SD 不能假设"drafter 与 target 自然趋同"，必须在 verify 端引入异常 acceptance 率监控</strong>，否则用户可以通过几十个 token 的 prompt 注入让算力账单翻倍而服务端无感。从基础研究角度，本文的 null-space 投影也提供了一个解耦"两冲突 loss"的通用模板，可启发未来 alignment / safety 类约束优化问题。这是一个少见的"系统级安全 + LLM 推断"的交叉工作，值得 LLM 推断 infra 团队列入威胁模型清单。</p>
+    </div>
+

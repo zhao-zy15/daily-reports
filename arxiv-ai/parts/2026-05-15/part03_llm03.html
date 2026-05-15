@@ -1,0 +1,86 @@
+  <div class="paper" id="p3">
+    <h3 class="paper-title">LLM-3 · DISCORD: Distribution Corrected Offline Data Distillation for Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 George Mason University</span>
+      <span><a href="https://arxiv.org/abs/2605.14071" target="_blank">arXiv:2605.14071</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">蒸馏</span>
+      <span class="tag tag-llm">数学推理</span>
+      <span class="tag tag-llm">分布纠偏</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>把强模型的推理能力蒸馏到小模型有两条路：(a) <strong>离线蒸馏</strong>（teacher 离线生成 trace，学生做 SFT/KL）—— 样本高效但存在<strong>训练-推理分布漂移</strong>：训练时学生总是看 teacher 生成的前缀，推理时却必须自回归自己生成的前缀，长 reasoning trace 上误差累积；(b) <strong>在线蒸馏</strong>（GKD 等让学生采样自身 rollout）—— 分布匹配但需 ~16× 算力，且训练前期学生质量低拖慢学习。本文要在<strong>不引入任何 online sampling</strong> 的前提下，纠正离线蒸馏的分布漂移。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 核心思想：student-support 感知的密度比纠偏</strong>
+        <p>对每条 teacher trace $\{x, y\sim\pi_T(\cdot|x;c)\}$，引入 student/teacher 概率密度比作为重要性权重 $\frac{\bar\pi_\theta(y|x)}{\bar\pi_T(y|x;c)}$（$\bar\pi$ 表示 stop-gradient）。直觉上：teacher 写但学生不会写的 token 权重低，teacher 写学生<strong>大概率会自己生成</strong>的 token 权重高——把学习火力压在"学生 inference 时容易踩到"的样本上。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Sigmoid 稳定化 + Token-Level 修正</strong>
+        <p>密度比无界且方差大，作者两步稳定：先做 sigmoid 压缩到 $(0,1)$，再做 token 级而非 sequence 级权重以避免长序列偏置：</p>
+        <p>$$r_t=\sigma\!\left(\tau\cdot\log\frac{\bar\pi_\theta(y_t\mid x,y_{<t})}{\bar\pi_T(y_t\mid x,c,y_{<t})}\right)$$</p>
+        <p>$\tau=1$ 时 $r_t$ 退化为 $\frac{\bar\pi_\theta}{\bar\pi_\theta+\bar\pi_T}$，正好等价于"$y_t$ 来自学生分布的后验概率"（uniform prior 下的贝叶斯分类器），这与<strong>对比解码（Contrastive Decoding）</strong>的训练时对偶。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ DISCORD 梯度</strong>
+        <p>把 $r_t$ 注入到任何离线 distillation 目标的梯度上，最简单的 SFT 形式为：</p>
+        <p>$$\nabla_\theta J_{\text{DISCORD}}(\theta)=\mathbb E_{x\sim\mathcal Q,\,y\sim\pi_T(\cdot|x;c)}\!\left[\sum_{t=0}^{|y|}\sigma\!\left(\tau\log\frac{\bar\pi_\theta}{\bar\pi_T}\right)\nabla_\theta\log\pi_\theta(y_t\mid x,y_{<t})\right]$$</p>
+        <p>这个修正项可作为 SFT、KL、Symmetric-KL 等任意离线 backbone 的<strong>插件式 reweighting</strong>，不改变其他训练流程。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 五阶段 reasoning 提示模板</strong>
+        <p>为了引出 teacher 的高质量推理，作者还设计了一段结构化指令 $c$，把 teacher 的输出强制分成五个阶段：① problem understanding → ② strategy selection → ③ solution → ④ verification → ⑤ final answer。仅保留 teacher 最终答案正确的轨迹用于训练。这样 teacher trace 自身的语义结构更稳定，密度比噪声更小。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：14B→1.5B 蒸馏中的分布纠偏</h4>
+      <div class="example-box">
+        <strong>场景</strong>：用 Qwen2.5-14B-Instruct 作 teacher，把 MATH 推理蒸馏到 Qwen2.5-1.5B-Instruct（学生模型）。
+        <ol>
+          <li><strong>Vanilla SFT</strong>：学生在 MATH500 上仅 41.0%，因为 teacher 在某些 token 处用了"Wait, let me reconsider…"等只有大模型自然分布会输出的反思短语，学生从未学会自己说出这类 prefix；</li>
+          <li><strong>SFT + DISCORD</strong>：在 token "Wait" 处 $\bar\pi_\theta(\text{"Wait"})\approx 0.001$，$\bar\pi_T(\text{"Wait"})\approx 0.20$，密度比对数 $\log(0.001/0.20)\approx -5.3$，sigmoid 后 $r_t\approx 0.005$——几乎不学这个 token；而对学生本来就会说的"$x = $"等通用 token，$r_t\approx 0.5$，正常学习。结果 MATH500 从 41.0% → <strong>45.4%（+4.4 pt）</strong>，GSM8K 从 67.32% → 69.75%；</li>
+          <li><strong>Symmetric-KL + DISCORD</strong>：MATH500 进一步从 44.20% → <strong>50.20%（+6.0 pt）</strong>，证明纠偏可与不同 backbone 叠加。</li>
+        </ol>
+        <strong>关键观察</strong>：DISCORD 让学生学会"<em>用学生的方式去说 teacher 的话</em>"，而不是模仿 teacher 自己也说不出来的稀有 prefix；这与对比解码"放大目标模型相对于弱模型的优势"是同一原理的训练时镜像。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Qwen2.5-14B → Qwen2.5-3B / 1.5B）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>MATH500 (14B→3B)</th><th>GSM8K (14B→3B)</th><th>MATH500 (14B→1.5B)</th><th>GSM8K (14B→1.5B)</th></tr></thead>
+        <tbody>
+          <tr><td>SFT</td><td>59.60</td><td>81.27</td><td>41.00</td><td>67.32</td></tr>
+          <tr><td>SFT + <strong>DISCORD</strong></td><td class="best">61.80 (+2.20)</td><td class="best">82.79 (+1.52)</td><td class="best">45.40 (+4.40)</td><td class="best">69.75 (+2.43)</td></tr>
+          <tr><td>ToDi（强离线 baseline）</td><td>60.40</td><td>82.34</td><td>45.40</td><td>69.29</td></tr>
+          <tr><td>Symmetric KL</td><td>61.40</td><td>81.80</td><td>44.20</td><td>69.75</td></tr>
+          <tr><td>Symmetric KL + <strong>DISCORD</strong></td><td>61.20 (-0.20)</td><td class="best">82.49 (+0.69)</td><td class="best">50.20 (+6.00)</td><td class="best">70.28 (+0.53)</td></tr>
+          <tr><td>GKD（在线参考，~16× compute）</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">效率：DISCORD 仅 3.12 GPU-hours、不生成任何 student rollout token；GKD 在线方法需 49.56 GPU-hours、生成 ~286 万 student rollout token。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>跨族实验（Qwen2.5 → Llama-3.2-3B）：在 Qwen2.5-7B 与 14B teacher 下，SFT+DISCORD 在 MATH500 上稳定提升 +2.0~3.0pt（49.40→52.40 / 50.00→52.00），表明纠偏机制不依赖同族 tokenizer。<strong>局限</strong>：(a) 当学生与 teacher 容量差距过大（如 14B→0.5B）时，密度比噪声主导，sigmoid 截断后大部分 token $r_t\approx 0$，学习信号被抑制；(b) DISCORD 主要解决 token-level 漂移，对句子级"思维链断裂"无能为力，这部分仍需 online rollouts；(c) 对非数学领域（如代码、agent reasoning）的迁移效果未充分验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>DISCORD 用一个轻量的 token-level sigmoid 重权将"在线蒸馏的分布匹配"近似搬到了"离线蒸馏的算力体量"上：用 1/16 的算力，逼近甚至追平 GKD 这类 online baseline。其哲学上的关键是<strong>"训练即对比解码"</strong>——把推断阶段的"放大学生 vs. 弱模型差异"反过来放到训练阶段做"放大学生 vs. teacher 差异下的反向加权"。对实际工业蒸馏管线的启发是：在已有 offline trace 数据集（最贵的部分已花完）的基础上，几乎不增成本就能把蒸馏效果拉到 online 水平的 80–95%。这是中小团队蒸馏 reasoning 模型的高性价比 baseline。</p>
+    </div>
+  </div>
+

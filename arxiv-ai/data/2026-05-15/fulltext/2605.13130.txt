@@ -1,0 +1,1797 @@
+GRACE: Gradient-aligned Reasoning Data Curation
+for Efficient Post-training
+Junjie Li∗
+Harbin Institute of Technology, Shenzhen, China
+22b351018@stu.hit.edu.cn
+Ziao Wang∗
+Hong Kong Baptist University, China
+ziaowang@hkbu.edu.cn
+NingXuan Ma
+Harbin Institute of Technology, Shenzhen, China
+2023311G27@stu.hit.edu.cn
+Jianghong Ma†
+Harbin Institute of Technology, Shenzhen, China
+City University of Hong Kong, China
+majianghong@hit.edu.cn
+Xiaofeng Zhang†
+Harbin Institute of Technology, Shenzhen, China
+zhangxiaofeng@hit.edu.cn
+Abstract
+Existing reasoning data curation pipelines score whole samples, treating every
+intermediate step as equally valuable. In reality, steps within a trace contribute
+very unevenly, and selecting reasoning data well requires assessing them individ-
+ually. We present GRACE, a gradient-aligned curation method that views each
+reasoning trace as a sequence of optimization events and scores every step by two
+complementary signals: its alignment with the answer-oriented gradient direction,
+and its consistency with the preceding reasoning trajectory. Step-level scores are
+aggregated into a sample-level value for subset selection, using only the model’s
+internal optimization signals and no external reward models or step annotations. To
+make this scalable, GRACE introduces a representation-level gradient proxy that es-
+timates step-level alignment from token-level upstream signals in a single forward
+pass. Post-training Qwen3-VL-2B-Instruct on MMathCoT-1M, GRACE reaches
+108.8% of the full-data performance with 20% of the data and retains 100.2% with
+only 5%, with subsets that transfer effectively across model backbones.
+1 Introduction
+Large-scale reasoning datasets have become a cornerstone for post-training large language and
+vision-language models [ 1, 2]. The standard way to use them is to supervise the model on the
+entire reasoning trace, treating every step as an equally valuable target. In reality, the steps within a
+trace contribute very unevenly: some directly support the final answer, while others restate earlier
+content, explore irrelevant tangents, or introduce noise. Training on them uniformly wastes budget
+on low-value steps and dilutes the contribution of useful ones. This cost has become significant as
+reasoning corpora grow to millions of traces [3] and post-training takes hundreds of GPU-hours per
+run. Choosing what to train on therefore matters [ 4], and for reasoning data this means assessing
+steps individually rather than ranking whole traces.
+∗These authors contributed equally to this work.
+†Corresponding author.
+Preprint.
+arXiv:2605.13130v1  [cs.AI]  13 May 2026
+
+Conventional CoT Curation
+(Sample-level Scoring)
+Sample-level Score
+Question
+...
+Question
+...
+Reasoning Trace (CoT)
+Then, apply the theorem ...Step 2 Then, apply the theorem ...Step 2
+First, identify the given ...Step 1 First, identify the given ...Step 1
+Next, we can compute ...Step 3 Next, we can compute ...Step 3
+...... ......
+Therefore, the result is ...Step K Therefore, the result is ...Step K
+The answer is 42.Answer The answer is 42.Answer
+Reasoning Trace (CoT)
+Then, apply the theorem ...Step 2
+First, identify the given ...Step 1
+Next, we can compute ...Step 3
+......
+Therefore, the result is ...Step K
+The answer is 42.Answer
+Question
+...
+Reasoning Trace (CoT)
+Then, apply the theorem ...Step 2
+First, identify the given ...Step 1
+Next, we can compute ...Step 3
+......
+Therefore, the result is ...Step K
+The answer is 42.Answer
+Step-wise optimization roles 
+are overlooked.
+Conventional CoT Curation
+(Sample-level Scoring)
+Sample-level Score
+Question
+...
+Reasoning Trace (CoT)
+Then, apply the theorem ...Step 2
+First, identify the given ...Step 1
+Next, we can compute ...Step 3
+......
+Therefore, the result is ...Step K
+The answer is 42.Answer
+Step-wise optimization roles 
+are overlooked.
+GRACE (Our Approach)
+(Step-level Utility Modeling)
+Step 1
+Step 2
+Step 3
+Step K
+...
+Answer
+Answer direction
+Well-aligned with answer 
+direction
+Misaligned / Opposite
+History directionHistory direction
+Reasoning steps have different 
+optimization utilities.
+Reasoning steps have different 
+optimization utilities.
+Step utilities guide data selection.
+GRACE (Our Approach)
+(Step-level Utility Modeling)
+Step 1
+Step 2
+Step 3
+Step K
+...
+Answer
+Answer direction
+Well-aligned with answer 
+direction
+Misaligned / Opposite
+History direction
+Reasoning steps have different 
+optimization utilities.
+Step utilities guide data selection.
+GRACE (Our Approach)
+(Step-level Utility Modeling)
+Step 1
+Step 2
+Step 3
+Step K
+...
+Answer
+Answer direction
+Well-aligned with answer 
+direction
+Misaligned / Opposite
+History direction
+Reasoning steps have different 
+optimization utilities.
+Step utilities guide data selection.
+Figure 1: Motivation and empirical effect of GRACE. Left: Reasoning traces are viewed as sequences
+of optimization events, where each step induces an update direction whose utility depends on its
+alignment with the target objective and the evolving trajectory. Right: Radar chart comparing
+downstream performance across benchmarks. GRACE achieves full-data or better performance using
+only a fraction of the training data.
+Existing data curation methods improve training efficiency by selecting samples based on correct-
+ness [5], reward models [6], or sample-level influence [7–9] and all of them operate at the granularity
+of entire traces. As a result, a trace with correct final answers but poor intermediate steps [ 10] is
+treated as equally valuable as a tightly reasoned one. This highlights a fundamental limitation:current
+approaches lack a mechanism to assess how individual reasoning steps contribute to optimization.
+In this work, we revisit reasoning data from an optimization perspective. Instead of viewing reasoning
+traces as static supervision targets, we model them as sequences of optimization events, where each
+reasoning step induces a local training signal that affects the gradient direction toward the final
+answer. From this view, the utility of reasoning data depends not only on external attributes such as
+correctness or length, but also on whether its intermediate steps constructively support optimization.
+Building on this view, we proposeGRACE(Gradient-alignedReasoning dAtaCuration forEfficient
+post-training), a method that performs fine-grained data curation by estimating step-level optimization
+utility. Rather than pruning or rewriting reasoning traces, GRACE assigns each step a utility score
+based on two complementary criteria: (i) its alignment with the answer-oriented optimization
+direction, and (ii) its consistency with the accumulated reasoning trajectory. These signals capture
+both task-driven and trajectory-aware contributions of each step. The resulting step-level scores are
+then aggregated to produce a sample-level utility score, enabling effective subset selection while
+preserving the simplicity of sample-level training. Fig. 1 illustrates the motivation of GRACE and
+provides empirical evidence that optimization-aware curation can retain strong performance with
+substantially fewer training samples.
+A key challenge is that true step-level gradients are computationally intractable at scale. Naively
+computing gradients for each reasoning step would require decomposing traces into multiple train-
+ing instances and performing repeated backward passes. To address this, GRACE introduces a
+representation-level gradient proxythat approximates step-induced optimization directions using
+token-level upstream signals. This proxy enables efficient estimation of step-level alignment from a
+single forward pass, making optimization-aware curation practical for large-scale CoT datasets.
+We evaluate GRACE by post-training Qwen3-VL-2B-Instruct [ 11] on MMathCoT-1M [ 3] and
+assessing the resulting models on a diverse suite of multimodal benchmarks spanning mathematical
+reasoning and general visual question answering. GRACE consistently identifies high-value subsets:
+training on only20%of the curated data surpasses full-data performance, reaching108.8%of the
+full-data result averaged across benchmarks, while using only5%retains100.2%. Furthermore,
+the selected subsets transfer effectively across model backbones, suggesting that the proposed
+optimization-based signal captures intrinsic data value beyond a specific model configuration.
+Our contributions are three-fold:
+2
+
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  Answer [         ...     ]  
+𝒯ans  
+... ...... ...
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  
+... ...
+Token sets:      for step k,         for answer
+𝒯𝑘 
+𝒯ans  
+Image / Question x
+What is the length of AE?
+Image / Question x
+What is the length of AE?
+Input: reasoning trace1 Input: reasoning trace1
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  
+... ...
+Token sets:      for step k,         for answer
+𝒯𝑘 
+𝒯ans  
+Image / Question x
+What is the length of AE?
+Input: reasoning trace1
+√ Single forward pass      × No per-step backpropagation
+Model  fθ For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 00 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+√ Single forward pass      × No per-step backpropagation
+Model  fθ For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+0 ≤ α ≤ 1: balance between two signals
+Step-level scoring3 Step-level scoring3
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔𝑎𝑛𝑠 ≜ 1
+ 𝒯𝑎𝑛𝑠  𝑢𝑡
+𝑡∈𝒯𝑎𝑛𝑠
+ 
+... ...
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 ... ...
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔𝑎𝑛𝑠 ≜ 1
+ 𝒯𝑎𝑛𝑠  𝑢𝑡
+𝑡∈𝒯𝑎𝑛𝑠
+ 
+... ...
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Answer alignment
+𝐴𝑘
+ans ≜ cos 𝑔𝑘 ,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+𝑔𝑘 
+𝑔ans  Answer alignment
+𝐴𝑘
+ans ≜ cos 𝑔𝑘 ,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+Trajectory alignment
+𝐴𝑘
+hist ≜ cos 𝑔𝑘,ℎ𝑘  , 
+ℎ𝑘 ≜ Normalize  𝜔𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+ℎ𝑘  
+𝑔𝑘 
+ℎ𝑘  Trajectory alignment
+𝐴𝑘
+hist ≜ cos 𝑔𝑘,ℎ𝑘  , 
+ℎ𝑘 ≜ Normalize  𝜔𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+ℎ𝑘  
+Answer alignment
+𝐴𝑘
+ans ≜ cos 𝑔𝑘 ,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+Trajectory alignment
+𝐴𝑘
+hist ≜ cos 𝑔𝑘,ℎ𝑘  , 
+ℎ𝑘 ≜ Normalize  𝜔𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+ℎ𝑘  
+Step score
+...
+Score𝐾  
+Score3  
+Score2  
+Score1  ...
+Score𝐾  
+Score3  
+Score2  
+Score1  
+Score𝑘  
+=α𝐴𝑘
+ans  
++ 1−𝛼 𝐴𝑘
+hist  
+Score𝑘  
+=α𝐴𝑘
+ans  
++ 1−𝛼 𝐴𝑘
+hist  
+Step score
+...
+Score𝐾  
+Score3  
+Score2  
+Score1  
+Score𝑘  
+=α𝐴𝑘
+ans  
++ 1−𝛼 𝐴𝑘
+hist  
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔𝑎𝑛𝑠 ≜ 1
+ 𝒯𝑎𝑛𝑠  𝑢𝑡
+𝑡∈𝒯𝑎𝑛𝑠
+ 
+... ...
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Answer alignment
+𝐴𝑘
+ans ≜ cos 𝑔𝑘 ,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+Trajectory alignment
+𝐴𝑘
+hist ≜ cos 𝑔𝑘,ℎ𝑘  , 
+ℎ𝑘 ≜ Normalize  𝜔𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+ℎ𝑘  
+Step score
+...
+Score𝐾  
+Score3  
+Score2  
+Score1  
+Score𝑘  
+=α𝐴𝑘
+ans  
++ 1−𝛼 𝐴𝑘
+hist  
+0 ≤ α ≤ 1: balance between two signals
+Step-level scoring3
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔𝑎𝑛𝑠 ≜ 1
+ 𝒯𝑎𝑛𝑠  𝑢𝑡
+𝑡∈𝒯𝑎𝑛𝑠
+ 
+... ...
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Answer alignment
+𝐴𝑘
+ans ≜ cos 𝑔𝑘 ,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+Trajectory alignment
+𝐴𝑘
+hist ≜ cos 𝑔𝑘,ℎ𝑘  , 
+ℎ𝑘 ≜ Normalize  𝜔𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+ℎ𝑘  
+Step score
+...
+Score𝐾  
+Score3  
+Score2  
+Score1  
+Score𝑘  
+=α𝐴𝑘
+ans  
++ 1−𝛼 𝐴𝑘
+hist  
+Post-training on S
+Sample-level selection4 Sample-level selection4
+Sample value
+𝑉 𝑧 = 1
+𝐾 Score𝑘 
+𝐾
+𝑘=1
+ Sample value
+𝑉 𝑧 = 1
+𝐾 Score𝑘 
+𝐾
+𝑘=1
+ 
+Rank all samples by V(z)Rank all samples by V(z)
+Top-ρ subset S Top-ρ subset S 
+Sample value
+𝑉 𝑧 = 1
+𝐾 Score𝑘 
+𝐾
+𝑘=1
+ 
+Rank all samples by V(z)
+Top-ρ subset S 
+Post-training on S
+Sample-level selection4
+Sample value
+𝑉 𝑧 = 1
+𝐾 Score𝑘 
+𝐾
+𝑘=1
+ 
+Rank all samples by V(z)
+Top-ρ subset S 
+Representation-level Proxy Extraction2 Representation-level Proxy Extraction2
+0 ≤ α ≤ 1: balance between two signals
+Answer alignment
+𝐴 𝑘
+ans ≜ cos 𝑔𝑘,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+𝑔𝑘 
+𝑔ans  Answer alignment
+𝐴 𝑘
+ans ≜ cos 𝑔𝑘,𝑔ans  
+𝑔𝑘 
+𝑔ans  
+Trajectory alignment
+𝐴 𝑘
+hist ≜ cos 𝑔𝑘 ,𝑟 𝑘 , 
+𝑟 𝑘 ≜ Normalize  ω𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+𝑟 𝑘 
+𝑔𝑘 
+𝑟 𝑘 Trajectory alignment
+𝐴 𝑘
+hist ≜ cos 𝑔𝑘 ,𝑟 𝑘 , 
+𝑟 𝑘 ≜ Normalize  ω𝑘,𝑗𝑔𝑗
+𝑗 <𝑘
+  
+𝑔𝑘 
+𝑟 𝑘 
+ 
+Sample-level selection4 Sample-level selection4
+Sample value
+𝑉 𝑧 = 1
+𝐾 Score 𝑘
+𝐾
+𝑘=1
+ Sample value
+𝑉 𝑧 = 1
+𝐾 Score 𝑘
+𝐾
+𝑘=1
+ 
+Rank all samples by V(z)Rank all samples by V(z)
+Top-ρ subset S 
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  Answer [         ...     ]  
+𝒯ans  
+... ...... ...
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  
+... ...
+Token sets:     for step k,         for answer
+𝒯𝑘 
+𝒯ans  
+Image / Question x
+What is the length of AE?
+Image / Question x
+What is the length of AE?
+Input: reasoning trace1 Input: reasoning trace1
+Reasoning trace z
+Step 1 [         ...     ]  
+𝒯1 
+Step 2 [         ...     ]  
+𝒯2 
+Step 3 [         ...     ]  
+𝒯3 
+Step K [         ...     ]  
+𝒯𝐾 
+Answer [         ...     ]  
+𝒯ans  
+... ...
+Token sets:     for step k,         for answer
+𝒯𝑘 
+𝒯ans  
+Image / Question x
+What is the length of AE?
+Input: reasoning trace1
+√ Single forward pass      × No per-step backpropagation
+For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 00 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+Model  fθModel  fθ
+Representation-level Proxy Extraction2 Representation-level Proxy Extraction2
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+√ Single forward pass      × No per-step backpropagation
+For each token t
+Logits pt
+One-hot yt
+Upstream signal
+0 0 ... 1 ... 0
+𝑢𝑡 =𝑊out 𝑝𝑡−𝑦𝑡  
+Model  fθ
+Representation-level Proxy Extraction2
+Grouped upstream 
+signals
+[         ...     ]  
+𝒯1 
+[         ...     ]  
+𝒯2 
+[         ...     ]  
+𝒯3 
+[         ...     ]  
+𝒯𝐾 
+[         ...     ]  
+𝒯ans  
+...
+Step-level scoring3 Step-level scoring3
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔ans ≜ 1
+ 𝒯ans  𝑢𝑡
+𝑡∈𝒯a n s
+ 
+......
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 ......
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Step aggregation
+𝑔𝑘 ≜ 1
+ 𝒯𝑘  𝑢𝑡
+𝑡∈𝒯𝑘
+ 
+𝑔ans ≜ 1
+ 𝒯ans  𝑢𝑡
+𝑡∈𝒯a n s
+ 
+......
+𝑔𝐾 
+𝑔ans  
+𝑔3 
+𝑔2 
+𝑔1 
+Step score
+...
+Score 𝐾 
+Score 3 
+Score 2 
+Score 1 ...
+Score 𝐾 
+Score 3 
+Score 2 
+Score 1 
+Score 𝑘 
+=α𝐴  
+    
++ 1−𝛼 𝐴 𝑘
+hist  
+Score 𝑘 
+=α𝐴  
+    
++ 1−𝛼 𝐴 𝑘
+hist  
+Step score
+...
+Score 𝐾 
+Score 3 
+Score 2 
+Score 1 
+Score 𝑘 
+=α𝐴  
+    
++ 1−𝛼 𝐴 𝑘
+hist  
+Figure 2: The GRACE curation pipeline.(1)Given an input and its reasoning trace, GRACE
+identifies token sets for each step and the answer.(2)A fixed scoring model extracts token-level
+upstream signals in one forward pass and groups them by token sets.(3)Grouped signals are averaged
+into gradient proxies and scored by answer and trajectory alignment.(4)Step scores are aggregated
+into a sample value for ranking and top-ρsubset selection.
+1. We introduce an optimization-based perspective on reasoning data, framing reasoning traces
+as sequences of optimization events and highlighting the role of step-level alignment in
+effective learning.
+2. We propose GRACE, a reasoning data curation method that aggregates step-level opti-
+mization signals derived from answer-oriented alignment and trajectory consistency for
+sample-level subset selection.
+3. We develop a representation-level gradient proxy that enables scalable estimation of step-
+level alignment without per-step parameter-space gradient computation.
+2 Method
+In this section, we present GRACE. We first define the reasoning data curation problem, then derive
+the step-level optimization utility, introduce its scalable representation-level proxy, and describe
+sample-level subset selection. The overall pipeline is illustrated in Fig. 2.
+2.1 Problem Formulation
+We consider a reasoning datasetD={z i}N
+i=1, where each sample is
+zi = (x i,s i, ai),
+with xi denoting the input, si = (s i,1, si,2, . . . , si,Ki ) denoting a sequence of reasoning steps, and
+ai denoting the final answer. Let fθ denote the model, and let Ti,k and Ti,ans denote the token
+positions of step si,k and the answer segment, respectively. For any token set T , we define the
+average token-level loss
+L(θ;z i,T) = 1
+|T |
+X
+t∈T
+Lt(θ;z i).
+3
+
+Accordingly, the step loss and answer loss are given by Li,k =L(θ;z i,T i,k) and Lans
+i =
+L(θ;z i,T i,ans), and the full loss over the reasoning trace and answer is
+Ti,full =
+Ki[
+k=1
+Ti,k ∪ Ti,ans, L full(θ;z i) =L(θ;z i,T i,full).
+Standard post-training minimizes
+LSFT(θ;D) = 1
+|D|
+X
+zi∈D
+Lfull(θ;z i).(1)
+Our goal is to select a compact subset S ⊂ D with budget |S|=⌈ρ|D|⌉ , where ρ∈(0,1) is the
+selection ratio, such that post-training onS preserves or improves downstream performance compared
+with training on the full dataset. To this end, GRACE assigns each sample a scalar value score V(z i)
+and selects the top-ranked subset:
+S={z i ∈ D |rank V (zi)≤ ⌈ρ|D|⌉}.(2)
+The key question is how to define V(z i) for reasoning data. GRACE addresses this by estimating the
+optimization utility of each reasoning step and aggregating these step-level signals into a sample-level
+value. Since these values are computed from model-internal signals, the scoring model should provide
+stable representations. Following prior works [12, 13], we obtain the scoring model fθ by warming
+up an initial modelf θ0 on aγ-ratio subset ofD, and keep it fixed during data scoring.
+2.2 Step-level Optimization Utility
+We define the utility of a reasoning step based on its contribution to optimizing a target objective.
+For clarity, we omit the sample index i when discussing a single sample z= (x,s, a) . Let Tk denote
+the token set of step sk, and write Lk(θ;z) =L(θ;z,T k). We adopt a standard first-order influence
+perspective [14, 15]. Consider a small update induced by steps k:
+θ′ =θ−η∇ θLk(θ;z),(3)
+where η >0 is the learning rate. Let Ltar(θ;z) denote a target loss specifying the desired optimization
+direction; under Eq. 3, its first-order change is approximated as
+Ltar(θ′;z)−L tar(θ;z)≈ −η
+
+∇θLk,∇ θLtar
+=−η∥∇ θLk∥ ∥∇θLtar∥cos
+ 
+∇θLk,∇ θLtar
+. (4)
+This shows that a step is locally beneficial when its induced gradient is directionally aligned with
+the target gradient. Since step lengths and gradient scales can vary substantially across reasoning
+segments, we focus on the normalized directional component:
+Atar
+k ≜cos
+ 
+∇θLk,∇ θLtar
+.(5)
+See Appendix B for details. Different choices of target direction correspond to different notions of
+step utility. In GRACE, we consider two complementary objectives:
+(1) Answer-oriented objective.We instantiate Ltar =L ans, where Lans(θ;z) =L(θ;z,T ans) is the
+loss on the answer segment andT ans denotes its token set. This gives
+Aans
+k ≜cos
+ 
+∇θLk,∇ θLans
+.(6)
+which measures whether the step supports optimizing the final answer. While the answer-oriented
+objective captures whether a step supports the final answer, it does not characterize whether the step
+is coherent with the reasoning process that precedes it.
+(2) Trajectory consistency objective.Reasoning steps form an ordered trajectory rather than
+independent supervision signals. For steps with preceding context, we define the historical reference
+direction and its corresponding alignment score jointly:
+Ahist
+k ≜cos
+ 
+∇θLk, rk
+
+, r k ≜Normalize
+
+X
+j<k
+ωk,j ∇θLj
+
+ ,(7)
+4
+
+where ωk,j ≥0 andP
+j<k ωk,j = 1 control the contribution of each previous step to the historical
+reference direction. The score Ahist
+k measures whether the current step continues the existing
+reasoning trajectory.
+Combining these two criteria, the final step-level utility is defined as
+Scorek ≜αA ans
+k + (1−α)A hist
+k , α∈[0,1],(8)
+where the historical term is omitted fork= 1, since no preceding context exists.
+2.3 Representation-level Gradient Proxy
+The step utility in Eq. 8 is defined through parameter-space gradients. Directly evaluating such
+gradients for every reasoning step would require isolating each step as a separate loss and performing
+repeated backward passes over decomposed traces. To obtain a scalable estimate of step-level
+alignment, we project the optimization signal to the final representation interface and compute
+alignment in this lower-dimensional space.
+Since the full gradient can be decomposed as∇ θL=
+
+∇Wout L;∇ θrep L
+
+, we estimate step-induced
+directions in the representation-producing subspace θrep, where all reasoning tokens interact through
+the model’s internal features. Let ht ∈R d denote the final-layer hidden state at token position t,
+where d is the hidden dimension, and let Wout ∈R d×V be the output projection matrix, where V is
+the vocabulary size. The pre-softmax logit is ℓt =W ⊤
+outht ∈R V , and the next-token probability is
+pt = softmax(ℓ t). For the token-level cross-entropy lossL t,
+∂Lt
+∂ℓt
+=p t −y t,
+wherey t is the one-hot target token. The corresponding gradient at the representation interface is
+ut ≜ ∂Lt
+∂ht
+=W out(pt −y t).(9)
+Let θrep denote the parameters that produce the final-layer representations, and defineJt =∂h t/∂θrep.
+By the chain rule, the representation-parameter gradient induced by token t is ∇θrep Lt =J ⊤
+t ut. Ac-
+cordingly, for a token setT , the corresponding segment gradient is∇θrep L(T) =|T | −1P
+t∈T J ⊤
+t ut.
+Thus, {ut} are the common upstream optimization signals that drive updates of the representation-
+producing parameters through the Jacobian mapping.
+Eq. 5 requires the cosine alignment between the update directions induced by two token segments.
+For two token setsT 1 andT 2, its representation-parameter form is
+cos
+ 
+∇θrep L(T1),∇ θrep L(T2)
+
+=
+P
+t∈T1
+P
+t′∈T2 u⊤
+t
+ 
+JtJ ⊤
+t′
+
+ut′
+P
+t∈T1 J ⊤
+t ut
+P
+t′∈T2 J ⊤
+t′ ut′
+ .(10)
+Eq. 10 shows that exact representation-parameter alignment depends on both token-level upstream
+signals and Jacobian-induced interactionsJ tJ ⊤
+t′ .
+Exact step-level evaluation of these interactions would require isolating each step loss and backpropa-
+gating it through θrep, leading to repeated per-step gradient computation. To make step-level scoring
+scalable, we introduce an interface-level surrogate that preserves upstream optimization signals while
+avoiding explicit construction of the Jacobian-induced geometry. This design follows scalable data
+valuation methods that approximate gradient information in proxy spaces [12, 16, 17]. Under this
+surrogate, the segment-level update direction is represented by the aggregated upstream signal:
+g(T)≜ 1
+|T |
+X
+t∈T
+ut.(11)
+The averaging follows the definition of the segment loss L(θ;z,T) as a token-level mean, ensuring
+that proxy directions are not biased by segment length.
+Using the token sets Tk and Tans, we write gk ≜g(T k) and gans ≜g(T ans). The step-level utility is
+then computed in the proxy space as
+\Scorek =
+(bAans
+k , k= 1,
+αbAans
+k + (1−α) bAhist
+k , k >1,
+(12)
+5
+
+Table 1: Performance of Qwen3-VL-2B under the data selection methods.Data %denotes the
+proportion of training data used, andRel. Avg.is the average relative performance over benchmarks.
+↑ indicates larger is better.Boldand underlined values denote the best and second-best results among
+20% data selection methods, respectively.
+Method Data % Hallusion[18]↑SQA[19]↑MMBench[20]↑MME[21]↑MMT[22]↑MathVista[23]↑MathVision[24]↑Rel. Avg.↑Perc. Cog. SI MI MINI Full
+Full100% 43.7 80.2 69.3 1517.3 656.1 55.0 53.4 52.5 16.4 14.7 –
+Random20% 45.5 84.5 72.6 1495.5 653.2 57.4 54.8 52.3 16.4 13.9 101.4Longest20% 46.3 83.0 73.6 1494.5687.556.4 54.6 51.3 15.8 14.5 101.7Stepmax20%46.983.8 73.7 1477.7 637.5 56.7 54.5 52.6 15.5 15.1 101.5LESS [12]20% 44.6 83.1 70.2 1511.4 668.6 56.0 53.7 49.9 18.8 14.3 101.7ICONS [7]20% 46.3 82.6 71.5 1497.0 675.0 55.5 53.8 51.0 13.2 14.4 99.1CADC [13]20% 44.6 84.4 73.1 1498.9 630.7 57.5 55.2 54.0 16.1 16.1 102.6
+GRACE(Ours)
+5% 48.5 83.0 71.1 1509.3 617.5 56.5 55.1 51.9 14.0 14.8 100.210% 45.7 82.5 69.5 1500.7 660.4 57.7 55.1 53.0 18.1 15.5 103.215% 48.5 82.6 71.1 1500.5 679.3 57.6 54.9 54.3 17.8 16.7 105.220% 46.8 85.0 73.8 1512.3682.9 58.5 56.3 54.2 21.7 17.2 108.8
+where
+bAans
+k ≜cos(g k, gans), bAhist
+k ≜cos(g k,brk),br k ≜Normalize
+
+X
+j<k
+ωk,j gj
+
+ .
+Importantly, for each sample, the fixed output projection Wout, the forward-pass probabilities {pt},
+and the ground-truth tokens {yt} are sufficient to obtain directional gradient proxies for all reasoning
+steps in a single forward pass, without constructing per-step training instances or performing backward
+passes. Detailed derivation is provided in Appendix C.
+2.4 Sample-level Aggregation
+Given the step-level proxy utility \Scorei,k in Eq. 12, GRACE instantiates the sample value V(z i) by
+averaging step-level utilities:
+V(z i) = 1
+Ki
+KiX
+k=1
+\Scorei,k.(13)
+This aggregation treats the reasoning trace as a sequence of optimization events and measures its
+overall training value by the average step-level utility.
+The samples are ranked by V(z i) and selected according to the top-budget rule in Eq. 2. The selected
+subsetSis used for post-training with the original reasoning traces. See Appendix D for details.
+3 Experiments
+We empirically validate GRACE through a series of experiments designed to answer five questions:
+• Does GRACE curate reasoning data more effectively than existing methods (Sec. 3.1)?
+• Do the curated subsets transfer across model backbones (Sec. 3.2)?
+• Which components of GRACE drive its effectiveness (Sec. 3.3)?
+• How robust is GRACE to its design hyperparameters (Sec. 3.4)?
+• What is the computational cost of GRACE relative to gradient-based alternatives (Sec. 3.5)?
+Experimental Setup.We evaluate GRACE by post-training Qwen3-VL-2B-Instruct on the
+reasoning-rich candidate pool of MMathCoT-1M and comparing against heuristic selectors (Random,
+Longest, Stepmax) and data-curation baselines (LESS, ICONS, CADC) under the same selection
+budget and training recipe. Evaluation covers general VQA/perception, multi-task and multi-image
+reasoning, and mathematical reasoning benchmarks, withRel. Avg.denoting performance normalized
+by the full-data baseline. Unless otherwise stated, GRACE usesρ= 0.2,γ= 0.05, uniform history
+aggregation, and α= 0.7 . Full experimental details, including datasets, backbones, benchmarks,
+training recipes, and hardware, are provided in Appendix E.
+6
+
+Table 2: Relative average performance (%) of Qwen3-VL-2B under different data selection ratios.
+Data %denotes the proportion of data used. Values are normalized to the full-data training baseline.
+Data % Full Random Longest Stepmax LESS ICONS CADC GRACE (Ours)
+5% 100.0 96.4 98.3 95.6 90.4 95.9 99.8 100.2
+10% 100.0 98.5 100.5 98.8 95.5 102.4 101.3103.2
+15% 100.0 100.0 98.2 100.6 98.9 101.7 100.7105.2
+3.1 Main Results
+Table 1 reports per-benchmark performance on Qwen3-VL-2B, comparing all baselines at a 20%
+selection ratio against GRACE at 5%, 10%, 15%, and 20%. GRACE consistently outperforms all
+heuristic and gradient-based baselines: at 20% data, it reaches 108.8% relative average, surpassing the
+strongest baseline (CADC, 102.6%) by a substantial margin and exceeding the full-data baseline by
+8.8 points. With only 5% of the data, GRACE retains100.2% of full-data performance, demonstrating
+that step-level optimization-aware scoring can identify highly compact yet informative subsets. This
+gain over full-data training is partly due to continued SFT on an instruction-tuned backbone: the
+math-centric candidate pool may over-specialize the model toward mathematical reasoning and cause
+partial forgetting on general VQA and perception abilities. Thus, reduced subsets can sometimes
+outperform full-data SFT, while GRACE further improves this effect by selecting traces with more
+favorable step-level optimization signals.
+Table 2 compares relative average performance across 5%–15% selection ratios. GRACE is the only
+method that exceeds full-data performance at every ratio, while heuristic baselines fluctuate around
+the full-data line and gradient-based baselines are unstable at low ratios.
+3.2 Transfer Across Backbones
+To test whether the value assigned by GRACE reflects data properties that transfer beyond the
+scoring backbone, we post-train other backbones on the subset selected using Qwen3-VL-2B,without
+re-running data selection. We consider Qwen2.5-VL-3B [25], LLaV A-1.5-7B [26], and Qwen3-VL-
+8B [11], covering different model families and scales, and compare them with their corresponding
+full-data baselines under the same training recipe.
+Figure 3: Transferability and training
+efficiency across backbones.
+Figure 3 further examines whether GRACE-selected data
+transfer across backbones. The line reports the relative
+average performance of the 20% GRACE subset, normal-
+ized by each backbone’s full-data baseline. The dashed
+horizontal line marks the 100% full-data level, and the
+bars compare single-GPU wall-clock training time under
+100% and 20% data. We select the 20% subset once using
+Qwen3-VL-2B and reuse it to post-train Qwen2.5-VL-3B,
+LLaV A-1.5-7B, and Qwen3-VL-8B without re-running
+data selection. The curated subset consistently surpasses
+the corresponding full-data baseline across all backbones,
+indicating that the value captured by GRACE is not tied
+to a single scoring model. This suggests that step-level
+optimization utility reflects transferable properties of rea-
+soning data rather than model-specific artifacts.
+In addition to transferability, the selected subset substantially reduces training cost, with larger savings
+on larger backbones where full-data post-training is more expensive. Overall, GRACE improves
+the efficiency–performance trade-off: a compact reasoning subset can match or surpass full-data
+performance while requiring only a fraction of the training time.
+3.3 Ablation Studies
+We ablate the two utility components and gradient proxy on Qwen3-VL-2B at ρ= 0.2 . We consider
+five variants: (a)w/o historical score: setting α= 1 , scoring each step only by answer-oriented
+alignment; (b)w/o answer score: removing the answer-oriented term and scoring steps only by
+7
+
+Table 3: Ablation study of GRACE on Qwen3-VL-2B atρ= 0.2.
+Variant Hallusion↑SQA↑MMBench↑ MME↑MMT↑ MathVista↑ MathVision↑ Rel. Avg.↑
+Perc. Cog. SI MI MINI Full
+GRACE46.8 85.0 73.81512.3 682.9 58.5 56.354.2 21.717.2 108.8
+w/o Hist. 45.9 83.3 71.0 1502.6686.856.6 54.8 55.217.2 18.4105.5
+w/o Ans. 44.5 80.8 69.7 1495.1 655.4 55.2 53.3 50.7 13.6 13.8 97.5
+Target = CoT + Ans46.881.8 69.2 1508.1 655.0 56.1 54.5 50.7 15.3 14.5 100.2
+Target = Suffix 44.4 82.1 68.51515.9656.1 55.2 52.7 51.3 14.4 15.1 99.0
+Proxy = Proj. Grad. 45.7 82.9 71.7 1501.0 661.8 56.7 54.8 49.0 12.7 14.1 98.3
+Table 4: Hyperparameter analysis on Qwen3-VL-2B at ρ= 0.2 . γ denotes the warm-up ratio; W
+and β are used for window and EMA history aggregation, respectively. For four-checkpoint scoring,
+0.25–1.0denotes checkpoints at25%,50%,75%, and100%warm-up progress.
+Study VariantγHist.W β αRel. Avg.↑
+Pool ≥8-step – – – – – 100.0
+Full w/o filter – – – – – 99.3
+Warm-up
+No warm-up 0 uniform – – 0.5 89.6
+Larger warm-up 0.25 uniform – – 0.5 99.6
+Four checkpoints 0.25–1.0 uniform – – 0.5 101.7
+Default 0.05 uniform – – 0.5 106.6
+History
+Window 0.05 window 3 – 0.5 104.6
+EMA 0.05 EMA – 0.8 0.5 105.7
+Uniform 0.05 uniform – – 0.5 106.6
+Balance
+α= 0.10.05 uniform – – 0.1 100.8
+α= 0.50.05 uniform – – 0.5 106.6
+α= 0.7(default) 0.05 uniform – – 0.7108.8
+α= 0.90.05 uniform – – 0.9 107.7
+historical alignment, with the first step omitted since no history exists; (c)Target = CoT + Ans:
+using the union of all reasoning steps and the answer as the optimization target; (d)Target = Suffix:
+using the trailing suffix after the current step, testing whether local future context suffices as an
+answer surrogate; (e)Proxy = projected gradient: replacing g(T) with LESS-style projected
+parameter-space gradients computed per step, while keeping the rest of GRACE unchanged.
+Table 3 reports the ablation results across all benchmarks. Both utility components contribute to
+GRACE. Using only answer-oriented alignment remains competitive, reaching 105.5% relative
+average performance, but still trails full GRACE by 3.3 points, showing that trajectory consistency
+provides complementary information beyond answer alignment. In contrast, removing the answer-
+oriented term drops the relative average to 97.5%, suggesting that historical consistency alone may
+favor internally coherent traces that are not necessarily aligned with the final optimization objective.
+The target direction also matters. Replacing the answer segment with the full trace (CoT + Ans) or
+local suffix reduces the relative average to100.2% and 99.0%, respectively, indicating that the final
+answer is a more reliable target for step-level utility estimation. Finally, replacing our representation-
+level proxy with projected parameter-space gradients yields only 98.3%, confirming that our proxy is
+not merely an efficiency approximation but also provides a stable signal for reasoning-step valuation.
+3.4 Hyperparameter Analysis
+We study the sensitivity of GRACE to its main hyperparameters on Qwen3-VL-2B atρ= 0.2 . We
+examine: (i) the candidate pool (default ≥8 -step subset of MMathCoT-1M vs. full MMathCoT-1M);
+(ii) the warm-up strategy, including the warm-up ratio γ and scoring checkpoints; (iii) the history
+aggregation scheme ωk,j (uniform / sliding window with size W / EMA with decay β); and (iv) the
+balance coefficientα∈[0,1]for answer-oriented and historical alignment.
+Table 4 summarizes representative hyperparameter variants. These results lead to four main obser-
+vations.Candidate pool.The ≥8-step pool slightly outperforms the unfiltered MMathCoT-1M
+8
+
+Table 5: Cost complexity of feature/signal collection.
+Method Time Complexity Storage Complexity
+Gradient projectionO
+ 
+M
+ 
+|Dtrain|+|D target|
+
+(Cfwd +C bwd)
+
+O
+ 
+M
+ 
+|Dtrain|+|D target|
+
+dproj
+
+GRACE gradient proxyO(M|D train|Cfwd)O(M|D train|(K+ 1)d)
+pool, supporting the use of reasoning-rich traces for stable step-level scoring.Warm-up.Without
+warm-up, performance drops to 89.6%, while the lightweight default warm-up with γ= 0.05 reaches
+106.6%, outperforming larger warm-up or multi-checkpoint scoring.History aggregation.Uniform
+cumulative averaging performs best among the tested strategies, suggesting that broader reasoning
+history provides a stable reference direction.Balance coefficient. α= 0.7 achieves the best result
+(108.8%), showing that answer alignment should dominate while still retaining trajectory consistency.
+Full per-benchmark results are provided in Appendix F.
+3.5 Computational Cost
+We focus on the dominant offline cost of feature/signal collection, as the subsequent ranking and
+top-ρ selection costs are negligible in comparison. Let Dtrain and Dtarget denote the candidate pool
+and the target/validation set, respectively; let M be the number of scoring checkpoints, K the average
+number of reasoning steps, dproj the projected-gradient dimension, and d the hidden dimension
+defined in Sec. 2.3. We use Cfwd and Cbwd for the cost of one forward and backward pass. Table 5
+summarizes the time and storage complexity of this collection stage.
+Gradient-projection methods collect projected gradients for both training and target samples, and
+each feature requires a forward–backward pass. This is expensive because it scales with both Dtrain
+and Dtarget and stores dproj-dimensional gradients for all samples. GRACE simplifies this collection
+stage. It requires no target set or backward computation; instead, it only performs forward passes
+over candidate training samples. Token-level upstream signals are then grouped into K step proxies
+and one answer proxy in the hidden dimension d, enabling step-aware valuation in a single pass
+per sample. In practice, this proxy collection remains lightweight, taking 6.5 single-node hours and
+5.7GB of storage on the candidate pool.
+Overall, GRACE replaces backward-based gradient extraction with forward-only proxy collection,
+making step-level reasoning data valuation substantially more efficient while preserving the fine-
+grained structure needed for our scoring objective.
+4 Related Work
+Reasoning supervision and step-level evaluation.Chain-of-thought prompting and supervision
+improve reasoning by exposing intermediate rationales [ 1, 2]. As reasoning datasets scale, post-
+training pipelines often curate data using quality indicators, such as final-answer correctness, self-
+consistency [5], reward-model scores, or preference signals [6, 27]. Process-supervision methods
+further evaluate intermediate steps with human annotations or verifiers [ 3, 10, 28, 29]. GRACE
+instead scores steps with internal optimization signals, without external rewards or step annotations.
+Data valuation and efficient post-training.Influence functions and TracIn-style estimators mea-
+sure training-sample effects through optimization dynamics [14, 15, 30, 31], and scalable variants
+such as LESS approximate these effects with projected gradients [ 12, 32]. Vision-language data
+selection methods further explore influence consensus or capability-aware curation [7, 13], while
+efficient instruction tuning often relies on diversity [ 33], difficulty [ 34], task coverage [ 7], data
+quality [8, 35–37], or sample-level influence [7, 12, 13]. These methods mainly operate at the sample
+level, whereas GRACE models the ordered internal structure of reasoning traces and aggregates
+step-level directional utilities for subset selection.
+5 Conclusion
+We present GRACE, a gradient-aligned reasoning data curation method for efficient post-training.
+Instead of treating a reasoning trace as an indivisible supervision unit, GRACE views it as a sequence
+9
+
+of optimization events and evaluates each step through answer-oriented alignment and trajectory
+consistency. To make this fine-grained valuation scalable, we introduce a representation-level gradient
+proxy that estimates step-induced update directions from forward-pass upstream signals, avoiding per-
+step backward computation. Experiments on multimodal reasoning post-training show that GRACE
+selects compact subsets that match or surpass full-data training, with 20% curated data reaching
+108.8% of full-data performance and 5% retaining 100.2%. These results suggest that the value of
+reasoning data depends not only on external quality indicators such as correctness, preference, or
+length, but also on whether its intermediate steps constructively support the optimization trajectory.
+References
+[1] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, brian ichter, Fei Xia, Ed Chi,
+Quoc V Le, and Denny Zhou. Chain-of-thought prompting elicits reasoning in large language
+models. In S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, editors,
+Advances in Neural Information Processing Systems, volume 35, pages 24824–24837. Curran
+Associates, Inc., 2022. URL https://proceedings.neurips.cc/paper_files/paper/
+2022/file/9d5609613524ecf4f15af0f7b31abca4-Paper-Conference.pdf.
+[2] Guowei Xu, Peng Jin, Hao Li, Yibing Song, Lichao Sun, and Li Yuan. Llava-cot: Let vision
+language models reason step-by-step.CoRR, abs/2411.10440, 2024. doi: 10.48550/ARXIV .
+2411.10440. URLhttps://doi.org/10.48550/arXiv.2411.10440.
+[3] Ruilin Luo, Zhuofan Zheng, Lei Wang, Yifan Wang, Xinzhe Ni, Zicheng Lin, Songtao
+Jiang, Yiyao Yu, Chufan Shi, Ruihang Chu, Jin zeng, and Yujiu Yang. Unlocking mul-
+timodal mathematical reasoning via process reward model. In D. Belgrave, C. Zhang,
+H. Lin, R. Pascanu, P. Koniusz, M. Ghassemi, and N. Chen, editors,Advances in Neu-
+ral Information Processing Systems, volume 38, pages 49851–49899. Curran Associates,
+Inc., 2025. URL https://proceedings.neurips.cc/paper_files/paper/2025/file/
+4757e472d97ca980c24a487622f7ff00-Paper-Conference.pdf.
+[4] Chunting Zhou, Pengfei Liu, Puxin Xu, Srinivasan Iyer, Jiao Sun, Yuning Mao, Xuezhe
+Ma, Avia Efrat, Ping Yu, Lili Yu, Susan Zhang, Gargi Ghosh, Mike Lewis, Luke Zettle-
+moyer, and Omer Levy. LIMA: less is more for alignment. In Alice Oh, Tristan Nau-
+mann, Amir Globerson, Kate Saenko, Moritz Hardt, and Sergey Levine, editors,Ad-
+vances in Neural Information Processing Systems 36: Annual Conference on Neural In-
+formation Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December
+10 - 16, 2023, 2023. URL http://papers.nips.cc/paper_files/paper/2023/hash/
+ac662d74829e4407ce1d126477f4a03a-Abstract-Conference.html.
+[5] Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc V . Le, Ed H. Chi, Sharan Narang, Aakanksha
+Chowdhery, and Denny Zhou. Self-consistency improves chain of thought reasoning in language
+models. InThe Eleventh International Conference on Learning Representations, ICLR 2023,
+Kigali, Rwanda, May 1-5, 2023. OpenReview.net, 2023. URL https://openreview.net/
+forum?id=1PL1NIMMrw.
+[6] Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin,
+Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton,
+Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul F. Christiano,
+Jan Leike, and Ryan Lowe. Training language models to follow instructions with human
+feedback. In Sanmi Koyejo, S. Mohamed, A. Agarwal, Danielle Belgrave, K. Cho, and A. Oh,
+editors,Advances in Neural Information Processing Systems 35: Annual Conference on Neural
+Information Processing Systems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28
+- December 9, 2022, 2022. URL http://papers.nips.cc/paper_files/paper/2022/
+hash/b1efde53be364a73914f58805a001731-Abstract-Conference.html.
+[7] Xindi Wu, Mengzhou Xia, Rulin Shao, Zhiwei Deng, Pang Wei Koh, and Olga Russakovsky.
+ICONS: influence consensus for vision-language data selection.CoRR, abs/2501.00654, 2025.
+[8] Zikang Liu, Kun Zhou, Wayne Xin Zhao, Dawei Gao, Yaliang Li, and Ji-Rong Wen. Less is
+more: High-value data selection for visual instruction tuning.CoRR, abs/2403.09559, 2024.
+10
+
+[9] Jaewoo Lee, Boyang Li, and Sung Ju Hwang. Concept-skill transferability-based data selection
+for large vision-language models. In Yaser Al-Onaizan, Mohit Bansal, and Yun-Nung Chen,
+editors,Proceedings of the 2024 Conference on Empirical Methods in Natural Language
+Processing, EMNLP 2024, Miami, FL, USA, November 12-16, 2024, pages 5060–5080, 2024.
+[10] Jonathan Uesato, Nate Kushman, Ramana Kumar, H. Francis Song, Noah Y . Siegel, Lisa Wang,
+Antonia Creswell, Geoffrey Irving, and Irina Higgins. Solving math word problems with process-
+and outcome-based feedback.CoRR, abs/2211.14275, 2022. doi: 10.48550/ARXIV .2211.14275.
+URLhttps://doi.org/10.48550/arXiv.2211.14275.
+[11] Qwen Team. Qwen3-vl technical report.CoRR, abs/2511.21631, 2025. doi: 10.48550/ARXIV .
+2511.21631. URLhttps://doi.org/10.48550/arXiv.2511.21631.
+[12] Mengzhou Xia, Sadhika Malladi, Suchin Gururangan, Sanjeev Arora, and Danqi Chen. LESS:
+selecting influential data for targeted instruction tuning. InForty-first International Conference
+on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024. OpenReview.net, 2024.
+[13] Junjie Li, Ziao Wang, Jianghong Ma, and Xiaofeng Zhang. Uncovering intrinsic capabilities:
+A paradigm for data curation in vision-language models.CoRR, abs/2510.00040, 2025. doi:
+10.48550/ARXIV .2510.00040. URLhttps://doi.org/10.48550/arXiv.2510.00040.
+[14] Garima Pruthi, Frederick Liu, Satyen Kale, and Mukund Sundararajan. Estimating training
+data influence by tracing gradient descent. In Hugo Larochelle, Marc’Aurelio Ranzato, Raia
+Hadsell, Maria-Florina Balcan, and Hsuan-Tien Lin, editors,Advances in Neural Information
+Processing Systems 33: Annual Conference on Neural Information Processing Systems 2020,
+NeurIPS 2020, December 6-12, 2020, virtual, 2020.
+[15] Pang Wei Koh and Percy Liang. Understanding black-box predictions via influence functions.
+In Doina Precup and Yee Whye Teh, editors,Proceedings of the 34th International Conference
+on Machine Learning, ICML 2017, Sydney, NSW, Australia, 6-11 August 2017, Proceedings of
+Machine Learning Research, pages 1885–1894. PMLR, 2017. URL http://proceedings.
+mlr.press/v70/koh17a.html.
+[16] Jordan T. Ash, Chicheng Zhang, Akshay Krishnamurthy, John Langford, and Alekh Agarwal.
+Deep batch active learning by diverse, uncertain gradient lower bounds. In8th International
+Conference on Learning Representations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020.
+OpenReview.net, 2020. URLhttps://openreview.net/forum?id=ryghZJBKPS.
+[17] Sung Min Park, Kristian Georgiev, Andrew Ilyas, Guillaume Leclerc, and Aleksander Madry.
+TRAK: attributing model behavior at scale. In Andreas Krause, Emma Brunskill, Kyunghyun
+Cho, Barbara Engelhardt, Sivan Sabato, and Jonathan Scarlett, editors,International Conference
+on Machine Learning, ICML 2023, 23-29 July 2023, Honolulu, Hawaii, USA, Proceedings of
+Machine Learning Research, pages 27074–27113. PMLR, 2023. URLhttps://proceedings.
+mlr.press/v202/park23c.html.
+[18] Tianrui Guan, Fuxiao Liu, Xiyang Wu, Ruiqi Xian, Zongxia Li, Xiaoyu Liu, Xijun Wang,
+Lichang Chen, Furong Huang, Yaser Yacoob, Dinesh Manocha, and Tianyi Zhou. Hallu-
+sionbench: An advanced diagnostic suite for entangled language hallucination and visual
+illusion in large vision-language models. InIEEE/CVF Conference on Computer Vision and
+Pattern Recognition, CVPR 2024, Seattle, WA, USA, June 16-22, 2024, pages 14375–14385.
+IEEE, 2024. doi: 10.1109/CVPR52733.2024.01363. URL https://doi.org/10.1109/
+CVPR52733.2024.01363.
+[19] Pan Lu, Swaroop Mishra, Tanglin Xia, Liang Qiu, Kai-Wei Chang, Song-Chun Zhu,
+Oyvind Tafjord, Peter Clark, and Ashwin Kalyan. Learn to explain: Multimodal rea-
+soning via thought chains for science question answering. In Sanmi Koyejo, S. Mo-
+hamed, A. Agarwal, Danielle Belgrave, K. Cho, and A. Oh, editors,Advances in Neu-
+ral Information Processing Systems 35: Annual Conference on Neural Information Pro-
+cessing Systems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - Decem-
+ber 9, 2022, 2022. URL http://papers.nips.cc/paper_files/paper/2022/hash/
+11332b6b6cf4485b84afadb1352d3a9a-Abstract-Conference.html.
+11
+
+[20] Yuan Liu, Haodong Duan, Yuanhan Zhang, Bo Li, Songyang Zhang, Wangbo Zhao, Yike Yuan,
+Jiaqi Wang, Conghui He, Ziwei Liu, Kai Chen, and Dahua Lin. Mmbench: Is your multi-modal
+model an all-around player? In Ales Leonardis, Elisa Ricci, Stefan Roth, Olga Russakovsky,
+Torsten Sattler, and Gül Varol, editors,Computer Vision - ECCV 2024 - 18th European Con-
+ference, Milan, Italy, September 29-October 4, 2024, Proceedings, Part VI, Lecture Notes in
+Computer Science, pages 216–233. Springer, 2024. doi: 10.1007/978-3-031-72658-3\_13.
+URLhttps://doi.org/10.1007/978-3-031-72658-3_13.
+[21] Chaoyou Fu, Peixian Chen, Yunhang Shen, Yulei Qin, Mengdan Zhang, Xu Lin, Zhenyu Qiu,
+Wei Lin, Jinrui Yang, Xiawu Zheng, Ke Li, Xing Sun, and Rongrong Ji. MME: A comprehensive
+evaluation benchmark for multimodal large language models.CoRR, abs/2306.13394, 2023. doi:
+10.48550/ARXIV .2306.13394. URLhttps://doi.org/10.48550/arXiv.2306.13394.
+[22] Kaining Ying, Fanqing Meng, Jin Wang, Zhiqian Li, Han Lin, Yue Yang, Hao Zhang, Wenbo
+Zhang, Yuqi Lin, Shuo Liu, Jiayi Lei, Quanfeng Lu, Runjian Chen, Peng Xu, Renrui Zhang,
+Haozhe Zhang, Peng Gao, Yali Wang, Yu Qiao, Ping Luo, Kaipeng Zhang, and Wenqi Shao.
+Mmt-bench: A comprehensive multimodal benchmark for evaluating large vision-language
+models towards multitask AGI. In Ruslan Salakhutdinov, Zico Kolter, Katherine A. Heller,
+Adrian Weller, Nuria Oliver, Jonathan Scarlett, and Felix Berkenkamp, editors,Forty-first
+International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024,
+Proceedings of Machine Learning Research, pages 57116–57198. PMLR / OpenReview.net,
+2024. URLhttps://proceedings.mlr.press/v235/ying24a.html.
+[23] Pan Lu, Hritik Bansal, Tony Xia, Jiacheng Liu, Chunyuan Li, Hannaneh Hajishirzi, Hao
+Cheng, Kai-Wei Chang, Michel Galley, and Jianfeng Gao. Mathvista: Evaluating mathematical
+reasoning of foundation models in visual contexts. InThe Twelfth International Conference
+on Learning Representations, ICLR 2024, Vienna, Austria, May 7-11, 2024. OpenReview.net,
+2024. URLhttps://openreview.net/forum?id=KUNzEQMWU7.
+[24] Ke Wang, Junting Pan, Weikang Shi, Zimu Lu, Houxing Ren, Aojun Zhou, Mingjie Zhan, and
+Hongsheng Li. Measuring multimodal mathematical reasoning with math-vision dataset. In
+Amir Globersons, Lester Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet, Jakub M.
+Tomczak, and Cheng Zhang, editors,Advances in Neural Information Processing Systems 38:
+Annual Conference on Neural Information Processing Systems 2024, NeurIPS 2024, Vancouver,
+BC, Canada, December 10 - 15, 2024, 2024. URL http://papers.nips.cc/paper_files/
+paper/2024/hash/ad0edc7d5fa1a783f063646968b7315b-Abstract-Datasets_and_
+Benchmarks_Track.html.
+[25] Qwen Team. Qwen2.5-vl, January 2025. URL https://qwenlm.github.io/blog/qwen2.
+5-vl/.
+[26] Haotian Liu, Chunyuan Li, Yuheng Li, and Yong Jae Lee. Improved baselines with visual in-
+struction tuning. InIEEE/CVF Conference on Computer Vision and Pattern Recognition, CVPR
+2024, Seattle, WA, USA, June 16-22, 2024, pages 26286–26296. IEEE, 2024. doi: 10.1109/
+CVPR52733.2024.02484. URLhttps://doi.org/10.1109/CVPR52733.2024.02484.
+[27] Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D. Manning, Stefano Ermon, and
+Chelsea Finn. Direct preference optimization: Your language model is secretly a reward model.
+In Alice Oh, Tristan Naumann, Amir Globerson, Kate Saenko, Moritz Hardt, and Sergey
+Levine, editors,Advances in Neural Information Processing Systems 36: Annual Conference on
+Neural Information Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December
+10 - 16, 2023, 2023. URL http://papers.nips.cc/paper_files/paper/2023/hash/
+a85b405ed65c6477a4fe8302b5e06ce7-Abstract-Conference.html.
+[28] Hunter Lightman, Vineet Kosaraju, Yura Burda, Harri Edwards, Bowen Baker, Teddy Lee, Jan
+Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. Let’s verify step by step, 2023. URL
+https://arxiv.org/abs/2305.20050.
+[29] Minghe Gao, Xuqi Liu, Zhongqi Yue, Yang Wu, Shuang Chen, Juncheng Li, Siliang Tang, Fei
+Wu, Tat-Seng Chua, and Yueting Zhuang. Benchmarking Multimodal CoT Reward Model Step-
+wise by Visual Program. InInternational Conference on Computer Vision, pages 1718–1728,
+2025. URLhttps://mlanthology.org/iccv/2025/gao2025iccv-benchmarking/.
+12
+
+[30] Chih-Kuan Yeh, Joon Kim, Ian En-Hsu Yen, and Pradeep K Ravikumar. Representer point
+selection for explaining deep neural networks.Advances in neural information processing
+systems, 31, 2018.
+[31] Amirata Ghorbani and James Y . Zou. Data shapley: Equitable valuation of data for machine
+learning. In Kamalika Chaudhuri and Ruslan Salakhutdinov, editors,Proceedings of the 36th
+International Conference on Machine Learning, ICML 2019, 9-15 June 2019, Long Beach,
+California, USA, Proceedings of Machine Learning Research, pages 2242–2251. PMLR, 2019.
+URLhttp://proceedings.mlr.press/v97/ghorbani19c.html.
+[32] Andrew Ilyas, Sung Min Park, Logan Engstrom, Guillaume Leclerc, and Aleksander Madry.
+Datamodels: Predicting predictions from training data. InICML, 2022.
+[33] Shengguang Wu, Keming Lu, Benfeng Xu, Junyang Lin, Qi Su, and Chang Zhou. Self-evolved
+diverse data sampling for efficient instruction tuning.CoRR, abs/2311.08182, 2023. doi:
+10.48550/ARXIV .2311.08182. URLhttps://doi.org/10.48550/arXiv.2311.08182.
+[34] Can Xu, Qingfeng Sun, Kai Zheng, Xiubo Geng, Pu Zhao, Jiazhan Feng, Chongyang Tao,
+Qingwei Lin, and Daxin Jiang. Wizardlm: Empowering large pre-trained language models to
+follow complex instructions. In B. Kim, Y . Yue, S. Chaudhuri, K. Fragkiadaki, M. Khan, and
+Y . Sun, editors,International Conference on Learning Representations, volume 2024, pages
+30745–30766, 2024. URL https://proceedings.iclr.cc/paper_files/paper/2024/
+file/82eec786fdfbbfa53450c5feb7d1ac92-Paper-Conference.pdf.
+[35] Wei Liu, Weihao Zeng, Keqing He, Yong Jiang, and Junxian He. What makes good data
+for alignment? A comprehensive study of automatic data selection in instruction tuning.
+InThe Twelfth International Conference on Learning Representations, ICLR 2024, Vienna,
+Austria, May 7-11, 2024. OpenReview.net, 2024. URL https://openreview.net/forum?
+id=BTKAeLqLMw.
+[36] Bardia Safaei, Faizan Siddiqui, Jiacong Xu, Vishal M. Patel, and Shao-Yuan Lo. Filter
+Images First, Generate Instructions Later: Pre-Instruction Data Selection for Visual Instruc-
+tion Tuning . In2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition
+(CVPR), pages 14247–14256, Los Alamitos, CA, USA, June 2025. IEEE Computer Society.
+doi: 10.1109/CVPR52734.2025.01329. URL https://doi.ieeecomputersociety.org/
+10.1109/CVPR52734.2025.01329.
+[37] Yihan Cao, Yanbin Kang, Chi Wang, and Lichao Sun. Instruction mining: Instruction data
+selection for tuning large language models, 2024. URL https://arxiv.org/abs/2307.
+06290.
+[38] Yuze Zhao, Jintao Huang, Jinghan Hu, Xingjun Wang, Yunlin Mao, Daoze Zhang, Zeyinzi
+Jiang, Zhikai Wu, Baole Ai, Ang Wang, Wenmeng Zhou, and Yingda Chen. SWIFT: A
+scalable lightweight infrastructure for fine-tuning. In Toby Walsh, Julie Shah, and Zico Kolter,
+editors,Thirty-Ninth AAAI Conference on Artificial Intelligence, Thirty-Seventh Conference
+on Innovative Applications of Artificial Intelligence, Fifteenth Symposium on Educational
+Advances in Artificial Intelligence, AAAI 2025, Philadelphia, PA, USA, February 25 - March
+4, 2025, pages 29733–29735. AAAI Press, 2025. doi: 10.1609/AAAI.V39I28.35383. URL
+https://doi.org/10.1609/aaai.v39i28.35383.
+[39] Haodong Duan, Junming Yang, Yuxuan Qiao, Xinyu Fang, Lin Chen, Yuan Liu, Xiaoyi
+Dong, Yuhang Zang, Pan Zhang, Jiaqi Wang, Dahua Lin, and Kai Chen. Vlmevalkit: An
+open-source toolkit for evaluating large multi-modality models. In Jianfei Cai, Mohan S.
+Kankanhalli, Balakrishnan Prabhakaran, Susanne Boll, Ramanathan Subramanian, Liang Zheng,
+Vivek K. Singh, Pablo César, Lexing Xie, and Dong Xu, editors,Proceedings of the 32nd ACM
+International Conference on Multimedia, MM 2024, Melbourne, VIC, Australia, 28 October
+2024 - 1 November 2024, pages 11198–11201. ACM, 2024. doi: 10.1145/3664647.3685520.
+URLhttps://doi.org/10.1145/3664647.3685520.
+13
+
+A Limitations
+GRACE has several limitations. First, GRACE estimates data utility from optimization signals
+observed under a fixed scoring model and warm-up configuration. Although our experiments show
+consistent gains across selection ratios, hyperparameter variants, and transferred backbones, applying
+GRACE to substantially different optimizers, training objectives, or model families may require
+additional empirical validation. Second, our empirical evaluation focuses on multimodal reasoning
+post-training with chain-of-thought data. While the results cover mathematical reasoning, general
+visual question answering, multi-task reasoning, and multi-image reasoning benchmarks, extending
+GRACE to pure language reasoning, non-CoT instruction data, or reinforcement-learning-based
+post-training remains an important direction for future work. Third, while improving data efficiency
+can reduce post-training cost and make reasoning model development more accessible, more effective
+curation may also lower the barrier to training stronger models for unintended or harmful downstream
+uses. This highlights the importance of responsible dataset governance, safety evaluation, and
+deployment when applying GRACE to capability-enhancing post-training pipelines.
+B First-order Motivation for Directional Step Utility
+For a samplezand a target lossL tar(θ;z), consider the step-induced update
+θ′ =θ−η∇ θLk(θ;z),(14)
+whereη >0. Applying a first-order Taylor expansion atθgives
+Ltar(θ′;z) =L tar(θ;z) +
+
+∇θLtar(θ;z), θ ′ −θ
+
++O(∥θ ′ −θ∥ 2)(15)
+=L tar(θ;z)−η
+
+∇θLtar(θ;z),∇ θLk(θ;z)
+
++O(η 2).(16)
+Therefore,
+Ltar(θ′;z)−L tar(θ;z) =−η
+
+∇θLk(θ;z),∇ θLtar(θ;z)
+
++O(η 2).(17)
+Under a small step size, ignoring the higher-order term yields Eq. 4.
+The first-order term shows that the local effect of step sk is governed by the inner product between
+the step gradient and the target gradient. This inner product can be written as
+
+∇θLk,∇ θLtar
+=∥∇ θLk∥ ∥∇θLtar∥A tar
+k ,(18)
+where
+Atar
+k ≜cos
+ 
+∇θLk,∇ θLtar
+.(19)
+Thus, Atar
+k corresponds to the normalized directional component of the first-order utility. GRACE
+uses this normalized form to compare step directions while reducing the effect of gradient scale.
+C Derivation of Representation-level Gradient Proxy
+We derive the representation-level proxy in Sec. 2.3 from the parameter-space formulation in Sec. 2.2.
+Let θrep denote the parameters that produce the final hidden representations. For a token-level loss
+Lt, by the chain rule,
+∇θrep Lt =
+ ∂ht
+∂θrep
+⊤ ∂Lt
+∂ht
+=J ⊤
+t ut,(20)
+where
+Jt ≜ ∂ht
+∂θrep
+, u t ≜ ∂Lt
+∂ht
+.
+For softmax cross-entropy, let ℓt =W ⊤
+outht, pt = softmax(ℓ t), and yt be the one-hot label. The
+token-level loss is
+Lt =−
+VX
+v=1
+(yt)v logp t,v, p t,v = exp(ℓt,v)PV
+r=1 exp(ℓt,r)
+.
+14
+
+The derivative of the softmax probability with respect to the logit is
+∂pt,v
+∂ℓt,r
+=p t,v(1v=r −p t,r).
+Applying the chain rule gives
+∂Lt
+∂ℓt,r
+=−
+VX
+v=1
+(yt)v
+pt,v
+∂pt,v
+∂ℓt,r
+=−
+VX
+v=1
+(yt)v(1v=r −p t,r) =p t,r −(y t)r.(21)
+Thus, in vector form,
+∂Lt
+∂ℓt
+=p t −y t.(22)
+Since the Jacobian of ℓt with respect to ht is W ⊤
+out, the upstream gradient at the representation
+interface is
+ut ≜ ∂Lt
+∂ht
+=
+ ∂ℓt
+∂ht
+⊤ ∂Lt
+∂ℓt
+=W out(pt −y t).(23)
+For a token setT, the corresponding representation-parameter gradient is
+∇θrep L(T) = 1
+|T |
+X
+t∈T
+J ⊤
+t ut.(24)
+Thus, {ut} are the common upstream optimization signals that drive updates of the representation-
+producing parameters through the Jacobian mapping.
+Consider two token setsT 1 andT 2. Their representation-parameter gradient inner product is
+
+∇θrep L(T1),∇ θrep L(T2)
+
+=
+*
+1
+|T1|
+X
+t∈T1
+J ⊤
+t ut, 1
+|T2|
+X
+t′∈T2
+J ⊤
+t′ ut′
++
+= 1
+|T1||T2|
+X
+t∈T1
+X
+t′∈T2
+u⊤
+t
+ 
+JtJ ⊤
+t′
+
+ut′.(25)
+Accordingly, their exact representation-parameter cosine alignment is
+cos
+ 
+∇θrep L(T1),∇ θrep L(T2)
+
+=
+P
+t∈T1
+P
+t′∈T2 u⊤
+t
+ 
+JtJ ⊤
+t′
+
+ut′
+P
+t∈T1 J ⊤
+t ut
+P
+t′∈T2 J ⊤
+t′ ut′
+ ,(26)
+where the segment-length normalization factors cancel in the cosine.
+Eq. 26 shows that exact alignment depends on both upstream gradients and Jacobian-induced
+interactions. Exact step-level evaluation of these interactions would require isolating each step
+loss and explicitly backpropagating it through θrep, leading to repeated per-step gradient computation.
+We therefore use an interface-level surrogate that preserves the upstream optimization signals while
+avoiding explicit construction of the Jacobian-induced geometry, in line with scalable data valuation
+methods that approximate gradient information in proxy spaces. This yields the representation-level
+proxy
+g(T)≜ 1
+|T |
+X
+t∈T
+ut.(27)
+For thek-th reasoning step and the answer segment, we define
+gk ≜g(T k), g ans ≜g(T ans).
+Using this proxy, the gradient-space quantities in Sec. 2.2 are instantiated as
+\Scorek =
+(bAans
+k , k= 1,
+αbAans
+k + (1−α) bAhist
+k , k >1,
+(28)
+15
+
+Algorithm 1GRACE reasoning data curation
+Require: Reasoning dataset D, initial model fθ0, warm-up ratio γ, selection ratio ρ, balance coeffi-
+cientα
+Ensure:Curated subsetS
+1:Warm upf θ0 on a subset ofDwith ratioγto obtainf θ.
+2:Keepf θ fixed during scoring and letW out be its output projection.
+3:foreach samplez i = (x i,s i, ai)∈ Ddo
+4:Run a forward pass with modelf θ to obtain token probabilitiesp t.
+5:Compute upstream signals:u t ←W out(pt −y t), wherey t is the ground-truth token.
+6:foreach reasoning steps i,k do
+7:g i,k ← |T i,k|−1P
+t∈Ti,k
+ut.
+8:end for
+9:g i,ans ← |T i,ans|−1P
+t∈Ti,ans ut.
+10:foreach reasoning steps i,k do
+11:ifk= 1then
+12: \Scorei,1 ←cos(g i,1, gi,ans).
+13:else
+14:br i,k ←Normalize
+P
+j<k ωk,j gi,j
+
+.
+15: \Scorei,k ←αcos(g i,k, gi,ans) + (1−α) cos(g i,k,bri,k).
+16:end if
+17:end for
+18:V(z i)←K −1
+i
+PKi
+k=1 \Scorei,k.
+19:end for
+20:SelectSas the top⌈ρ|D|⌉samples ranked byV(z i).
+21:returnS
+where
+bAans
+k ≜cos(g k, gans), bAhist
+k ≜cos(g k,brk),br k ≜Normalize
+
+X
+j<k
+ωk,j gj
+
+ .
+Thus, \Scorek is the computable representation-level approximation of the gradient-space utility
+Scorek. The coefficientsω k,j can instantiate several common history aggregation strategies:
+ωk,j =
+
+
+
+1
+k−1 ,Uniform,
+1{max(1, k−W)≤j < k}
+min(W, k−1) ,Sliding window,
+βk−1−j
+Pk−1
+r=1 βk−1−r
+,EMA.
+where W∈N denotes the window size, β∈[0,1) is the decay factor, and 1{·} is the indicator
+function.
+D Detailed Algorithm
+Algorithm 1 provides the complete curation procedure of GRACE, including model warm-up, forward-
+only proxy extraction, step-level scoring, sample-level aggregation, and top-ρsubset selection.
+E Experimental Details
+Training data.We post-train on MMathCoT-1M [ 3], a large-scale multimodal mathematical
+reasoning corpus with chain-of-thought supervision. Since GRACE evaluates step-level optimization
+signals, we use reasoning traces with at least eight reasoning steps as the default candidate pool,
+16
+
+which provides sufficient granularity for stable step-level utility estimation. Preliminary experiments
+show that training on the full MMathCoT-1M does not improve downstream performance over this
+reasoning-rich pool, suggesting that this filtering does not compromise training effectiveness. Unless
+explicitly stated otherwise, all reported full-data baselines and selection ratios are defined with respect
+to this≥8-step candidate pool.
+Backbone models.Our default backbone is Qwen3-VL-2B-Instruct [ 11]. To examine the transfer-
+ability of GRACE-selected subsets, we additionally post-train Qwen2.5-VL-3B [25], LLaV A-1.5-
+7B [26], and Qwen3-VL-8B-Instruct on the same curated subset, without re-running data selection.
+For data scoring, we warm up the initial model on a γ= 0.05 subset of the candidate pool to obtain
+the fixed scoring model fθ, and use a single warm-up checkpoint by default. The warm-up subset is
+used only to obtain the fixed scoring model and is not counted as post-training data. For fairness,
+all gradient- and proxy-based baselines use the same warm-up checkpoint when applicable. The
+default selection ratio is ρ= 0.2 . The historical reference direction brk uses uniform aggregation
+(ωk,j = 1/(k−1) , i.e., the historical average), and the balance coefficient is fixed to α= 0.7 .
+Post-training and evaluation are conducted with the ms-swift framework [38].
+Baselines.We compare GRACE against two families of baselines: (i)heuristic selectors—Random
+(uniform sampling), Longest (longest reasoning traces by token length), and Stepmax (traces with
+the largest number of steps); (ii)state-of-the-art data curation methods—LESS [ 12], a gradient-
+projection-based influence method; ICONS [ 7], a cross-task influence-consensus selector; and
+CADC [13], a recent curriculum-aware data curator. For fair comparison, all baselines select subsets
+at the same ratio ρ from the same candidate pool and are post-trained with identical training recipes.
+Benchmarks.We evaluate the post-trained models on a diverse suite of multimodal benchmarks
+using the VLMEvalKit [39] backend integrated in ms-swift, covering three categories:
+• general visual question answering and perception—HallusionBench [ 18], ScienceQA [19],
+MMBench [20], MME (Perception and Cognition) [21];
+•multi-task and multi-image reasoning—MMT-Bench (single-image) and MMT-Bench_MI
+(multi-image) [22];
+•mathematical reasoning—MathVista [23], MathVision_MINI, and MathVision (full) [24].
+We report task-specific metrics for each benchmark, and additionally report relative average perfor-
+mance (Rel. Avg.) normalized by the full-data training baseline. For compactness, tables abbreviate
+HallusionBench as Hallusion, ScienceQA as SQA, MME Perception/Cognition as Perc./Cog., and
+MMT-Bench single-/multi-image settings as SI/MI.
+Given B evaluation entries, including benchmark sub-scores reported separately, we compute the
+relative score of a selected subsetSon entrybas
+Rb(S) = mb(S)
+mb(Dfull) ×100,
+where mb(·) denotes the metric of entry b, and Dfull denotes the full ≥8-step candidate pool. The
+relative average is then
+Rel.Avg.= 1
+B
+BX
+b=1
+Rb(S).
+Implementation framework.All post-training experiments are implemented with ms-swift v3.12.1,
+following the official recommended SFT recipe for vision-language models. We use PyTorch 2.9.0
+with CUDA 12.8 and cuDNN 9.10.2, and use DeepSpeed v0.17.6 with ZeRO-2 optimization for
+distributed training.
+Post-training configuration.Unless otherwise specified, all models are fine-tuned for one epoch
+with LoRA. We use bfloat16 precision, FlashAttention, padding-free training, sequence packing, and
+gradient checkpointing. LoRA is applied to all linear layers with rank 8 and scaling factor 32, while
+the vision encoder and multimodal aligner are frozen. The learning rate is set to 1×10 −4 with a
+17
+
+Table 6: Full hyperparameter results for candidate pool and warm-up strategy on Qwen3-VL-2B at
+ρ= 0.2 . For four-checkpoint scoring, 0.25–1.0 denotes checkpoints at 25%, 50%, 75%, and 100%
+warm-up progress.
+VariantγHist.αHallusion SQA MMBench MME MMT MathVista MathVision Rel. Avg.
+Perc. Cog. SI MI MINI Full
+≥8-step pool – – – 43.7 80.2 69.3 1517.3 656.1 55.0 53.4 52.5 14.7 16.4 100.0
+Full w/o step filter – – – 43.2 83.4 73.5 1526.0 593.6 56.0 54.6 50.1 14.9 15.1 99.3
+Warm-up 25% 0.25 uniform 0.5 46.2 83.5 72.5 1506.7 622.9 56.7 54.4 50.3 15.0 13.8 99.6
+Four checkpoints 0.25–1.0 uniform 0.5 45.6 85.2 72.4 1508.5 650.0 57.2 56.2 50.7 14.8 15.8 101.7
+No warm-up 0 uniform 0.5 12.5 72.2 70.4 1486.7 465.7 54.6 53.1 51.4 15.8 16.8 89.6
+Table 7: Full hyperparameter results for history aggregation on Qwen3-VL-2B at ρ= 0.2 . All
+variants use γ= 0.05 and α= 0.5 .Boldand underlined values denote the best and second-bestRel.
+Avg., respectively.
+Hist. Param.γ αHallusion SQA MMBench MME MMT MathVista MathVision Rel. Avg.
+Perc. Cog. SI MI MINI Full
+Window
+W= 20.05 0.5 46.1 83.0 72.7 1508.8 665.0 59.3 57.0 52.9 14.5 17.2 103.5
+W= 30.05 0.5 45.8 84.6 72.8 1504.5 692.1 57.2 55.8 52.0 17.1 16.7 104.6
+W= 40.05 0.5 44.5 83.7 73.3 1504.0 610.4 57.0 54.9 54.7 17.8 16.5 103.6
+W= 50.05 0.5 44.3 85.8 74.4 1494.6 577.5 57.7 56.5 53.3 16.4 16.8 103.0
+W= 60.05 0.5 45.1 82.8 71.4 1501.8 693.9 57.3 55.3 44.2 17.4 15.8 102.0
+W= 80.05 0.5 47.5 84.9 73.3 1486.8 652.9 57.5 55.0 53.8 17.1 16.1 104.2
+EMA
+β= 0.700.05 0.5 46.4 84.1 73.3 1505.0 671.8 56.7 55.9 51.1 18.4 16.3 104.7
+β= 0.750.05 0.5 45.6 84.7 73.5 1506.2 658.6 57.3 55.8 49.8 19.4 16.1 104.7
+β= 0.800.05 0.5 46.6 84.3 72.7 1496.4 669.6 57.7 55.5 51.0 20.1 16.4 105.7
+β= 0.850.05 0.5 46.0 85.5 74.3 1493.9 588.9 57.2 55.8 52.9 18.8 16.1 104.1
+β= 0.900.05 0.5 46.1 83.8 72.7 1508.2 666.1 57.1 54.5 54.1 17.1 16.4 104.1
+β= 0.950.05 0.5 45.9 84.5 72.4 1498.1 651.1 57.1 56.0 53.8 17.4 15.3 103.4
+β= 0.990.05 0.5 45.9 85.5 73.1 1483.4 610.7 57.3 55.8 51.7 15.8 15.5 101.7
+Uniform – 0.05 0.5 47.3 85.5 75.1 1509.6 678.2 57.5 56.1 52.2 19.4 16.5106.6
+warm-up ratio of 0.05. The per-device batch size is 1, the gradient accumulation step is 2, and the
+maximum sequence length is 4096. Optimizer and scheduler settings follow the default ms-swift SFT
+configuration unless otherwise stated.
+Hardware.Experiments are conducted on a server with eight NVIDIA A800-SXM4-80GB GPUs
+and approximately 1.0 TiB system memory, running Ubuntu 22.04.5 LTS.
+F Full Hyperparameter Results
+We provide the full per-benchmark hyperparameter results in Tables 6–8.
+18
+
+Table 8: Full hyperparameter results for the balance coefficient α on Qwen3-VL-2B at ρ= 0.2 .
+All variants use γ= 0.05 .Boldand underlined values denote the best and second-bestRel. Avg.,
+respectively.
+Hist. Param.αHallusion SQA MMBench MME MMT MathVista MathVision Rel. Avg.
+Perc. Cog. SI MI MINI Full
+Uniform –
+0.9 46.6 84.7 72.4 1506.0 683.9 56.3 54.2 52.9 21.4 17.9 107.7
+0.8 46.2 82.5 71.5 1496.1 678.2 56.3 54.0 53.4 18.4 17.1 104.7
+0.7 46.8 85.0 73.8 1512.3 682.9 58.5 56.3 54.2 21.7 17.2108.8
+0.6 45.7 83.5 71.1 1501.3 682.1 56.9 54.1 52.7 16.4 16.5 103.2
+0.5 47.3 85.5 75.1 1509.6 678.2 57.5 56.1 52.2 19.4 16.5 106.6
+0.4 44.0 81.6 70.0 1494.5 686.1 54.7 53.2 52.5 17.1 15.7 101.7
+0.3 47.1 82.7 70.0 1496.6 667.9 55.2 53.8 51.1 18.4 16.5 103.6
+0.2 45.7 85.1 70.8 1500.8 665.0 56.9 54.8 50.3 17.1 16.0 102.8
+0.1 43.9 83.8 71.4 1516.0 647.5 56.6 55.1 53.6 13.8 15.9 100.8
+WindowW= 3
+0.9 46.3 83.7 71.5 1493.9 686.4 57.0 54.7 54.6 21.7 16.6 107.2
+0.8 45.1 81.9 71.8 1510.2 677.5 57.2 54.7 52.5 18.4 17.0 104.6
+0.7 44.5 84.0 72.5 1496.6 673.6 56.8 54.3 52.3 17.8 16.4 103.7
+0.6 44.7 82.6 71.1 1503.7 695.0 56.3 54.2 52.1 15.5 16.2 102.0
+0.5 45.8 84.6 72.8 1504.5 692.1 57.2 55.8 52.0 17.1 16.7 104.6
+0.4 46.1 83.7 71.1 1496.1 690.0 57.1 54.7 53.1 17.4 15.6 103.6
+0.3 46.4 83.7 71.8 1505.3 670.0 56.4 53.9 53.0 18.8 15.5 104.0
+0.2 44.1 83.1 72.0 1513.2 677.1 56.1 53.7 52.9 17.8 15.5 102.8
+0.1 45.6 83.6 71.6 1503.0 651.8 56.0 55.2 51.7 18.4 14.7 102.6
+EMAβ= 0.8
+0.9 46.1 83.6 72.5 1491.7 661.8 57.2 54.7 53.5 17.4 17.0 104.4
+0.8 45.2 82.9 70.2 1498.7 672.5 56.7 54.5 51.7 16.4 17.2 103.0
+0.7 44.1 83.7 71.7 1511.6 689.3 56.2 54.7 52.4 15.8 16.7 102.8
+0.6 47.4 83.9 70.5 1501.0 692.9 55.3 53.7 53.6 18.1 17.4 105.1
+0.5 46.6 84.3 72.7 1496.4 669.6 57.7 55.5 51.0 20.1 16.4 105.7
+0.4 45.5 82.7 71.6 1498.3 677.9 56.4 54.6 53.1 17.4 16.9 104.0
+0.3 45.0 84.5 71.4 1506.5 659.6 55.8 53.9 52.5 17.4 16.8 103.4
+0.2 44.9 85.1 72.3 1512.8 635.4 56.4 54.5 54.2 16.1 16.3 102.7
+0.1 43.9 82.4 69.7 1502.4 656.1 55.9 53.7 53.6 16.4 16.7 102.1
+19

@@ -1,0 +1,105 @@
+  <div class="paper" id="p12">
+    <h3 class="paper-title">Medical-2 · COTCAgent: Preventive Consultation via Probabilistic Chain-of-Thought Completion</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 The University of Hong Kong, UESTC, The University of Sydney</span>
+      <span><a href="https://arxiv.org/abs/2605.15016" target="_blank">arXiv:2605.15016</a></span>
+      <br>
+      <span class="tag tag-medical">Medical</span>
+      <span class="tag tag-medical">EHR</span>
+      <span class="tag tag-medical">CoT</span>
+      <span class="tag tag-medical">差异诊断</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>纵向 EHR（labs、vitals、症状）是临床诊断的关键时序证据，但 LLM 在这上面有两个根本缺陷：(1) <strong>缺乏精细统计推理</strong>——把"血肌酐 1 月内从 80 到 130 上升"这种需要回归才能确认的趋势直接幻觉成"急剧升高"，扭曲诊断；(2) <strong>非均匀时间序列 + 标签稀缺</strong>——纯 LLM 难以捕获长程时间依赖。本文 COTCAgent 通过<strong>"统计代码 + 知识库匹配 + 概率 CoT 补全"三层架构</strong>，把 LLM 的幻觉风险隔离在"自然语言 paraphrase"这一最小角色，让真正的数值推理走在确定性管道里。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① TSA 模块（Temporal-Statistics Adapter）：自然语言 → 统计代码</strong>
+        <p>把临床查询 $Q$ 映射为可执行统计：</p>
+        <p>$$M:Q\to\Phi\to\Lambda\to C$$</p>
+        <p>$\Phi$ 是解析的语义结构，$\Lambda$ 是选择的统计模型，$C$ 是生成的可执行脚本。常用的两种模型：</p>
+        <p><strong>趋势查询 → 混合效应模型</strong>：</p>
+        <p>$$y_{ij}=\beta_0+\beta_1 t_{ij}+u_i+\epsilon_{ij},\;u_i\sim\mathcal N(0,\sigma_u^2),\;\epsilon_{ij}\sim\mathcal N(0,\sigma_\epsilon^2)$$</p>
+        <p><strong>急转查询 → 贝叶斯变点检测</strong>：</p>
+        <p>$$P(\tau\mid y)\propto\Big[\prod_{t=1}^\tau f_1(y_t)\Big]\Big[\prod_{t=\tau+1}^T f_2(y_t)\Big]P(\tau)$$</p>
+        <p>每个 TSA 输出是结构化 tuple <code>(span, estimand, value, qual)</code>，<code>estimand</code> 来自有限 schema（slope / change-point posterior / cohort z-score 等）；拟合失败自动降级并打 UNSTABLE/SPARSE 标记。<strong>这把 "LLM 说 p=0.03 却没似然函数"的常见幻觉模式从源头堵死</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② COTC 模块：IDF-Weighted Gibbs 能量打分</strong>
+        <p>知识库覆盖 9,948 个内科疾病（心血管、呼吸、代谢、感染、神经五大类）的 Symptom-Trend-Disease 三元组。给定症状/趋势集合 $S_p$，对每个候选疾病 $d_i$ 计算 Gibbs 能量：</p>
+        <p>$$E(d_i\mid S_p)=-\sum_{s_j\in S_{d_i}\cap S_p}\log w^{\text{IDF}}_j+\log\phi(s_j, d_i)$$</p>
+        <p>其中 IDF 权重</p>
+        <p>$$w^{\text{IDF}}_j=\log\frac{|D|+1}{|\{d_i\in D:s_j\in S_{d_i}\}|+1}$$</p>
+        <p>常见症状（如发热、乏力）权重低；罕见特异指标（如 Koplik 斑）权重高，对应医学直觉中的"病理特异性"。$\phi(s_j, d_i)\in[0.5, 1]$ 是临床医生预设的 specificity 系数。最终 softmax 归一化得</p>
+        <p>$$\tilde P(d_i\mid S_p)=\frac{\exp(-E(d_i\mid S_p)/T)}{\sum_k\exp(-E(d_k\mid S_p)/T)}$$</p>
+        <p>过滤掉 $R_i&lt;T$（Risk threshold）的疾病，保留有意义的候选。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Probabilistic CoT Completion：有上限的多轮澄清</strong>
+        <p>当 $\max_i\tilde P(d_i\mid S_p)$ 仍低于阈值 $\theta$（候选未足够区分）时，触发 completion 循环（Algorithm 1）：</p>
+        <ol>
+          <li><strong>TopGaps</strong>(KB, $S_p$, t)：找出当前最有诊断价值的 $k$ 个 unknown 症状/化验，用 entropy 引导选择"最能压缩候选集合"的查询；</li>
+          <li>用模板 + LLM constrained paraphrase 渲染为简洁问题 $q$；</li>
+          <li>解析用户回答 $a$ 为离散 evidence，加入 $S_p$，重新计算能量与概率；</li>
+          <li>当 $\max_i\tilde P\ge\theta$、entropy 低于阈值或达到 round cap $R_{\max}$ 时停止，返回排名 + CoT 日志 $\mathcal L$。</li>
+        </ol>
+        <p><strong>这是受限 Bayesian information gathering</strong>——避免 LLM 自由生成无意义问题，把对话生成限制在 KB 已知 gap 上。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 三个随机源严格隔离</strong>
+        <p>架构不变量：(i) <strong>可执行统计</strong>消耗原始时序数据，输出有 likelihood 的回归结果；(ii) <strong>离散匹配</strong>仅消耗已 tokenize 的 predicate（如 severe-trend）；(iii) <strong>自然语言</strong>只用于"paraphrase 预定的 gap 问题"和"解析用户回答"。当 $M$ 抛错，COTC 收到的是显式 uncertainty flag 而非幻觉数字；当 KB miss，Algorithm 1 走 low-coverage 分支而非编造连边。<strong>失败可读、回路清晰</strong>是该设计的核心承诺。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：糖尿病肾病前驱期的"非问诊式"识别</h4>
+      <div class="example-box">
+        <strong>场景</strong>：一位 58 岁男性，最近两次体检数据进入系统：血肌酐 80→130 μmol/L、尿素氮 5.2→8.1、尿蛋白 +、空腹血糖 10.8。
+        <ol>
+          <li><strong>TSA 阶段</strong>：执行混合效应回归，输出 <code>(blood_creatinine, slope=+12.5/month, p&lt;0.01, qual=CONFIRMED)</code>；变点检测在尿蛋白时间序列上 detect change at week 8；</li>
+          <li><strong>COTC 阶段</strong>：在 KB 中匹配 "rising_creatinine, persistent_proteinuria, hyperglycemia" → 候选 top-3：糖尿病肾病 (Risk 95%)、原发性肾小球肾炎 (Risk 72%)、高血压肾病 (Risk 55%)。最大概率达到 $\theta=0.9$，无需 completion；</li>
+          <li><strong>对比</strong>：单纯让 LLM "看一眼数字"判断，由于无统计回归可能错把"80→130"当作正常波动；让 LLM 通过 RAG 检索也容易因为忽视 IDF 权重把"持续性蛋白尿"这种特异指标按 hot keyword 频率混入排序；</li>
+          <li><strong>性能</strong>：在自建 9948 疾病数据集上，COTCAgent + Baichuan-M2 达到 Top-1 acc <strong>90.47%</strong>、Top-2 acc 92.18%、F1 86.74%，超过 KARE + GPT-4o (Top-1 83.76%)、DirPred + GPT-4o (88.27%)、Gemini 2.5 Pro 单 pass (86.08%) 等所有 baseline。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（自建 EHR 9948 疾病数据集）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>Backbone</th><th>Top-1 Acc</th><th>F1</th><th>Top-2 Acc</th><th>Disease Recall</th></tr></thead>
+        <tbody>
+          <tr><td>TimeCAP</td><td>GPT-4o</td><td>78.31</td><td>74.18</td><td>83.06</td><td>69.43</td></tr>
+          <tr><td>Google agent</td><td>GPT-4o</td><td>80.47</td><td>76.84</td><td>85.19</td><td>72.08</td></tr>
+          <tr><td>KARE</td><td>GPT-4o</td><td>83.76</td><td>80.05</td><td>89.43</td><td>83.24</td></tr>
+          <tr><td>DirPred</td><td>GPT-4o</td><td>88.27</td><td>85.06</td><td>83.98</td><td>70.87</td></tr>
+          <tr><td>Gemini 2.5 Pro single-pass</td><td>—</td><td>86.08</td><td>82.71</td><td>88.61</td><td>79.31</td></tr>
+          <tr><td>Claude 3.7 Sonnet single-pass</td><td>—</td><td>86.94</td><td>83.55</td><td>89.38</td><td>80.16</td></tr>
+          <tr><td>o4-mini + tools</td><td>OpenAI</td><td>87.51</td><td>84.12</td><td>89.82</td><td>80.74</td></tr>
+          <tr><td>Qwen3-Next-80B-A3B</td><td>—</td><td>85.14</td><td>81.87</td><td>87.51</td><td>77.62</td></tr>
+          <tr><td class="best">COTCAgent（本文）</td><td class="best">Baichuan-M2</td><td class="best">90.47</td><td class="best">86.74</td><td class="best">92.18</td><td class="best">82.91</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">尽管使用的 Baichuan-M2（中国国产 LLM）单独看不及 Gemini 2.5 Pro / Claude 3.7 Sonnet，但通过 COTCAgent 三层架构包装后，最终 Top-1 准确率超过单 pass 大模型 +3-4pt。这是"<strong>系统设计 &gt; 模型 raw 能力</strong>"的典型例证。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>移除 TSA 模块</strong>（让 LLM 自己处理时序数字）：Top-1 跌到 ~85%，且 hallucinated trend 错误率显著上升；(2) <strong>移除 IDF weighting</strong>（所有症状权重相等）：Top-1 降至 ~87%，因为常见症状主导排序；(3) <strong>禁用 completion 循环</strong>（不澄清直接给出 best-effort）：在 ambiguous case 上 Top-1 跌 5-7pt；(4) <strong>KB 大小敏感性</strong>：从 9948 → 3000 疾病时整体准确率仅下降 ~2pt，说明系统对 KB 完整度的依赖<em>有限</em>但<em>关键疾病不能漏</em>。<strong>局限</strong>：(a) 仅支持文本 EHR，不处理影像和波形；(b) KB 主要英文医学文献编译，对方言、罕见病覆盖不足；(c) 当前不支持 medication safety、prognosis、preventive care scheduling，scope 主要是 differential diagnosis。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>COTCAgent 给临床 LLM 系统提供了一个非常宝贵的工程范式——<strong>将 LLM 的幻觉源限制在最小可控位置</strong>（仅做 paraphrase 与 parse），让数值推理交给确定性统计模型，让分类决策交给 IDF-weighted 知识库匹配。这是医学 AI 部署中长期被忽视但极重要的<strong>"AI 系统设计哲学"</strong>：在高风险场景下，<strong>"LLM 越多越糟"</strong>，恰当的分工反而带来更高准确率与可审计性。对赵政昀博士在 CliniQ / DR.EHR 的工作启发是：检索召回的证据可以与 COTC 的 KB 结构融合，把 dense retrieval 当作 KB 的动态扩展层；这或许是下一代电子病历检索系统的形态。该论文目前 metric 设计、消融严密，应是 NeurIPS / EMNLP 级强投稿。</p>
+    </div>
+  </div>
+

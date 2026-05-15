@@ -1,0 +1,93 @@
+  <div class="paper" id="p6">
+    <h3 class="paper-title">RL-2 · Semantic-Reward RL Enables Low-Resource Language Expansion without Alignment Tax</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-14</span>
+      <span>🏛 Minzu University of China, Ant Group, Shanghai Jiao Tong University</span>
+      <span><a href="https://arxiv.org/abs/2605.14366" target="_blank">arXiv:2605.14366</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">GRPO</span>
+      <span class="tag tag-rl">语义奖励</span>
+      <span class="tag tag-rl">低资源语种</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>把 LLM 扩展到藏语、蒙语等低资源语种几乎总要付出"<strong>对齐税</strong>"——SFT 在窄分布数据上做 token-level 似然最大化，把基础能力（中文阅读理解 CMRC、英文常识等）严重侵蚀。论文先量化了这一现象：用 strong SFT 把 Qwen3-4B 适配到藏文翻译后，CMRC 性能从 base 的 ~85% 跌到 41.82% F1，下游中文能力近乎崩塌。问题：能否在<strong>不破坏原有多语种能力</strong>的前提下学到低资源语种？作者主张把 alignment 重新表述为<strong>语义空间一致性</strong>，让模型用自由的表达方式实现"等价含义"，自然减少对原参数空间的破坏。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 语义空间对齐的问题表述</strong>
+        <p>放弃 token-level 似然 $\max\sum\log\pi(y_t\mid y_{<t}, x)$，改为：<em>"输出语义等价于参考即正确，无须形式逐字一致"</em>。形式化为</p>
+        <p>$$\max_\theta\;\mathbb E_{x,y\sim\pi_\theta(\cdot|x)}[\,s(y, y^*)\,]\quad\text{s.t.}\;\mathrm{KL}(\pi_\theta\,\|\,\pi_{\text{ref}})\le\beta$$</p>
+        <p>$s(\cdot,\cdot)$ 是 sentence embedding 的余弦相似度，KL 约束保护预训练表征。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Cold-Start + RL 的两阶段范式</strong>
+        <p><strong>Stage 1（Cold-Start SFT）</strong>：在仅 5K 平行语对上做 2 epoch 轻量 SFT，目的不是好分数，而是让模型能产出"目标 script"的非退化输出，作为 RL 的初始 policy $\pi_{\text{init}}$；
+        <strong>Stage 2（GRPO 语义 RL）</strong>：从 $\pi_{\text{init}}$ 出发，在剩余 90K 数据上用 GRPO 训练 1 epoch。每个 prompt $x$ 采 $K$ 条 rollout $y^{(k)}$，按 group-relative advantage 更新 policy。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 语义奖励：阈值-缩放 + 语种一致硬约束</strong>
+        <p>主奖励来自双语 sentence embedding $f(\cdot)$（基于 CINO，藏文增强的 XLM-R）：</p>
+        <p>$$s(y,y^*)=\cos(f(y), f(y^*))$$</p>
+        <p>但直接用余弦不稳定（早期 rollout 噪声大），引入 threshold-and-rescale shaping：</p>
+        <p>$$R_{\text{sim}}(y,y^*)=\begin{cases}0, & s\le\tau \\ \dfrac{s-\tau}{1-\tau}, & s>\tau\end{cases}$$</p>
+        <p>其中 $\tau$ 取 cold-start 后的最低充分性水平（实验 ~0.4-0.5），保证 RL 只 refine 已经能写出像样输出的样本。</p>
+        <p>语种一致性硬约束（防 reward hacking 用其他语言"骗"高 embedding 相似度）：</p>
+        <p>$$R_{\text{lang}}(y)=\begin{cases}1, & \text{output script consistent} \\ 0, & \text{otherwise}\end{cases}$$</p>
+        <p>用 Unicode 范围 + 正则做规则检查。最终奖励：</p>
+        <p>$$R(y, y^*)=\lambda_{\text{sim}}\cdot R_{\text{sim}}+\lambda_{\text{lang}}\cdot R_{\text{lang}},\;\lambda_{\text{sim}}=1.5,\;\lambda_{\text{lang}}=1.0$$</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ GRPO + LoRA 训练</strong>
+        <p>使用 GRPO（value-free PPO 变体）作为约束 RL 的具体实现，与基础 PPO 的 trust-region 限制等价但无须 critic。底座 Qwen3-4B + LoRA（r=64, α=128, dropout=0.05）应用到 self-attention 和 MLP 的所有线性投影。RL 的 KL 系数控制每步 policy drift，从根上保证<strong>对预训练知识的微扰</strong>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Strong SFT vs. Semantic-Reward RL 的"对齐税"对比</h4>
+      <div class="example-box">
+        <strong>设置</strong>：Qwen3-4B + LoRA，藏-中机器翻译。Strong SFT 与 Semantic RL 用同样的训练数据（5K + 90K），同样的 LoRA 配置。
+        <ol>
+          <li><strong>Strong SFT 结果</strong>：BLEU-4 = 0.6006，语义相似度 = 0.8282——表面看翻译质量很高；但 CMRC（中文阅读理解）F1 从 base 的 ~85% 暴跌到 <strong>62.99</strong>，AVG 41.82。模型为了"匹配藏文翻译参考的具体词形"重写了原有中文表征；</li>
+          <li><strong>Semantic RL 结果</strong>：BLEU-4 = 0.4519（低于 SFT），但语义相似度 = 0.7164；关键的是 CMRC <strong>几乎不掉</strong>（保持 ~80%+）；</li>
+          <li><strong>LLM-as-judge 偏好</strong>：Strong SFT 胜率 59.2%，Semantic RL 仍获 33.5% 胜率——尽管 BLEU 低 15pt，开放式翻译质量并未显著落后；</li>
+          <li><strong>解读</strong>：Semantic RL 用"语义等价"作奖励让模型保留了表达自由度，因此不必把"中文表征空间"重写成"翻译参考语料的子集"，从根本上回避了 alignment tax。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（藏-中翻译 + 藏文 headline 生成）</h4>
+      <table>
+        <thead><tr><th>任务 / 指标</th><th>Cold-Start SFT</th><th>Semantic RL（本文）</th><th>Strong SFT（best-effort）</th></tr></thead>
+        <tbody>
+          <tr><td>藏-中 MT · BLEU-4</td><td>0.3953</td><td>0.4519</td><td class="best">0.6006</td></tr>
+          <tr><td>藏-中 MT · Semantic Similarity</td><td>0.5593</td><td>0.7164</td><td class="best">0.8282</td></tr>
+          <tr><td>藏文 Headline · ROUGE-L</td><td>0.2204</td><td class="best">0.2530</td><td>—</td></tr>
+          <tr><td>藏文 Headline · Semantic Similarity</td><td>0.5774</td><td class="best">0.6404</td><td>—</td></tr>
+          <tr><td>CMRC（中文 RC）F1（对齐税代理指标）</td><td>~83</td><td class="best">~80（几乎无衰减）</td><td>62.99（−20pt 严重）</td></tr>
+          <tr><td>LLM-judge MT 胜率（vs Strong SFT）</td><td>—</td><td>33.5%</td><td>59.2%</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">虽然 BLEU 不及 Strong SFT，但 Semantic RL 在保留通用能力上显著占优，且 LLM judge 偏好显示语义质量并未降低多少。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>移除 $R_{\text{lang}}$</strong>：模型出现 reward hacking——用中英文回答提高 cosine 相似度，藏语 script 比例从 99% 跌到 60%；(2) <strong>$\tau=0$ 不做 shaping</strong>：训练前期低质量 rollout 占主导，policy 收敛缓慢；(3) <strong>用 BLEU 作 reward 而非 semantic embedding</strong>：BLEU-4 涨更多但 alignment tax 急剧反弹（CMRC 跌至 ~70%），证明"形式 reward 必然带来形式 SFT 的损失"。few-shot 迁移实验显示 RL 训出的 model 在小样本上的可迁移性优于 SFT，说明语义 reward 学到了"更可迁移的表征"。<strong>局限</strong>：(a) 仅在藏语-汉语单一组合上验证，对其他低资源语种（如蒙语、维语）效果未给出；(b) 双语 sentence embedding 自身的偏差（CINO 对藏语已有先验）会被 RL 放大；(c) BLEU 一定低于 SFT，对工程上"硬指标导向"的产品场景需权衡。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这是一个对低资源语种适配领域具有<strong>方法论价值</strong>的工作：把"语种适配"从"分布拟合"重新定义为"语义对齐"，并用 GRPO + 嵌入 reward 把这一定义落地。其核心 takeaway 是 <strong>"alignment tax 的根因是 SFT 的 token-level 形式压力，而不是新语种本身"</strong>——用语义层奖励 + RL 的小步约束更新就能绕过这一陷阱。对蚂蚁集团这样要部署多语种产品的工业团队，这个范式可直接复用：先 5K SFT 冷启 → 90K GRPO 语义 RL，CMRC 等关键中文能力几乎无损，藏文/蒙文翻译质量已基本可用。这是中文社区在 alignment / multilingual NLP 上的一个实在贡献。</p>
+    </div>
+  </div>
+

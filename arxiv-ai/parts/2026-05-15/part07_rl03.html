@@ -1,0 +1,96 @@
+  <div class="paper" id="p7">
+    <h3 class="paper-title">RL-3 · SU-01: Achieving Gold-Medal-Level Olympiad Reasoning via Simple and Unified Scaling</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 Shanghai AI Laboratory, CUHK, Tsinghua University</span>
+      <span><a href="https://arxiv.org/abs/2605.13301" target="_blank">arXiv:2605.13301</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">RLVR</span>
+      <span class="tag tag-rl">数学推理</span>
+      <span class="tag tag-rl">奥数金牌</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>奥赛（IMO 数学、IPhO 物理）是 LLM long-horizon 推理的最佳压力测试：需要解题树搜索、严格假设管控、中间步骤自验、最终能通过严格评分。AlphaProof / AlphaGeometry 2 / Gemini DeepThink 通过专属符号引擎或巨量搜索拿到 IMO 银/金，但配方复杂且开源不友好。本文提出一个<strong>"简单统一可复现"的 recipe</strong>，用 30B-A3B（MoE-A3B 激活 3B 参数）开源底座 + 340K 短轨迹 SFT + 200 RL steps，<strong>在 IMO 2025 / USAMO 2026 / IPhO 2024-2025 上达到金牌水平</strong>，最终模型 SU-01 在 IMO-ProofBench 上 70.2% 接近 Gemini 3.1 Pro Thinking。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Reverse-Perplexity Curriculum SFT（Stage 1）</strong>
+        <p>340K 长度 ≤8K token 的精选 reasoning trajectories，覆盖 Math/STEM/Code/Instruction Following。关键创新是<strong>反向困惑度课程</strong>：每个 epoch 把 trajectories 按当前 policy $\pi_\theta$ 的 perplexity $\mathrm{PPL}_\theta(y\mid x)$ 排序，<strong>先训 PPL 最高（最不熟）的样本</strong>，再训 PPL 低（已熟）的样本：</p>
+        <p>$$\text{order}(y_i)=\mathrm{rank}\!\big(\!-\mathrm{PPL}_\theta^{(t)}(y_i\mid x_i)\big)$$</p>
+        <p>直觉：先用陌生但严格证明轨迹"重塑"reasoning style，再用熟悉样本"巩固"原有能力，避免单纯训陌生样本带来的灾难遗忘。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Coarse RL：Verifiable Reward + GSPO（Stage 2-1）</strong>
+        <p>第一阶段 RL 走 RLVR 路线：使用可自动验证的数学题（最终答案匹配）。policy update 使用 GSPO（Group Sequence Policy Optimization），目标是放大 SFT 阶段已经习得的 search/verify 行为，提升对硬题的覆盖与求解率。reward 仅按答案对错给二值 0/1。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Refined RL：Generative Reward + Self-Refinement + Experience Replay（Stage 2-2）</strong>
+        <p>第二阶段 RL 把目标从"答案对"升级到"证明严格"，引入三个机制：</p>
+        <ul>
+          <li><strong>Proof-level Generative Reward Model</strong>：用 DeepSeek-Math V2 给完整证明评分，按 ✓ CoT Validity / ✓ Proof Quality / ✓ Anti-Hacking 三个维度返回连续奖励（避免 verifiable reward 对推导过程不敏感的问题）；</li>
+          <li><strong>Self-Refinement Prompts</strong>：训练 critique-and-repair 行为——模型先输出 initial solution，再被引导生成 bug report 与修订版，整个 solve→verify→refine 链路同时被优化；</li>
+          <li><strong>Experience Replay</strong>：对在线 rollout 正确率 &lt;25% 的硬题，把<strong>仅有的 1 条成功 trajectory</strong> 存入 experience buffer，下次该 query 出现时把它作为 hard-positive 重放进 batch；正确率回升到 50% 时退役。这是稀有成功轨迹的"保护机制"。</li>
+        </ul>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Test-Time Scaling：Self-Verify + Self-Refine 迭代（Stage 3）</strong>
+        <p>推断时启动迭代闭环：solver 给 candidate proof → verifier 输出结构化 critique（critical errors / major justification gaps / minor justification）→ solver 按 critique 修订。该 loop 是 model-agnostic 的，可以叠加在已训好的 SU-01 之上把性能再向前推 12-15 pt。例如 IMO-ProofBench 直接生成 57.6% → TTS 后 70.2%。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：USAMO 2026 上超过人类金牌</h4>
+      <div class="example-box">
+        <strong>USAMO 2026 实测</strong>：直接生成的 SU-01 已经跨过铜牌线；启用 TTS（自验证-自修正循环 5 轮）后达到 <strong>35 分</strong>——
+        <ol>
+          <li>这一分数<strong>超过 USAMO 2026 金牌线 10 分</strong>；</li>
+          <li><strong>匹配 USAMO 2026 全部 340 名参赛选手中最高的人类总分</strong>（按官方报告）；</li>
+          <li>对比：未做 TTS 的同 size 基线（如 P1-30B-A3B）仅得 23.1，Qwen3.6-35B-A3B 得 31.4；</li>
+          <li>关键得分点：SU-01 在 Problem 4（数论几何混合）上展示了 60K+ token 的完整 proof trajectory，含 7 次 self-correction，最终给出严谨且完整的论证。</li>
+        </ol>
+        <strong>意义</strong>：开源 30B-A3B（激活 3B 参数）模型用 200 RL steps 即可在 USAMO 上跨过金牌线，这意味着奥赛级 reasoning 不再是闭源大厂专利——团队具备工程复现条件。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（IMO-ProofBench）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>规模</th><th>IMO-ProofBench (%)</th></tr></thead>
+        <tbody>
+          <tr><td>P1-30B-A3B（base）</td><td>30B-A3B</td><td>20.0</td></tr>
+          <tr><td>Qwen3.6-35B-A3B</td><td>35B-A3B</td><td>23.1</td></tr>
+          <tr><td>Gemma-4-31B</td><td>31B</td><td>31.4</td></tr>
+          <tr><td>Gemini-2.5-Pro</td><td>—</td><td>36.4</td></tr>
+          <tr><td>GPT-5</td><td>—</td><td>39.5</td></tr>
+          <tr><td>SU-01 SFT only</td><td>30B-A3B</td><td>33.8</td></tr>
+          <tr><td>SU-01 SFT + Coarse RL</td><td>30B-A3B</td><td>47.2</td></tr>
+          <tr><td class="best">SU-01（直接生成）</td><td class="best">30B-A3B</td><td class="best">57.6</td></tr>
+          <tr><td class="best">SU-01 + TTS</td><td class="best">30B-A3B</td><td class="best">70.2</td></tr>
+          <tr><td>Gemini-3.1-Pro</td><td>—</td><td>72.6</td></tr>
+          <tr><td>DeepSeekMath-V2 (Heavy)</td><td>—</td><td>80.5</td></tr>
+          <tr><td>GPT-5.5-High</td><td>—</td><td>80.7</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">官方比赛：IPhO 2024 / 2025 直接生成已超金牌线；IMO 2025 / USAMO 2026 直接过铜牌线，TTS 后 35/42 跨金牌线。开源同尺寸 baseline 中 SU-01 处于绝对领先（Qwen3.6-35B-A3B 仅 23.1 vs SU-01 57.6）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析（IMO-ProofBench）：(1) <strong>Reverse-Perplexity Curriculum vs 随机顺序 SFT</strong>：在 SFT 仅 1 epoch 后，反向 PPL 课程比随机顺序高 ~3pt，且后续 RL 收敛更稳；(2) <strong>移除 Refined RL 的 Experience Replay</strong>：硬题（最初 rollout 正确率 &lt;25%）解题率从 ~40% 跌到 ~22%——稀有成功轨迹消失后无法继续改进；(3) <strong>Generative RM vs binary verifiable</strong>：仅 binary 时模型容易学会"答案猜测"reward hacking，证明严格性显著退步；(4) <strong>TTS solve-verify-refine</strong>：1→3→5 轮分别带来 +5.4/+8.8/+12.6 pt 的渐进收益。<strong>局限</strong>：(a) 200 RL steps 看似少但每步含大量 rollout（rollout 成本是主要费用）；(b) Generative RM 的鲁棒性影响最终质量，DeepSeek-Math V2 闭源团队不易复现；(c) 比赛级 proof 评测仍需 LLM judge 协助，存在评分一致性风险。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SU-01 用一套朴素而完备的"<strong>SFT 反向 PPL 课程 + 两阶段 RL（Coarse → Refined）+ TTS 自修正</strong>"组合，让 30B-A3B 这个开源底座在 IMO/USAMO/IPhO 上达到金牌甚至超金牌的性能。其方法论对开源社区的最大启发是：<strong>奥赛级 reasoning 不是黑魔法，而是 SFT 配方 + RL 配方 + TTS 配方的合理组合</strong>。三阶段中 Refined RL 的 Experience Replay 尤其值得借鉴——它本质上是对"稀有正样本"的保护机制，可推广到任何 long-horizon RL 训练。这是 Shanghai AI Lab 等机构希望证明"开源也能做奥赛金牌"的代表作，论文还放出了 Code 与 Models，对学术界与工业界都是高价值参考。</p>
+    </div>
+  </div>
+

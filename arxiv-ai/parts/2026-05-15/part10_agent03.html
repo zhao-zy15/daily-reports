@@ -1,0 +1,93 @@
+  <div class="paper" id="p10">
+    <h3 class="paper-title">Agent-3 · MAP: A Map-then-Act Paradigm for Long-Horizon Interactive Agent Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13</span>
+      <span>🏛 USTC, Meituan, CASIA</span>
+      <span><a href="https://arxiv.org/abs/2605.13037" target="_blank">arXiv:2605.13037</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">长周期</span>
+      <span class="tag tag-agent">认知地图</span>
+      <span class="tag tag-agent">ARC-AGI-3</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>ReAct/CoT 类 agent 范式遵循"<strong>act-during-think</strong>"：模型只在执行时才被动获得环境感知。这造成<strong>Delayed Environmental Perception（延迟环境感知）</strong>：agent 必须通过 trial-and-error 推断空间布局、动作语法和约束，掉进低效失败循环——作者称之为 <strong>Epistemic Bottleneck</strong>。这是一个范式问题，<em>不能</em>靠扩大 reasoning 能力解决（ARC-AGI-3 上 Claude 4.6 也几乎为零分）。从 Pearl do-calculus 角度看，根因是 $P(o_{t+1}\mid do(a_t))$ 干预分布无法仅从观测分布 $P(a_t\mid o_t)$ 复原。本文借鉴人类 affordance perception 与 cognitive map 理论，提出"<strong>map-then-act</strong>"：先勘探建图、再带图执行。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 任务形式化：把策略拆为 mapping + acting</strong>
+        <p>标准 act-during-think：</p>
+        <p>$$\pi_\theta(e\mid u)=\prod_{t=1}^n\pi_\theta(a_t\mid u, a_1, o_1, \ldots, o_{t-1})$$</p>
+        <p>受限于观测分布 $P(a_t\mid o_t)$。MAP 改为：</p>
+        <p>$$M\sim\pi_\theta(M\mid u, \tau_{\text{exp}}),\quad \pi_\theta(e\mid u, M)=\prod_t\pi_\theta(a_t\mid u, M, h_t)$$</p>
+        <p>$\tau_{\text{exp}}$ 是 $do(\text{explore})$ 干预产生的探索轨迹，$M$ 是从中蒸馏出的 cognitive map（包含空间布局、对象-动作 affordances）。这把 agent 决策从"相关性 pattern matching"提升到"因果性 knowledge-driven reasoning"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Stage 1：Cross-Task Global Exploration（跨任务全局先验 $K_g$）</strong>
+        <p>每个环境只执行一次。Agent 先以 <strong>Focus Analyzer</strong> 角色从 $\mathcal D_{\text{env}}$ 与少量手工轨迹 $F_{\text{manual}}$ 中提炼 <strong>Focus Points</strong>（如"测试 action syntax 严格性"），再以 <strong>Explorer</strong> 角色在训练任务集上执行探索。用<strong>状态新颖度内在奖励</strong> $r(o_t)=1/N(o_t)$ 鼓励到达稀有状态。轨迹经 Reflection / Knowledge Distillation 蒸馏为持久化全局先验 $K_g$（含 action syntax、interaction rules、error patterns）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Stage 2：Task-Specific Cognitive Mapping</strong>
+        <p>给定具体任务指令 $u$，agent 在 $K_g$ 引导下用 RPP（Role-Purpose-Priority）prompt 协议执行轻量探索，构造任务特定 cognitive map $M_t$。$M_t$ 包含三类条目：(a) <strong>Object-Action Affordances</strong>（"turn on lamp → lamp on"）；(b) <strong>Spatial Layouts</strong>（kitchen contains [stove, fridge, sink]）；(c) <strong>Game Rules</strong>（ARC-AGI-3 的 latent rules）。增量更新：知识增益 $\Delta|K_t|=K_t-K_{t-1}$ 作为停止准则。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Stage 3：Knowledge-Augmented Execution + Cognitive Fine-tuning</strong>
+        <p>执行阶段策略基于双层知识：</p>
+        <p>$$a_t\sim\pi_\theta(a_t\mid u, M_t, K_g, h_t)$$</p>
+        <p>对应内化阶段：作者构造 <strong>MAP-2K</strong> 数据集（2000 条 map-then-act 轨迹），用 ms-swift 在 8 张 H800 上 SFT Qwen3-4B-Thinking → MAP-4B（lr=1e-5, 3 epochs）。<strong>关键发现</strong>：训练 map-then-act 轨迹比训练同样数量的 expert execution traces 效果更好——"理解环境比模仿专家行动更基础"。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：ALFWorld "用台灯检查碗"任务</h4>
+      <div class="example-box">
+        <strong>任务</strong>：Examine the bowl with the desklamp.
+        <ol>
+          <li><strong>ReAct 路径</strong>：观察当前房间没有 bowl 也没有 desklamp →探索每个房间→在 desk 上找到 bowl→在 dresser 上找到 desklamp →尝试 take desklamp（失败：lamp 是固定家具）→尝试 use desklamp on bowl（失败：需要 proximity）...典型 trial-and-error 死循环；</li>
+          <li><strong>MAP 路径（带 cognitive map）</strong>：mapping 阶段已提取关键 affordance：<code>desklamp: turn_on/off, NOT takeable; needs proximity to use</code>，<code>bowl: takeable, on desk</code>。<br>execution 阶段：
+          <ul>
+            <li>Think: According to the map, the bowl is on desk, the desklamp is on dresser. I decide to get the desk lamp first.</li>
+            <li>Action: Move to dresser. Take desklamp → "Nothing happens"（map 中已注：not takeable）；</li>
+            <li>Think: The lamp can't be taken. So I'll change my approach: I'll bring the bowl over first.</li>
+            <li>Action: Move to desk. Take bowl. Go to dresser. <strong>Examine bowl with desklamp.</strong> ✓</li>
+          </ul></li>
+          <li>不带 map：Qwen3-4B 完成率 31.8%；带 MAP（同模型）→ <strong>61.1% (+29.3pt 翻倍)</strong>；GPT-4o-mini 21.9%→46.2% (+24.3pt)。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（长周期交互 benchmarks）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>ALFWorld ReAct→MAP</th><th>TextCraft ReAct→MAP</th><th>ScienceWorld ReAct→MAP</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen3-4B-Instruct</td><td>31.8 → 61.1 (<strong>+29.3</strong>)</td><td>31.8 → 71.9 (<strong>+40.1</strong>)</td><td>13.9 → 24.3 (<strong>+10.4</strong>)</td></tr>
+          <tr><td>Qwen3-30B-A3B-Instruct</td><td>39.3 → 62.0 (+22.7)</td><td>56.8 → 66.6 (+9.8)</td><td>0.5 → 9.8 (+9.3)</td></tr>
+          <tr><td>GPT-4o-1120</td><td>75.2 → 82.6 (+7.4)</td><td>94.7 → 99.6 (+4.9)</td><td>41.3 → 53.3 (+12.0)</td></tr>
+          <tr><td>GPT-4o-mini</td><td>21.9 → 46.2 (+24.3)</td><td>46.5 → 75.6 (+29.1)</td><td>1.6 → 12.2 (+10.6)</td></tr>
+          <tr><td>Qwen3-32B-Thinking</td><td>78.4 → 84.0 (+5.6)</td><td>82.4 → 90.4 (+8.0)</td><td>16.1 → 28.0 (+11.9)</td></tr>
+          <tr><td class="best">Kimi-K2-Thinking + MAP</td><td class="best">95.0</td><td class="best">99.2</td><td class="best">46.8</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;"><strong>ARC-AGI-3 (流体智能 benchmark)</strong>：frontier models 原本得分接近 0；MAP 让模型在 25 个游戏中的 22 个超过 near-zero baseline，是质变性突破。MAP 是 plug-and-play paradigm，对小模型增益尤其明显（Qwen3-4B TextCraft +40pt 翻倍多）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>CoMAP（map-and-act 同时进行）vs MAP（先 map 后 act）</strong>：CoMAP 比 ReAct 平均 +5pt，但 MAP 比 CoMAP 再 +9-30pt——证明<strong>"先后分离"是关键</strong>而非仅仅"加 map"；(2) <strong>训练 expert execution（ACT-4B） vs 训练 MAP 轨迹（MAP-4B）</strong>：相同 token 预算下，MAP-4B 在 OOD 任务上显著强于 ACT-4B，验证"环境理解 &gt; 行动模仿"；(3) <strong>移除 $K_g$（仅有 task-specific map）</strong>：跨环境泛化能力丧失，新环境性能降回 ReAct 基线水平。<strong>局限</strong>：(a) Stage 1 需要 manual trajectory 启动（非完全 zero-shot）；(b) cognitive map 当前是文本结构化，对极复杂动态环境（如 Minecraft 大世界）可能不够紧凑；(c) mapping 阶段消耗的 token 预算与 acting 相当，预算敏感场景需 trade-off。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>MAP 把 LLM agent 的 paradigm 从"行动中理解"转为"理解后行动"，这是<strong>第一性原理层面的范式跃迁</strong>。其因果论证（Pearl do-calculus 区分观测分布与干预分布）严谨而有说服力。对工业 agent 团队（包括美团这种业务多场景 agent 部署）的启发是：<strong>对每个新业务环境先做一轮"沙盒探索 + 先验蒸馏"</strong>，将得到的 $K_g$ + 任务级 cognitive map 嵌入 agent 系统提示，能在小模型上取得近 GPT-4o 级的成功率。这种范式特别适合：(a) 浏览器 agent / GUI agent 的元素探索阶段；(b) 代码 agent 进入新 codebase 时的"先 grok 再 PR"流程；(c) 任何 ARC-AGI-3 类 zero-knowledge 环境。USTC + 美团署名，应是 NeurIPS/ICLR 强投稿。</p>
+    </div>
+  </div>
+
