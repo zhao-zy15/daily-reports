@@ -1,0 +1,96 @@
+  <h2 class="section-title agent">🤖 Agent</h2>
+
+  <div class="paper" id="p8">
+    <h3 class="paper-title">Agent-1 · Look Before You Leap: Autonomous Exploration for LLM Agents</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 University of Science and Technology of China, Meituan</span>
+      <span><a href="https://arxiv.org/abs/2605.16143" target="_blank">arXiv:2605.16143</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">Exploration</span>
+      <span class="tag tag-agent">Explore-then-Act</span>
+      <span class="tag tag-agent">GRPO</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM agent 在<em>不熟悉的环境</em>中频繁失败，根因是 <strong>premature exploitation</strong>：模型会基于先验立刻行动，而不肯先收集环境信息。现有 ReAct 风格的 loop 都是 goal-conditioned $\pi(a_t \mid H_t, g)$ —— 没有任何机制为 agent 分配"先观察、再行动"的预算。论文提出两个深刻问题：(1) 当前 LLM agent 究竟有多差的 autonomous exploration 能力？(2) 任务驱动 RL（task-only GRPO）会不会<em>反而损害</em> exploration 能力？答案是：损害（与 LLM-4 / NUDGERL 完全一致——RL 让模型更窄）。本文把 exploration 作为一种<em>可量化、可单独训练</em>的能力提取出来，并给出 Explore-then-Act 推理范式。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Exploration Checkpoint Coverage (ECC)：第一个可验证的 exploration 指标</strong>
+        <p>对每个环境实例预定义有限 checkpoint 集合 $\mathcal C = \{c_1, \ldots, c_M\}$，每个 checkpoint 对应"一个有能力的探索者应该发现的事实"——可达地点、关键物体、有效交互目标、功能状态、affordance、约束等。给定 exploration trajectory $\tau_{\mathrm{EXP}}$：</p>
+        <p>$$\mathrm{ECC}(\tau_{\mathrm{EXP}}) = \frac{1}{M}\sum_{i=1}^M \mathbb 1[c_i \in \tau_{\mathrm{EXP}}]$$</p>
+        <p>这是<em>不依赖任务成功</em>的 process-level metric，等价于 agent 学界长期缺失的"地图覆盖率"指标。论文为 ALFWorld / SciWorld / TextCraft 三个环境分别构造了 checkpoint set（Appendix E）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Autonomous Exploration 形式化</strong>
+        <p>普通 task agent：$a_t \sim \pi_{\mathrm{ACT}}(\cdot \mid H_t, g)$。Autonomous exploration：把 $g$ 移除，agent 只有交互预算 $N$ 步：</p>
+        <p>$$a_t \sim \pi_{\mathrm{EXP}}(\cdot \mid H_t),\quad \tau_{\mathrm{EXP}} = (o_1, a_1, \ldots, a_N, o_{N+1})$$</p>
+        <p>其目标是建立环境的内在模型——transition $T(o_{t+1} \mid o_t, a_t)$、状态空间、动作语义、隐藏约束。Exploration 完成后再合成 grounded knowledge summary $\mathcal K = \mathrm{SUMMARIZE}(\tau_{\mathrm{EXP}})$。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Interleaved GRPO：交错的 task + exploration 训练</strong>
+        <p>对 exploration 步用 ECC 作 verifiable reward，对 task 步用 task success reward。两种 step 在训练中交错出现：</p>
+        <p>$$\hat A_i^{\mathrm{exp}} = \frac{\mathrm{ECC}(\tau_i^{\mathrm{exp}}) - \mu^{\mathrm{exp}}}{\sigma^{\mathrm{exp}} + \epsilon},\quad \hat A_i^{\mathrm{task}} = \frac{R_i^{\mathrm{task}} - \mu^{\mathrm{task}}}{\sigma^{\mathrm{task}} + \epsilon}$$</p>
+        <p>每种 reward 走自己的 GRPO clipped surrogate，混合训练让两种能力<em>同时存在于一个 policy</em>，不必额外切换 expert。论文称为 <strong>GRPO (Interleaved)</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Explore-then-Act 推理范式</strong>
+        <p>推理时分两阶段：先 $N$ 步 goal-free exploration 产生 $\tau_{\mathrm{EXP}}$，再合成 $\mathcal K$，最后 goal-conditioned acting：</p>
+        <p>$$a_t \sim \pi_{\mathrm{ACT}}(\cdot \mid H_t, g, \mathcal K)$$</p>
+        <p>$\mathcal K$ 作为结构化自然语言注入 prompt——包含状态布局、object affordance、action 前置条件、已发现的约束、failure cases。这是把"环境知识"从 implicit policy memory 显式化到 prompt 上下文，可解释、可检查、可调试。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Qwen3-4B 在 ALFWorld 上从 31.8% 跃升到 89.7%</h4>
+      <div class="example-box">
+        <strong>诊断阶段（无任务、100 步预算）</strong>：
+        <ul>
+          <li>Qwen2.5-7B 三环境平均 ECC = 22.2%——大量重复动作、过早终止；</li>
+          <li>Qwen3-4B 平均 ECC = 28.5%；<strong>Qwen3-4B + Task-Only GRPO 后反而降到 18.8%</strong>——任务训练显著损伤 exploration；</li>
+          <li>Claude-Opus-4.5 平均 ECC = 89.5%（接近完美），GPT-4.1 = 49.3%——开闭源差距巨大。</li>
+        </ul>
+        <strong>训练 + Explore-then-Act 后</strong>：以 Qwen3-4B 在 ALFWorld 为例，Task-Only baseline 直接执行成功率 72.6%，Interleaved GRPO + E-t-A 达到 <strong>89.7%</strong>。Qwen2.5-7B 同样从 78.4% → 90.9%。<br>
+        <strong>失败行为对比（Table 3）</strong>：Task-Only GRPO 训练后的 agent —— 重复动作率 63.4%、loop 率 16.0%、信息搜索率 1.0%、错误恢复率 0.0%。Exploration-Aware 训练后 —— 重复动作率 24.9%、loop 率 7.7%、信息搜索率 7.5%、<strong>错误恢复率 20.1%</strong>。这是质变：错误恢复能力从无到有。<br>
+        <strong>关键</strong>：探索能力<em>本身</em>就是抗失败的护城河——会 recover 的 agent 就是会 explore 的 agent。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（task success rate, %）</h4>
+      <table>
+        <thead><tr><th>Backbone</th><th>方法</th><th>Direct Execution</th><th>Explore-then-Act</th><th>$\Delta$ Task</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Qwen3-4B</td><td>Base</td><td>~31.8</td><td>~30 (E-t-A 反而稍降)</td><td>-2.2</td></tr>
+          <tr><td>GRPO (Task-Only)</td><td>72.6</td><td>71.3</td><td>-1.3</td></tr>
+          <tr><td class="best">GRPO (Interleaved, 本文)</td><td class="best">85.3</td><td class="best">89.7</td><td class="best">+4.4</td></tr>
+          <tr><td rowspan="3">Qwen2.5-7B</td><td>GRPO (Task-Only)</td><td>78.4</td><td>77.1</td><td>-1.3</td></tr>
+          <tr><td>GRPO (Explore-Only)</td><td>较低</td><td>正向</td><td>+</td></tr>
+          <tr><td class="best">GRPO (Interleaved, 本文)</td><td class="best">87.2</td><td class="best">90.9</td><td class="best">+3.7</td></tr>
+          <tr><td rowspan="2">Closed-Source</td><td>GPT-4.1（无 RL）</td><td>—</td><td>+2.0 macro avg</td><td>+2.0</td></tr>
+          <tr><td>Claude-Opus-4.5（无 RL）</td><td>—</td><td>+8.6 macro avg</td><td>+8.6</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">三环境（ALFWorld / SciWorld / TextCraft）。关键观察：(1) <strong>Task-Only GRPO 让 ECC 下降</strong>——RL 训练会损伤 exploration 能力；(2) <strong>Interleaved GRPO</strong> 在 Direct Execution 下也优于 Task-Only baseline，证明 exploration 训练即使在推理时不显式 explore，也能改善决策；(3) <strong>Claude-Opus-4.5</strong> 是唯一能从 E-t-A 中获益超 8% 的现有大模型，说明 exploration 是 frontier 模型的关键差异化能力。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>Task-Exploration ratio sensitivity</strong>（Appendix D）：50:50 配比是甜点，全 exploration 反而损害 task 完成；(2) <strong>不同 exploration model + 同一 acting model</strong>：固定 Qwen3-4B 当 actor，仅替换 explorer（如用 Claude 探索 → Qwen 行动），$\mathcal K$ 质量直接决定下游任务表现；(3) <strong>关闭 $\mathcal K$ summary</strong>：直接把 $\tau_{\mathrm{EXP}}$ 拼入 prompt 反而性能下降——必须经过 SUMMARIZE 把 noisy trajectory 压成结构化知识；(4) <strong>错误恢复率</strong> 0.0%→20.1% 是定性转变。<strong>局限</strong>：(a) ECC 依赖人工预定义的 checkpoint，对 open-world 任务难以自动构造；(b) 训练数据需要 environment-specific exploration 信号，泛化到新环境仍需要建 checkpoint；(c) E-t-A 范式的 budget $N$ 是手调超参，未优化自适应分配。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这篇工作的核心贡献是把"<em>探索</em>"作为 LLM agent 的<strong>独立可训练能力</strong>提取出来——它有自己的 verifiable reward (ECC)、自己的训练目标、自己的推理范式 (E-t-A)。三个深刻发现共同形成了一个连贯认知：(1) 任务驱动 RL 会损伤 base 模型的 exploration 能力（与 LLM-4 / RL-2 完全同构）；(2) 错误恢复是 exploration 的副产品；(3) Claude-Opus-4.5 是唯一在该指标上接近"人类可信代理"水准的大模型。对正在做的 GPU IPO 和 LLM agent 投资分析有直接参考价值——下一代 agent 的核心壁垒不只是 reasoning step length，而是<strong>能在陌生环境里"先看再动"的元能力</strong>。这也指出了 RLVR/LPO 研究的一个重要扩展方向：不要只优化 task reward，要把 process-level reward（如 ECC 这类 environment-aware 信号）纳入混合训练目标。</p>
+    </div>
+  </div>
+

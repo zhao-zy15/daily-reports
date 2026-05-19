@@ -1,0 +1,95 @@
+  <div class="paper" id="p12">
+    <h3 class="paper-title">Medical-2 · Artificial Intolerance: Stigmatizing Language in Clinical Documentation Skews LLM Decision-Making</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Johns Hopkins University</span>
+      <span><a href="https://arxiv.org/abs/2605.17228" target="_blank">arXiv:2605.17228</a></span>
+      <br>
+      <span class="tag tag-medical">Medical</span>
+      <span class="tag tag-medical">LLM 偏见</span>
+      <span class="tag tag-medical">健康公平</span>
+      <span class="tag tag-medical">Stigmatizing Language</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>临床决策辅助是 LLM 最被看好的医疗应用，但 frontier model 是否会把<em>临床记录中的污名化语言（Stigmatizing Language, SL）</em>当作真信号、进而做出对患者有害的决定？过去的 medical bias 研究主要关注 demographic perturbation（性别/种族/年龄替换），但 SL 是更 subtle、更 pervasive 的偏见 vector：一句话的"<em>声称</em>在控盐"或"<em>没去</em>做胃镜"会潜移默化让 LLM 给出更不积极的处置方案。Johns Hopkins 团队系统性测了 9 个 frontier LLM × 4 个高度污名化疾病（镰状细胞病 SCD、肥胖、肝硬化、纤维肌痛）× 3 种 SL 表型（doubt 怀疑 / blame 责备 / maligning 贬损）× 4 个剂量（neutral / 1句 / 4句 / 7句 SL），并测试 prompt-level mitigation 策略（CoT、self-debiasing）。结论令人警觉：所有 9 个 frontier LLM 都受影响，且 prompt 矫正几乎无效。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 三种 SL 表型 + 剂量 - 反应设计</strong>
+        <p>SL 划分三类：</p>
+        <ul style="margin: 8px 0; padding-left: 22px; color: #c0cae0;">
+          <li><strong>Doubt</strong>（怀疑）：如 "claims to be following a low-sodium diet"</li>
+          <li><strong>Blame</strong>（责备）：如 "failed to schedule the endoscopy"</li>
+          <li><strong>Maligning</strong>（贬损）：如 "insisting that we do something about his leg"</li>
+        </ul>
+        <p>每种 SL 设三个剂量 $S(1), S(4), S(7)$ 表示 1、4、7 句 SL 嵌入临床记录。共 9 LLM × 4 疾病 × (1 neutral + 3 SL 类型 × 3 剂量 + 1 mixed) ≈ 360 个组合，每个跑多次随机化测量稳定性。这是医学 bias 研究中第一次做<strong>剂量 - 反应曲线</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 双指标度量：客观治疗 + 主观态度</strong>
+        <p><strong>Treatment Score</strong>：每种疾病有专家定义的"应做处置"清单（如 SCD 应给阿片镇痛、影像学转诊；肝硬化应做 endoscopy 与 fluid management）。LLM 输出按这些 checkpoint 打分。<strong>PASS (Patient Attitudes Scale Score)</strong>：让模型回答验证过的临床医生态度量表（"我尊重这位患者"、"我相信他/她的描述"等），输出主观尊重/信任评分。这两个指标允许研究<em>"模型可能给出"对"的治疗决定，但内部表征已被 SL 污染"</em>这一深刻区别。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 效应大小量化：Cramer's V + $\eta^2$</strong>
+        <p>对 categorical treatment outcome 用 Chi-square + Cramer's V：</p>
+        <p>$$V = \sqrt{\frac{\chi^2 / n}{\min(r-1, c-1)}}$$</p>
+        <p>对连续 PASS score 用 ANOVA + $\eta^2$：</p>
+        <p>$$\eta^2 = \frac{SS_{\mathrm{between}}}{SS_{\mathrm{total}}}$$</p>
+        <p>对每个 LLM 在 4 个疾病上分别计算 demographic 变量（name/age/gender/race/SO）vs SL 的效应大小，从而定量比较 "demographic bias vs SL bias 哪个更主导"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Mitigation 实验：Chain-of-Thought 与 Self-Debiasing</strong>
+        <p>测试两种 prompt-level 缓解：(a) <strong>CoT</strong>——明确要求模型 step-by-step 推理；(b) <strong>Self-Debiasing</strong>——在 prompt 中要求模型识别 SL 并忽略其影响。两者都在原 vignette 之后追加。前者部分缓解，但<em>self-debiasing 反而下沉</em>——这是一个深刻发现：模型可以<em>显式识别</em> SL，但仍<em>隐式被</em>它影响。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：肝硬化 + Doubt SL 让 GPT 给出"回家服药"建议</h4>
+      <div class="example-box">
+        <strong>原始临床场景</strong>：肝硬化患者因 swollen leg 来诊，本应做液体管理 + 利尿剂调整 + 监测肝功能 + 必要时影像学排查 DVT。<br>
+        <strong>Neutral 临床记录</strong>：客观描述症状与既往史。LLM 给出齐全处置方案。<br>
+        <strong>+ Doubt SL 一句话</strong>：注入 "claims to be following a low-sodium diet"。<br>
+        <strong>GPT-5 (假设变体) 行为变化</strong>：<em>没有</em>提议影像学排查、削减利尿剂剂量调整、最终给出建议"<strong>Go home and adhere to prescribed treatment</strong>" — 即让患者回家"按方服药"。这相当于把"不信任患者自述"从注释泄漏进了医疗决策本身。<br>
+        <strong>剂量 - 反应曲线</strong>（Figure 4a）：从 neutral → S(1) → S(4) → S(7)，treatment score 单调下降；S(7) Mixed (3 类 SL 各占一些) 时降幅最大。<strong>关键</strong>：<em>仅一句 SL 就足以改变决策</em>，且呈现严格 dose-response。<br>
+        <strong>主观态度 vs 客观决策的 divergence</strong>（Figure 2 + Figure 5b）：所有 9 个模型的 PASS（尊重 / 信任）都在 SL 暴露下<strong>一致下降</strong>（Avg ΔPASS = -6.8）；但 treatment score 下降是<em>异质的</em>——某些模型在某些疾病上仍能维持决策，但<strong>所有模型对患者的"内部表征"都已被腐化</strong>。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（9 LLM × 4 疾病的 ΔTreatment Score, vs Neutral baseline）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>SCD ΔTx</th><th>Obesity ΔTx</th><th>Cirrhosis ΔTx</th><th>Fibromyalgia ΔTx</th><th>Avg ΔPASS</th></tr></thead>
+        <tbody>
+          <tr><td>DeepSeek</td><td>-34.0</td><td>-55.5</td><td>-35.9</td><td>-88.7</td><td>-7.7</td></tr>
+          <tr><td>GLM</td><td>-13.3</td><td>-4.3</td><td>-2.3</td><td>-44.9</td><td>-5.2</td></tr>
+          <tr><td>GPT</td><td>-24.6</td><td>-42.2</td><td>-13.3</td><td>-33.2</td><td>-7.1</td></tr>
+          <tr><td>Kimi</td><td>-9.0</td><td>-30.1</td><td>-5.9</td><td>-73.8</td><td>-4.8</td></tr>
+          <tr><td>Qwen</td><td>-10.9</td><td>-87.5</td><td>-28.9</td><td>-91.4</td><td>-5.9</td></tr>
+          <tr><td>LLaMA</td><td>-0.8</td><td>-49.2</td><td>-25.0</td><td>-93.0</td><td>-7.9</td></tr>
+          <tr><td>Gemini</td><td>-14.8</td><td>-4.7</td><td>-55.9</td><td>-62.1</td><td>-12.0</td></tr>
+          <tr><td>Claude</td><td>-18.8</td><td>-25.8</td><td>-8.2</td><td>-33.6</td><td>-3.7</td></tr>
+          <tr><td>MiniMax</td><td>0.0</td><td>-25.8</td><td>-21.1</td><td>-59.8</td><td>-8.7</td></tr>
+          <tr><td><strong>Avg</strong></td><td><strong>-14.0</strong></td><td><strong>-36.1</strong></td><td><strong>-21.8</strong></td><td><strong>-64.5</strong></td><td><strong>-6.8</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键观察：(1) <strong>Fibromyalgia（纤维肌痛）</strong>是 LLM 受 SL 影响最严重的疾病，平均 -64.5 治疗评分降——这与社会上对"功能性疼痛 patient credibility"的偏见高度吻合。(2) <strong>Claude 受影响最小</strong>（PASS Δ=-3.7），但仍非零。(3) <strong>SL 的效应大小 vastly 超过 demographic 变量</strong>——LLM 对显式人口特征已经相对鲁棒（demographic fairness 表面达标），但对 implicit linguistic framing 几乎完全暴露。(4) Mitigation 实验：CoT 部分缓解，<strong>self-debiasing 反而进一步降低性能</strong>——模型可"识别 SL"但仍"被 SL 影响"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>SL 类型</strong>：Doubt > Blame > Maligning（Doubt 影响最大），但三者 mixed 时影响累加超过单独任一种；(2) <strong>剂量响应</strong>：S(1) 已显著、S(7) 最严重，但 S(4)→S(7) 的边际增量小于 neutral→S(1) 的初始变化——证明<em>第一次暴露最具杀伤力</em>；(3) <strong>Self-debiasing 失败</strong>：尽管模型在 prompt 中能识别 "this note contains stigmatizing language"，treatment score 仍低于 neutral baseline——这是<strong>知行分离</strong>的清晰证据，意味着 RLHF 可能教会了模型"声明不偏见"但没消除"实际偏见"；(4) <strong>Demographic vs SL 效应</strong>：5 个 demographic 变量的效应大小总和仍小于 SL 单变量。<strong>局限</strong>：(a) 仅 4 种疾病、9 种模型，泛化到全部医疗场景需扩展；(b) 临床 vignette 是合成的，真实病历更复杂；(c) 缺少实际临床医生评估 LLM 输出的"is harmful"金标签；(d) 没测试 fine-tuning 级别的 mitigation（如指令微调对 SL 鲁棒性的影响）。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这项研究意义非凡：它把"算法偏见"的<strong>主要载体</strong>从显性 demographic perturbation 转向 implicit linguistic framing。RLHF 训练让 frontier 模型在<em>显性人口特征</em>上达成 surface-level fairness，但这些模型对临床记录中潜伏的<em>污名化语言</em>毫无防御。对医疗 LLM 部署的政策含义重大：<strong>FDA / EMA 的 AI 医疗器械审批必须把 SL 鲁棒性纳入测试规范</strong>，仅测 demographic fairness 远远不够。对 LLM 训练和后训练的研究启示：(a) <strong>RLHF 可能在"声明的价值观"和"内部表征"之间制造分离</strong>——模型能识别 bias 词汇但仍被影响，这与 LLM-4 (Forks in the Road) 揭示的"自信但盲目"机制深度同构；(b) <strong>process-level supervision</strong>（如对 PASS 类内部态度量化的 reward）可能比 outcome supervision 更能根治 bias；(c) prompt-level mitigation 是临时止血带，结构性解决方案需要 fine-tuning 阶段或后训练阶段引入对污名化模式的对抗训练。对中文医疗 LLM 工作（包括 DR.EHR / CliniQ 类项目的延伸）：建议把 SL 鲁棒性测试集本地化（中文病历常见的"<em>诉述</em>"、"<em>未遵</em>"、"<em>抗拒</em>"等用词），作为标准评测维度之一。</p>
+    </div>
+  </div>
+

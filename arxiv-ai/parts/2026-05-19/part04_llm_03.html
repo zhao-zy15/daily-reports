@@ -1,0 +1,93 @@
+  <div class="paper" id="p3">
+    <h3 class="paper-title">LLM-3 · Context Memorization for Efficient Long Context Generation (Attention-State Memory)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Institute of Science Tokyo, Imperial College London</span>
+      <span><a href="https://arxiv.org/abs/2605.18226" target="_blank">arXiv:2605.18226</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">长前缀</span>
+      <span class="tag tag-llm">In-Context Learning</span>
+      <span class="tag tag-llm">RAG</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>现代 LLM 应用越来越依赖长 conditioning prefix（few-shot 示例、任务说明、检索文档）来控制模型行为。但 prefix-augmented 推理有两个结构性缺陷：(i) <strong>Prefix 影响力会衰减</strong>：随生成进行，prefix 在后期 generation token 处的注意力变得稀薄；(ii) <strong>Attention over prefix 是 O(L_p) 线性扫描</strong>，长 prefix 让推理延迟随 prefix 长度线性增长。现有解法两类：(a) 在 attention 中保留 prefix 但压缩它（如 KVzip），仍要 attend prefix；(b) 把 prefix 内化到参数（fine-tuning），训练昂贵且不适应频繁更新的 prefix。本文提出 ASM：把 prefix attention 完全外化为 query-indexed 字典，<strong>不再 attend prefix、训练免费、可动态更新</strong>。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Attention 状态分解的可外化性（Sufficiency + Composability）</strong>
+        <p>关键数学观察：标准 attention 在 prefix 段产生的输出可以表示为 attention state $(a_p(q), Z_p(q))$，其中 $a_p$ 是 attended value sum，$Z_p$ 是 normalizer：</p>
+        <p>$$a_p(q) = \sum_{i \in \mathrm{prefix}} \exp(q^\top k_i)\, v_i,\quad Z_p(q) = \sum_{i \in \mathrm{prefix}} \exp(q^\top k_i)$$</p>
+        <p>由 online-softmax identity，prefix 部分的 attention 与 response 部分可以独立计算后<strong>合并</strong>：</p>
+        <p>$$\mathrm{Attn}(q) = \frac{a_p(q) + a_r(q)}{Z_p(q) + Z_r(q)}$$</p>
+        <p><strong>Sufficiency</strong>：$(a_p, Z_p)$ 完全决定 prefix 对 attention 的贡献，知道它们就不再需要 prefix 本身。<strong>Composability</strong>：多 prefix chunk 可以分别 forward 然后 merge，不需要一次性放入显存。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Memory Bank：每层一个 K-entry 字典</strong>
+        <p>对每一层 $i$ 构造字典 $\mathcal C^{(i)} = \{(\bar q_k^{(i)}, \bar a_k^{(i)}, \bar Z_k^{(i)})\}_{k=1}^K$，其中 $\bar q$ 是 lookup key（簇质心 query 表示），$(\bar a, \bar Z)$ 是该簇的合并 attention state。$K \in \{1K, 2K, 4K, 8K, 16K\}$。每条 entry 的存储足迹按 GQA 调好与"一个 KV cache entry"等价。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 离线校准：Attention-Aware K-means 聚合</strong>
+        <p>第 1 阶段（Collection）：对每对 $(p, t)$ 走一次 forward 收集 $(q, a_p(q), Z_p(q))$；第 2 阶段（Clustering）：对 query 向量做 K-means，每簇聚合方式不是简单平均，而是按 attention 数学合规聚合：</p>
+        <p>$$\bar q_k = \frac{1}{|C_k|}\sum_{q \in C_k} q,\quad \bar Z_k = \frac{1}{|C_k|}\sum_{Z \in C_k} Z,\quad \bar a_k = \frac{\sum_{C_k} Z\,a}{\sum_{C_k} Z}$$</p>
+        <p>注意 $\bar a_k$ 是 <em>Z 加权平均</em>而非简单算术平均，这正是 online-softmax 合并的代数结构（公式 2）。$\bar Z_k$ 用 $|C_k|$ 归一化以避免无界 merge 在 attention scale 上引入噪声（这是先前合并多文档常见的失败模式）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 在线推理：Top-m 检索 + 合并到自注意力</strong>
+        <p>推理时，每层用当前 token 的 query $q$ 去检索 top-m 个相似 entry：</p>
+        <p>$$\mathrm{out}(q) = \frac{\sum_{k \in \mathrm{Top}\text{-}m} \omega_k \bar a_k + a_r(q)}{\sum_{k \in \mathrm{Top}\text{-}m} \omega_k \bar Z_k + Z_r(q)},\quad \omega_k = \exp(q^\top \bar q_k)$$</p>
+        <p>这样推理时<strong>不再 attend prefix</strong>——只 attend response 自身（生成的几百 token）+ 一次字典 lookup。Attention 复杂度从 $O(L_p + L_r)$ 降到 $O(L_r + m)$，对 32K prefix + 几百 generation 来说接近于"前缀消失"。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：在 NBA RAG 上 20% memory 反超 ICL</h4>
+      <div class="example-box">
+        <strong>任务</strong>：RuleArena NBA 球员交易规则问答，rulebook ~20K token。<br>
+        <strong>Zero-shot baseline</strong>（不给规则）：21.2% exact-match。<br>
+        <strong>Full ICL</strong>（20K rulebook 全塞 context）：24.1%。<br>
+        <strong>ASM @ K=4K entries</strong>（用 4K 字典 entry，memory footprint ≈ 4K KV cache，<em>仅 ICL 的 20%</em>）：<strong>25.5%</strong>，反超 Full ICL 1.4 pt。<br>
+        <strong>关键洞察</strong>：accuracy vs entries 是<em>非单调</em>的——K=4K 是甜点，K=8K 反而掉到 23.2%、K=16K 掉到 19.4%。原因是训练数据有限，bucket 太多时每簇质心估计不准。这意味着<strong>codebook size 是任务相关的超参数</strong>，并非越大越好。<br>
+        <strong>对比 KVzip</strong>（KV cache 压缩 baseline）：在 ICL 任务上 KVzip 几乎全面落后于 ASM 与 ICL，因为它压 KV 时容易丢掉 label token 这种关键信号；ASM 存的是 attention<em>输出</em>，把整段 prefix 的语义聚合保留下来。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果</h4>
+      <table>
+        <thead><tr><th>任务 / 配置</th><th>方法</th><th>Memory Entries</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">NBA (RAG, 20K rulebook)</td><td>Zero-shot</td><td>0</td><td>21.2</td></tr>
+          <tr><td>Full ICL</td><td>20K (full)</td><td>24.1</td></tr>
+          <tr><td class="best">ASM (本文)</td><td class="best">4K</td><td class="best">25.5</td></tr>
+          <tr><td rowspan="2">math_counting (推理)</td><td>ICL</td><td>8K</td><td>26.0</td></tr>
+          <tr><td class="best">ASM</td><td class="best">16K</td><td class="best">26.0</td></tr>
+          <tr><td rowspan="2">gpqa_cot (推理)</td><td>ICL</td><td>1K</td><td>28.3</td></tr>
+          <tr><td>ASM</td><td>1K</td><td>28.3 (持平)</td></tr>
+          <tr><td rowspan="3">banking77（chunked offline calibration）</td><td>4K chunk × 1（仅一段）</td><td>—</td><td>61.5</td></tr>
+          <tr><td>16K 整段（baseline）</td><td>—</td><td>79.0</td></tr>
+          <tr><td class="best">4 × 4K chunk + ASM merge</td><td class="best">—</td><td class="best">78.5</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">ManyICLBench 5 个 ICL 任务（clinc150、banking77 等）在 1K–8K entries 范围内 ASM 平均匹配或超过 Full ICL；4K 时 NBA 上 8K→32K prefix 时 attention latency 降低 1.36×（论文 Section 4.5）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>Attention-aware aggregation vs 简单平均</strong>：在 banking77 上掉超过 5pt，证明 $Z$-weighted 合并是必要的；(2) <strong>Chunked offline calibration</strong>：把 16K prefix 拆成 4 段 4K 独立 forward 然后 merge，可以达到 78.5%，几乎等价于一次 16K forward 的 79.0%——说明 composability 在工程上确实成立，可大幅压缩离线显存峰值；(3) <strong>K=16K 反而退步</strong>：clinc150 只有 ~150 训练样本，无法填满 16K codebook，质心收敛不稳。<strong>局限</strong>：(a) 需要离线校准 traces，对 frequently changing prefix（如新闻、文档库）每次更新都要重建 codebook；(b) 在<em>推理任务</em>（math_counting / gpqa_cot）上 ICL 本身就不太能从更多 example 中获益，ASM 也只能持平而非反超；(c) GQA 扩展节虽提供，但论文没在 70B 级 dense 模型上验证。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>ASM 给出了一个关键的概念升级：<strong>attention 是可分解、可合并的代数对象</strong>——一旦你接受 prefix attention 是 $(a, Z)$ 二元组，就可以离线 precompute、聚类、字典化检索、按 online-softmax 公式动态合并。这使得"长 prefix"不再是必须被 attend 的连续 KV cache，而可以变成一个 lookup-based 的<em>外部知识库</em>。这与 RAG 的精神一致，但比 RAG 走得更深：RAG 把检索停在 token 层（"哪段文档"），ASM 把检索推到 attention 层（"哪段 attention output"）。展望：这个范式天然适合企业知识库 + LLM 的场景——文档不变时只需一次离线校准，运行时永远是常数复杂度。对中金公司内部的研报检索/法规问答，是值得跟踪的工程化方向。</p>
+    </div>
+  </div>
+

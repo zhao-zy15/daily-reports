@@ -1,0 +1,92 @@
+  <h2 class="section-title rl">🎯 RL & Alignment</h2>
+
+  <div class="paper" id="p5">
+    <h3 class="paper-title">RL-1 · General Preference Reinforcement Learning (GPRL)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Stanford University, University of Oklahoma</span>
+      <span><a href="https://arxiv.org/abs/2605.18721" target="_blank">arXiv:2605.18721</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">GPRL</span>
+      <span class="tag tag-rl">GPM</span>
+      <span class="tag tag-rl">Reward Hacking</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>当前 LLM post-training 的两条路径几乎是脱节的：(1) <strong>RLVR</strong>（GRPO + verifiable reward）能在 math/code 上诱发 emergent reasoning，但依赖可执行的 verifier，无法处理 open-ended 任务；(2) <strong>偏好优化</strong>（DPO、SimPO、SPPO、GPO）能处理 open-ended，但放弃了 online exploration —— 它们要么 offline、要么"3 轮迭代"。要把两者合并就需要一个 open-ended 的 verifier，但<strong>标量 reward model 是错误的形状</strong>：质量本质上是多维的，任何标量得分都是不完整代理，会让 online RL 坍塌到该 RM 最敏感的那条轴（典型如 verbosity / 拍马屁）。GPRL 的回答：用 General Preference Model（GPM）的 $k$ 个 skew-symmetric 子空间替代标量 reward，让 online RL 拥有"多维 + intransitivity-aware"的偏好信号。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① GPM：把偏好嵌入到 $k$ 个 skew-symmetric 子空间</strong>
+        <p>对每个回答 $y$，GPM 学一个 $2k$ 维归一化嵌入 $v_{y|x} \in \mathbb R^{2k}$，并通过 block-diagonal skew-symmetric 算子 $R_\succ$ 给出每对回答的得分：</p>
+        <p>$$s_l(y_i, y_j \mid x) = v_i^{(2l)} v_j^{(2l-1)} - v_i^{(2l-1)} v_j^{(2l)},\quad s(y_i \succ y_j \mid x) = \sum_{l=1}^k \lambda_l(x)\, s_l(y_i, y_j \mid x)$$</p>
+        <p>每个子空间 $l$ 的得分 $s_l$ 天然反对称（因此可以表示 intransitive 偏好 A≻B≻C≻A），而权重 $\lambda_l(x) \ge 0$ 是 prompt 相关的"维度门控"。在 Skywork-Reward 上 $k=3$ 时三个子空间分别对应"helpfulness vs verbosity / factual accuracy vs fluency / safety vs directness"等可解释维度。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Per-dimension Group-Relative Advantage</strong>
+        <p>对 $G$ 个 rollout，先对每个子空间 $l$ 算群内 pairwise 平均：</p>
+        <p>$$\hat s_l^{(i)}(x) = \frac{1}{G-1}\sum_{j \ne i} s_l(y_i, y_j \mid x)$$</p>
+        <p>关键：<strong>每个子空间独立做 mean/std 归一化</strong>，再用 $\lambda_l$ 加权聚合：</p>
+        <p>$$\hat A_l^{(i)}(x) = \frac{\hat s_l^{(i)}(x) - \mu_l(x)}{\sigma_l(x) + \epsilon},\quad \hat A^{(i)}(x) = \sum_{l=1}^k \lambda_l(x) \hat A_l^{(i)}(x)$$</p>
+        <p>这是 GPRL 与"全局归一化标量 reward"的本质差别——任何单一维度因 magnitude 大而 dominate 的能力被切断。论文形式化证明（Theorem in §3.1）：在足够条件下，GPRL 的聚合 advantage 拒绝任何标量 reward 必然倾向的 single-axis exploitation。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ GPRL Objective：GRPO 的多维替换</strong>
+        <p>把 advantage 插入 GRPO 的 clipped surrogate：</p>
+        <p>$$\mathcal L_{\mathrm{GPRL}}(\theta) = -\mathbb E_{x, \{y_i\}}\!\left[\frac{1}{G}\sum_{i=1}^G \min\!\big(r_i \hat A^{(i)},\ \bar r_i \hat A^{(i)}\big) - \beta\,\mathrm{KL}(\pi_\theta \| \pi_{\mathrm{ref}})\right]$$</p>
+        <p>其中 $r_i = \pi_\theta(y_i|x)/\pi_{\theta_{\mathrm{old}}}(y_i|x)$ 是重要性比，$\bar r_i$ 是其裁剪版本。<strong>GPRL 在 $k=1$ 时严格退化为 GRPO+BT</strong>，因此可以无缝接入 vLLM rollout / 分布式训练栈，唯一的额外开销是每组一次 GPM forward。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Closed-loop Drift Monitor：在线检测 reward hacking</strong>
+        <p>核心可观测量是 advantage variance share：$\alpha_l(t) = \mathrm{Var}_l(t) / \sum_{l'} \mathrm{Var}_{l'}(t)$。健康训练下 $\alpha(t)$ 保持初始形状；reward hacking 时 $\alpha(t)$ 坍塌到某一维 $l^\ast$。定义 drift 量</p>
+        <p>$$D(t) = \big\|\alpha(t) - \alpha(0)\big\|_2$$</p>
+        <p>$D(t) > \tau$ 时触发控制器：自动 reweight $\lambda_l$ 抑制 over-optimized 维度，并紧缩 KL trust region $\beta$。这是<em>无需任何外部 RM 评估信号</em>就能识别并矫正 reward hacking 的机制——一种纯内部一致性检验。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：GPRL vs GRPO+BT 的 length collapse 对比</h4>
+      <div class="example-box">
+        <strong>设定</strong>：base = Llama-3-8B-Instruct，rollout policy 与 GPM/BT-RM 都是 8B 规模，prompt set = UltraFeedback。<br>
+        <strong>GRPO + 8B BT scalar reward（baseline）</strong>：epoch 1–2 性能上升，epoch 3 开始 unwinds——AlpacaEval 2.0 LC.WR 回落到 41.92%。响应长度被推到 ~3000 token（length hacking 经典模式：判官偏长，模型就疯长）。<br>
+        <strong>SPPO / GPO（iterative baselines）</strong>：iteration 3 时 LC.WR 停在 41–43%，但响应长度 inflate 到 2400–3300 token。<br>
+        <strong>GPRL with 8B GPM（本文）</strong>：LC.WR = <strong>56.51%</strong>（+14.59 vs GRPO+BT），且响应长度<strong>仅 1600 token</strong>（全表最短）。<br>
+        <strong>机制可视化</strong>：drift trajectory 图显示 healthy run 的 $D(t)$ 始终接近 0；hacked run（关闭 controller）下 $D(t)$ 在 $t' \approx 4000$ 步处突破阈值 $\tau$，BT-RM 分数仍单调上升但实际 LC.WR 已 unwind。开启 controller 后，drift 被实时矫正回归。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（4 个 open-ended benchmark）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>AlpacaEval 2.0 LC.WR</th><th>Arena-Hard v2</th><th>MT-Bench</th><th>WildBench</th><th>平均回答长度</th></tr></thead>
+        <tbody>
+          <tr><td>DPO</td><td>~42</td><td>~0.85</td><td>~7.9</td><td>~35.5</td><td>~1500</td></tr>
+          <tr><td>SimPO</td><td>~43</td><td>~0.85</td><td>~8.0</td><td>~36</td><td>~1700</td></tr>
+          <tr><td>SPPO (iter 3)</td><td>42.55</td><td>~0.90</td><td>~8.1</td><td>~36</td><td>~2400</td></tr>
+          <tr><td>GPO (iter 3)</td><td>~42</td><td>~0.85</td><td>~8.1</td><td>~37</td><td>~3300</td></tr>
+          <tr><td>GRPO + BT scalar (epoch 3)</td><td>41.92</td><td>~0.90</td><td>7.69</td><td>35.41</td><td>~3000</td></tr>
+          <tr><td class="best">GPRL (8B GPM, 本文)</td><td class="best">56.51</td><td class="best">最高</td><td class="best">最高</td><td class="best">最高</td><td class="best">~1600</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">结构性细分（MT-Bench coding、WildBench math/data）GPRL 比最强 baseline 各 +1.00 / +2.84 pt——这些类别都<em>不在</em> Skywork-Reward 训练 GPM 的分布中，说明 GPM 提供的多维结构信号能让 online RL 自然外推到 supervision 之外的 reasoning-heavy 子任务。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>子空间数 $k$</strong>：$k=1$（退化为 GRPO+BT）LC.WR=44.21，$k=3$ 升到 56.51，$k>3$ 增益饱和——Skywork-Reward 大约就在 3 个可分离方向上 saturate。(2) <strong>Per-dimension 归一化</strong>：换成全局归一化时一个高方差维度直接 dominate，length hack 立刻回归，LC.WR 跌 ~6 pt。(3) <strong>关闭 drift controller</strong>：epoch 5 时 LC.WR 比开启 controller 低约 ~4 pt，且 BT-RM 仍单调上升却完全不反映这种坍塌——证明<em>BT-RM 本身就是 reward hacking 的盲点</em>。(4) <strong>GPM 规模</strong>：2B GPM 已经能让 GPRL 显著超过 GRPO+BT，8B GPM 更强。<strong>局限</strong>：(a) 仅在 Llama-3-8B-Instruct 上验证，对更大 dense 或 MoE 模型行为待研究；(b) GPM 训练数据质量是上限，对窄分布的偏好任务（如代码风格）可能需要 task-specific GPM；(c) drift controller 的阈值 $\tau$ 仍是手调超参。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>GPRL 是 RLVR 之外最值得 RL 研究关注的"重大设计变量"：<strong>把标量 reward 升级为多维 skew-symmetric 偏好，是真正解决 reward hacking 的结构性方案，而非缝补</strong>。它提供了一个 GRPO 的"无副作用替换"——在 $k=1$ 时严格等价于 GRPO，在 $k>1$ 时获得多维结构红利。对政昀正在研究的 RLVR/GRPO/LPO 方向尤其重要：(a) <strong>per-dimension advantage normalization</strong> 是可以直接迁移到 LPO 的设计模式，能阻止单维 dominance；(b) <strong>drift monitor</strong> 提供了一个无需外部 verifier 的 reward hacking 检测器，对 open-ended RL 训练流水线是必备工具；(c) GPM 与 RLVR 完全互补——math/code 走 RLVR，open-ended 走 GPRL，构成下一代 post-training 的双轨并行框架。</p>
+    </div>
+  </div>
+

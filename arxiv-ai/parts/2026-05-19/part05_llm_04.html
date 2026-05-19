@@ -1,0 +1,92 @@
+  <div class="paper" id="p4">
+    <h3 class="paper-title">LLM-4 · Why Do Reasoning Models Lose Coverage? The Role of Data and Forks in the Road</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Penn State University</span>
+      <span><a href="https://arxiv.org/abs/2605.17026" target="_blank">arXiv:2605.17026</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">推理模型</span>
+      <span class="tag tag-llm">pass@k 衰减</span>
+      <span class="tag tag-llm">数据中心</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>推理后训练（reasoning SFT、RLVR）能稳定提升 pass@1，但近期文献反复观察到一个反直觉现象——<strong>coverage shrinkage</strong>：post-trained 模型在更大 k 下的 pass@k 反而<em>低于</em>其 base 模型。这意味着 post-training 不是"全面让模型变强"，而是"把概率质量集中到一条路径上"，从而损失了 base 模型本就具备的解题路径多样性。这对 best-of-N、test-time scaling、majority voting 等推理策略都是直接威胁。已有解释多归因于优化算法或 entropy collapse；本文给出一个全新的<strong>数据中心假设</strong>：shrinkage 由训练数据中"决策点（forks in the road）"的特性驱动。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Fork-in-the-road Hypothesis</strong>
+        <p>正式假设：<em>当 solution space 含多条等价路径，但训练数据 obscure 了"为什么选这一条"的 rationale 时，模型无法学到泛化的选择机制；它转而依赖虚假（spurious, non-causal）线索来消解歧义，结果是把概率集中到次集合上，导致大 k 处 pass@k 衰减。</em></p>
+        <p>这个假设的优雅之处在于把 shrinkage 和 SFT 的 <strong>survivorship bias</strong> 直接挂钩：fine-tuning 数据通常只包含"成功的最终路径"，每个 fork 处的<em>替代路径与选择理由</em>被结构性删除。模型于是学到：<em>这种 prompt → 这种走法</em>，但这一映射的本质是"伪相关"，缺乏因果性。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Graph Navigation 受控实验：Forward vs Reverse (w/o DP)</strong>
+        <p>构造一个 star-graph 依赖链：每个 prompt 给出变量间的函数依赖与 target query。binary branching 节点本身就是天然的决策点。两个对照组：</p>
+        <ul style="margin: 8px 0; padding-left: 22px; color: #c0cae0;">
+          <li><strong>Forward 设置</strong>：模型必须在分支节点选一个分支（含决策点）。</li>
+          <li><strong>Reverse (w/o DP) 设置</strong>：把同一问题用 target→source 反向求解，分支选择被消除。</li>
+        </ul>
+        <p>两个设置对应同一个底层任务，因此任何行为差异都<strong>可归因于决策点的存在</strong>。在 Qwen-2.5-0.5B 与 EvoLM-1B 两个 backbone 上重复实验。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Confidence Collapse at Decision Points</strong>
+        <p>定义决策点处的 confidence 为 token 概率：</p>
+        <p>$$\mathrm{conf}_{\mathrm{DP}}(t) = \max_v p_\theta(v \mid x_{<t})$$</p>
+        <p>论文发现：随 SFT epoch 增加，<strong>模型在决策点的 confidence 急剧上升</strong>，但这种上升是<em>非选择性</em>的——不论模型选对还是选错，confidence 都被推到接近 1.0。这是 shrinkage 的微观机制：模型"自信但盲目"，把不确定性折叠为一个 spurious commit。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Mitigation：Top-k Prefix Sampling</strong>
+        <p>既然初始 token 是决策点的高发区，论文提出在 inference 端用 <strong>Top-8 prefix sampling</strong>：每条样本的前 N 个 token 强制从 top-8 candidates 采样而非 top-1，再进入 standard decoding。这相当于在决策点处人为重新注入多样性，反向"解锁"被 SFT 抑制的路径。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Graph Navigation 上的 Coverage Shrinkage</h4>
+      <div class="example-box">
+        <strong>任务</strong>：依赖图 navigation，binary branching star graph，2 个 backbone（EvoLM-1B / Qwen-2.5-0.5B）。<br>
+        <strong>Reverse (w/o DP) 设置</strong>：两个模型在 epoch 1–16 内迅速收敛到 pass@k≈1.0（k=1, 2, 8, 32 全部接近 100%），且<em>稳定</em>，没有任何 shrinkage 迹象。<br>
+        <strong>Forward 设置（含决策点）</strong>：
+        <ol>
+          <li>pass@1 单调上升（这是 SFT 的预期收益）。</li>
+          <li>pass@2/8/32 先上升、后下降——<strong>k 越大、衰减越明显</strong>。</li>
+          <li>到 epoch 16，pass@32 显著低于 epoch 1 的 base。</li>
+        </ol>
+        <strong>Decision Point Confidence 分析</strong>：epoch 1→16，模型在 fork 处的 token confidence 从近均匀分布（多模态）逐步坍塌到 ≈1.0（单峰）；但拆开"correct/incorrect"看，<strong>错误分支同样获得高 confidence</strong> — 这就是"自信地走错路"。<br>
+        <strong>Mitigation 实验（Top-8 prefix sampling）</strong>：在 EvoLM-1B 上，pass@1 仅小幅下降，pass@64 从 0.72 →恢复到 0.80；Qwen-2.5-0.5B 上 pass@64 从 0.88→0.92。说明<em>多样性没有被消除，只是被锁死在 decoding 起点</em>。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Graph Navigation, EvoLM-1B 在 epoch 16）</h4>
+      <table>
+        <thead><tr><th>设置</th><th>pass@1</th><th>pass@8</th><th>pass@32</th><th>pass@64</th></tr></thead>
+        <tbody>
+          <tr><td>Reverse (w/o DP)</td><td>~0.95</td><td>~1.00</td><td>~1.00</td><td>—</td></tr>
+          <tr><td>Forward (with DP)</td><td>~0.95</td><td>~0.85</td><td>~0.85</td><td>—</td></tr>
+          <tr><td>Forward + Default decoding (基线)</td><td>~0.17</td><td>—</td><td>~0.65</td><td>~0.72</td></tr>
+          <tr><td>Forward + Top-1 prefix（控制变量）</td><td>~0.17</td><td>—</td><td>~0.66</td><td>~0.74</td></tr>
+          <tr><td class="best">Forward + Top-8 prefix（本文）</td><td class="best">~0.16</td><td class="best">—</td><td class="best">~0.70</td><td class="best">~0.80</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">注：Reverse 设置下 pass@k 几乎全部接近上界 1.0；Forward 设置中 pass@k 随 k 增大反而下降，且 k 越大衰减越严重。Top-8 prefix sampling 几乎不损失 pass@1 但显著恢复 pass@32/64。论文亦在 RLVR 后训练上验证了相同模式（Appendix）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>决策点是因果变量</strong>：Forward 与 Reverse 的唯一差别就是 fork 是否暴露给训练，行为差异完全可归因。(2) <strong>SFT vs RLVR</strong>：RLVR 同样表现出 shrinkage（Appendix），证明这不是 SFT 独有；问题根源在数据结构而非优化算法。(3) <strong>数据合成 mitigation</strong>：在 SFT 数据中显式标注"为什么选这条路"的 rationale，可部分缓解 shrinkage（论文 Section 5）。(4) <strong>Reasoning mode selection</strong>（Section 4.2）：在 math 任务上，让模型选 NL 解法 vs Python script 也是决策点；同样观察到 shrinkage。<strong>局限</strong>：(a) 实验主要在小模型（0.5B–1B）；(b) 在 100B+ 大模型上是否仍受 fork 主导未验证；(c) Top-k prefix mitigation 是工程拐杖，不是结构性解决；(d) 数据合成 mitigation 需要"为决策标注 rationale"，规模化成本高。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这是 2026 年迄今最重要的"反直觉认知"之一：<strong>推理 SFT/RLVR 提升 pass@1 是有代价的，coverage 衰减不是 bug 而是 feature</strong>——只要训练数据 obscure 了决策点的 rationale，模型就必然学会"自信地猜"。对 RLVR 实践（GRPO、LPO 等政昀正在研究的方向）的直接启示：<em>评测必须同时报告 pass@k 曲线，单看 pass@1 会严重高估算法收益</em>；同时<strong>数据 curation 应当为 fork 显式标注"为什么"</strong>，而不只是给 ground-truth 路径。这一假设也为 best-of-N 设计（如 majority voting、verifier-guided search）提供了新视角：base 模型的 path diversity 是宝贵资产，post-training 不能只追求 sharpening。</p>
+    </div>
+  </div>
+

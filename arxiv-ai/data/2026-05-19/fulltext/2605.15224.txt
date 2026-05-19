@@ -1,0 +1,1365 @@
+Preprint.
+ICRL: Learning to Internalize Self-Critique
+with Reinforcement Learning
+Jianbo Lin1,2 Xiaomin Yu1 Yi Xin2 Yifu Guo3 Zhuosong Jiang4
+Zhongqi Yue7 Weishi Wang6 Heqing Zou5 Chengwei Qin1† Hui Xiong1
+1Hong Kong University of Science and Technology (Guangzhou) 2Nanjing University
+3Sun Yat-sen University 4National University of Singapore
+5Nanyang Technological University 6SAP 7Microsoft Research
+jianbo.lin@outlook.com
+ABSTRACT
+Large language model-based agents make mistakes, yet critique can often guide
+the same model toward correct behavior. However, when critique is removed, the
+model may fail again on the same query, indicating that it has not internalized
+the critique’s guidance into its underlying capability. Meanwhile, a frozen critic
+cannot improve its feedback quality over time, limiting the potential for iterative
+self-improvement. To address this, we propose learning toInternalize self-Critique
+withReinforcementLearning(ICRL), a novel framework that jointly trains a
+solver and a critic from a shared backbone to convert critique-induced success into
+unassisted solver ability. The critic is rewarded based on the solver’s subsequent
+performance gain, incentivizing actionable feedback. To address the distribution
+shift between critique-conditioned and critique-free behavior, ICRL introduces a
+distribution-calibration re-weighting ratio that selectively transfers critique-guided
+improvements compatible with the solver’s own prompt distribution. Additionally,
+a role-wise group advantage estimation stabilizes joint optimization across the two
+roles. Together, these mechanisms ensure that the solver learns to improve itself
+without external critique, rather than becoming dependent on critique-conditioned
+behavior. We evaluate ICRL on diverse benchmarks spanning agentic and mathe-
+matical reasoning tasks, using Qwen3-4B and Qwen3-8B as backbones. Results
+show consistent improvements, with average gains of 6.4 points over GRPO on
+agentic tasks, and 7.0 points on mathematical reasoning. Notably, the learned 8B
+critic is comparable to 32B critics while using substantially fewer tokens. The code
+is available athttps://github.com/brick-pid/ICRL.
+1 Introduction
+Large language model (LLM)-based agents make mistakes when solving complex tasks Yang et al.
+(2024); Wang et al. (2024b;a); Qin et al. (2025); Li et al. (2025a;b). As illustrated in Figure 1, critique
+can guide the same model to correct its errors and successfully complete the task Madaan et al.
+(2023); Shinn et al. (2023); Liu et al. (2025); Chen et al. (2026); Gou et al. (2023); Asai et al. (2023).
+However, when critique is removed, the model may fail again on the same query, indicating that it has
+not internalized the guidance from critique into its underlying capability. Meanwhile, a frozen critic
+cannot improve its feedback quality over the course of training, limiting the potential for iterative
+self-improvement.
+The challenge isinternalization: how can critique-guided revisions be transferred into the solver’s
+critique-free policy? A fundamental distributional obstacle arises when critique-based self-
+improvement is introduced into training. As illustrated in Figure 1(a), when an agent fails on
+query q but succeeds after receiving critique c, the successful trajectory is sampled from a critique-
+conditioned behavior distribution π(y|q, c) rather than the solver’s original distributionπ(y|q) .
+Training on such trajectories reinforces critique-dependent behavior, where the solver learns to
+†Corresponding author.
+1
+arXiv:2605.15224v1  [cs.AI]  13 May 2026
+
+Preprint.
+Solver𝜋!"
+Solver𝜋!"
+QueryCritique
+Query
+Success w/ Critique:
+Fail w/o Critique:
+Solver𝜋!"
+Solver𝜋!"
+QueryCritique
+Query
+Success w/ Critique:
+Success w/o Critique:
+(b) Internalize Critique(a) Rely on Critique
+Env
+Env
+Env
+Env
+Internalize Critique
+Figure 1: Critique can turn failed trajectories into successful revisions, while training should internal-
+ize such revision behavior into the critique-free solver.
+perform wellgivencritique, not to perform wellwithoutit Scheurer et al. (2023). Without explicit
+correction for this distributional mismatch, standard policy optimization produces a biased estimate
+of the intended critique-free policy update.
+The quality of critique is equally important. The ability to diagnose the solver’s failures and propose
+actionable corrections should itself be learnable and co-evolve with the solver. However, existing
+critique-based methods typically rely on a frozen critic model Zhang et al. (2025b); Tang et al. (2025),
+whose feedback quality remains static regardless of how the solver updates. This decoupling limits
+the agent’s capacity for sustained self-improvement: as the solver advances, a stale critic may produce
+increasingly irrelevant or redundant feedback.
+In this paper, we proposeICRL, a reinforcement-learning framework that converts critique-induced
+success into unassisted solver ability. ICRL jointly trains a solver and a critic from a shared backbone,
+without external teacher models or manually annotated critique data. The critic is rewarded for
+producing a critique that improves the solver’s subsequent attempt, creating learning signals tied to
+direct critique utility. To internalize critique-guided revisions, ICRL reconditions revised trajectories
+under the solver’s critique-free prompt and applies a token-level distribution-calibration re-weighting
+ratio. This ratio selectively transfers tokens whose generation is already plausible under the critique-
+free distribution, while down-weighting tokens that depend heavily on the critique context. The result
+is that the solver internalizes revision patterns compatible with its own prompt distribution. To further
+stabilize joint optimization, ICRL employs role-wise group advantage estimation that normalizes
+solver and critic rewards separately, preserving distinct learning signals for each role.
+To our knowledge, ICRL is the first framework to improve both critique internalization and critic
+learning in a reinforcement-learning setting. We evaluate ICRL on diverse environments, including
+text-world tasks Shridhar et al. (2021), e-commerce web navigation Yao et al. (2022), multi-hop
+question answering Yang et al. (2018); Ho et al. (2020); Press et al. (2023); Trivedi et al. (2022), and
+mathematical reasoning Hendrycks et al. (2021); Lewkowycz et al. (2022); He et al. (2024); Li et al.
+(2024). Experiments are conducted on Qwen3-4B and Qwen3-8B, and compared with prompting-
+based baselines, reinforcement-learning baselines, and critique-based methods. Experimental results
+demonstrate empirical improvements over baselines on both agentic tasks and mathematical reasoning
+tasks. We summarize our contributions as follows:
+• We propose the ICRL framework, a solver-critic reinforcement-learning framework that enables
+iterative self-improvement by jointly learning to critique and to internalize critique.
+• We introduce a distribution-calibration re-weighting ratio that corrects the distributional shift
+between critique-conditioned and critique-free behavior. We further propose role-wise group
+advantage estimation to stabilize joint solver-critic optimization.
+• Experimental results demonstrate empirical improvements over baselines on both agentic and
+mathematical reasoning tasks. The jointly learned critic achieves performance comparable to 32B
+frozen critics while using fewer tokens.
+2
+
+Preprint.
+Solver𝜋!"
+Critic𝜋!#
+Solver𝜋!"
+Solver Group 𝐺!
+𝑞𝜏𝑟
+Self-Critique
+Initial Round
+…
+𝑞𝜏𝑐
+𝑞𝜏𝑟𝑐
+𝑐
+(c) Policy Optimization(a) Rolloutw/ Critique(b) InternalizeCritique
+Internalize Critique
+Remove Critique𝑞𝜏𝑟𝑐
+𝑞𝜏𝑟
+Re-weight Ratio 𝑤"𝑤$=𝜋(𝑦|𝑞)𝜋(𝑦|𝑞,𝑐)- Role-wise Group Adv.
+Critic Group 𝐺#𝑞𝑐𝑟𝑞𝑐𝑟…
+Solver Group 𝐺"
+𝑞𝜏𝑟𝑞𝜏𝑟
+…
+Role-wise Group Adv.
+𝐴𝐴𝐴
+𝐴𝐴𝐴𝜋(𝑦|𝑞,𝑐)𝜋(𝑦|𝑞)w/ critiquew/o critique
+Applying Reweight𝑤!
+𝑞 𝑞Query𝜏Trajectory𝑐Critique𝑟SolverReward
+𝐴Advantage𝑟CriticReward
+Figure 2: Overview of the ICRL framework. (1) Rollout with critique alternates solver and critic; (2)
+Policy optimization jointly trains both solver and critic; (3) Internalizing critique into solver.
+2 Preliminary
+2.1 Task Formulation
+Given a query q∈ Q , an LLM-based agent πθ, parameterized by θ, interacts with the environment
+to sample a trajectory τ, and receives reward r(τ) from a task evaluator. We model agentic tasks as
+a Partially Observable Markov Decision Process (POMDP) following Xi et al. (2025a;b). At each
+time step t, the agent conditions on history ht = (q, o 0, a0, . . . , ot) consisting of the initial query and
+the sequence of past observations and actions up to time t. Based on this history, the agent samples
+an action at ∼π θ(· |h t). This interaction proceeds for H steps, resulting in a complete trajectory
+τ= (q, o 0, a0, . . . , aH−1 , oH ). The training objective is
+J(θ) =E τ∼π θ [r(τ)].(1)
+2.2 Group-Relative Policy Optimization
+We adopt GRPO Guo et al. (2025) as the underlying reinforcement-learning primitive. For a
+query q, GRPO samples a group of candidate trajectories G(q) ={τ 1, . . . , τG} and computes
+the group-normalized advantage as ˆAi = r(τi)−meanj r(τj )
+stdj r(τj )+δ , where δ >0 is a small constant for
+numerical stability. Let yt denote the t-th generated token of sample τi; the importance-sampling
+ratio ρt(θ) = πθ(yt|q,y<t)
+πθold (yt|q,y<t) measures the deviation of the current policy from the behavior policy
+used to collect the group. The resulting clipped surrogate objective is
+JGRPO(θ) =E i, t
+h
+min
+
+ρt(θ) ˆAi,clip
+ 
+ρt(θ),1−ϵ,1 +ϵ
+ ˆAi
+i
+,(2)
+where i indexes a trajectory in the sampled group G(q), t indexes a generated token position within
+that trajectory, andϵis the clipping parameter.
+3 Methodology
+3.1 Self-Improving Workflow
+Self-Improving Workflow.ICRL instantiates two agent roles, a solver and a critic, from a shared
+backbone with parameters θ and role-specific prompts pS and pC. Specifically, thesolver πS
+θ
+generates task-solving trajectories, while thecritic πC
+θ generates natural-language critique after
+failed attempts. For each query q, we execute an iterative self-improvement session with at most
+K total rounds. The solver first samples an initial trajectory τ1 ∼π S
+θ (· |q) , and the environment
+provides an outcome reward r(τ1). If the current trajectory τi fails, the critic analyzes it and generates
+critique ci ∼π C
+θ (· |q, τ i). The solver then generates a revised trajectory conditioned on the critique,
+τi+1 ∼π S
+θ (· |q, c i). This iterative process repeats until the task succeeds or the round budget is
+exhausted. A complete rollout session may thus contain multiple rounds of solver trajectories and
+critic outputs, denoted asS= (τ 1, c1, τ2, . . . , ck−1, τk)withk≤K.
+3
+
+Preprint.
+Solver and Critic Reward.The policy optimization is guided by separate reward signals for each
+role. For the solver, we use the task outcome reward r(τ)∈[0,1] for optimization, where r(τ) = 1
+indicates successful task completion. For the critic, the reward measures whether its critique improves
+the solver’s subsequent performance. Specifically, after the critic produces a critiqueci for the solver
+trajectory τi (i < k ), the solver generates a revised trajectory τi+1 conditioned on ci. As shown
+in Eq. (3), the critic receives a reward of 1 if the revised trajectory succeeds; otherwise, its reward
+equals the temporal improvement in the solver’s reward, which is nonzero only when the environment
+provides non-binary dense rewards.
+r(ci) =
+1,ifτ i+1 succeeds,
+r(τi+1)−r(τ i),otherwise. (3)
+This design provides learning signals tied to downstream revision utility, where the critic is rewarded
+not for producing plausible-sounding feedback, but for feedback that demonstrably helps the solver.
+3.2 Self-Improvement Policy Optimization
+Self-improvement introduces two challenges absent from standard policy optimization.(i) Mixed
+prompt prefixes.GRPO relies on group-relative comparisons among samples generated under a
+shared prompt prefix and behavior distribution. In our workflow, however, initial attempts, critiques,
+and revisions are generated under different role-specific and information-conditioned prompts, so
+their rewards are not directly comparable within a single group.(ii) Distributional shift.The critic
+changes the solver’s effective sampling distribution. Initial attempts are drawn from the critique-free
+solver behavior distribution πS
+θrollout (· |q) , whereas revised attempts are drawn from a critique-
+conditioned behavior distribution πS
+θrollout (· |q, c) . Treating revised trajectories as if they were
+sampled from the critique-free solver distribution yields a biased estimate of the intended policy
+update (see Appendix A for detailed analysis).
+The revised trajectories are valuable because they contain solutions discovered through the critic’s
+feedback. However, these trajectories are sampled from a critique-conditioned behavior distribution
+πS
+θrollout (· |q, c), they cannot be used to update the critique-free policy without correction.
+Critique-Conditioned Distribution Calibration.To optimize critique-guided revisions under the
+solver’s original behavior distribution, we recondition each revised trajectory by removing the critique
+from its prompt and treating it as evidence for πS
+θ (· |q) . We then introduce a token-level reweight
+ratio to calibrate this behavior distribution mismatch. For a self-improved round (τi, ci, τi+1), where
+τi ∼π S
+θrollout (· |q)andτ i+1 ∼π S
+θrollout (· |q, c i). We define the token-wise reweight ratio as
+wt =
+
+
+
+πS
+θrollout (yt|q,y<t)
+πS
+θrollout
+(yt|q,c,y<t) ,critique-guided solver trajectories,
+1,otherwise.
+(4)
+This ratio measures whether a critique-guided token is already plausible under the critique-free solver
+behavior distribution. Tokens whose probability remains high without the critique are transferred
+strongly to πS
+θ (· |q) , while tokens that depend heavily on the critic context are downweighted.
+When wt ≈1 , the token’s generation does not depend on the critique context and can be directly
+transferred to the critique-free policy. When wt ≪1 , the token relies heavily on the critique and is
+downweighted to avoid reinforcing critique-dependent behavior. Conversely,wt >1 indicates tokens
+that the critique-free solver would have generated with higher probability, which are upweighted. In
+this way, the solver internalizes revision behavior that is compatible with its own prompt distribution
+instead of blindly imitating critic-assisted outputs.
+Following the GRPO importance-sampling ratio introduced in Section 2, we use ρt(θ) to denote
+the token-level importance-sampling ratio. For solver trajectories, this ratio is computed under the
+critique-free prompt context (q, y<t) after removing the critique; critic trajectories are evaluated
+under their original prompt (q, τi). The reweight ratio wt defaults to 1 for all non-revised trajectories,
+whileρ t(θ)retains its standard role as the clipped GRPO importance-sampling ratio.
+Role-wise Advantage Estimation.Solver and critic trajectories are generated under different prompt
+prefixes with distinct reward functions: the solver is optimized for task completion, while the critic
+4
+
+Preprint.
+Algorithm 1ICRL Policy Optimization
+Require:Problem batchQ, group sizeG, maximum roundsK, current parametersθ
+1: foreach problemq∈ Qdo
+2: GS (q)← ∅,G C(q)← ∅
+3: forGindependent sessionsdo
+4: Sampleτ 1 ∼π S
+θrollout (· |q)
+5: Compute solver rewardr S (τ1)∈[0,1]
+6: Add(q, τ 1, rS (τ1))toG S (q)
+7: fori= 1toK−1do
+8: ifr S (τi) = 1then
+9: break
+10: Samplec i ∼π C
+θrollout (· |q, τ i)
+11: Sampleτ i+1 ∼π S
+θrollout (· |q, c i)
+12: Compute solver rewardr S (τi+1)
+13: Compute critic rewardr C(ci)via Eq. (3)
+14: Add(q, τ i, ci, rC(ci))toG C(q)
+15: Add(q, c i, τi+1, rS (τi+1))toG S (q)
+16: Compute ˆAS
+i and ˆAC
+i via Eq. (5)
+17: Compute reweight ratiosw t for revised solver trajectories via Eq. (4)
+18: Updateθby maximizing the multi-role objectiveJ(θ)in Eq. (6)
+is optimized for revision utility. Directly normalizing these heterogeneous rewards within a single
+group would violate the relative-comparison principle and produce misleading advantage estimates.
+We therefore compute the group-relative advantage separately for each role. Formally, for each query
+q and role g∈ {S,C} , we collect a role-specific group Gg(q) ={τ g
+1 , . . . , τg
+Gg } and compute the
+advantage within that group:
+ˆAg
+i =
+r(τ g
+i )−mean j r(τ g
+j )
+stdj r(τ g
+j ) +δ , g∈ {S,C}.(5)
+where δ >0 is a small constant for numerical stability. This role-wise baseline preserves the
+relative-comparison principle while respecting the distinct semantics of each role.
+Policy Optimization Objective.Our final objective is a GRPO-style clipped update over sampled
+trajectories and token positions. For brevity, we omit the role superscript in ρt(θ) when the role is
+clear from the trajectoryτ:
+J(θ) =E τ, t
+h
+min
+ 
+wt, wmax
+
+min
+
+ρt(θ) ˆA(τ),clip
+ 
+ρt(θ),1−ϵ,1 +ϵ
+ ˆA(τ)
+i
+,(6)
+where only critique-guided revised solver trajectories receive the distribution-calibration reweight
+(wt from Eq. (4)), while initial solver and critic trajectories retain wt = 1. The upper bound wmax
+prevents excessively large weights that could arise when the critique-free probability substantially
+exceeds the critique-conditioned probability, thereby bounding gradient variance. Since the solver
+and critic are two prompted roles instantiated from the same backbone, maximizing Eq. (6) jointly
+trains both roles through their role-specific advantages and rewards. The solver learns from initial
+and calibrated revised trajectories, progressively internalizing critique-guided improvements into
+its critique-free policy. The critic simultaneously learns to produce feedback that maximizes the
+improvement of the downstream solver.
+4 Experiments
+4.1 Experimental Setup
+Environments.To comprehensively evaluate ICRL, we conduct experiments on four types of
+tasks. (1) Text world: we use ALFWorld Shridhar et al. (2021), a text-based environment that
+5
+
+Preprint.
+Table 1: Main results on agentic tasks.Boldindicates the best performance within each group.
+Method ALFWorld WebShop HotpotQA 2Wiki Bamboogle MuSiQue Avg.SR SR Reward SR SR SR SR
+Prompting
+Qwen3-4B 22.0 1.5 9.6 24.0 32.0 26.0 6.0 17.3
+Qwen3-8B 38.0 2.0 10.3 32.0 32.0 30.0 6.0 21.5
+Qwen3-30B-A3B 45.5 3.0 25.6 40.0 58.0 44.0 16.0 33.2
+Gemini-2.5-flash 78.5 41.2 48.7 47.0 66.0 59.5 26.0 52.4
+Gemini-3-Flash 97.0 53.0 57.3 52.0 78.0 72.0 31.0 62.9
+Qwen3-4B
+GRPO 81.0 63.5 81.8 38.0 36.0 30.0 14.0 49.2
+GSPO 82.0 65.0 82.1 42.0 36.0 34.0 10.0 50.2
+ScalingInter 90.0 66.5 84.7 44.0 38.0 32.0 15.0 52.9
+MATPO 87.5 65.0 82.446.042.040.0 16.054.1
+Critique-GRPO 91.5 72.5 87.1 43.5 43.0 38.5 15.0 55.9
+ICRL (Ours) 92.5 74.5 88.9 44.0 45.0 38.0 16.0 57.0
+Qwen3-8B
+GRPO 82.5 71.5 83.7 38.0 42.0 38.0 14.0 52.8
+GSPO 83.0 71.0 83.4 44.0 44.542.015.0 54.7
+ScalingInter91.073.0 86.2 41.5 40.0 38.0 14.0 54.8
+MATPO 89.0 68.0 81.6 45.0 46.0 41.017.055.4
+Critique-GRPO 90.5 73.5 86.846.047.5 38.0 14.0 56.6
+ICRL (Ours) 90.5 76.0 88.3 44.0 50.0 40.0 16.0 57.8
+simulates embodied household tasks requiring multi-step navigation. (2) Web navigation: we employ
+WebShop Yao et al. (2022), an e-commerce website environment that requires agents to navigate,
+search for, and purchase products. (3) Multi-hop question answering: we evaluate on multi-hop
+question answering tasks using an RAG-based search environment, including HotpotQA Yang et al.
+(2018), 2WikiMultiHopQA Ho et al. (2020), Bamboogle Press et al. (2023), and MuSiQue Trivedi
+et al. (2022). (4) Mathematical reasoning: we evaluate on five benchmarks, including MATH500
+Hendrycks et al. (2021), Minerva Math Lewkowycz et al. (2022), OlympiadBench He et al. (2024),
+AIME24 Li et al. (2024), and AMC23 Li et al. (2024). These datasets consist of high-school and
+college-level math problems. Detailed environment descriptions are provided in Appendix D.
+Baselines and Backbone Models.We compare our method with different baselines. For prompting-
+based baselines, we use off-the-shelf models, including Qwen3-4BYang et al. (2025), Qwen3-8BYang
+et al. (2025), Qwen3-30B-A3BYang et al. (2025), Gemini-2.5-FlashComanici et al. (2025), and
+Gemini-3-FlashGoogle DeepMind (2026). For single-agent RL baselines, we include GRPOGuo
+et al. (2025) and GSPOZheng et al. (2025b). To compare against agent-oriented training methods,
+we further include ScalingInter-RLXi et al. (2025b), which gradually increases the interaction
+horizon; MATPOMo et al. (2025), which trains the planner and subagent through role-specific
+policy optimization; and Critique-GRPOZhang et al. (2025b)(self-critique), which introduces natural-
+language critiques for critique-guided policy optimization. For backbone models, we consider
+Qwen3-4B and Qwen3-8B.
+4.2 Results on Agentic Tasks
+As shown in Table 1, ICRL improves agentic-task performance across the three agentic environments.
+On Qwen3-4B, ICRL achieves the best average score, reaching 57.0%. It improves over GRPO by
+7.8 points and surpasses Critique-GRPO by 1.1 points on average. Specifically, ICRL achieves the
+best success rate on ALFWorld and WebShop, indicating improved decision quality in long-horizon
+environments. On 2WikiMultiHopQA and MuSiQue, ICRL also achieves the best results, and on
+HotpotQA and Bamboogle, it remains competitive with the best-performing baselines.
+On Qwen3-8B, ICRL further obtains the highest average score of 57.8%, improving over GRPO
+and Critique-GRPO by 5.0 points and 1.2 points, respectively. On the WebShop environment, ICRL
+achieves the best success rate and reward. On ALFWorld, ICRL also achieves competitive results. For
+6
+
+Preprint.
+Table 2: Main results on math reasoning tasks.Boldindicates the best performance.
+Method MATH 500 Minerva
+MATH
+Olympiad
+Bench AMC23 AIME24 Avg.
+Qwen3-8B
+Qwen3-8B 82.0 41.2 44.1 67.5 40.0 55.0
+SFT 83.2 43.8 46.4 82.5 40.0 59.2
+GRPO 91.0 52.6 65.6 82.5 50.0 68.3
+Critique-GRPO 92.6 52.6 66.295.060.0 73.3
+ICRL (Ours) 94.0 55.6 68.9 93.1 65.1 75.3
+multi-hop search tasks, ICRL achieves the best results on 2WikiMultiHopQA under both backbones
+and remains competitive on MuSiQue, HotpotQA, and Bamboogle, although it is not uniformly the
+best on all datasets. Overall, these results suggest that ICRL is effective on the evaluated agentic
+environments and backbone scales.
+4.3 Results on Math Tasks
+As shown in Table 2, ICRL performs effectively on mathematical reasoning tasks. On Qwen3-8B,
+SFT provides only moderate improvements, increasing the average score from 55.0% to 59.2%, while
+GRPO reaches 68.3% by directly optimizing answer correctness. Critique-GRPO further improves
+the average score to 73.3%, showing the benefit of critique information. ICRL achieves the best
+overall performance with an average score of 75.3%, outperforming GRPO and Critique-GRPO
+by 7.0 points and 2.0 points, respectively. The improvements are especially clear on challenging
+competition-style benchmarks, such as OlympiadBench and AIME24, where ICRL improves over
+GRPO from 65.6% to 68.9% and from 50.0% to 65.1%. Compared with Critique-GRPO, ICRL
+performs better on four out of five benchmarks, with the only exception being AMC23. These
+math results are consistent with ICRL better internalizing critique-guided improvements, which is
+associated with stronger direct reasoning performance even without critique conditioning.
+5 Discussion
+5.1 Test-Time Self-Improvement
+To examine whether the learned critic can further improve agents at inference time, we evaluate
+multi-round test-time refinement on ALFWorld, WebShop, and SearchQA. As shown in Figure 3,
+all methods improve as the number of refinement rounds increases, but the sources of improvement
+differ. GRPO exhibits only gradual gains, suggesting that repeated attempts mainly provide additional
+sampling opportunities rather than targeted correction. Critic-GRPO improves more consistently by
+conditioning later attempts on critique information, but its gains remain limited across all three envi-
+ronments. In contrast, ICRL achieves both stronger first-round performance and larger improvements
+across refinement rounds, indicating that the learned critic provides feedback that is more useful for
+revising failed trajectories.
+The advantage of ICRL is consistent across task types. On ALFWorld, ICRL starts near the strongest
+baseline and continues to improve, reaching 98% success rate by the third round. On WebShop, it
+improves from 76% to over 83.5%, while maintaining a clear margin over both GRPO and Critic-
+GRPO throughout refinement. A similar trend appears on SearchQA, where ICRL increases from
+roughly 37.5% to 45% and consistently outperforms the critique-based baseline. These results
+suggest that ICRL does not merely benefit from additional inference-time computation; rather, its
+critic learns actionable diagnostic signals that help the solver identify previous errors and make more
+effective revisions. This is consistent with the hypothesis that joint solver-critic training can produce
+a self-improvement mechanism that remains useful at test time.
+7
+
+Preprint.
+Figure 3: Test-time self-improvement performance on ALFWorld, WebShop, and SearchQA.
+Figure 4: Training dynamics on ALFWorld. (1) Reward curve of the solver agent. (2) Reward curve
+of the critic agent. (3) Curve of re-weighting ratiow t (Eq. (4)). (4) The curve of gradient norm.
+5.2 Training Dynamics
+Training Stability.Stable optimization is crucial for ICRL, since the solver and critic are trained
+under a shared backbone. Figure 4 reports the training dynamics of ICRL. The solver reward steadily
+increases from around 40% to above 90%, showing that the solver improves its task performance
+throughout training. The critic reward also improves, starting from around 26% and rising to around
+60%. This indicates that the critic learns to generate more useful critiques. It is also observed that the
+critic reward curve is lower and exhibits greater fluctuations, which suggests that learning to critique
+is more challenging and less directly tied to task success than training the solver. Meanwhile, the
+gradient norm remains bounded throughout training, suggesting that ICRL maintains stable updates
+and that the role-wise advantage estimation and re-weighting ratio are effective in practice.
+Re-weighting Ratio Dynamics.The re-weighting ratio wt provides a view of how critique-guided
+revisions are transferred back to the critique-free solver distribution. Early in training, wt stays below
+the unity baseline, indicating that many successful revised actions still depend strongly on the critic
+context and should therefore receive a conservative update when used to train the direct solver. As
+training proceeds, wt increases steadily, suggesting that more tokens from critique-guided revisions
+become compatible with the solver’s original prompt distribution. This trend supports the intended
+effect of distribution calibration: early training avoids blindly imitating critic-dependent behavior,
+while later training allows more revised trajectories to contribute once the solver begins to internalize
+the underlying correction pattern.
+5.3 Learning to Critique
+To investigate whether the critic learns useful feedback generation, we conduct a critic-swap evaluation
+by fixing the solver as ICRL-8B and replacing only the critic used for revision. As shown in Table 3,
+the learned ICRL-8B critic provides highly effective feedback despite being much smaller than the
+frozen reference critics. It achieves a 95.0% success rate on ALFWorld, matching or surpassing
+larger critics, and improves WebShop performance from 76.0% to 78.5%. Notably, it does so with
+much shorter critiques, using only 57.0 tokens on ALFWorld and 93.9 tokens on WebShop, far fewer
+than the 20B and 32B critics. These results suggest that, in our evaluation, effective criticism is not
+explained by scale or verbosity alone. Instead, by optimizing the critic for downstream revision utility,
+8
+
+Preprint.
+Table 3: Critic-swap evaluation. The revision solver is fixed as ICRL-8B, and only the critic is
+replaced. Direct denotes no critique-based revision. Token denotes the average critique length.
+Critic Deploy. Size ALFWorld WebShop
+SR(↑)Token(↓)SR(↑)Token(↓)
+Direct - - 90.5 - 76.0 -
+OSS-20B Separate 20B95.0921.6 79.0 975.1
+Qwen3-32B Separate 32B 94.5 526.680.0417.7
+ICRL-8B Shared 8B 95.0 57.0 78.5 93.9
+Table 4: Ablation studies of ICRL. Each variant removes one component from the full method. Avg.
+reports the average score across the evaluated benchmarks.
+Variant ALFWorld WebShop SearchQA MATH Avg.
+ICRL90.5 76.0 37.5 75.3 69.8
+w/o Role-wise Advantage 88.5 74.5 36.3 74.1 68.4
+w/o Re-weight Ratio 88.0 73.0 35.8 74.2 67.8
+ICRL learns solver-specific, concise, and actionable feedback that aligns with the solver’s failure
+modes while reducing inference cost.
+5.4 Ablation Studies
+As shown in Table 4, removing either component consistently degrades performance across all
+evaluated benchmarks. Without role-wise advantage normalization, the average score drops from
+69.8% to 68.4%, indicating that solver and critic samples should not be normalized under a single
+shared reward scale. Since the solver is optimized for task completion while the critic is optimized
+for improving the solver’s next attempt, role-wise normalization preserves their distinct learning
+signals during joint training. Removing the re-weight ratio causes a drop to 67.8%, suggesting
+that the critique-conditioned response should not be optimized as a critique-free solver rollout. By
+re-weighting these revised trajectories, ICRL better aligns the training objective with the critique-free
+behavior distribution. Overall, the ablation results show that the gains of ICRL come not only
+from using a critic, but also from stabilizing the joint solver-critic optimization through role-aware
+advantage estimation and re-weight ratio adjustment.
+6 Related Work
+Critique and self-critique.Natural-language critique, feedback, and reflection have been widely
+used to improve language-model reasoning and agent behavior. Methods such as Self-Refine Madaan
+et al. (2023) and Reflexion Shinn et al. (2023) prompt models to analyze previous attempts and
+generate revised answers or trajectories. Other works introduce external or self-generated critics
+to detect mistakes, verify reasoning, or improve retrieval and generation quality Gou et al. (2023);
+Asai et al. (2023); Liu et al. (2025); Chen et al. (2026). Recent studies further show that models can
+improve by identifying errors in their own answers or intermediate reasoning steps and revising them
+accordingly Weng et al. (2023); Zhang et al. (2025a); Ma et al. (2025). These methods demonstrate
+that critique can provide effective local guidance: a failed attempt can often be repaired when the
+model is conditioned on appropriate feedback. However, they primarily improve critique-conditioned
+behavior at inference time, and do not guarantee that the model internalizes the guidance into its
+critique-free policy.
+Policy Optimization.Policy-gradient methods have become a central tool for post-training language
+models and agents. Algorithms such as PPO Schulman et al. (2017), GRPO Guo et al. (2025), and
+GSPO Zheng et al. (2025b) have shown strong potential in improving both reasoning models and
+interactive agents. Recent work studies stabilization strategies for agent RL Chen et al. (2025); Zheng
+9
+
+Preprint.
+et al. (2025a), as well as curriculum or interaction-scaling methods for long-horizon training Xi
+et al. (2025b). Beyond single-agent optimization, researchers have started to explore reinforcement
+learning for multi-agent or multi-role systems, including different agent architectures and role-specific
+training objectives Zhao et al. (2025); Feng et al. (2026); Mo et al. (2025). Furthermore, expert data
+or expert models are incorporated into the training process Yan et al. (2025); Zhang et al. (2025b;c).
+Specifically, Critique-GRPO Zhang et al. (2025b) leverages critic feedback for policy optimization,
+but still relies on a static critic model. While these methods improve agent training, they typically do
+not study how critique-guided revisions can be internalized into a critique-free solver.
+7 Conclusions
+In this work, we presented ICRL, a reinforcement-learning framework that jointly learns to critique
+and to internalize self-critique. ICRL converts critique-induced success into unassisted solver ability
+through two key mechanisms: a distribution-calibration re-weight ratio that selectively transfers
+critique-guided improvements compatible with the solver’s critique-free distribution, and a role-wise
+group advantage estimation that stabilizes joint optimization of two roles. Extensive experiments
+across different models demonstrate its superiority over strong baselines on both agentic and mathe-
+matical reasoning tasks. Our analyses further show that the learned critic remains useful at test time
+and provides concise feedback comparable to much larger frozen critics, suggesting that self-critique
+may be most effective when critique generation and critique internalization are learned together.
+References
+Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, and Hannaneh Hajishirzi. Self-rag: Learning to retrieve,
+generate, and critique through self-reflection.ArXiv, abs/2310.11511, 2023.
+Aili Chen, Aonian Li, Bangwei Gong, Binyang Jiang, Bo Fei, Bo Yang, Boji Shan, Changqing Yu, Chao Wang,
+Cheng Zhu, et al. Minimax-m1: Scaling test-time compute efficiently with lightning attention.arXiv preprint
+arXiv:2506.13585, 2025.
+Yuxin Chen, Yu Wang, Yi Zhang, Ziang Ye, Zhengzhou Cai, Yaorui Shi, Qi Gu, Hui Su, Xunliang Cai, Xiang
+Wang, et al. Learning to self-verify makes language models better reasoners.arXiv preprint arXiv:2602.07594,
+2026.
+Gheorghe Comanici, Eric Bieber, Mike Schaekermann, Ice Pasupat, et al. Gemini 2.5: Pushing the frontier
+with advanced reasoning, multimodality, long context, and next generation agentic capabilities, 2025. URL
+https://arxiv.org/abs/2507.06261.
+Lang Feng, Longtao Zheng, Shuo He, Fuxiang Zhang, and Bo An. Dr. mas: Stable reinforcement learning for
+multi-agent llm systems.arXiv preprint arXiv:2602.08847, 2026.
+Wei Fu, Jiaxuan Gao, Xujie Shen, Chen Zhu, Zhiyu Mei, Chuyi He, Shusheng Xu, Guo Wei, Jun Mei, Jiashu
+Wang, et al. Areal: A large-scale asynchronous reinforcement learning system for language reasoning.arXiv
+preprint arXiv:2505.24298, 2025.
+Google DeepMind. Gemini 3 Flash. https://deepmind.google/models/gemini/flash/, 2026.
+Accessed: 2026-05-01.
+Zhibin Gou, Zhihong Shao, Yeyun Gong, Yelong Shen, Yujiu Yang, Nan Duan, and Weizhu Chen. Critic: Large
+language models can self-correct with tool-interactive critiquing.arXiv preprint arXiv:2305.11738, 2023.
+Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang,
+Shirong Ma, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning.
+arXiv preprint arXiv:2501.12948, 2025.
+Chaoqun He, Renjie Luo, Yuzhuo Bai, Shengding Hu, Zhen Thai, Junhao Shen, Jinyi Hu, Xu Han, Yujie
+Huang, Yuxiang Zhang, Jie Liu, Lei Qi, Zhiyuan Liu, and Maosong Sun. OlympiadBench: A challenging
+benchmark for promoting AGI with olympiad-level bilingual multimodal scientific problems. InProceedings
+of the 62nd Annual Meeting of the Association for Computational Linguistics (V olume 1: Long Papers), pp.
+3828–3850, Bangkok, Thailand, August 2024. Association for Computational Linguistics. doi: 10.18653/v1/
+2024.acl-long.211. URLhttps://aclanthology.org/2024.acl-long.211/.
+10
+
+Preprint.
+Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, and
+Jacob Steinhardt. Measuring mathematical problem solving with the math dataset, 2021. URL https:
+//arxiv.org/abs/2103.03874.
+Xanh Ho, Anh-Khoa Duong Nguyen, Saku Sugawara, and Akiko Aizawa. Constructing A multi-hop QA dataset
+for comprehensive evaluation of reasoning steps. In Donia Scott, Núria Bel, and Chengqing Zong (eds.),
+Proceedings of the 28th International Conference on Computational Linguistics, COLING 2020, Barcelona,
+Spain (Online), December 8-13, 2020, pp. 6609–6625. International Committee on Computational Linguistics,
+2020. doi: 10.18653/V1/2020.COLING-MAIN.580. URL https://doi.org/10.18653/v1/2020.
+coling-main.580.
+Aitor Lewkowycz, Anders Andreassen, David Dohan, Ethan Dyer, Henryk Michalewski, Vinay Ramasesh,
+Ambrose Slone, Cem Anil, Imanol Schlag, Theo Gutman-Solo, Yuhuai Wu, Behnam Neyshabur, Guy
+Gur-Ari, and Vedant Misra. Solving quantitative reasoning problems with language models, 2022. URL
+https://arxiv.org/abs/2206.14858.
+Jia Li, Edward Beeching, Lewis Tunstall, Ben Lipkin, Roman Soletskyi, Shengyi Costa Huang, Kashif
+Rasul, Longhui Yu, Albert Jiang, Ziju Shen, Zihan Qin, Bin Dong, Li Zhou, Yann Fleureau, Guil-
+laume Lample, and Stanislas Polu. Numinamath. https://github.com/project-numina/
+aimo-progress-prize/blob/main/report/numina_dataset.pdf, 2024.
+Kuan Li, Zhongwang Zhang, Huifeng Yin, Liwen Zhang, Litu Ou, Jialong Wu, Wenbiao Yin, Baixuan Li,
+Zhengwei Tao, Xinyu Wang, et al. Websailor: Navigating super-human reasoning for web agent.arXiv
+preprint arXiv:2507.02592, 2025a.
+Weizhen Li, Jianbo Lin, Zhuosong Jiang, Jingyi Cao, Xinpeng Liu, Jiayu Zhang, Zhenqiang Huang, Qianben
+Chen, Weichen Sun, Qiexiang Wang, et al. Chain-of-agents: End-to-end agent foundation models via
+multi-agent distillation and agentic rl.arXiv preprint arXiv:2508.13167, 2025b.
+Xiaoyuan Liu, Tian Liang, Zhiwei He, Jiahao Xu, Wenxuan Wang, Pinjia He, Zhaopeng Tu, Haitao Mi, and
+Dong Yu. Trust, but verify: A self-verification approach to reinforcement learning with verifiable rewards.
+arXiv preprint arXiv:2505.13445, 2025.
+Ruotian Ma, Peisong Wang, Cheng Liu, Xingyan Liu, Jiaqi Chen, Bang Zhang, Xin Zhou, Nan Du, and Jia
+Li. S2r: Teaching llms to self-verify and self-correct via reinforcement learning. InProceedings of the 63rd
+Annual Meeting of the Association for Computational Linguistics (V olume 1: Long Papers), pp. 22632–22654,
+2025.
+Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon, Nouha
+Dziri, Shrimai Prabhumoye, Yiming Yang, et al. Self-refine: Iterative refinement with self-feedback.Advances
+in neural information processing systems, 36:46534–46594, 2023.
+Zhanfeng Mo, Xingxuan Li, Yuntao Chen, and Lidong Bing. Multi-agent tool-integrated policy optimization.
+arXiv preprint arXiv:2510.04678, 2025.
+Ofir Press, Muru Zhang, Sewon Min, Ludwig Schmidt, Noah A. Smith, and Mike Lewis. Measuring and narrow-
+ing the compositionality gap in language models. In Houda Bouamor, Juan Pino, and Kalika Bali (eds.),Find-
+ings of the Association for Computational Linguistics: EMNLP 2023, Singapore, December 6-10, 2023, pp.
+5687–5711. Association for Computational Linguistics, 2023. doi: 10.18653/V1/2023.FINDINGS-EMNLP.
+378. URLhttps://doi.org/10.18653/v1/2023.findings-emnlp.378.
+Yujia Qin, Yining Ye, Junjie Fang, Haoming Wang, Shihao Liang, Shizuo Tian, Junda Zhang, Jiahao Li, Yunxin
+Li, Shijue Huang, et al. Ui-tars: Pioneering automated gui interaction with native agents.arXiv preprint
+arXiv:2501.12326, 2025.
+Jérémy Scheurer, Jon Ander Campos, Tomasz Korbak, Jun Shern Chan, Angelica Chen, Kyunghyun Cho, and
+Ethan Perez. Training language models with language feedback at scale.arXiv preprint arXiv:2303.16755,
+2023.
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization
+algorithms.arXiv preprint arXiv:1707.06347, 2017.
+Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao. Reflexion: Language
+agents with verbal reinforcement learning.Advances in neural information processing systems, 36:8634–8652,
+2023.
+11
+
+Preprint.
+Mohit Shridhar, Xingdi Yuan, Marc-Alexandre Côté, Yonatan Bisk, Adam Trischler, and Matthew Hausknecht.
+ALFWorld: Aligning Text and Embodied Environments for Interactive Learning. InProceedings of the
+International Conference on Learning Representations (ICLR), 2021. URL https://arxiv.org/abs/
+2010.03768.
+Zhengyang Tang, Ziniu Li, Zhenyang Xiao, Tian Ding, Ruoyu Sun, Benyou Wang, Dayiheng Liu, Fei Huang,
+Tianyu Liu, Bowen Yu, et al. Self-evolving critique abilities in large language models.arXiv preprint
+arXiv:2501.05727, 2025.
+Harsh Trivedi, Niranjan Balasubramanian, Tushar Khot, and Ashish Sabharwal. Musique: Multihop questions
+via single-hop question composition.Trans. Assoc. Comput. Linguistics, 10:539–554, 2022. doi: 10.1162/
+TACL\_A\_00475. URLhttps://doi.org/10.1162/tacl_a_00475.
+Junyang Wang, Haiyang Xu, Jiabo Ye, Ming Yan, Weizhou Shen, Ji Zhang, Fei Huang, and Jitao Sang. Mobile-
+agent: Autonomous multi-modal mobile device agent with visual perception.arXiv preprint arXiv:2401.16158,
+2024a.
+Xingyao Wang, Boxuan Li, Yufan Song, Frank F Xu, Xiangru Tang, Mingchen Zhuge, Jiayi Pan, Yueqi Song,
+Bowen Li, Jaskirat Singh, et al. Openhands: An open platform for ai software developers as generalist agents.
+arXiv preprint arXiv:2407.16741, 2024b.
+Yixuan Weng, Minjun Zhu, Fei Xia, Bin Li, Shizhu He, Shengping Liu, Bin Sun, Kang Liu, and Jun Zhao. Large
+language models are better reasoners with self-verification. InFindings of the Association for Computational
+Linguistics: EMNLP 2023, pp. 2550–2575, 2023.
+Zhiheng Xi, Yiwen Ding, Wenxiang Chen, Boyang Hong, Honglin Guo, Junzhe Wang, Xin Guo, Dingwen Yang,
+Chenyang Liao, Wei He, et al. Agentgym: Evaluating and training large language model-based agents across
+diverse environments. InProceedings of the 63rd Annual Meeting of the Association for Computational
+Linguistics (V olume 1: Long Papers), pp. 27914–27961, 2025a.
+Zhiheng Xi, Jixuan Huang, Chenyang Liao, Baodai Huang, Honglin Guo, Jiaqi Liu, Rui Zheng, Junjie Ye,
+Jiazheng Zhang, Wenxiang Chen, et al. Agentgym-rl: Training llm agents for long-horizon decision making
+through multi-turn reinforcement learning.arXiv preprint arXiv:2509.08755, 2025b.
+Jianhao Yan, Yafu Li, Zican Hu, Zhi Wang, Ganqu Cui, Xiaoye Qu, Yu Cheng, and Yue Zhang. Learning to
+reason under off-policy guidance, 2025. URLhttps://arxiv.org/abs/2504.14945.
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen
+Huang, Chenxu Lv, et al. Qwen3 technical report.arXiv preprint arXiv:2505.09388, 2025.
+John Yang, Carlos E Jimenez, Alexander Wettig, Kilian Lieret, Shunyu Yao, Karthik R Narasimhan, and Ofir
+Press. SWE-agent: Agent-computer interfaces enable automated software engineering. InThe Thirty-eighth
+Annual Conference on Neural Information Processing Systems, 2024. URL https://arxiv.org/abs/
+2405.15793.
+Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio, William W. Cohen, Ruslan Salakhutdinov, and Christo-
+pher D. Manning. Hotpotqa: A dataset for diverse, explainable multi-hop question answering. In Ellen
+Riloff, David Chiang, Julia Hockenmaier, and Jun’ichi Tsujii (eds.),Proceedings of the 2018 Conference on
+Empirical Methods in Natural Language Processing, Brussels, Belgium, October 31 - November 4, 2018,
+pp. 2369–2380. Association for Computational Linguistics, 2018. doi: 10.18653/V1/D18-1259. URL
+https://doi.org/10.18653/v1/d18-1259.
+Shunyu Yao, Howard Chen, John Yang, and Karthik Narasimhan. Webshop: Towards scalable real-world
+web interaction with grounded language agents.Advances in Neural Information Processing Systems, 35:
+20744–20757, 2022.
+Fuxiang Zhang, Jiacheng Xu, Chaojie Wang, Ce Cui, Yang Liu, and Bo An. Incentivizing llms to self-verify
+their answers.arXiv preprint arXiv:2506.01369, 2025a.
+Xiaoying Zhang, Yipeng Zhang, Hao Sun, Kaituo Feng, Chaochao Lu, Chao Yang, and Helen Meng.
+Critique-grpo: Advancing llm reasoning with natural language and numerical feedback.arXiv preprint
+arXiv:2506.03106, 2025b.
+Xuechen Zhang, Zijian Huang, Yingcong Li, Chenshun Ni, Jiasi Chen, and Samet Oymak. Bread: Branched
+rollouts from expert anchors bridge sft & rl for reasoning.arXiv preprint arXiv:2506.17211, 2025c.
+Yujie Zhao, Lanxiang Hu, Yang Wang, Minmin Hou, Hao Zhang, Ke Ding, and Jishen Zhao. Stronger-mas:
+Multi-agent reinforcement learning for collaborative llms.arXiv preprint arXiv:2510.11062, 2025.
+12
+
+Preprint.
+Chujie Zheng, Kai Dang, Bowen Yu, Mingze Li, Huiqiang Jiang, Junrong Lin, Yuqiong Liu, Hao Lin, Chencan
+Wu, Feng Hu, et al. Stabilizing reinforcement learning with llms: Formulation and practices.arXiv preprint
+arXiv:2512.01374, 2025a.
+Chujie Zheng, Shixuan Liu, Mingze Li, Xiong-Hui Chen, Bowen Yu, Chang Gao, Kai Dang, Yuqiong Liu, Rui
+Men, An Yang, et al. Group sequence policy optimization.arXiv preprint arXiv:2507.18071, 2025b.
+13
+
+Preprint.
+A Analysis of Critique-Conditioned Trajectories
+Critique-guided trajectories are not sampled from the same behavior distribution as a critique-free
+solver. The initial attempt is drawn from πS
+θrollout (τ|q) , while a revised trajectory is generated under
+an extra critique c and is therefore drawn from πS
+θrollout (τ|q, c) . This means revised trajectories are
+informative, but they are distribution-shifted relative to the critique-free prompt. If they are used
+directly, the update targets the critique-conditioned behavior distribution rather than the intended
+critique-free behavior distribution, which is exactly the mismatch we want to control.
+The re-weight in Eq. (4) is meant to transfer only the parts of a trajectory that remain plausible
+once the critique is removed. For a token yt in a revised trajectory, the critique-free and critique-
+conditioned behavior mismatch is captured by wt =π S
+θrollout (yt |q, y <t)/πS
+θrollout (yt |q, c, y <t). We
+clip this weight in practice to avoid high-variance of the gradient. The resulting update downweights
+tokens that depend too heavily on the critique context and keeps the solver focused on behaviors it
+can internalize under its original prompt distribution.
+B Limitations
+A potential limitation of ICRL is that it relies on the critique for revision, which may lead to longer
+rollout times for long-tail trajectories under synchronous RL training. In practice, this can create
+a bottleneck when difficult samples require multiple rounds of critique and revision before they
+converge. It may also reduce overall throughput if the training pipeline must wait for the slowest
+trajectories in each synchronous update. In our current training setup, we set the iteration round to 2
+to improve training efficiency. The use of asynchronous training Fu et al. (2025) remains unexplored
+and may further improve the efficiency of iterative training by decoupling these slow paths from the
+main optimization loop.
+C Training Settings
+For all agentic environments, including ALFWorld, WebShop, and SearchQA, we use the AgentGym
+framework Xi et al. (2025a), for math environment, we follow the same setting from Critique-
+GRPO Zhang et al. (2025b).
+Training Settings.We set the maximum number of agent-environment interactions to 30 turns.
+We use the Adam optimizer with a constant learning rate of 1×10 −6, a weight decay of 0.1, and
+β1 = 0.9, β2 = 0.98. For each query, we sample 8 rollouts with a temperature of 1.0, a maximum
+context length of 16384, a maximum response length of 2048 for each turn. By default, training
+runs with tensor parallel size 2, sequence parallelism, dynamic batch size, and a maximum of 16384
+tokens per GPU. For ICRL settings, the max iteration round is set to 2, and the re-weight ratio upper
+boundw max is set to 2.
+Compute Resources.For ALFWorld, WebShop and Math environments, Qwen3-4B experiments are
+trained on 2 H100 GPUs, and Qwen3-8B experiments are trained on 4 H100 GPUs. For SearchQA,
+we use 4 H100 GPUs and 8 H100 GPUs for 4B and 8B experiments, respectively.
+D Environments Setting
+D.1 ALFWorld
+ALFWorld is a text-based household environment that aligns abstract TextWorld interaction with
+embodied household tasks from ALFRED Shridhar et al. (2021). In this environment, the agent
+receives a natural-language household goal and must complete it through multi-turn interaction,
+including navigation, object manipulation, and receptacle operations. ALFWorld is evaluated by
+task completion. The environment returns a binary outcome reward, where r(τ) = 1 if the final
+environment state satisfies the household goal and r(τ) = 0 otherwise. The prompt of ALFWorld
+environment is as follows.
+14
+
+Preprint.
+ALFWorld
+You are the executor agent to complete a task in a given environment.
+Environment:
+ALFWorld is a household environment with rooms, receptacles, and
+manipulable objects.
+You need to solve a household goal by navigating and interacting with
+objects and containers.
+Task:
+{{task}}
+Environment action:
+Available Actions:
+- <action>go to [LOCATION]</action>: move to a receptacle or location.
+- <action>take [OBJECT] from [RECEPTACLE]</action>: pick up an object
+from a receptacle.
+- <action>put [OBJECT] in/on [RECEPTACLE]</action>: put an object on a
+receptacle.
+- <action>open [RECEPTACLE]</action>: open a receptacle to reveal its
+contents.
+- <action>close [RECEPTACLE]</action>: close a receptacle.
+- <action>toggle [OBJECT] [RECEPTACLE]</action>: switch an object on
+or off.
+- <action>clean [OBJECT] with [RECEPTACLE]</action>: clean an object
+using a receptacle.
+- <action>heat [OBJECT] with [RECEPTACLE]</action>: heat an object
+using a receptacle.
+- <action>cool [OBJECT] with [RECEPTACLE]</action>: cool an object
+using a receptacle.
+- <action>inventory</action>: list objects currently being carried.
+- <action>look</action>: describe the current situation.
+- <action>examine [OBJECT]</action>: examine an object or receptacle
+in detail.
+Output format:
+<think>
+short reason
+</think>
+<action>
+chosen action
+</action>
+D.2 Webshop
+WebShop is an e-commerce environment in which the agent searches, navigates product pages,
+inspects item attributes, and purchases a product that matches a user shopping instruction Yao et al.
+(2022); Xi et al. (2025a). The task requires both information seeking and decision making because
+the agent must choose useful search queries and compare candidate products before purchasing.
+Following the WebShop evaluation protocol Yao et al. (2022), the final reward compares the purchased
+productywith the user instructionuby matching product type, attributes, options, and price:
+r=r type · |Uatt ∩Y att|+|U opt ∩Y opt|+1[y price ≤u price]
+|Uatt|+|U opt|+ 1 ,(7)
+where U and Y denote instruction-side constraints and purchased-product fields, and rtype penalizes
+mismatched product types. An trajectory is considered successful whenr= 1 , meaning the purchased
+product fully satisfies the instruction. The prompt of WebShop environment is as follows.
+15
+
+Preprint.
+WebShop
+You are the executor agent to complete a task in a given environment.
+Environment:
+Webshop is an e-commerce shopping environment where you need to find
+and purchase product based on given shopping goal.
+Task:
+{{task}}
+Environment action:
+Every round I will give you an observation and a list of available
+actions, you have to respond an action based on the state and
+instruction.
+You can use search action if search is available.
+You can click one of the buttons in clickables.
+If the action is not valid, perform nothing.
+Keywords in search are up to you, but the value in click must be a
+value in the list of available actions.
+Remember that your keywords in search should be carefully designed.
+There are different types of pages:
+- Initial Page: You can perform search actions to find products.
+- Search Results Page: You can view search results, navigate through
+pages using click[Next >] and click[< Prev], and click on product
+ASIN to view details.
+- Product Detail Page: You can view product details, check description
+and features, and if the product matches the requirements, you
+can purchase the product. If not, you can go back to the search
+results or go to initial page.
+Available Actions:
+- <action>search[query]</action>: search for products using the
+specified query (initial page only).
+- <action>click[button]</action>: navigate by clicking buttons or
+items.
+Output format:
+<think>
+short reason
+</think>
+<action>
+chosen action
+</action>
+D.3 SearchQA
+SearchQA is a search-augmented question-answering environment built on multi-hop QA benchmarks,
+including HotpotQA, 2WikiMultiHopQA, Bamboogle, and MuSiQue Yang et al. (2018); Ho et al.
+(2020); Press et al. (2023); Trivedi et al. (2022). The agent alternates between issuing search queries
+and reading retrieved information until it has enough evidence to produce a concise final answer.
+Intermediate search actions are used only to gather evidence, and the trajectory is evaluated after
+the agent emits a final answer or reaches the interaction budget. The environment returns a binary
+outcome reward based on answer correctness, with r(τ) = 1 when the normalized final answer
+matches an accepted reference answer andr(τ) = 0 otherwise. The prompt of SearchQA environment
+is as follows.
+16
+
+Preprint.
+SearchQA
+You are the executor agent to complete a task in a given environment.
+Environment:
+SearchEnv is a websearch environment. You need to answer a question by
+issuing search queries and iteratively refining your search based
+on retrieved information.
+When all necessary information is gathered, return a short and concise
+final answer.
+Task:
+You must reason inside <think>...</think> first. If you do not have
+enough knowledge, issue a <search>...</search> and then STOP. Do
+not generate <information> or <answer> yet. Wait for external
+input wrapped in <information>...</information>. After receiving
+information, reason again in <think>. If confident, output your
+final answer in <answer>...</answer>. Do not output <answer>
+before receiving <information> unless you are fully confident. If
+you find no further external knowledge needed, you can directly
+provide the answer inside <answer> and </answer>, without detailed
+illustrations. For example, <answer> Beijing </answer>. Follow
+this process every time.
+{{task}}
+Environment action:
+Available Actions:
+- <search>query</search>: search for relevant information.
+- <answer>answer</answer>: provide the final concise answer.
+When giving the final answer, make it short and concise. Don’t include
+any additional explanations or notes.
+For example, if the question is "What is the capital of France?":
+<answer>Paris</answer>
+Output format:
+<think>
+short reason
+</think>
+<action>
+chosen action
+</action>
+D.4 Math
+The math environment evaluates mathematical reasoning on MATH500, Minerva Math, Olympiad-
+Bench, AMC23, and AIME24 Hendrycks et al. (2021); Lewkowycz et al. (2022); He et al. (2024);
+Li et al. (2024). The agent is given a math problem and should reason step by step to arrive at the
+final answer. The final answer is checked against the reference answer. The environment returns a
+binary outcome reward, where r(τ) = 1 if the final answer is equivalent to the reference solution and
+r(τ) = 0otherwise. The prompt of Math environment is as follows.
+Math
+You are a math problem solver.
+Task:
+{{task}}
+Please reason step by step, and put your final answer within \boxed{}.
+17
+
+Preprint.
+Output format:
+<think>
+short reason
+</think>
+<answer>
+\boxed{answer}
+</answer>
+E Trajectory Examples
+The following boxes show a trajectory comparison between a failed GRPO trajectory and a successful
+trajectory produced by our method under the same task setting.
+GRPO
+Task: put a hot potato in fridge.
+Response:
+<|im_start|>assistant
+<think>
+... Let me start by going to
+countertop 1 to check.
+</think>
+<action>go to countertop 1</
+action><|im_end|>
+<|im_start|>user
+On the countertop 1, you see a
+dishsponge 3, a dishsponge 2,
+a fork 1, a spoon 1, and a
+tomato 1.<|im_end|>
+<|im_start|>assistant
+<think>
+... I need to find the potato
+first. Let’s go to
+countertop 2 next.
+</think>
+<action>go to countertop 2</
+action><|im_end|>
+<|im_start|>user
+On the countertop 2, you see a
+bread 2, a cup 1, and a fork
+3.<|im_end|>
+<|im_start|>assistant
+<think>
+... Let’s go to countertop 3
+next.
+</think>
+<action>go to countertop 3</
+action><|im_end|>
+<|im_start|>user
+On the countertop 3, you see a
+butterknife 2, a butterknife
+1, a lettuce 3, a lettuce 2,
+a mug 1, a soapbottle 3,
+and a spatula 1.<|im_end|>
+<|im_start|>assistant
+<think>
+ICRL
+Task: put a hot potato in fridge.
+Response:
+<|im_start|>assistant
+<think>
+... Let’s start by checking the
+countertops and other
+visible places.
+</think>
+<action>
+look
+</action><|im_end|>
+<|im_start|>user
+You are in the middle of a room.
+Looking quickly around you,
+you see nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to countertop 1
+</action><|im_end|>
+<|im_start|>user
+On the countertop 1, you see a
+dishsponge 3, a dishsponge 2,
+a fork 1, a spoon 1, and a
+tomato 1.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to countertop 2
+</action><|im_end|>
+<|im_start|>user
+On the countertop 2, you see a
+bread 2, a cup 1, and a fork
+3.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+18
+
+Preprint.
+... So perhaps go to cabinet 1,
+open it, and check contents.
+Let’s try that.
+</think>
+<action>go to cabinet 1</action
+><|im_end|>
+<|im_start|>user
+The cabinet 1 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>... Let’s open cabinet 1
+to see.</think>
+<action>open cabinet 1</action
+><|im_end|>
+<|im_start|>user
+You open the cabinet 1. The
+cabinet 1 is open. In it,
+you see a bowl 1.<|im_end|>
+<|im_start|>assistant
+<think>... Let’s go to cabinet 2
+and open it.</think>
+<action>go to cabinet 2</action
+><|im_end|>
+<|im_start|>user
+The cabinet 2 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+Okay, cabinet 2 is closed. Let’s
+open it to check. If there’
+s a potato inside, that’s
+great. If not, proceed to
+the next cabinet.
+Alternatively, maybe check
+drawers. But since cabinets
+are common storage, perhaps
+continue checking cabinets.
+Let’s open cabinet 2.
+</think>
+<action>open cabinet 2</action
+><|im_end|>
+<|im_start|>user
+You open the cabinet 2. The
+cabinet 2 is open. In it,
+you see nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+... Let’s check drawer 1.
+</think>
+<action>go to drawer 1</action
+><|im_end|>
+<|im_start|>user
+The drawer 1 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+Drawer 1 is closed. Need to open
+it. Let’s open drawer 1 to
+go to countertop 3
+</action><|im_end|>
+<|im_start|>user
+On the countertop 3, you see a
+butterknife 2, a butterknife
+1, a lettuce 3, a lettuce 2,
+a mug 1, a soapbottle 3,
+and a spatula 1.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to stoveburner 1
+</action><|im_end|>
+<|im_start|>user
+On the stoveburner 1, you see a
+pot 1.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to stoveburner 2
+</action><|im_end|>
+<|im_start|>user
+On the stoveburner 2, you see a
+pot 2.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to stoveburner 3
+</action><|im_end|>
+<|im_start|>user
+On the stoveburner 3, you see
+nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to stoveburner 4
+</action><|im_end|>
+<|im_start|>user
+On the stoveburner 4, you see
+nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to microwave 1
+</action><|im_end|>
+<|im_start|>user
+The microwave 1 is closed.<|
+im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+19
+
+Preprint.
+check if there’s a potato
+inside. If not, proceed to
+the next drawer or cabinet.
+Let’s open it.
+</think>
+<action>open drawer 1</action><|
+im_end|>
+<|im_start|>user
+You open the drawer 1. The
+drawer 1 is open. In it, you
+see a fork 2.<|im_end|>
+<|im_start|>assistant
+<think>
+... Let’s try drawer 2.
+</think>
+<action>go to drawer 2</action
+><|im_end|>
+<|im_start|>user
+The drawer 2 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+Drawer 2 is closed. Let’s open
+it to check. If there’s a
+potato, great. If not,
+continue to next drawer or
+check other locations. Let’s
+open drawer 2.
+</think>
+<action>open drawer 2</action><|
+im_end|>
+<|im_start|>user
+You open the drawer 2. The
+drawer 2 is open. In it, you
+see a knife 1.<|im_end|>
+<|im_start|>assistant
+<think>
+... Let’s try drawer 3.
+</think>
+<action>go to drawer 3</action
+><|im_end|>
+<|im_start|>user
+The drawer 3 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+Drawer 3 is closed. Let’s open
+it to check. If there’s a
+potato, great. If not, move
+to drawer 4. Let’s open
+drawer 3.
+</think>
+<action>open drawer 3</action><|
+im_end|>
+<|im_start|>user
+You open the drawer 3. The
+drawer 3 is open. In it, you
+open microwave 1
+</action><|im_end|>
+<|im_start|>user
+You open the microwave 1. The
+microwave 1 is open. In it,
+you see nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to fridge 1
+</action><|im_end|>
+<|im_start|>user
+The fridge 1 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+open fridge 1
+</action><|im_end|>
+<|im_start|>user
+You open the fridge 1. The
+fridge 1 is open. In it, you
+see a apple 2, a bread 1, a
+egg 2, a potato 2, a potato
+1, and a tomato 2.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+inventory
+</action><|im_end|>
+<|im_start|>user
+You are not carrying anything.<|
+im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+take potato 1 from fridge 1
+</action><|im_end|>
+<|im_start|>user
+You pick up the potato 1 from
+the fridge 1.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to microwave 1
+</action><|im_end|>
+<|im_start|>user
+The microwave 1 is open. In it,
+you see nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+20
+
+Preprint.
+see a peppershaker 1, and a
+spoon 2.<|im_end|>
+<|im_start|>assistant
+<think>
+... Let’s proceed to drawer 4.
+</think>
+<action>go to drawer 4</action
+><|im_end|>
+<|im_start|>user
+The drawer 4 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+... Let’s open drawer 4.
+</think>
+<action>open drawer 4</action><|
+im_end|>
+<|im_start|>user
+You open the drawer 4. The
+drawer 4 is open. In it, you
+see nothing.<|im_end|>
+<|im_start|>assistant
+<think>
+... Maybe the potato is in the
+fridge already? No, the task
+is to put it in the fridge.
+So it must be elsewhere.
+Let’s check cabinet 3 next.
+</think>
+<action>go to cabinet 3</action
+><|im_end|>
+<|im_start|>user
+The cabinet 3 is closed.<|im_end
+|>
+<|im_start|>assistant
+<think>
+... Let’s go to cabinet 4 next.
+</think>
+<action>go to cabinet 4</action
+><|im_end|>
+<|im_start|>user
+On the cabinet 4, you see a
+soapbottle 1.<|im_end|>
+Reward = 0
+<action>
+heat potato 1 with microwave 1
+</action><|im_end|>
+<|im_start|>user
+You heat the potato 1 using the
+microwave 1.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+go to fridge 1
+</action><|im_end|>
+<|im_start|>user
+The fridge 1 is open. In it, you
+see a apple 2, a bread 1, a
+egg 2, a potato 2, and a
+tomato 2.<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<action>
+put potato 1 in/on fridge 1
+</action><|im_end|>
+<|im_start|>user
+You put the potato 1 in/on the
+fridge 1.<|im_end|>
+<|im_start|>assistant
+Reward = 1
+F Critic Examples
+The following box shows an example of the learned critic diagnosing a failed ALFWorld trajectory
+and producing concise feedback for the next solver attempt.
+ALFWorld Critique
+<|im_start|>system
+You are the critic agent. You will be given an executor trajectory
+that fail to complete the task. Identify the concrete failure mode
+21
+
+Preprint.
+and produce a short set of core tips that can help the next
+executor round succeed.
+Environment:
+{environment}
+Rules:
+- Diagnose the highest-value mistake.
+- Focus on actionable corrections for the next executor run.
+- The next round is a fresh retry from the initial observation.
+- Do not output actions, XML action tags, or long narratives.
+- Summarize only the reusable core tips.
+Output format:
+<think>
+short reason
+</think>
+<critic>
+Tip 1: ...
+Tip 2: ...
+Tip 3: ...
+</critic><|im_end|>
+<|im_start|>user
+# Task
+{task}
+# Trajectory Summary
+reward: {reward}
+trajectory: {trajectory}
+<|im_start|>assistant
+<think>
+Okay, let’s look at the trajectory the executor took. The task was to
+cool an apple and put it in the microwave. The executor started by
+going to the fridge, opened it, but didn’t find an apple there.
+Then they checked countertops and found apple 1 on countertop 3,
+took it, went to the sink, tried to cool it with the sink, but
+nothing happened. Then they cleaned it, put it in the microwave,
+closed it, but when trying to take it back, it didn’t work. They
+kept looping between fridge and sink, trying to cool the apple
+again.
+Hmm, the main issue here is that the executor didn’t realize that
+cooling the apple requires placing it in the fridge first. The
+available actions might have a specific way to cool an item, like
+putting it in the fridge. Instead of using the sink or trying to
+clean it, they should have placed the apple in the fridge to cool
+it. Also, after cooling, they needed to take it out of the fridge
+and then put it in the microwave. The executor kept trying to cool
+it with the sink, which isn’t the correct method. So the core
+mistakes are not using the fridge for cooling and not properly
+retrieving the apple after cooling.
+</think>
+<critic>
+Tip 1: Use fridge for cooling, not sink. Cooling requires placing item
+in fridge, not interacting with sink.
+Tip 2: After cooling, retrieve apple from fridge before placing in
+microwave.
+Tip 3: Avoid redundant actions - don’t repeatedly try to cool already
+cooled apple.
+</critic><|im_end|>
+Reward = 1
+22

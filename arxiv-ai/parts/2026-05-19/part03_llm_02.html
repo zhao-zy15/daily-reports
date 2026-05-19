@@ -1,0 +1,89 @@
+  <div class="paper" id="p2">
+    <h3 class="paper-title">LLM-2 · Full Attention Strikes Back: Transferring Full Attention into Sparse within Hundred Training Steps (RTPurbo)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Nanjing University, Alibaba Group</span>
+      <span><a href="https://arxiv.org/abs/2605.16928" target="_blank">arXiv:2605.16928</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">Sparse Attention</span>
+      <span class="tag tag-llm">长上下文</span>
+      <span class="tag tag-llm">Top-p 选择</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>长上下文推理是 LLM 部署最大的算力黑洞——full attention 的复杂度随 context 平方增长。现有解法分两条路：(1) <strong>原生稀疏训练</strong>（如 NSA、Mixture-of-Heads），代价是从头预训练；(2) <strong>启发式 token eviction</strong>（如 SnapKV、Quest），不需训练但精度下滑明显，且对多跳检索任务（multi-Q / multi-K / multi-V）尤其脆弱。RTPurbo 提出一个第三条路：full-attention LLM 本身就<strong>内禀稀疏</strong>，只需要极少量（百步级）训练就能转化成稀疏检索头，并且：(a) 仅 ~15% 的 head 真正需要长程检索；(b) 长程检索由 <strong>低维（16 维）子空间</strong>主导；(c) 每个 query 真正需要的 token 数随上下文动态变化，因此 dynamic top-p 比 fixed top-k 更合适。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Offline Head-wise Calibration（找到检索头）</strong>
+        <p>构造一个"双 needle"长校准序列：在长文档头尾各插入同一段 needle text。用后段 needle token $t \in N_{\mathrm{post}}$ 对前段 needle token $j \in N_{\mathrm{pre}}$ 的 attention mass 来量化每个 head 的检索能力：</p>
+        <p>$$R_h = \frac{1}{|N_{\mathrm{post}}|}\sum_{t \in N_{\mathrm{post}}}\sum_{j \in N_{\mathrm{pre}}} A_h(t, j)$$</p>
+        <p>论文发现 head 的检索行为<strong>极度稳定且与输入几乎无关</strong>，因此<em>只需一条长序列校准一次</em>即可把所有 query head 切成 $\mathcal H_{\mathrm{ret}}$（top 15%）和 $\mathcal H_{\mathrm{loc}}$（其余 85%）。这是 RTPurbo "百步训练即可" 的关键前提：要训练的参数量小，且每 head 的角色已经事先固定。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② RoPE-induced Low-Rank Routing（用 16 维子空间做 token 选择）</strong>
+        <p>关键洞察：RoPE 的高频通道会让长程 query–key 内积衰减；长程信息其实集中在<strong>低频子空间</strong>。RTPurbo 在 RoPE 注入<em>之前</em>用低秩投影做 token 路由：</p>
+        <p>$$s_h(m, n) = (W^Q_h q^{\mathrm{pre}}_{m,h})^\top (W^K_h k^{\mathrm{pre}}_{n,h}),\quad W^Q_h, W^K_h \in \mathbb R^{r \times d_h}, r = 16 \ll d_h$$</p>
+        <p>$s_h$ 只是路由信号，最终的 attention 仍然在<strong>原始 d 维空间</strong>用完整 RoPE 计算，因此<em>位置几何不被破坏</em>。这是与 LinearAttention/低秩 attention 的关键区别：低秩只用于"选 token"，不用于"算 attention"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Query-Aware Dynamic Top-p Selection</strong>
+        <p>对每个 retrieval head，根据低秩 score 选出累积 mass 达到阈值 $p$ 的最小 token 子集：</p>
+        <p>$$\mathcal S_h(m) = \mathrm{Top}\text{-}P\big(s_h(m, \cdot),\, p = 0.9\big),\quad O_h(m) = \mathrm{softmax}\!\Big(\frac{q_{m,h}^\top k_{n,h}}{\sqrt{d_h}}\Big)_{n \in \mathcal S_h(m)} v_{n,h}$$</p>
+        <p>不同 query 自动选不同数量的 token：简单 query 可能 1K 即可，复杂多跳 query 可能选到 8K。这与 fixed top-k=4096 的 baseline 相比，能在简单 query 上省算力，复杂 query 上保精度。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 两阶段轻量训练（共 ~600 步）</strong>
+        <p>第一阶段：仅训练低维投影参数 $W^Q_h, W^K_h$（每 head 仅 $2 \times 16 \times d_h$ 参数），冻结主干。第二阶段：在 32K–80K 长文档上做 600 步端到端微调，平均长度 48K。整个训练在 H20 GPU 上完成。论文用约 100 训练步即可让 LongBench 平均分接近 full attention 的 53.80%（RTPurbo top-p 达 54.24% 反超 0.44pt）。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Qwen3-Coder-30B-A3B 在 multi-V 任务上的稀疏化</h4>
+      <div class="example-box">
+        <strong>任务</strong>：LongBench multi-V（多 value 多跳问答），需要从分散的多个 value 段落聚合信息。<br>
+        <strong>Full Attention baseline</strong>：在该子任务上保持 76.2 / 76.2 满分。<br>
+        <strong>FlexPrefill</strong>（依赖相邻块）：因证据分散到多块、不连续 → 显著掉点（multi-V 平均掉 ~10pt）。<br>
+        <strong>SnapKV / Minference</strong>（用 recent query 估全局）：multi-Q / multi-K 直接坍塌（原文表 4 显示 RULER 64K 上 SnapKV 多跳子任务掉至 60% 以下）。<br>
+        <strong>RTPurbo top-p</strong>：保留 ~15% 的 retrieval heads + 8K 局部窗口。在 multi-V 上几乎无损（单题 token 选择数依据复杂度从 ~1K 动态扩到 ~6K），LongBench 整体平均 <strong>54.24%（vs Full 53.80%）</strong>。<br>
+        <strong>关键</strong>：dynamic top-p 让简单 needle 任务自动节省算力，复杂多跳任务保留更多 token——同一套阈值在不同任务上自适应。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（LongBench Avg, %）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>类别</th><th>LongBench Avg.</th><th>RULER 64K</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td>Full Attention</td><td>upper bound</td><td>53.80</td><td>—</td><td>O(n²) 算力</td></tr>
+          <tr><td>RazorAttn</td><td>training-free, 15% heads</td><td>52.98</td><td>下降</td><td>训练免费但 hotpot/musique 弱</td></tr>
+          <tr><td>Minference</td><td>近邻估全局</td><td>48.39</td><td>下降</td><td>multi-Q/K 显著掉</td></tr>
+          <tr><td>FlexPrefill</td><td>累积阈值 0.9</td><td>49.42</td><td>下降</td><td>multi-V 严重掉</td></tr>
+          <tr><td>Quest</td><td>block-level 稀疏</td><td>50.69</td><td>下降</td><td>粗粒度损失</td></tr>
+          <tr><td>SnapKV</td><td>recent-query 估全局</td><td>50.74</td><td>下降</td><td>qmsum/qasper 大幅掉</td></tr>
+          <tr><td>RTPurbo (top-k=4096)</td><td>fixed budget</td><td>53.30</td><td>较强</td><td>静态预算次优</td></tr>
+          <tr><td class="best">RTPurbo (top-p=0.9, 本文)</td><td class="best">dynamic budget</td><td class="best">54.24</td><td class="best">扩到 512K 仍稳定</td><td class="best">+0.44 vs Full</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">在 ultra-long 512K 测试中，RTPurbo 仍保持高准确率而 baselines 出现灾难性退化（论文 Figure 6）。Reasoning 任务（AIME24/25, MMLU-PRO）由于 prompt 短而 generation 长，也是 RTPurbo 的强项（详见原文 Table 5）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>retrieval head ratio</strong> 从 15%→10% 时 LongBench Avg 掉约 0.5pt，→25% 时几乎不再涨说明 15% 是 sweet spot；(2) <strong>低维 r</strong> 从 16→8 时 RULER 多跳掉 1pt，→32 几乎无收益，说明 RoPE 低频信号确实能用 16 维捕获；(3) <strong>top-p vs top-k</strong>：在 LongBench 上差 ~1pt，但在 reasoning 任务上 top-p 优势更明显，因为 reasoning 长度高度异质；(4) <strong>不要 sliding window</strong> 会让 PR-zh 直接掉到接近随机；(5) <strong>训练步数 100 vs 600</strong>：100 步已恢复 ~95% 性能，600 步收敛到 +0.44 pt 反超 Full。<strong>局限</strong>：(a) 只在 Qwen3-30B-A3B 系列上验证，对 dense 大模型（如 70B+）head specialization 是否同样稳定待验证；(b) 校准依赖 needle 任务，对极端不规则的 retrieval 模式（如代码）可能需要重新校准；(c) MoE 模型每个 expert 的 retrieval 行为是否一致未明确说明。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>RTPurbo 的核心启发：<strong>full-attention 模型本身就内禀稀疏</strong>，主流"重训练换稀疏"或"启发式驱逐"都低估了原生 attention 的结构信息。把训练成本压到 600 步、把目标参数压到几个低秩投影，就能把 30B 模型在 512K 长上下文上稳住——这对在线服务至关重要。它揭示了与 OSCAR 同源的工程哲学：<strong>低成本压缩的关键是"对齐 attention 真实使用的几何"</strong>。OSCAR 对齐 $C_Q, C_S$ 协方差，RTPurbo 对齐 RoPE 低频子空间——本质都是"少数主成分负责所有重要信号"。对长上下文 LLM 服务的产品化意义：未来 32K→512K 上下文不再需要重训，sparse retrofit 路线已经具备生产可行性。</p>
+    </div>
+  </div>
+

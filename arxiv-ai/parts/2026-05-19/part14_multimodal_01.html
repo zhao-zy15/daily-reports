@@ -1,0 +1,97 @@
+  <h2 class="section-title mm">🌐 Multimodal</h2>
+
+  <div class="paper" id="p13">
+    <h3 class="paper-title">Multimodal-1 · SaaS-Bench: Can Computer-Use Agents Leverage Real-World SaaS to Solve Professional Workflows?</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 UniPat AI, Peking University, HKU</span>
+      <span><a href="https://arxiv.org/abs/2605.15777" target="_blank">arXiv:2605.15777</a></span>
+      <br>
+      <span class="tag tag-multimodal">Multimodal</span>
+      <span class="tag tag-multimodal">Computer-Use Agent</span>
+      <span class="tag tag-multimodal">Long-Horizon</span>
+      <span class="tag tag-multimodal">SaaS</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>Computer-Using Agents (CUAs) 把 LLM 从"语言理解"推向"主动执行"——可以打开浏览器、点按钮、跨应用操作。但现有 CUA benchmark（Mind2Web、WebArena、OSWorld 等）<strong>系统性高估</strong>当前能力：(1) 应用级复杂度低（即使可执行环境，page logic / backend 仍简化）；(2) 单 application、单步 goal，没有真实工作流的跨系统协调；(3) 缺少 long-horizon 依赖（真实 SaaS 工作流常需 100+ 交互步）。SaaS（CRM、财务、运营、客服）才是现代 knowledge work 的真实底座。SaaS-Bench 在<strong>23 个真实可部署 SaaS 系统</strong>上构造 106 个跨 6 大专业领域（Business / Healthcare / Software / Teamwork / Agriculture / Media）的长程任务，含 text-only 和 multimodal 双 setting，用 weighted checkpoint 测部分进展和完整完成。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 23 个真实 SaaS 系统 × 6 专业领域</strong>
+        <p>不是模拟环境，而是真正部署、有完整 frontend/backend/state 的 SaaS。例子：OpenEMR (medical record)、OnlyOffice (document)、OpnForm (form builder)、Odoo (ERP)、Mattermost (chat) 等。每个 SaaS 都有真实登录、真实数据库、真实 API。这与 OSWorld 用容器化 desktop、WebArena 用合成 web 有本质不同——SaaS-Bench 是<em>"agent 上线就能用"</em>的最严苛环境。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Long-Horizon Multi-App Tasks（>100 步交互）</strong>
+        <p>每个 task 跨 1-4 个 SaaS app，平均 >100 步交互。任务规格包括：</p>
+        <ul style="margin: 8px 0; padding-left: 22px; color: #c0cae0;">
+          <li><strong>description.md</strong>：任务文字描述、所需步骤、登录凭证；</li>
+          <li><strong>verify.py</strong>：可执行 Python 验证脚本，调用 SaaS 后端 API/数据库直接检查目标是否达成；</li>
+          <li><strong>weighted checkpoints</strong>：5-20 个加权验证点，覆盖 strict completion 与 partial progress。</li>
+        </ul>
+        <p>典型任务：作为公共卫生官员，在 OpenEMR 创建 SOAP note → 在 OnlyOffice 生成案例报告 → 在 OpnForm 构造上报字段 → 关联 ICD-10 编码并提交。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Weighted Checkpoint 评分</strong>
+        <p>定义任务 $T$ 的 checkpoint 集 $\{c_1, \ldots, c_K\}$，权重 $w_k$，verify 脚本输出 $v_k(\tau) \in \{0, 1\}$：</p>
+        <p>$$\mathrm{CheckpointScore}(\tau) = \frac{\sum_{k=1}^K w_k v_k(\tau)}{\sum_{k=1}^K w_k},\quad \mathrm{Resolved}(\tau) = \prod_{k=1}^K v_k(\tau)$$</p>
+        <p>Checkpoint Score 反映 partial progress（很多任务 agent 完成 30-70% 就卡住），Resolved Score 是严格的 end-to-end 成功（all checkpoints 通过）。这是 SaaS-Bench 比之前 GUI benchmark 都更精细的地方——它不是 0/1 二元，而是带"工作流哪一段最容易卡死"的诊断信号。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Pass@k 多次尝试评估</strong>
+        <p>论文不仅报告 single-pass score，还做 pass@1, pass@3 — 这能区分"模型缺乏知识"vs"模型不稳定但偶尔成功"。SaaS-Bench 的发现：pass@3 比 pass@1 平均提升 ~8 pp，<strong>说明很多失败来自 execution variance 而非缺知识</strong>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Claude Opus 4.6 的失败拆解</h4>
+      <div class="example-box">
+        <strong>设定</strong>：Claude Opus 4.6 在 SaaS-Bench 全部 106 个任务上的轨迹分析。<br>
+        <strong>动作分布</strong>（Figure 7 left）：click 41.4%, send_keys 23.2%, input 16.7%, find_elements 3.4%, wait 2.8%, navigate 2.5%, scroll 2.0%, search_page 1.8%, select_dropdown 1.3%, other 4.9%。<br>
+        <strong>失败模式分布</strong>（Figure 7 right）：<strong>Entity Missing 占 70.2%</strong>（agent 未能创建预期的 record/file/ticket/document），Backend/API Exception 9.1%，Value Mismatch 7.4%，Wrong Status/State 6.0%，Partial Data 4.9%，Empty Output 1.2%。<br>
+        <strong>Per-Domain Behavior Pathology</strong>（Figure 9）：
+        <ul>
+          <li><strong>Agriculture / Media</strong>：catalogue-heavy → search/scroll thrashing 严重（Agriculture 85% 失败 trace 含此模式）；</li>
+          <li><strong>Software</strong>：repeated action on blocked control（"卡死按钮还点 50 次"）占主导；</li>
+          <li><strong>Healthcare / Teamwork</strong>：UI grounding failure（复杂 canvas + 文档式界面里点错坐标）。</li>
+        </ul>
+        <strong>Long-Horizon Score Decay</strong>：把 checkpoints 按时间分早/中/晚，所有模型都呈<em>单调下降</em>——agent 越走越偏。这个"checkpoint score 末尾衰减"是 long-horizon 任务的<strong>共同病理</strong>。<br>
+        <strong>Resolved 1.9% 意味着什么</strong>：在 106 个任务里 Claude Opus 4.6 仅完整通关 2 个；GPT-5.4 High = 3.8%（4 个）。即使最强 frontier model，<em>96% 的真实 SaaS 工作流仍超过其 end-to-end 能力</em>。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（7 frontier model 在 SaaS-Bench 106 任务上）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>Overall Checkpoint Score</th><th>Resolved Score (all pass)</th></tr></thead>
+        <tbody>
+          <tr><td class="best">Claude Opus 4.6</td><td class="best">43.2%</td><td>1.9%</td></tr>
+          <tr><td>GPT-5.4 High</td><td>37.0%</td><td class="best">3.8%</td></tr>
+          <tr><td>Qwen 3.6 Plus</td><td>29.9%</td><td>1.9%</td></tr>
+          <tr><td>Kimi K2.5</td><td>27.7%</td><td>0.0%</td></tr>
+          <tr><td>Gemini 3.1 Pro</td><td>27.1%</td><td>0.0%</td></tr>
+          <tr><td>Doubao Seed 2.0 Pro</td><td>27.1%</td><td>1.9%</td></tr>
+          <tr><td>Claude Sonnet 4.6</td><td>23.3%</td><td>0.9%</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键观察：(1) <strong>Claude Opus 4.6 整体最强</strong>（checkpoint 43.2%，比第二名 GPT-5.4 高 6.2 pp），但<em>resolved 反而低于 GPT-5.4</em>——Opus 擅长"做到一半"，GPT 擅长"偶尔通关"，模型间存在<em>能力风格分化</em>；(2) <strong>所有模型 resolved < 4%</strong>——长程 SaaS 工作流仍是 frontier model 的真正"未解之谜"；(3) <strong>Doubao Seed 2.0 Pro</strong> 与 Gemini 3.1 Pro 持平，证明国内 frontier model 在 CUA 任务上已达世界级水准；(4) Score vs Complexity（Figure 8）：apps=4 task 平均得分降到 ~25%，operation length >300 步任务降到 ~20%，checkpoints>=18 任务降到 ~27% — 三轴都呈现 monotonic decay。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>Pass@1 vs Pass@3</strong>：平均提升 8pp，但模型间差异大——一些模型从重复尝试获益强（高 variance、occasionally lucky），另一些表现稳定但低（low variance）。这表明 single-pass evaluation 严重 misleading。(2) <strong>Text-only vs Multimodal</strong>：multimodal 任务平均比 text-only 难 ~5pp，但差距小于预期，说明多模态接口理解已不再是主要瓶颈，<em>真正的瓶颈是 long-horizon planning</em>。(3) <strong>Domain difficulty</strong>：Teamwork（chat-like）最简单，Healthcare（结构化记录 + 数值约束）和 Business（跨 app 数据搬运）最难。(4) <strong>Checkpoint stage decay</strong>：所有模型 late-stage checkpoint 通过率比 early-stage 低 25-40 pp。<strong>局限</strong>：(a) 106 任务覆盖 6 个领域，每域约 15-20 个任务，统计置信区间较宽；(b) verify.py 是预定义检查，可能漏掉某些"有创意但有效"的解法；(c) SaaS 系统本身在迭代更新，benchmark 维护成本高。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SaaS-Bench 给出的 brutal truth：<strong>2026 年 5 月 frontier model 的 end-to-end SaaS 自动化能力远低于业界鼓吹的水平</strong>——最强 Claude Opus 4.6 仅完成 2/106，最强 GPT-5.4 也只有 4/106。这与同日 Agent-3 (EvoMemBench) 的发现深度同构：现实任务对 memory + planning + recovery 的综合要求远超单一能力的 benchmark。三大启示：(a) <strong>Resolved 与 Checkpoint Score 的分化</strong>说明 agent 评估必须双指标——只看 checkpoint 进度容易被 partial progress 蒙骗；(b) <strong>70% 失败来自 entity missing</strong> 是工程级关键诊断信号——不是模型不会点鼠标，而是它在长链中"忘了创建对象"；(c) <strong>pass@3 vs pass@1 差距 8pp 提示 execution variance 是非平凡因素</strong>——Agent-1 的 explore-then-act 与 Agent-2 的 self-critique 这类减少 variance 的机制对生产部署至关重要。对中金 GPU IPO 项目的延伸思考：SaaS 自动化是企业级 GPU 推理需求的一个重要增量来源——一旦 frontier CUA resolve rate 从 4% 跨过 30-50% 阈值，企业 SaaS 工作流的 LLM 推理调用量将出现量级跳跃，这是<strong>未来 18-24 个月 datacenter 推理需求结构性增长的重要变量之一</strong>，值得在 OC 投行 pitch 材料中作为长期需求侧驱动力之一引用。</p>
+    </div>
+  </div>
+

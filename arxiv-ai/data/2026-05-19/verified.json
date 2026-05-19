@@ -1,0 +1,311 @@
+[
+  {
+    "section": "llm",
+    "id": "2605.17757",
+    "title": "OSCAR: Offline Spectral Covariance-Aware Rotation for 2-bit KV Cache Quantization",
+    "published": "2026-05-18T02:24:29Z",
+    "updated": "2026-05-18T02:24:29Z",
+    "summary": "INT2 KV-cache quantization is attractive for long-context LLM serving, but it remains difficult to make both accurate and deployable. Simple rotations such as Hadamard transforms reduce outliers, but still degrade at INT2 because they are not aligned with downstream attention. We propose OSCAR, an Ultra-low-bit KV Cache quantization method that estimates attention-aware covariance structures offline and uses them to derive fixed rotations and clipping thresholds for quantization. In this way, it aligns KV quantization with the covariance structures that attention actually consumes. More importantly, we not only provide theoretical justification but also develop a fully deployable OSCAR system with a custom INT2 attention kernel that remains compatible with paged KV-cache serving and fused kernel pipelines, enabling seamless integration into modern LLM serving frameworks such as SGLang and vLLM.\n  We evaluate our methods on recent reasoning models with reasoning traces of up to 32k tokens across 5 tasks. On Qwen3-4B-Thinking-2507 and Qwen3-8B, OSCAR reduces the BF16 accuracy gap to 3.78 and 1.42 points, respectively, while naive rotation INT2 collapses to nearly zero. We further scale OSCAR to Qwen3-32B and GLM-4.7 (358B params), where it remains effectively on par with BF16. On long context - RULER-NIAH up to 128K, OSCAR remains robust on both Qwen3 models, while naive rotation INT2 collapses. System-wise, OSCAR reduces KV-cache memory by approximately 8x, improves throughput by up to 7x at large batch sizes under the same memory budget, and accelerates batch-size-1 decoding by up to 3x over BF16 due to reduced memory bandwidth overhead.",
+    "authors": [
+      "Zhongzhu Zhou",
+      "Donglin Zhuang",
+      "Jisen Li",
+      "Ziyan Chen",
+      "Shuaiwen Leon Song",
+      "Ben Athiwaratkun",
+      "Xiaoxia Wu"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.17757v1",
+    "institutions_raw": []
+  },
+  {
+    "section": "rl",
+    "id": "2605.15726",
+    "title": "Nudging Beyond the Comfort Zone: Efficient Strategy-Guided Exploration for RLVR",
+    "published": "2026-05-15T08:22:59Z",
+    "updated": "2026-05-15T08:22:59Z",
+    "summary": "Reinforcement learning with verifiable rewards (RLVR) has emerged as a scalable paradigm for improving the reasoning capabilities of large language models. However, its effectiveness is fundamentally limited by exploration: the policy can only improve on trajectories it has already sampled. While increasing the number of rollouts alleviates this issue, such brute-force scaling is computationally expensive, and existing approaches that modify the optimization objective provide limited control over what is explored. In this work, we propose NudgeRL, a framework for structured and diversity-driven exploration in RLVR. Our approach introduces Strategy Nudging, which conditions each rollout on lightweight, strategy-level contexts to induce diverse reasoning trajectories without relying on expensive oracle supervision. To effectively learn from such structured exploration, we further propose a unified objective, which decomposes the reward signal into inter- and intra-context components and incorporates a distillation objective to transfer discovered behaviors back to the base policy. Empirically, NudgeRL outperforms standard GRPO with up to 8 times larger rollout budgets, while outperforming oracle-guided RL baseline on average across five challenging math benchmarks. These results demonstrate that structured, context-driven exploration can serve as an efficient and scalable alternative to both brute-force rollout scaling and feasibility-oriented methods based on privileged information. Our code is available at https://github.com/tally0818/NudgeRL.",
+    "authors": [
+      "Chanuk Lee",
+      "Sangwoo Park",
+      "Minki Kang",
+      "Sung Ju Hwang"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.15726v1",
+    "institutions_raw": []
+  },
+  {
+    "section": "rl",
+    "id": "2605.18374",
+    "title": "Beyond Inference-Time Search: Reinforcement Learning Synthesizes Reusable Solvers",
+    "published": "2026-05-18T13:21:40Z",
+    "updated": "2026-05-18T13:21:40Z",
+    "summary": "Large language models (LLMs) typically approach combinatorial optimization as an inference-time procedure, solving each instance separately through sampling, search, or repeated prompting. We ask whether reinforcement learning can instead shift part of this reasoning cost into the weights of a code LLM, so that the model synthesizes a reusable solver for an entire problem family. We study this question on Synergistic Dependency Selection (SDS), a controlled variant of constrained Quadratic Knapsack designed to expose a specific failure mode: local signals and strict feasibility constraints make greedy heuristics attractive but unreliable. Under identical scaffolding, Best-of-64 base-model sampling saturates at an approximately 28.7% gap to the global Virtual Best Solver (VBS); code audits show that the base model often retrieves Simulated Annealing templates but misimplements the Metropolis acceptance rule. We fine-tune Qwen2.5-Coder-14B-Instruct with Group Relative Policy Optimization (GRPO) using a feasibility-gated reward and light structural scaffolding. The resulting policy converges to a constraint-aware Simulated Annealing template in 99.8% of feasible SDS outputs, achieves a 5.0% gap to that VBS, and is 91 times cheaper in post-generation execution/search cost than cumulative Best-of-64 evaluation. A compile-once check shows that one best frozen solver per seed remains highly competitive when reused unchanged across the SDS test set, while an additional-domain evaluation on Job Shop Scheduling provides narrower but positive evidence that the scaffold transfers beyond SDS. Negative ablations reveal the limits of this recipe: standard stabilizers degrade performance, a soft feasibility gate fails, and results remain sensitive to reward normalization and domain-specific design choices.",
+    "authors": [
+      "Soheyl Massoudi",
+      "Gabriel Apaza",
+      "Milad Habibi",
+      "Mark Fuge"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.18374v1",
+    "institutions_raw": [
+      "Gabriel Apaza University of Maryland College Park",
+      "Milad Habibi University of Maryland College Park"
+    ]
+  },
+  {
+    "section": "agent",
+    "id": "2605.16143",
+    "title": "Look Before You Leap: Autonomous Exploration for LLM Agents",
+    "published": "2026-05-15T16:24:16Z",
+    "updated": "2026-05-15T16:24:16Z",
+    "summary": "Large language model based agents often fail in unfamiliar environments due to premature exploitation: a tendency to act on prior knowledge before acquiring sufficient environment-specific information. We identify autonomous exploration as a critical yet underexplored capability for building adaptive agents. To formalize and quantify this capability, we introduce Exploration Checkpoint Coverage, a verifiable metric that measures how broadly an agent discovers key states, objects, and affordances. Our systematic evaluation reveals that agents trained with standard task-oriented reinforcement learning consistently exhibit narrow and repetitive behaviors that impede downstream performance. To address this limitation, we develop a training strategy that interleaves task-execution rollouts and exploration rollouts, with each type of rollout optimized by its corresponding verifiable reward. Building on this training strategy, we propose the Explore-then-Act paradigm, which decouples information-gathering from task execution: agents first utilize an interaction budget to acquire grounded environmental knowledge, then leverage it for task resolution. Our results demonstrate that learning to systematically explore is imperative for building generalizable and real-world-ready agents.",
+    "authors": [
+      "Ziang Ye",
+      "Wentao Shi",
+      "Yuxin Liu",
+      "Yu Wang",
+      "Zhengzhou Cai",
+      "Yaorui Shi",
+      "Qi Gu",
+      "Xunliang Cai",
+      "Fuli Feng"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.16143v1",
+    "institutions_raw": []
+  },
+  {
+    "section": "agent",
+    "id": "2605.18421",
+    "title": "EvoMemBench: Benchmarking Agent Memory from a Self-Evolving Perspective",
+    "published": "2026-05-18T13:54:38Z",
+    "updated": "2026-05-18T13:54:38Z",
+    "summary": "Recent benchmarks for Large Language Model (LLM) agents mainly evaluate reasoning, planning, and execution. However, memory is also essential for agents, as it enables them to store, update, and retrieve information over time. This ability remains under-evaluated, largely because existing benchmarks do not provide a systematic way to assess memory mechanisms. In this paper, we study agent memory from a self-evolving perspective and introduce EvoMemBench, a unified benchmark organized along two axes: memory scope (in-episode vs. cross-episode) and memory content (knowledge-oriented vs. execution-oriented). We compare 15 representative memory methods with strong long-context baselines under a standardized protocol. Results show that current memory systems are still far from a general solution: long-context baselines remain highly competitive, memory helps most when the current context is insufficient or tasks are difficult, and no single memory form works consistently across all settings. Retrieval-based methods remain strong for knowledge-intensive settings, whereas procedural and long-term memory methods are more effective for execution-oriented tasks when their stored experience matches the task structure. We hope EvoMemBench facilitates future research on more effective memory systems for LLM-based agents. Our code is available at https://github.com/DSAIL-Memory/EvoMemBench.",
+    "authors": [
+      "Yuyao Wang",
+      "Zhongjian Zhang",
+      "Mo Chi",
+      "Kaichi Yu",
+      "Yuhan Li",
+      "Miao Peng",
+      "Bing Tong",
+      "Chen Zhang",
+      "Yan Zhou",
+      "Jia Li"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.18421v1",
+    "institutions_raw": [
+      "Beijing Institute of Technology Primary contact",
+      "Beijing University of Posts and Telecommunications",
+      "Hong Kong University of Science and Technology"
+    ]
+  },
+  {
+    "section": "medical",
+    "id": "2605.17101",
+    "title": "SEMA-RAG: A Self-Evolving Multi-Agent Retrieval-Augmented Generation Framework for Medical Reasoning",
+    "published": "2026-05-16T18:09:47Z",
+    "updated": "2026-05-16T18:09:47Z",
+    "summary": "Retrieval-Augmented Generation (RAG) is widely employed to mitigate risks such as hallucinations and knowledge obsolescence in medical question answering, yet its predominantly single-round, static retrieval paradigm misaligns with the multi-stage process of clinical reasoning. This compressed workflow induces two structural deficiencies: question-to-query translation often lacks clinically grounded semantic interpretation, and retrieval lacks iterative sufficiency feedback, making it difficult to form reliable evidence chains. We argue that both issues stem from a deeper cause: overloading a single reasoning chain with heterogeneous tasks of interpretation, exploration, and adjudication. The remedy is to reconstruct the workflow via task decoupling and dynamic multi-round exploration. To this end, we propose SEMA-RAG, a Self-Evolving Multi-Agent RAG framework for medical question answering, which assigns these roles to three specialist agents: the Interpreter Agent for clinical schema interpretation, the Explorer Agent for sufficiency-driven self-evolving retrieval, and the Arbiter Agent for evidence adjudication and answer selection. Across five benchmarks and five LLM backbones, SEMA-RAG improves the strongest baseline by +6.46 accuracy points on average, measured per backbone.",
+    "authors": [
+      "Yongfeng Huang",
+      "Ruiying Chen",
+      "James Cheng"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.17101v1",
+    "institutions_raw": [
+      "The Chinese University of Hong Kong",
+      "Wuhan University of Technology"
+    ]
+  },
+  {
+    "section": "multimodal",
+    "id": "2605.15777",
+    "title": "SaaS-Bench: Can Computer-Use Agents Leverage Real-World SaaS to Solve Professional Workflows?",
+    "published": "2026-05-15T09:35:15Z",
+    "updated": "2026-05-15T09:35:15Z",
+    "summary": "Computer-Using Agents (CUAs) are rapidly extending large language models (LLMs) beyond text-based reasoning toward action execution in more complex environments, such as web browsers and graphical user interfaces (GUIs). However, existing web and GUI agent benchmarks often rely on simplified settings, isolated tasks, or short-horizon interactions, making it difficult to assess capabilities of agents in realistic professional workflows. Software-as-a-Service (SaaS) environments are a natural choice for CUA evaluation, as they host a large share of modern digital work and naturally involve dynamic system states, cross-application coordination, domain-specific knowledge, and long-horizon dependencies. To this end, we introduce SaaS-Bench, a benchmark built on 23 deployable SaaS systems across six professional domains, containing 106 tasks grounded in realistic work scenarios. These tasks require long-horizon execution, cover both text-only and multimodal settings, and are evaluated with weighted verification checkpoints that measure strict task completion and partial progress. Experiments show that representative LLM-based agents struggle on SaaS-Bench, with even the strongest model completing fewer than 4% of tasks end-to-end, exposing limitations in planning, state tracking, cross-application context maintenance, and error recovery. Code are available at https://github.com/UniPat-AI/SaaS-Bench for reproduction.",
+    "authors": [
+      "Kean Shi",
+      "Zihang Li",
+      "Tianyi Ma",
+      "Zengji Tu",
+      "Jialong Wu",
+      "Xinbo Xu",
+      "Qingyao Yang",
+      "Ruoyu Wu",
+      "Weichu Xie",
+      "Ming Wu",
+      "Jason Zeng",
+      "Michael Heinrich",
+      "Elvis Zhang",
+      "Liang Chen",
+      "Kuan Li",
+      "Baobao Chang"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.15777v1",
+    "institutions_raw": [
+      "Pipeline Lab"
+    ]
+  },
+  {
+    "section": "llm",
+    "id": "2605.18226",
+    "title": "Context Memorization for Efficient Long Context Generation",
+    "published": "2026-05-18T11:12:45Z",
+    "updated": "2026-05-18T11:12:45Z",
+    "summary": "Modern large language model (LLM) applications increasingly rely on long conditioning prefixes to control model behavior at inference time. While prefix-augmented inference is effective, it incurs two structural limitations: i) the prefix's influence fades as generation proceeds, and ii) attention computation over the prefix scales linearly with its length. Existing approaches either keep the prefix in attention while compressing it, or internalize it into model parameters through gradient-based training. The former still attends to the prefix at inference, while the latter is training-intensive and ill-suited to prefix updates. To address these issues, we propose attention-state memory, a training-free approach that externalizes the prefix into a lightweight, lookup-based memory of precomputed attention states between prefix and query tokens. On ManyICLBench with LLaMA-3.1-8B, our method improves accuracy over in-context learning at 1K-8K memory budgets while reducing attention latency by 1.36x at 8K, and surpasses full-attention RAG performance on NBA benchmark using only 20% of its memory footprint.",
+    "authors": [
+      "Yasuyuki Okoshi",
+      "Hao Mark Chen",
+      "Guanxi Lu",
+      "Hongxiang Fan",
+      "Masato Motomura",
+      "Daichi Fujiki"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.18226v1",
+    "institutions_raw": [
+      "Imperial College London"
+    ]
+  },
+  {
+    "section": "llm",
+    "id": "2605.17026",
+    "title": "Why Do Reasoning Models Lose Coverage? The Role of Data and Forks in the Road",
+    "published": "2026-05-16T14:55:12Z",
+    "updated": "2026-05-16T14:55:12Z",
+    "summary": "Recent progress in large language models has led to the emergence of reasoning models, which have shown strong performance on complex tasks through specialized fine-tuning procedures. While these methods reliably improve pass@1 accuracy, prior works have observed that they show a coverage shrinkage behavior, where pass@k degrades relative to the base model. In this paper, we investigate the reasoning shrinkage arise under SFT-based post-training. We hypothesize that this behavior is driven by properties of the fine-tuning data, specifically related to decision points or \"forks in the road\" scenarios where model faces indecipherable patterns with multiple valid reasoning paths. To test this hypothesis, we design controlled case studies that simulate such decision-point settings, spanning indecipherable nodes in graph branching, and reasoning modes. By tracking post-training dynamics in these settings, we find that the shrinkage phenomenon is tightly correlated with the prevalence of decision-point scenarios in the training data. We also demonstrate that this shrinkage behavior can be partially mitigated through targeted data synthesis design of decision-points, and a more systematic diversity-encouraging decoding mechanism. Our findings identify data-centric factors as a key driver of shrinkage in reasoning models and highlight diversity-aware designs as an effective lever for controlling it.",
+    "authors": [
+      "Ngoc-Hieu Nguyen",
+      "Parshin Shojaee",
+      "Phuc Minh Nguyen",
+      "Nan Zhang",
+      "Chandan K Reddy",
+      "Khoa D Doan",
+      "Rui Zhang"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.17026v1",
+    "institutions_raw": [
+      "Nan Zhang The Pennsylvania State University",
+      "Rui Zhang The Pennsylvania State University Equal advising",
+      "The Pennsylvania State University hnn"
+    ]
+  },
+  {
+    "section": "medical",
+    "id": "2605.17228",
+    "title": "Artificial Intolerance: Stigmatizing Language in Clinical Documentation Skews Large Language Model Decision-Making",
+    "published": "2026-05-17T02:28:25Z",
+    "updated": "2026-05-17T02:28:25Z",
+    "summary": "Large Language Models (LLMs) are increasingly deployed in high-stakes domains such as clinical decision support and medical documentation. However, the robustness of these models against subtle linguistic variations, specifically stigmatizing language (SL) commonly found in human-authored clinical notes, remains critically under-explored. In this work, we investigate whether frontier LLMs inherit and propagate this human bias when processing clinical text. We systematically evaluate nine frontier LLMs across four stigmatized medical conditions, utilizing clinical vignettes injected with varying intensities and phenotypes of SL (doubt, blame, and maligning). Our results demonstrate that all evaluated models exhibit substantial bias, with clinical decision-making significantly skewed towards less aggressive patient management. Notably, we observe a high sensitivity to linguistic framing, where a single SL sentence is sufficient to alter model outputs, revealing a clear dose-response relationship. Furthermore, we evaluate standard prompt-based mitigation strategies, including Chain-of-Thought (CoT) reasoning and model self-debiasing. These approaches show limited efficacy; models struggle to explicitly identify SL while remaining implicitly influenced by it. Our findings expose a critical vulnerability in current LLMs regarding fairness and robustness in clinical NLP, underscoring the need for rigorous algorithmic guardrails to prevent the automation of health disparities.",
+    "authors": [
+      "Jen-tse Huang",
+      "Didi Zhou",
+      "Faith Kamau",
+      "Amy Oh",
+      "Anne R. Links",
+      "Mark Dredze",
+      "Mary Catherine Beach",
+      "Somnath Saha"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.17228v1",
+    "institutions_raw": [
+      "Johns Hopkins University",
+      "LLMs in diagnostic workflows. FundingNational Institute of Minority Health and Health Disparities, National Science"
+    ]
+  },
+  {
+    "section": "llm",
+    "id": "2605.16928",
+    "title": "Full Attention Strikes Back: Transferring Full Attention into Sparse within Hundred Training Steps",
+    "published": "2026-05-16T10:51:58Z",
+    "updated": "2026-05-16T10:51:58Z",
+    "summary": "Long-context inference in large language models is bottlenecked by the quadratic cost of full attention. Existing efficient alternatives often rely either on native sparse training or on heuristic token eviction, creating an undesirable trade-off among efficiency, training cost, and accuracy. In this work, we show that full-attention LLMs are already intrinsically sparse and can be transformed into highly sparse models with only minimal adaptation. Our approach is built on three observations: (1) only a small subset of attention heads truly requires full long-context processing; (2) long-range retrieval is governed primarily by a low-dimensional subspace, allowing relevant tokens to be retrieved efficiently with a 16-dimensional indexer; and (3) the useful token budget is strongly query-dependent, making dynamic top-$p$ selection more suitable than fixed top-$k$ sparsification. Based on these insights, we propose RTPurbo, which retains the full KV cache only for retrieval heads and introduces a lightweight token indexer for sparse attention. By exploiting the model's intrinsic sparsity, RTPurbo achieves sparsification with only a few hundred training steps. Experiments on long-context benchmarks and reasoning tasks show that RTPurbo preserves near-lossless accuracy while delivering substantial efficiency gains, including up to a 9.36$\\times$ prefill speedup at 1M context and about a 2.01$\\times$ decode speedup. These results suggest that strong sparse inference can be obtained from standard full-attention training without expensive native sparse pretraining.",
+    "authors": [
+      "Yanke Zhou",
+      "Yiduo Li",
+      "Hanlin Tang",
+      "Maohua Li",
+      "Kan Liu",
+      "Lan Tao",
+      "Lin Qu",
+      "Yuan Yao",
+      "Xiaoxing Ma"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.16928v1",
+    "institutions_raw": [
+      "Nanjing University"
+    ]
+  },
+  {
+    "section": "rl",
+    "id": "2605.18721",
+    "title": "General Preference Reinforcement Learning",
+    "published": "2026-05-18T17:50:27Z",
+    "updated": "2026-05-18T17:50:27Z",
+    "summary": "Post-training has split large language model (LLM) alignment into two largely disconnected tracks. Online reinforcement learning (RL) with verifiable rewards drives emergent reasoning on math and code but depends on a programmatic verifier that cannot reach open-ended tasks, while preference optimization handles open-ended generation yet forgoes the continuous exploration that powers online RL. Closing this gap requires a verifier for open-ended quality, but a scalar reward model is the wrong shape for the job. Quality is multi-dimensional, and any scalar score is an incomplete proxy that lets online RL collapse onto whichever axis the score is most sensitive to. We turn instead to the General Preference Model (GPM), which embeds responses into $k$ skew-symmetric subspaces and represents preference as a structured, intransitivity-aware comparison. Building on this, we propose General Preference Reinforcement Learning (GPRL), which carries the $k$-way structure through to the policy update. GPRL computes per-dimension group-relative advantages, normalizes each on its own scale so no axis can dominate, and aggregates them with context-dependent eigenvalues. The same structure powers a closed-loop drift monitor that detects single-axis exploitation and corrects it on the fly by reweighting dimensions and tightening the trust region. Starting from $\\texttt{Llama-3-8B-Instruct}$, GPRL reaches a length-controlled win rate of $56.51\\%$ on AlpacaEval~2.0 while also outperforming SimPO and SPPO on Arena-Hard, MT-Bench, and WildBench by resisting reward hacking across extended training runs.",
+    "authors": [
+      "Muhammad Umer",
+      "Muhammad Ahmed Mohsin",
+      "Ahsan Bilal",
+      "Arslan Chaudhry",
+      "Andreas Haupt",
+      "Sanmi Koyejo",
+      "Emily Fox",
+      "John M. Cioffi"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.18721v1",
+    "institutions_raw": [
+      "Ahsan Bilal The University of Oklahoma ahsan",
+      "Andreas Haupt Stanford University h",
+      "Arslan Chaudhry Independent Researcher",
+      "Emily Fox Stanford University ebfox",
+      "John M. Cioffi Stanford University cioffi",
+      "Muhammad Ahmed Mohsin Stanford University muahmed",
+      "Muhammad Umer Stanford University mumer",
+      "Sanmi Koyejo Stanford University sanmi"
+    ]
+  },
+  {
+    "section": "agent",
+    "id": "2605.15224",
+    "title": "ICRL: Learning to Internalize Self-Critique with Reinforcement Learning",
+    "published": "2026-05-13T08:50:05Z",
+    "updated": "2026-05-13T08:50:05Z",
+    "summary": "Large language model-based agents make mistakes, yet critique can often guide the same model toward correct behavior. However, when critique is removed, the model may fail again on the same query, indicating that it has not internalized the critique's guidance into its underlying capability. Meanwhile, a frozen critic cannot improve its feedback quality over time, limiting the potential for iterative self-improvement. To address this, we propose learning to internalize self-critique with reinforcement learning(ICRL), a novel framework that jointly trains a solver and a critic from a shared backbone to convert critique-induced success into unassisted solver ability. The critic is rewarded based on the solver's subsequent performance gain, incentivizing actionable feedback. To address the distribution shift between critique-conditioned and critique-free behavior, ICRL introduces a distribution-calibration re-weighting ratio that selectively transfers critique-guided improvements compatible with the solver's own prompt distribution. Additionally, a role-wise group advantage estimation stabilizes joint optimization across the two roles. Together, these mechanisms ensure that the solver learns to improve itself without external critique, rather than becoming dependent on critique-conditioned behavior. We evaluate ICRL on diverse benchmarks spanning agentic and mathematical reasoning tasks, using Qwen3-4B and Qwen3-8B as backbones. Results show consistent improvements, with average gains of 6.4 points over GRPO on agentic tasks, and 7.0 points on mathematical reasoning. Notably, the learned 8B critic is comparable to 32B critics while using substantially fewer tokens. The code is available at https://github.com/brick-pid/ICRL.",
+    "authors": [
+      "Jianbo Lin",
+      "Xiaomin Yu",
+      "Yi Xin",
+      "Yifu Guo",
+      "Zhuosong Jiang",
+      "Zhongqi Yue",
+      "Weishi Wang",
+      "Heqing Zou",
+      "Chengwei Qin",
+      "Hui Xiong"
+    ],
+    "affs": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.15224v1",
+    "institutions_raw": [
+      "Hong Kong University of Science and Technology",
+      "Microsoft Research jianbo",
+      "Nanjing University",
+      "Nanyang Technological University",
+      "National University of Singapore",
+      "Sun Yat-sen University"
+    ]
+  }
+]

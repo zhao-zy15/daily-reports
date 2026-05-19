@@ -1,0 +1,92 @@
+  <div class="paper" id="p6">
+    <h3 class="paper-title">RL-2 · Nudging Beyond the Comfort Zone: Efficient Strategy-Guided Exploration for RLVR (NUDGERL)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 KAIST, DeepAuto.ai</span>
+      <span><a href="https://arxiv.org/abs/2605.15726" target="_blank">arXiv:2605.15726</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">RLVR</span>
+      <span class="tag tag-rl">Exploration</span>
+      <span class="tag tag-rl">Strategy Nudging</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>RLVR（GRPO + verifiable reward）的<em>本质瓶颈</em>是探索：策略只能在它已经采样到的轨迹上改进。要发现稀有正确轨迹，naive 做法是疯狂加 rollout 数（$N=64, 128$），但概率论给出的下界是 $\mathbb E[\#\text{rollouts}] = 1/\pi(y\mid x_0)$——对低概率正确轨迹而言成本爆炸，而且 GRPO 在 $N=64$ 时已经表现出训练不稳定。另一类方案（POPE）依赖 oracle solution prefix 提供 privileged information，scaling 困难且容易锁死到某条窄路径。NUDGERL 提出第三条：用 <strong>策略级 lightweight context</strong>（不是 oracle answer，而是几个 reasoning 策略的关键词）来 nudge 模型主动遍历多种思路，并配套 inter-intra group advantage + self-distillation 解决 train-test gap。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Strategy-Level Context Pool（不是 oracle，是 hint）</strong>
+        <p>对每个 prompt $x_0$，用 gpt-4o-mini 廉价生成 2 个策略关键词（例如对几何题给"Pythagorean theorem" / "shoelace formula"），构成 $C(x_0) = \{c_1, \ldots, c_M\}$（论文 $M=2$）。每个 rollout 在采样前<em>独立采样一个 strategy context</em> $c_i \sim \mathrm{Unif}(C(x_0))$ 并 append 到 prompt：</p>
+        <p>$$y_i \sim \pi_\theta(\cdot \mid x_0 \oplus c_i)$$</p>
+        <p>这样 $G$ 个 rollout 被结构性切分成 $M$ 组，强制覆盖不同策略。Strategy 不是答案，只是一句"试试用这个工具"——成本相比 oracle 解法低 1-2 个数量级。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Inter-Intra Group Advantage（跨组 + 组内的双层信用分配）</strong>
+        <p>由于 rollout 在不同 context 下生成，奖励差异同时反映"轨迹质量"和"context 偏置"，标准 group advantage 不可靠。NUDGERL 把 advantage 拆成两层：</p>
+        <p>$$\hat A_i^{\mathrm{intra}} = \frac{r_i - \mu_{c(i)}}{\sigma_{c(i)} + \delta},\quad \hat A_i^{\mathrm{inter}} = \frac{\mu_{c(i)} - \bar\mu}{\bar\sigma + \delta}$$</p>
+        <p>其中 $\mu_{c(i)}, \sigma_{c(i)}$ 是当前 rollout 所属 strategy 组的统计量，$\bar\mu, \bar\sigma$ 是所有 strategy 组之间的统计量。最终 advantage 用调节因子 $\lambda \in (1, 2]$ 加权：</p>
+        <p>$$\hat A_i = \lambda \cdot \hat A_i^{\mathrm{intra}} + (1 - \lambda) \cdot \hat A_i^{\mathrm{inter}}$$</p>
+        <p>直觉：来自高奖励 strategy 组的成功 rollout 拿到更大 advantage（"这是个好策略，多抄"），来自低奖励 strategy 组的稀有成功 rollout advantage 较小（"幸运 outlier，别学过头"）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Self-Distillation 缩小 train-test gap</strong>
+        <p>训练时 rollout 都带 strategy context，但<em>推理时没有</em>—— 这造成显著的分布漂移。NUDGERL 在每步加入蒸馏项：</p>
+        <p>$$\mathcal L_{\mathrm{Distill}} = -\sum_{(x_0, y^\ast) \in \mathcal H_{\mathrm{good}}} \log \pi_\theta(y^\ast \mid x_0)$$</p>
+        <p>其中 $\mathcal H_{\mathrm{good}}$ 是"在 strategy context 下产生的正确轨迹"，但训练目标里把 context 抹掉，让 base prompt 也学会这条路径。这把"context 暴露下发现的解法"内化进 base policy，使推理时不再需要 strategy hint。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 完整 NUDGERL 目标</strong>
+        <p>把 GRPO clipped surrogate 与蒸馏项合并：</p>
+        <p>$$\mathcal L_{\mathrm{NUDGERL}} = -\mathbb E\!\left[\min(r_0 \hat A,\, \mathrm{clip}(r_0, 1\!-\!\epsilon, 1\!+\!\epsilon)\hat A)\right] + \alpha \mathcal L_{\mathrm{Distill}}$$</p>
+        <p>训练流程：strategy-conditioned rollout → inter-intra advantage → policy update + 同步蒸馏。完全兼容 vLLM/DAPO 等标准 RLVR pipeline。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：AIME 上 GRPO 全军覆没的题被 NUDGERL 攻破</h4>
+      <div class="example-box">
+        <strong>问题</strong>：AIME25 一道函数方程几何题——求所有 $f: \mathbb N^2 \to \mathbb R$ 满足 $f(x+y) + f(x-y) = f(3x)$。<br>
+        <strong>GRPO 训练后模型行为</strong>：32 rollouts 全部尝试"coordinate geometry"主导路径——具体看 13 次坐标几何 + 5 次 symmetry assumption + 4 次 area decomposition + 5 次其他次优策略。<strong>32/32 全部 truncated & wrong</strong>。Shoelace formula（这道题的关键武器）只被 sample 到 1 次，且因前后不一致也错。<br>
+        <strong>NUDGERL 训练后模型行为</strong>：32 rollouts 中 coordinate geometry 仍是 15 次，但<strong>shoelace formula 出现 6 次（10 次中 6 次正确）</strong>。其他长尾策略（如 Pythagorean）也都被覆盖。<strong>正确率从 0/32 → 6/32（≈19%）</strong>。<br>
+        <strong>关键洞察</strong>：NUDGERL 没有"教会"模型新策略——base 模型本就具备使用 shoelace 的能力，但 GRPO 训练让概率坍塌到 dominant mode。Strategy Nudging 通过在训练阶段强制采样 shoelace context 然后蒸馏回 base，<em>解锁了被 GRPO 抑制的 latent 能力</em>。这与 LLM-4 (Forks-in-the-Road) 的发现深度共鸣。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（pass@1 平均，5 个 benchmark：AIME24, AIME25, AMC23, MATH500-L5, Apex Shortlist）</h4>
+      <table>
+        <thead><tr><th>Backbone</th><th>方法</th><th>Rollout 数 N</th><th>Avg. pass@1</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6">Qwen3-4B-Instruct-2507</td><td>Base (no RL)</td><td>—</td><td>~0.42</td></tr>
+          <tr><td>GRPO</td><td>8</td><td>~0.46</td></tr>
+          <tr><td>GRPO</td><td>32</td><td>0.487</td></tr>
+          <tr><td>GRPO</td><td>64</td><td>0.451 (退化)</td></tr>
+          <tr><td>POPE (oracle prefix)</td><td>—</td><td>~0.475</td></tr>
+          <tr><td class="best">NUDGERL (本文)</td><td class="best">8</td><td class="best">0.489</td></tr>
+          <tr><td rowspan="3">Olmo-3-7B-Instruct-SFT</td><td>GRPO best (N=32)</td><td>32</td><td>0.281</td></tr>
+          <tr><td>GRPO N=64</td><td>64</td><td>退化</td></tr>
+          <tr><td class="best">NUDGERL (本文)</td><td class="best">8</td><td class="best">0.285</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键观察：(1) NUDGERL 用 N=8 就匹配/超越 GRPO N=32 的最佳成绩，对应 4× rollout 计算节约；(2) GRPO 在 N=64 时<em>退化</em>，证明 brute-force rollout scaling 不稳定；(3) NUDGERL 用廉价 strategy context 反超基于 oracle solution prefix 的 POPE，说明结构化探索 > 注入特权信息。pass@k 曲线（图 3c）显示 NUDGERL 在 k=1024 区间仍稳定领先。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>无 self-distillation</strong>：训练时 strategy 看似有用，但推理时（无 context）性能掉 ~3pt，证明蒸馏是 train-test gap 的关键桥梁；(2) <strong>$\lambda$ 设置</strong>：$\lambda \approx 1.5$ 最优，$\lambda=2$（纯 intra）丢失跨策略信号，$\lambda=1$（intra=inter 平均）削弱组内区分；(3) <strong>strategy context 数量 $M$</strong>：$M=2$ 已显著超越 $M=1$，$M=4$ 收益递减（受限于 rollout 总数）；(4) <strong>strategy 是否经过验证</strong>：用 gpt-4o-mini 不验证地生成的策略 vs 人工筛选的策略——基本等效，说明 noise 容忍度高，<strong>scalable</strong>。<strong>局限</strong>：(a) 仅在 math 域验证，code/agent 任务的 strategy 抽象更难自动化；(b) gpt-4o-mini 生成 strategy 仍需 API 成本，对极大规模训练数据可能成为瓶颈；(c) inter-intra advantage 引入的额外超参 $\lambda$ 需手调。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>NUDGERL 的关键贡献是把"探索瓶颈"从<em>计算资源问题</em>重新定义为<em>结构化引导问题</em>：在固定 rollout 预算下，通过策略级 hint 强制覆盖 long-tail reasoning mode 反而比 8× 加 rollout 更有效。这与 LLM-4 (Forks in the Road) 共同指向同一个核心问题——RL 训练后 base policy 的多样性被默默损毁，而恢复它的关键不是更多算力，而是<strong>显式注入策略多样性</strong>。对政昀正在研究的 LPO 方向有非常直接的启示：(a) <strong>inter-intra advantage</strong> 是处理"context-conditioned rollout"的通用模式，可以推广到 LPO 中处理"different prompt rewriting under same query"；(b) <strong>self-distillation 闭合 train-test gap</strong> 是任何"训练时加 hint、推理时无 hint"算法的必备组件；(c) 用 cheap LLM 当 strategy generator 是低成本可 scale 的工程模板。NUDGERL 与 LLM-4 应该被作为一对"诊断 + 治疗"配套阅读。</p>
+    </div>
+  </div>
+

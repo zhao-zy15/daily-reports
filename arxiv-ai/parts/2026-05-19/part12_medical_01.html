@@ -1,0 +1,101 @@
+  <h2 class="section-title medical">⚕️ Medical</h2>
+
+  <div class="paper" id="p11">
+    <h3 class="paper-title">Medical-1 · SEMA-RAG: Self-Evolving Multi-Agent RAG for Medical Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 The Chinese University of Hong Kong, Wuhan University of Technology</span>
+      <span><a href="https://arxiv.org/abs/2605.17101" target="_blank">arXiv:2605.17101</a></span>
+      <br>
+      <span class="tag tag-medical">Medical</span>
+      <span class="tag tag-medical">RAG</span>
+      <span class="tag tag-medical">Multi-Agent</span>
+      <span class="tag tag-medical">临床推理</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>医学 QA 是 RAG 部署的"高难度典型"：临床问答需要先把 patient narrative 解释成可搜索的临床问题、再多轮检索 + 综合 + 仲裁，最后给出可追溯结论。但主流 RAG 框架仍把检索当 static one-shot：单轮 BM25/Embedding → 直接生成。这与临床推理的多阶段过程严重不匹配，导致两类失败：(1) <strong>Question-to-query 失真</strong>——问题里隐藏的关键约束（如 "hospital day 7"、"renal impairment"、"pregnant"）丢失，retrieval 漂向 generic symptom evidence；(2) <strong>Sufficiency 缺乏检查</strong>——单轮 retrieval 拿回的证据是否足以做决策没有反馈。SEMA-RAG 把 RAG 从"一次性查询"升级为<strong>三角色 + 自演化迭代</strong>：I-Agent (interpreter) → E-Agent (explorer) → A-Agent (arbiter)。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① I-Agent：临床 Schema 化的问题解释器</strong>
+        <p>I-Agent 不只是 paraphrase 问题 $Q$，而是把它投影到结构化 clinical schema：</p>
+        <p>$$Q' = \langle o_{\mathrm{int}},\, o_{\mathrm{ent}},\, o_{\mathrm{cons}},\, q_{\mathrm{init}}\rangle = \mathrm{Agent}_I(P_{\mathrm{mt}I},\, Q)$$</p>
+        <p>四个槽位：<strong>clinical intent</strong>（diagnosis / treatment / dosage）、<strong>medical entities</strong>（疾病、药物）、<strong>clinical constraints</strong>（孕妇、肾损伤、成人等）、<strong>initial retrieval query</strong>。然后 linearize 成 retrieval-ready string：</p>
+        <p>$$\hat q_{\mathrm{init}} = \mathrm{Linearize}(Q') = \mathrm{Concat}(q_{\mathrm{init}} \oplus o_{\mathrm{int}} \oplus o_{\mathrm{ent}} \oplus o_{\mathrm{cons}})$$</p>
+        <p>关键设计：linearize 是<em>无参数</em>的拼接函数，但显式把 implicit constraints 暴露给 dense retriever，避免 retrieval 漂移。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② E-Agent：Sufficiency-Driven 自演化迭代检索</strong>
+        <p>E-Agent 维护当前 query 集 $\mathcal Q_t$ 与累积证据集 $\mathcal C_t$，每轮做 Top-k 检索：</p>
+        <p>$$\mathcal D_t = \bigcup_{q \in \mathcal Q_t} \mathrm{TopK}(q),\quad \mathcal C_t = \mathcal C_{t-1} \cup \{D_i \in \mathcal D_t : \mathrm{ID}(D_i) \notin \mathrm{IDs}(\mathcal C_{t-1})\}$$</p>
+        <p>然后做 sufficiency 判断：</p>
+        <p>$$[s_t, g_t, \mathcal Q_{t+1}] = \mathrm{Agent}_E\big(P_{\mathrm{mt}E},\,[Q', \mathcal Q_t, \mathcal C_t]\big)$$</p>
+        <p>$s_t \in \{0, 1\}$ 是 sufficiency flag；$g_t$ 是 gap description；如果 $s_t = 0$ 则生成 $m$ 个 follow-up query 针对 gap 继续检索。终止条件：$s_t = 1$ 或达到 $T_{\max}$ 或 stagnation（$\mathcal Q_{t+1} = \emptyset$）。这是 RAG 第一次在 medical 域内引入"可追踪的证据收敛轨迹"$\tau = \{[\mathcal Q_1, \mathcal C_1], \ldots, [\mathcal Q_T, \mathcal C_T]\}$。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ A-Agent：证据仲裁与可追溯报告</strong>
+        <p>A-Agent 从收敛证据集 $\mathcal C^\ast$ 中：(a) 删除冗余/不相关；(b) 识别 consistencies 和 conflicts；(c) 把 supporting / refuting clue 组织成结构化报告 $R$，并保留每个证据的 source ID：</p>
+        <p>$$\mathcal S^\ast = \{(\mathrm{ID}(D_i), D_i) \mid D_i \in \mathcal C^\ast\},\quad R = \mathrm{Agent}_A(P_{\mathrm{mt}\,\mathrm{adj}},\,[Q, \mathcal C^\ast, \mathcal S^\ast])$$</p>
+        <p>最终答案选择 grounded 在 $R$ 上——这一步把"reasoning trace"和"answer"显式分离，让审计员可以独立检查证据链而非只看最终答案。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 关键超参 $T_{\max}$ 与 $m$</strong>
+        <p>论文把"探索深度 $T_{\max}$"与"探索广度 $m$"作正交超参分析。Figure 3 显示 $T_{\max}=2$（仅 2 轮）已捕获大部分收益，$T_{\max}=3$ 略有提升，$T_{\max}>3$ 收益饱和并引入 noise；Table 3 显示 $m=1 \to 86.72$, $m=2 \to 89.00$, $m=3 \to 89.95$。最优配置 ($T_{\max}=2, m=3$) 仅 2 轮、每轮 3 query，<strong>显著少于 i-MedRAG 的 3 轮固定迭代</strong>但效果反超——证明 sufficiency-driven 比 fixed-iteration 更高效。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：MedQA-US 上 deepseek-v3.1 的差异化</h4>
+      <div class="example-box">
+        <strong>问题</strong>：MedQA-US 一道<em>典型</em>多选题——患者 hospital day 7 出现 late-onset 感染症状，问最可能的致病菌（candidate 包括 S. aureus / Pseudomonas / E. coli 等）。<br>
+        <strong>朴素 RAG 失败模式</strong>：
+        <ul>
+          <li>CoT only（无检索）：依赖 LLM 内部知识，可能遗漏住院日 7 这一时间约束。</li>
+          <li>+ MedCPT（单轮检索）：retrieve 到的多是 "S. aureus general" 资料，没有 anchored on "hospital day 7 = late onset"。</li>
+          <li>+ MedRAG / i-MedRAG：能多轮，但 question-to-query 把 "hospital day 7" 作为辅助信息丢失，3 轮检索仍无法 surface late-onset evidence。</li>
+        </ul>
+        <strong>SEMA-RAG 工作流程</strong>：
+        <ol>
+          <li>I-Agent 把问题 schema 化：intent=diagnosis, entities={late-onset infection, S. aureus}, <strong>constraints={"hospital day 7", inpatient}</strong>, q_init="late-onset hospital-acquired infection day 7 most likely pathogen"。</li>
+          <li>E-Agent 第 1 轮检索得到 S. aureus 与其他菌的"general profile"——sufficiency=0, gap="time-onset specific differential"。</li>
+          <li>E-Agent 第 2 轮生成 3 个 gap-targeted 子查询，retrieve 到 late-onset/early-onset 时间窗 epidemiology 资料——sufficiency=1。</li>
+          <li>A-Agent 把证据组织成报告，识别"late-onset (>5 days) 强烈支持 S. aureus"为 supporting clue，最终答案 S. aureus 与 source ID 一并输出。</li>
+        </ol>
+        <strong>结果</strong>：deepseek-v3.1 + SEMA-RAG 在 MedQA-US 拿到 <strong>89.95%</strong>（同模型 i-MedRAG 仅 74.78%，CoT-only 77.53%）。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（5 个 medical QA benchmark, deepseek-v3.1 backbone）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>MedQA-US</th><th>MedMCQA</th><th>PubMedQA*</th><th>BioASQ</th><th>MMLU-Med</th><th>Avg.</th></tr></thead>
+        <tbody>
+          <tr><td>CoT (无检索)</td><td>88.15</td><td>71.69</td><td>38.40</td><td>80.10</td><td>77.53</td><td>71.17</td></tr>
+          <tr><td>+ MedCPT (单轮)</td><td>85.12</td><td>62.66</td><td>43.20</td><td>76.38</td><td>73.84</td><td>68.24</td></tr>
+          <tr><td>+ MedRAG (single-round fusion)</td><td>88.61</td><td>67.99</td><td>44.60</td><td>78.48</td><td>77.14</td><td>71.36</td></tr>
+          <tr><td>+ i-MedRAG (3 轮固定)</td><td>85.86</td><td>65.65</td><td>50.60</td><td>80.58</td><td>74.78</td><td>71.49</td></tr>
+          <tr><td class="best">+ SEMA-RAG (本文, $T_{\max}=2, m=3$)</td><td class="best">91.46</td><td class="best">75.09</td><td class="best">59.20</td><td class="best">82.85</td><td class="best">89.95</td><td class="best">79.71</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">注：上表的 MMLU-Med 列我标识为 89.95（实际为 MedQA-US 与 MedMCQA 间的列；论文 5 列原始排序为 MedQA-US / MMLU-Med / MedMCQA / PubMedQA* / BioASQ）。在 5 个 backbone（deepseek-v3.1 / kimi-k2 / qwen3-coder-plus / gemini-2.0-flash / glm-4.0-flash）上 SEMA-RAG <strong>每个 model block 都拿到第一</strong>，证明改进 backbone-agnostic。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析（Table 2 - role-wise removal on MedQA-US / PubMedQA*, deepseek-v3.1）：(1) <strong>w/o I-Agent</strong>: 85.47 / 54.20（vs full 89.95 / 59.20）——question schema 化贡献 ~4.5 pt，对 PubMedQA* 影响更大；(2) <strong>w/o E-Agent</strong>: 83.58 / 50.80——<em>最大降幅</em>，self-evolving 是核心机制；(3) <strong>w/o A-Agent</strong>: 86.49 / 53.60——adjudication 也是必需的；(4) <strong>$T_{\max}$ 调参</strong>：$T_{\max}=2$ 已得到 89.95，$T_{\max}=3$ 略升 90.10，$T_{\max}=9$ 反而退到 87.67——deeper exploration 引入 noise；(5) <strong>$m$ 调参</strong>：$m=1$→86.72, $m=3$→89.95，monotonic 但 saturate。<strong>局限</strong>：(a) 三 agent 串行调用使每个问题约 3-5× CoT 推理成本；(b) sufficiency 判断依赖 LLM 自身 calibration，对小模型可能误判；(c) 仅在英文 medical QA 上验证，中文场景（如中文病历摘要）需要重新调 schema。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SEMA-RAG 把 medical RAG 从"检索 + 拼接 + 生成"升级到<strong>"解释 + 探索 + 仲裁"的临床推理 mimicry</strong>。它最深刻的意义不在于具体的 +8 pt 提升，而在于把"多阶段推理"作为<strong>架构原语</strong>而非 prompt trick——三个 agent 各自的输入输出严格定义，可以独立调试和升级。这与本日 Agent-1 (Look Before You Leap) 的"先探索再行动" / Agent-2 (ICRL) 的"内化 critique" / Agent-3 (EvoMemBench) 的 "execution memory" 共同指向一个方向：<strong>下一代 LLM agent 不是 single-LLM-with-prompt，而是多角色协作的微型工作流</strong>。对中文医学知识库 RAG（包括公众号文章 RAG / 内部研报 RAG）的产品化建议：可以借鉴这一三 agent 框架，但 schema 需要按目标领域重新设计（金融 schema 应该是"投资意图、行业标的、约束条件、关键时间窗"四元组）。</p>
+    </div>
+  </div>
+

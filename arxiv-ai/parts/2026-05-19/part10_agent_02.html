@@ -1,0 +1,109 @@
+  <div class="paper" id="p9">
+    <h3 class="paper-title">Agent-2 · ICRL: Learning to Internalize Self-Critique with Reinforcement Learning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 HKUST (Guangzhou), Nanjing University, Microsoft Research</span>
+      <span><a href="https://arxiv.org/abs/2605.15224" target="_blank">arXiv:2605.15224</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">Self-Critique</span>
+      <span class="tag tag-agent">GRPO</span>
+      <span class="tag tag-agent">分布校准</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>"Self-Refine"和"Critic-then-Revise"已经成为 LLM agent 的标准 inference-time 增强：模型先尝试 → critic 给反馈 → 模型再修正。但有两个尚未解决的根本问题：(1) <strong>Internalization 失败</strong>：删掉 critic 后，模型在同一问题上又会失败——说明它学到的是"<em>有 critic 时</em>正确"，没把能力真正内化；(2) <strong>Critic 静态化</strong>：现有方法的 critic 通常是 frozen 的（甚至来自外部 teacher 模型），随 solver 进化会越来越无关。ICRL 同时解决这两点：从同一 backbone 联合训练 solver 和 critic，并通过 token-level 分布校准把 critique-guided 修正<em>选择性地</em>迁移回 critique-free policy，避免 solver 退化为"对 critic 上瘾"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Joint Solver + Critic from Shared Backbone</strong>
+        <p>从同一个 base 模型 $\pi_\theta$ 派生两种 role 行为：solver 角色 $\pi_\theta^S(\cdot \mid q)$ 和 critic 角色 $\pi_\theta^C(\cdot \mid q, \tau_i)$。critic 的 reward 不是 critique 自身的"好坏"，而是<strong>下游 solver 接受 critique 后的 performance gain</strong>：</p>
+        <p>$$R^C(c) = R\big(\tau_{i+1} \sim \pi_\theta^S(\cdot \mid q, c)\big) - R(\tau_i)$$</p>
+        <p>这把 critique 的"actionability"作为可优化目标——critic 必须给出对当前 solver<em>真正能用</em>的反馈，不仅是"对的话"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Critique-Conditioned Distribution Calibration</strong>
+        <p>修正轨迹 $\tau_{i+1}$ 来自 critique-conditioned 分布 $\pi^S(\cdot \mid q, c)$，但要更新的是 critique-free policy $\pi^S(\cdot \mid q)$——直接 plug-in 会得到有偏估计。ICRL 引入 token-level reweight ratio：</p>
+        <p>$$w_t = \frac{\pi_{\theta_{\mathrm{rollout}}}^S(y_t \mid q, y_{<t})}{\pi_{\theta_{\mathrm{rollout}}}^S(y_t \mid q, c, y_{<t})}$$</p>
+        <p>$w_t$ 度量"这个 token 在没有 critique 时是否仍然合理"：</p>
+        <ul style="margin: 8px 0; padding-left: 22px; color: #c0cae0;">
+          <li>$w_t \approx 1$：token 不依赖 critique，可以直接迁移；</li>
+          <li>$w_t \ll 1$：token 强烈依赖 critique，<strong>降权</strong>避免 reinforce critique-dependence；</li>
+          <li>$w_t > 1$：critique-free 反而会更自然地生成的 token，<strong>升权</strong>。</li>
+        </ul>
+        <p>这是一种 importance sampling 校正——但用在 token 粒度而非 trajectory 粒度，因此可以同一条 trajectory 内"取其精华去其糟粕"。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Role-Wise Group Advantage Estimation</strong>
+        <p>solver 和 critic 在不同 prompt 下采样，奖励量纲不同，混在同一个 group 做 standardize 会把信号污染。ICRL 把 advantage 按 role 分组：</p>
+        <p>$$\hat A_i^S = \frac{R_i^S - \mu^S}{\sigma^S + \epsilon},\quad \hat A_i^C = \frac{R_i^C - \mu^C}{\sigma^C + \epsilon}$$</p>
+        <p>各自 GRPO clipped surrogate 加权后联合更新共享 backbone。这是处理 multi-role 联合训练的通用模式。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 完整 ICRL 目标</strong>
+        <p>对修正轨迹中 critique-guided 部分应用 token-level $w_t$ 校准的 GRPO surrogate：</p>
+        <p>$$\mathcal L_{\mathrm{ICRL}} = -\mathbb E\!\left[\sum_t w_t \cdot \min\big(r_t \hat A^S, \mathrm{clip}(r_t)\hat A^S\big)\right] - \mathbb E\!\left[\min\big(r^C \hat A^C, \mathrm{clip}(r^C)\hat A^C\big)\right]$$</p>
+        <p>无需外部 teacher、无需手工标注 critique 数据，纯 self-improvement 闭环。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Qwen3-8B 在 AIME24 上从 50% → 65.1%</h4>
+      <div class="example-box">
+        <strong>设定</strong>：base model = Qwen3-8B，benchmark = AIME24（30 道高难度奥数）。<br>
+        <strong>各方法表现</strong>：
+        <ul>
+          <li>Qwen3-8B base: 40.0%</li>
+          <li>SFT: 40.0%（SFT 对竞赛数学增量很小）</li>
+          <li>GRPO（标准 RLVR）: 50.0%（+10pt 来自答题 reward）</li>
+          <li>Critique-GRPO（外加 frozen critic）: 60.0%（+10pt 来自 critique）</li>
+          <li><strong>ICRL（本文）</strong>: <strong>65.1%</strong>（+15pt over GRPO、+5pt over Critique-GRPO）</li>
+        </ul>
+        <strong>测试时 multi-round refinement</strong>（ALFWorld 上）：GRPO baseline 第 1 轮 ~80% 第 3 轮约 ~83%（gradual gains 主要来自重复采样的多次机会，而非真的修正）；Critic-GRPO 第 1 轮 ~85% 第 3 轮 ~91%；<strong>ICRL 第 1 轮就 ~92%，第 3 轮达 98%</strong>——同时 first-round 更强、refinement 增益更陡，证明它的 critic 真正在产生 actionable feedback。<br>
+        <strong>关键</strong>：8B 学到的 critic 能力已经达到<em>可与 32B critic 相比</em>的水平，且 token 数少很多——critic 能力可以从 backbone 共享中"涌现"，不必单独喂大模型。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（agentic + math 任务）</h4>
+      <table>
+        <thead><tr><th>Backbone</th><th>方法</th><th>ALFWorld SR</th><th>WebShop SR</th><th>HotpotQA</th><th>Bamboogle</th><th>Avg.</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Qwen3-4B</td><td>GRPO</td><td>81.0</td><td>63.5</td><td>38.0</td><td>30.0</td><td>49.2</td></tr>
+          <tr><td>Critique-GRPO</td><td>91.5</td><td>72.5</td><td>43.5</td><td>38.5</td><td>55.9</td></tr>
+          <tr><td class="best">ICRL (本文)</td><td class="best">92.5</td><td class="best">74.5</td><td class="best">44.0</td><td>38.0</td><td class="best">57.0</td></tr>
+          <tr><td rowspan="3">Qwen3-8B</td><td>GRPO</td><td>82.5</td><td>71.5</td><td>38.0</td><td>38.0</td><td>52.8</td></tr>
+          <tr><td>Critique-GRPO</td><td>90.5</td><td>73.5</td><td>46.0</td><td>38.0</td><td>56.6</td></tr>
+          <tr><td class="best">ICRL (本文)</td><td class="best">90.5</td><td class="best">76.0</td><td>44.0</td><td>40.0</td><td class="best">57.8</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>方法 (Qwen3-8B)</th><th>MATH500</th><th>OlympiadBench</th><th>AMC23</th><th>AIME24</th><th>Math Avg.</th></tr></thead>
+        <tbody>
+          <tr><td>SFT</td><td>83.2</td><td>46.4</td><td>82.5</td><td>40.0</td><td>59.2</td></tr>
+          <tr><td>GRPO</td><td>91.0</td><td>65.6</td><td>82.5</td><td>50.0</td><td>68.3</td></tr>
+          <tr><td>Critique-GRPO</td><td>92.6</td><td>66.2</td><td>95.0</td><td>60.0</td><td>73.3</td></tr>
+          <tr><td class="best">ICRL (本文)</td><td class="best">94.0</td><td class="best">68.9</td><td>93.1</td><td class="best">65.1</td><td class="best">75.3</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键观察：(1) ICRL 在 agentic 平均比 GRPO 高 6.4pt、math 平均比 GRPO 高 7.0pt；(2) 多轮 refinement ALFWorld 第 3 轮达 98% SR——可以看作"小模型 + 共训 critic ≈ frontier closed-source agent"；(3) Qwen3-4B 上 ICRL 已经接近 Qwen3-30B-A3B 提示直推的水平。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>关闭 token-level reweight</strong>（直接把 critique-conditioned 轨迹当成 critique-free 轨迹训练）：solver 完全 critique-dependent，移除 critic 后立即退化到 base 水准；(2) <strong>用 frozen critic</strong>：消除 critic 共训，性能与 Critique-GRPO 接近，无法持续 self-improve；(3) <strong>Role-wise advantage 关闭</strong>（混合 group）：训练严重不稳，loss spike 频繁；(4) <strong>训练动态</strong>：critic 与 solver 交替进步——solver 解决能力强后，critic 也学会针对更微妙的错误做反馈。<strong>局限</strong>：(a) 在 Bamboogle / MuSiQue 等数据集上 ICRL 并非全面最优，多跳 RAG 任务 critic 学习更难；(b) AMC23 上 Critique-GRPO（95.0%）反超 ICRL（93.1%），说明在 distributionally easy 的任务上分布校准会带来轻微保守偏差；(c) Joint training 显存占用高（同时维护 solver + critic 两套 rollout），训练成本约 1.5× GRPO。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>ICRL 是 self-improvement RL 的<strong>关键拐点</strong>：它正面回答"为什么 self-refine 训练经常退化为 'critic 依赖'"——根因是 critique-conditioned trajectory 直接 plug 进 GRPO 会改变有效目标分布。token-level reweight ratio 是一个简单但极有效的工程修正，可以推广到任何 mixed-prompt-prefix 联合训练场景（包括 NUDGERL 的 strategy context 训练）。对政昀 RLVR/LPO 研究的启发：(a) <strong>在 importance ratio 上做 token-level 校正</strong>是处理 distributional shift 的最直接方式，比 SFT mixing 优雅得多；(b) <strong>critic 与 solver 共训 + reward 绑定下游 utility</strong> 是构造 self-improvement 闭环的标准模板；(c) ICRL 的 8B critic ≈ 32B critic 这一观察具有深刻系统含义——critic 能力不是"参数量越多越好"，而是"reward shaping 越准越好"。</p>
+    </div>
+  </div>
+

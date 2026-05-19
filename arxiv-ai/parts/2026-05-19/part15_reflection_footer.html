@@ -1,0 +1,53 @@
+  <div class="reflection">
+    <h2>🔍 每日反思 · 2026-05-19</h2>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:12px;">📌 今日主线脉络</h3>
+    <p>今日 13 篇精选论文呈现一条清晰的暗线——<strong>"RL 让 base 模型变窄"是 2026 年最有争议的核心问题</strong>。LLM-4 (Forks-in-the-Road)、RL-2 (NUDGERL)、Agent-1 (Look Before You Leap) 三篇从不同维度直接论证：</p>
+    <ul style="padding-left: 22px;">
+      <li><strong>LLM-4</strong> 用 graph navigation 的可控实验证明，决策点存在时 SFT 必然引发 pass@k 衰减，且模型在 fork 处<em>过度自信地走错</em>；</li>
+      <li><strong>RL-2 NUDGERL</strong> 用 strategy hint 强制覆盖 long-tail reasoning 模式 + self-distillation 蒸回 base，让模型在 8 rollout 下匹配 GRPO 32 rollout；</li>
+      <li><strong>Agent-1</strong> 直接量化 task-only RL 让 ECC（探索覆盖率）<em>下降</em> 9.7 pt，并通过 interleaved exploration reward 把 ALFWorld success 从 72.6% 提到 89.7%。</li>
+    </ul>
+    <p>三篇共同得出"<em>RL 不止优化、也在悄悄抹杀 diversity / exploration</em>"的结论。配套疗法的核心模式相似——在训练时显式注入 diversity 信号 + 蒸馏回 critique-free policy（ICRL 的 token-level reweight 是又一个同模式案例）。这构成今日<strong>方法论级别的共识</strong>。</p>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 RL/GRPO 的设计变量更新</h3>
+    <ul style="padding-left: 22px;">
+      <li><strong>RL-1 GPRL</strong>：用 $k$-维 General Preference Model 替代标量 reward，直接把 reward hacking 从"事后补救"变为"结构性禁止"。<em>per-dimension advantage normalization</em> + <em>drift monitor</em> 是可直接迁移到 LPO 的两个独立设计 patch。</li>
+      <li><strong>RL-3 Hero / SDS</strong>：feasibility-gated reward cliff + curriculum-faded structural bonus 是处理硬约束 + 训练-推理 gap 的成熟模板。</li>
+      <li><strong>Agent-2 ICRL</strong>：token-level distribution-calibration reweight ratio $w_t = \pi^S(y_t \mid q) / \pi^S(y_t \mid q, c)$ 是处理 mixed prompt prefix 联合训练的通用工具，可推广到任何"训练时有 hint、推理时无 hint"的算法。</li>
+    </ul>
+    <p>对政昀 RLVR/LPO 研究的直接动作项：(1) GPRL 的 multi-axis advantage 与 LPO 框架结合；(2) NUDGERL 的 inter-intra group advantage 在 LPO 多 prompt rewriting 场景的迁移；(3) ICRL 的 token-level reweight 用于处理任何 conditioned-rollout 训练。</p>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 长上下文 / KV Cache 工程的"对齐 attention 几何"哲学统一</h3>
+    <p>LLM-1 (OSCAR INT2 KV cache)、LLM-2 (RTPurbo Sparse Attention)、LLM-3 (ASM Attention-State Memory) 三篇看似互不相关，但<strong>共享同一哲学</strong>：低成本压缩的关键是<em>对齐下游算子真正使用的几何结构</em>。</p>
+    <ul style="padding-left: 22px;">
+      <li>OSCAR 对齐 $C_Q = Q^\top Q$ 与 $C_S = V^\top S^\top S V$；</li>
+      <li>RTPurbo 对齐 RoPE 低频子空间（仅 16 维即可路由）；</li>
+      <li>ASM 把 prefix attention 的代数结构 $(a_p, Z_p)$ 显式分解、可合并、可外化为字典。</li>
+    </ul>
+    <p>2026 年长上下文 LLM 工程的关键认知升级：<strong>"通用旋转 / 通用压缩"已经走到尽头，下一阶段必须使用算子感知的目标函数</strong>。这一哲学对生产推理栈（vLLM/SGLang）的产品力提升路径有直接指导意义。</p>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 Agent / Memory 的产品化结论</h3>
+    <p><strong>Agent-3 (EvoMemBench)</strong> 给出选型矩阵：context 充裕用 long-context LLM；context 受限（≤32K）优先 procedural memory（ReasoningBank、AWM 类存 strategy 而非 fact）；事实修订（revision）所有现有 memory 系统都失败。<strong>Agent-1 (Look Before You Leap)</strong> 提供"explore-then-act"推理范式与对应训练目标。<strong>Multimodal-1 (SaaS-Bench)</strong> 给出 sober 的产业现状：frontier CUA end-to-end SaaS 完成率仅 1.9-3.8%，70% 失败是 entity missing。三者结合是 2026 H2 agent 产品技术选型的最佳指南。</p>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 医疗 LLM 的两类核心命题</h3>
+    <p><strong>Medical-1 SEMA-RAG</strong>：把 RAG 升级为"Interpret + Explore + Adjudicate"的三 agent 架构，是医学 RAG 工程级最佳实践。<strong>Medical-2 Artificial Intolerance</strong>：揭示一个监管级风险——所有 9 个 frontier LLM 都被临床记录中的污名化语言污染，且 RLHF 训练让模型"声明无偏见"但"实际有偏见"——这是<em>知行分离</em>的清晰证据。两篇配套读：前者教医学 LLM<em>如何赢</em>，后者教医学 LLM<em>如何不出事</em>。</p>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 观察与遗憾</h3>
+    <ul style="padding-left: 22px;">
+      <li>今日<strong>白名单机构（DeepSeek、Qwen、OpenAI、Google、Scale AI、Seed、Hunyuan）作为一作的论文没有出现</strong>。SaaS-Bench 中 Doubao Seed 2.0 Pro 作为评测对象出现，国内 frontier model 在 CUA 任务上已与 Gemini 3.1 Pro 持平。OSCAR 来自 Together AI，是"开源推理服务商把 Qwen3 + GLM-4.7 推到 INT2"的代表性工作。</li>
+      <li>arXiv API 在 SF 时段持续 429 限流，需要长冷却（90-120s）才能稳定通过。今日所有 13 篇 published date 都在 2026-05-13 至 2026-05-19 区间内。</li>
+      <li>遗憾今日 cs.IR 板块下没有出现纯文本 Information Retrieval 强论文（多模态搜索/GUI 居多），符合近期趋势——IR 领域正在被 RAG 与 Agent 吃掉。</li>
+    </ul>
+
+    <h3 style="color:#b3c1de;font-size:16px;margin-top:18px;">📌 投资 / IPO 视角的延伸观察</h3>
+    <p>今日三类工作直接关联中金 GPU IPO 项目的需求侧叙事：(1) <strong>OSCAR INT2 KV cache</strong>——同硬件 batch / context 数量级提升，重塑 datacenter capex 模型；(2) <strong>RL-3 Hero amortized solver synthesis</strong>——训练一次 → 推理无数次的范式让"训练侧 vs 推理侧"算力比例的预测变量更复杂；(3) <strong>SaaS-Bench resolved <4%</strong>——CUA 真正能商用是<em>未来 18-24 个月</em>事件，企业 SaaS 推理需求的"非线性跳变"是值得长期跟踪的 secular tailwind。可考虑作为 OC pitch 中"AI 推理需求 secular thesis"的论据补充。</p>
+  </div>
+
+  <footer>
+    <p>📚 arXiv AI 日报 · 2026-05-19 · 当日 RSS 抓取 468 篇 NEW 论文（cs.CL 114 + cs.AI 51 + cs.LG 303），精选 13 篇深度分析。</p>
+    <p>所有论文 arXiv ID 与日期已通过 arXiv API 二次校验；论文方法、实验数据、消融数据均严格来自原文 PDF / HTML 全文。</p>
+  </footer>
+</div>
+</body>
+</html>

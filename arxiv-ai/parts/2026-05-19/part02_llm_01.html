@@ -1,0 +1,95 @@
+  <div class="paper" id="p1">
+    <h3 class="paper-title">LLM-1 · OSCAR: Offline Spectral Covariance-Aware Rotation for 2-bit KV Cache Quantization</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Together AI, University of Sydney, UIUC</span>
+      <span><a href="https://arxiv.org/abs/2605.17757" target="_blank">arXiv:2605.17757</a></span>
+      <br>
+      <span class="tag tag-llm">LLM</span>
+      <span class="tag tag-llm">KV Cache</span>
+      <span class="tag tag-llm">INT2 量化</span>
+      <span class="tag tag-llm">系统部署</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>把 KV cache 压到 INT2（每元素 2bit）对长上下文 LLM 服务极有价值——它能直接把同硬件能承载的 batch / context 长度提升数倍。但现有方法在 INT2 上几乎全军覆没：<strong>QuaRot-INT2</strong> 在 Qwen3-8B AIME25 上从 BF16 的 70% 跌至 2.22%，朴素 INT2 直接归零。问题根源在于：(1) <strong>Hadamard 变换</strong>等"通用旋转"只能均化通道方差，并不知道下游 attention 真正消费的是 $Q^\top Q$ 与 $V^\top S^\top S V$ 这两个统计量，因此误差能量错配；(2) 现有方法多为算法 demo，缺乏 <strong>真正可用的分页 KV / 融合 kernel</strong>，无法接入 SGLang/vLLM 等生产推理栈。OSCAR 直面这两点：用注意力感知的协方差结构对齐 INT2 量化方向，并写出了完整的 SGLang 集成。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 注意力感知的目标协方差（Query-aware key & Score-aware value）</strong>
+        <p>OSCAR 的关键洞察：朴素 PCA 优化 $K, V$ 自己的协方差 $K^\top K, V^\top V$，但下游 attention 实际消费的是 $QK^\top$ 与 $S^\top S V$。因此应当用注意力下游真正用到的二阶统计量作为目标。对 query 行 $q$，定义</p>
+        <p>$$C_Q = \frac{1}{N}\sum_{n=1}^{N} q_n^\top q_n,\quad C_S = \frac{1}{N} V^\top S^\top S V,\quad S = \mathrm{softmax}_{\mathrm{row}}\!\left(QK^\top/\sqrt{d}\right)$$</p>
+        <p>其中 $C_Q$ 编码"哪些方向上 query 投影最强"，$C_S$ 编码"attention score 加权后 value 真正贡献的方向"。论文证明（Theorem 1）在残差对角假设下，用 $C_Q, C_S$ 的特征向量做旋转可极小化 frozen-error 代理。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 谱分解 + Hadamard + 比特反转的复合旋转</strong>
+        <p>设 $C_Q = U_Q \Lambda_Q U_Q^\top$，$C_S = U_S \Lambda_S U_S^\top$，OSCAR 的最终旋转矩阵是三段复合：</p>
+        <p>$$R_K = U_Q\,H_{\mathrm{Had}}\,P_{\mathrm{br}},\qquad R_V = U_S\,H_{\mathrm{Had}}\,P_{\mathrm{br}}$$</p>
+        <p>其中 $U_Q / U_S$ 把能量旋到注意力主成分轴上、$H_{\mathrm{Had}}$ 进一步均化通道、$P_{\mathrm{br}}$（bit-reversal 置换）把高方差与低方差通道交错排列以使每个 INT2 块的动态范围更均衡。这是同时为 <strong>"对齐 attention 几何"</strong> 与 <strong>"对齐 INT2 硬件几何"</strong> 服务。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ 混合精度 KV 布局：[BF16 sink | INT2 history | BF16 recent]</strong>
+        <p>OSCAR 把每个 request 的 KV cache 分三段：前 $S_0=64$ 个 token（sink）和最近 $W=256$ 个 token 仍保留 BF16，中间最长的"历史区"压成 INT2。</p>
+        <p>$$\underbrace{[1, S_0]}_{\mathrm{BF16\ sink}}\;\Vert\;\underbrace{[S_0{+}1,\, t{-}W]}_{\mathrm{INT2\ history}}\;\Vert\;\underbrace{[t{-}W{+}1,\, t]}_{\mathrm{BF16\ recent}}$$</p>
+        <p>这是与 paged-attention 兼容的设计：每个 paged block 内部要么纯 BF16，要么纯 INT2，避免页内格式混用导致 kernel 复杂度暴涨。新生成 token 先写入 BF16 recent window，待其滑出 W 时再被 fused Triton kernel 量化降级。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ INT2 解码 kernel：双段 attention + 在线 softmax 合并</strong>
+        <p>解码时把 cache 分成 BF16 段（sink+recent）和 INT2 段两次独立 attention 计算，其结果通过 online softmax 在数值稳定下合并：</p>
+        <p>$$\mathrm{out}_t = \frac{e^{m_{\mathrm{bf16}}}\,o_{\mathrm{bf16}} + e^{m_{\mathrm{int2}}}\,o_{\mathrm{int2}}}{e^{m_{\mathrm{bf16}}} + e^{m_{\mathrm{int2}}}}$$</p>
+        <p>INT2 kernel 内部解包 4 个 2-bit 值打包到一个 byte，应用 per-token scale/zero point，反量化后在 fp32 中累计 attention。OSCAR 把 $R_V$ 吸收进模型的输出投影权重，因此 V 路解码时不再需要在线乘以 $R_V$，进一步降低延迟。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：Qwen3-8B 在 AIME25 上的"INT2 复活"</h4>
+      <div class="example-box">
+        <strong>设定</strong>：Qwen3-8B Thinking-2507，AIME25（30 道）32K 推理生成，5 random seeds。<br>
+        <strong>BF16 baseline</strong>：70.00 ± 3.33 % 准确率。<br>
+        <strong>朴素 INT2 直接量化</strong>：所有 5 seed 输出全部不可读 → <strong>0.00%</strong>。<br>
+        <strong>QuaRot-INT2</strong>（仅 Hadamard 旋转）：2.22 ± 1.57 % — 模型仍然可以"说话"但答案完全错乱。<br>
+        <strong>KIVI-KV2</strong>（channel-wise INT2）：57.67 ± 9.00 %（注意：方差 9 个点，且需要 channel-wise 的非分页 buffer，无法接入 SGLang）。<br>
+        <strong>OSCAR (BPE=2.28)</strong>：<strong>66.67 ± 3.33 %</strong>，相对 BF16 仅掉 3.33 个点（mean-of-5 drop = -1.42 跨 5 个 benchmark），并且<strong>完全在 SGLang 分页 attention 链路里运行</strong>。<br>
+        <strong>关键</strong>：OSCAR 不是"靠更高的 effective bitrate 取胜"——它的 BPE=2.28 与 QuaRot 的 2.25 几乎相同，差距完全来自旋转矩阵 $U_Q, U_S$ 的注意力对齐。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Table 2 摘选）</h4>
+      <table>
+        <thead><tr><th>模型</th><th>方法</th><th>BPE</th><th>Mean (5 任务)</th><th>vs BF16</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4">Qwen3-8B</td><td>BF16</td><td>16.00</td><td>70.84</td><td>—</td></tr>
+          <tr><td>QuaRot-INT2</td><td>2.25</td><td>10.14</td><td>-60.70</td></tr>
+          <tr><td>Naive INT2</td><td>2.25</td><td>0.00</td><td>-70.84</td></tr>
+          <tr><td class="best">OSCAR (本文)</td><td class="best">2.28</td><td class="best">69.42</td><td class="best">-1.42</td></tr>
+          <tr><td rowspan="4">Qwen3-32B</td><td>BF16</td><td>16.00</td><td>74.19</td><td>—</td></tr>
+          <tr><td>QuaRot-INT2</td><td>2.25</td><td>7.90</td><td>-66.29</td></tr>
+          <tr><td>TurboQuant (no MP)</td><td>3.25</td><td>71.99</td><td>-2.20</td></tr>
+          <tr><td class="best">OSCAR (本文)</td><td class="best">2.28</td><td class="best">74.17</td><td class="best">-0.02</td></tr>
+          <tr><td rowspan="3">GLM-4.7-FP8 (358B)</td><td>BF16</td><td>16.00</td><td>77.89</td><td>—</td></tr>
+          <tr><td>QuaRot-INT2</td><td>2.25</td><td>75.14</td><td>-2.75</td></tr>
+          <tr><td class="best">OSCAR (本文)</td><td class="best">2.28</td><td class="best">78.16</td><td class="best">+0.27</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">5 任务 = GPQA-Diamond / HumanEval / LiveCodeBench v6 / AIME25 / MATH500，均 32K 生成。注：在 GLM-4.7-FP8（358B）上 OSCAR 反而比 BF16 高 0.27 — 这是常见的 INT2 噪声正则化效应。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>仅 Hadamard 不带 $U_Q, U_S$</strong> 即 QuaRot 配置，Qwen3-4B-Thinking 从 71.9% 跌到 1.4%，说明<em>注意力感知协方差是 INT2 复活的唯一关键</em>；(2) <strong>不用 score-aware $C_S$ 而退回 $V^\top V$</strong> 在 LiveCodeBench 上掉约 2pt，说明 attention score 加权确实重要；(3) <strong>取消 BF16 sink/recent 窗口</strong>会让 Qwen3-4B-Thinking 平均掉 ~3pt，证明长尾外溢区仍需高精度兜底。<strong>系统层</strong>：在单卡 H100 上 Qwen3-8B 32K 解码吞吐相对 BF16 提升约 1.6×，长上下文 RULER-NIAH 128K 上 OSCAR 仍稳定，naive INT2 完全坍塌。<strong>局限</strong>：(a) 校准集需 ~9K token，对超大模型校准成本仍可观；(b) 当前仅评测了 dense 模型，对 MoE 模型每个 expert 的 $C_Q$ 估计稳定性未验证；(c) 旋转矩阵全部 offline 固定，对在线 distribution shift（如新语言、新代码风格）鲁棒性待研究。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>OSCAR 给出的本质教训是：<strong>低比特量化的"几何"必须与下游算子的几何一致</strong>。对 attention 来说，这个几何就是 $Q^\top Q$ 与 $V^\top S^\top S V$，而非 $K, V$ 自身的协方差。这一原则可以推广到任何"激活进入下游线性算子"的场景——下次要做 INT2 weight quant 也好、做长上下文 cache 也好，都可以问一句"我真正要近似的算子是什么二阶量"。在工程上，OSCAR 又一次证明：算法 + 配套 paged kernel + SGLang 集成才能让 INT2 真正"用得上"。对中金的 GPU IPO 项目而言，这类"把同一张卡的有效 KV 容量再压 4×"的工作正是数据中心客户最敏感的产品力——值得重点跟踪 Together AI 在这个方向的产业落地节奏。</p>
+    </div>
+  </div>
+

@@ -1,0 +1,91 @@
+  <div class="paper" id="p7">
+    <h3 class="paper-title">RL-3 · Beyond Inference-Time Search: Reinforcement Learning Synthesizes Reusable Solvers (Hero)</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 ETH Zürich, University of Maryland</span>
+      <span><a href="https://arxiv.org/abs/2605.18374" target="_blank">arXiv:2605.18374</a></span>
+      <br>
+      <span class="tag tag-rl">RL</span>
+      <span class="tag tag-rl">GRPO</span>
+      <span class="tag tag-rl">代码生成</span>
+      <span class="tag tag-rl">组合优化</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM 解组合优化通常采用 inference-time search：每个实例都重新采样、搜索、prompt——成本随实例数线性增长，且不会"积累经验"。本文提出反向命题：能不能用 RL 把"求解逻辑"<strong>固化进模型权重</strong>，使模型为整个问题族（family）合成一个<em>可复用的代码 solver</em>，而非每实例 separately 推理？作者用 Synergistic Dependency Selection (SDS)——constrained Quadratic Knapsack 的可控变体——作为研究对象。SDS 设计成一个"诱惑陷阱"：local signal 让贪心启发式（如按 weight 排序）看起来很合理，但 quadratic interaction 会让贪心 retrieve 到的 Simulated Annealing 模板<em>语义错误</em>（典型表现：误用 Metropolis acceptance rule）。Best-of-64 base sampling 的 gap 到 Virtual Best Solver (VBS) 卡在 ≈28.7%——这就是 "competence wall"。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 任务定义：Reusable Solver Synthesis</strong>
+        <p>给定 SDS 问题分布 $\mathcal P$，目标不是"对每个实例生成一段一次性 trace"，而是让模型生成一段<strong>对整个 $\mathcal P$ 通用的 Python solver code</strong>，编译一次后可重复执行所有实例。形式化地：</p>
+        <p>$$\theta^\ast = \arg\max_\theta \mathbb E_{p \sim \mathcal P}\!\left[\,\mathrm{Score}\big(\mathrm{compile}(\pi_\theta(\cdot \mid \mathcal P))\,\text{on}\,p\big)\right]$$</p>
+        <p>RL 把"实例级搜索成本"摊销到一次训练里。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Hierarchical Reward + Feasibility-Gated Optimality</strong>
+        <p>复合 reward 拆成三层（权重 0.1 / 0.2 / 0.7）：</p>
+        <p>$$r(o) = \lambda_1 R_{\mathrm{format}} + \lambda_2 R_{\mathrm{exec}} + \lambda_3 R_{\mathrm{nom}}$$</p>
+        <p>其中 $R_{\mathrm{format}}$ 检查 reasoning-action trace 结构（$\langle\mathrm{think}\rangle\ldots\langle\mathrm{code}\rangle$）；$R_{\mathrm{exec}} = R_{\mathrm{syntax}} + R_{\mathrm{schema}} + R_{\mathrm{struct}} + R_{\mathrm{feas}}$ 是稠密的代码可执行性反馈，并嵌入<strong>anti-lazy sorting penalty</strong>——惩罚模型 fall back 到"按 weight 排序"这种 linear greedy；$R_{\mathrm{nom}}$ 是 feasibility-gated optimality：</p>
+        <p>$$R_{\mathrm{nom}} = \begin{cases} \mathrm{Norm}(\mathrm{Score}(o)) & N_{\mathrm{vio}} = 0 \\ 0 & N_{\mathrm{vio}} > 0 \end{cases}$$</p>
+        <p>这种"不可行就 0 分"的 cliff 强制策略<em>先满足硬约束、再优化目标值</em>，避免陷入"高分但不合法"的退化解。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ GRPO with Group Size 64, β = 0</strong>
+        <p>用 Qwen2.5-Coder-14B-Instruct 作初始 policy，group $G=64$，无 KL 正则（$\beta=0$）以最大化探索深度。整个训练只有 90 global steps（≈ 4 小时，12×GH200 GPU），共看到 360 prompts（占完整 epoch 的 4.5%），但合成 23,040 reasoning traces。GRPO 的 group standardization 在 reward 稀疏时仍能提供有效梯度。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Curriculum-Faded Structural Bonus</strong>
+        <p>$R_{\mathrm{struct}}$ 中的 graph-structure 正向 bonus 随训练步 $t$ 衰减：</p>
+        <p>$$R_{\mathrm{struct}}(t) = \alpha(t)\,R_{\mathrm{struct}}^{\mathrm{raw}},\quad \alpha(t) \to 0\,\text{as}\,t \to T$$</p>
+        <p>意图：训练早期需要 structural hint 引导策略走出朴素采样陷阱；训练后期撤掉 hint 让 policy 自我承担优化责任。这与 NUDGERL 的"训练时 nudge → 推理时蒸馏掉"哲学完全一致——本质都是 train-test 距离的<em>动态 schedule</em>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：从 misimplemented Metropolis 到 constraint-aware SA</h4>
+      <div class="example-box">
+        <strong>Base 模型 Best-of-64 行为</strong>：在 SDS 上检查 base 模型 64 次采样的代码：~30% 的样本提到了 "Simulated Annealing"，但<em>误用 Metropolis acceptance rule</em>——把 $\exp(-\Delta E / T)$ 的符号写错或忽略 quadratic interaction term，导致即使 SA 模板被检索到也无法解出正确解。Best-of-64 的 gap to VBS 锁定在 28.7%，且 cumulative execution cost 高达 17.4 CPU-sec。<br>
+        <strong>Hero 训练后行为</strong>：90 步 GRPO 训练后，<em>99.8%</em> 的 feasible 输出收敛到一个 <strong>constraint-aware Simulated Annealing 模板</strong>——正确实现 acceptance rule、考虑 $W_{ij}$ interaction term、并嵌入硬约束检查。这不是"生成长 reasoning trace"，而是<strong>合成一段固定 Python solver</strong>。<br>
+        <strong>Compile-once 验证</strong>：把训练完成的 frozen Hero solver（一份 Python 代码）<em>不修改地</em>跑遍 1000 道测试集 SDS 实例，pass rate = 97.87%、mean gap to VBS = 4.34%（Appendix C.5 Table 2）。<br>
+        <strong>关键洞察</strong>：RL 没有发明新算法（SA 早就存在），但它<em>修复了 base 模型对该算法的 semantic-level 错误实现</em>——这是论文标题"semantic repair"的真正含义，比简单的"RL 提点"深刻。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Syndeopt benchmark, 1000 测试实例 × 3 seed）</h4>
+      <table>
+        <thead><tr><th>方法</th><th>Pass Rate (%)</th><th>Gap to VBS (%)</th><th>Time (CPU-sec)</th></tr></thead>
+        <tbody>
+          <tr><td>Greedy</td><td>98.3 ± 0.3</td><td>22.8 ± 1.3</td><td>0.001</td></tr>
+          <tr><td>Local Search</td><td>98.3 ± 0.3</td><td>10.0 ± 0.7</td><td>0.165</td></tr>
+          <tr><td>Branch-and-Bound</td><td>97.3 ± 0.4</td><td>19.1 ± 1.1</td><td>3.301</td></tr>
+          <tr><td>Base Best-of-64 (无 RL)</td><td>85.6 ± 1.3</td><td>28.7 ± 2.3</td><td>17.434</td></tr>
+          <tr><td>ShinkaEvolve (frontier search)</td><td>91.6 ± 1.2</td><td>14.4 ± 2.0</td><td>0.127</td></tr>
+          <tr><td>+ Oracle anchoring</td><td>65.3 ± 11.5</td><td>40.6 ± 3.1</td><td>0.247</td></tr>
+          <tr><td>+ Diversity bonus</td><td>61.3 ± 9.8</td><td>44.6 ± 14.0</td><td>0.195</td></tr>
+          <tr><td>w/o Structural Scaffolding</td><td>74.8 ± 19.2</td><td>34.7 ± 14.1</td><td>0.115</td></tr>
+          <tr><td class="best">Hero (本文)</td><td class="best">97.8 ± 0.2</td><td class="best">5.0 ± 1.3</td><td class="best">0.191</td></tr>
+          <tr><td>CP-SAT (限时)</td><td>98.3 ± 0.3</td><td>1.0 ± 0.0</td><td>1.212</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">关键观察：(1) Hero gap to VBS = 5.0% 比 Local Search 的 10.0% 强一倍，且仅次于 CP-SAT 的 1.0%（CP-SAT 是商业级求解器）；(2) 与 Best-of-64 相比 Hero 在 amortized execution cost 上<strong>91× 加速</strong>且 gap 优 5.7×；(3) <strong>+Oracle</strong> 与 <strong>+Diversity</strong> 反而<em>损害</em>性能（pass rate 跌到 65/61%）——证明 Hero 极简 hierarchical reward 已是充分配方，外加 oracle 反而干扰了 feasibility-first 学习。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>w/o Structure</strong>（移除 hierarchical reward）：pass rate 标准差暴增到 19.2%——证明 structural scaffolding 是稳定性的关键；(2) <strong>w/o Prompt</strong>（移除 Deconstruct-Hypothesize-Critique system prompt）：gap 从 5.0% 涨到 47.8%；(3) <strong>+Oracle</strong>：注入 oracle solution prefix 反而降到 65% pass rate——这印证了 NUDGERL 的发现：oracle anchoring 限制 exploration diversity；(4) <strong>+Diversity</strong> bonus：单纯加 diversity 项也无效，必须配合 anti-lazy sorting penalty 才有效。<strong>Stochastic Dominance</strong>（图 1b）：Hero 在 0–50% gap 区间几乎全程压制 base、Local Search、ShinkaEvolve。<strong>局限</strong>：(a) Syndeopt 是控制变量 benchmark，不是标准 OR suite，对真实 industrial OR 任务的迁移待验证；(b) 仅在 Qwen2.5-Coder-14B 上验证，更小的 7B 训练不稳；(c) RL 训练并非"零样本生成新算法"，更像"修复 base 模型对已知算法的实现错误"——这是哲学局限。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这篇工作给出的最有价值的概念升级是<strong>"amortized solver synthesis"</strong>：RL 不再为每个实例做 inference-time search，而是把求解逻辑<em>烧进权重并产出可复用代码</em>。这本质上把"推理是消费品"变成"推理是资本品"——一次训练，无数次复用。对 RLVR/GRPO 的实践意义：(a) <strong>feasibility-gated reward cliff</strong> 是处理硬约束任务的通用模式，避免 reward hacking 到 "高分但违法" 的退化解；(b) <strong>极简胜过复杂</strong>：oracle anchoring + diversity bonus 反而损害性能，简洁的 hierarchical reward 已经足够；(c) <strong>RL 主要功能是 semantic repair</strong>，不是发明新算法——这对评估 RLVR 真正能力边界至关重要。对中金 GPU IPO 项目的延伸思考：当 LLM 越来越多承担"代码合成-自动调度-自动优化"的角色时，"训练一次→产出 reusable solver"的范式会重新定义 datacenter compute 的需求结构（训练侧重 vs 推理侧重的比例会显著倾斜）。</p>
+    </div>
+  </div>
+

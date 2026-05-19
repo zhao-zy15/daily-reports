@@ -1,0 +1,97 @@
+  <div class="paper" id="p10">
+    <h3 class="paper-title">Agent-3 · EvoMemBench: Benchmarking Agent Memory from a Self-Evolving Perspective</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19</span>
+      <span>🏛 Beijing Institute of Technology, BUPT, HKUST</span>
+      <span><a href="https://arxiv.org/abs/2605.18421" target="_blank">arXiv:2605.18421</a></span>
+      <br>
+      <span class="tag tag-agent">Agent</span>
+      <span class="tag tag-agent">Memory Benchmark</span>
+      <span class="tag tag-agent">Self-Evolution</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM agent memory 文献长期存在"碎片化评测"问题：LoCoMo / LongMemEval 偏 conversational 知识保留；MemoryAgentBench 偏 incremental QA；MemoryArena 偏 multi-session action。每种 benchmark 只测 memory 能力空间的<em>一个角落</em>，而且其中一些（MemoryBench、Evo-Memory）<strong>不开源</strong>，无法横向比较。结果是：现有 memory 系统众多（Mem0、A-MEM、MemOS、ReasoningBank、AWM、SkillWeaver、AgentKB ……），但<strong>没有人能告诉你哪种 memory 在哪种场景下真的有用</strong>。EvoMemBench 提出统一的二维分类：<em>In-Episode vs Cross-Episode</em>（时间维度）× <em>Knowledge vs Execution</em>（内容维度）= 4 个 cell，把 memory 评测压平成一个可对比的矩阵。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 二维分类框架</strong>
+        <p>Memory evolution 的两个正交轴：</p>
+        <ul style="margin: 8px 0; padding-left: 22px; color: #c0cae0;">
+          <li><strong>Scope（范围）</strong>：In-Episode（一次任务内 step 之间的演化）vs Cross-Episode（多次任务间的复用与积累）。</li>
+          <li><strong>Content（内容）</strong>：Knowledge（事实、规则、约束）vs Execution（动作、工具调用、路径状态）。</li>
+        </ul>
+        <p>四个 cell：</p>
+        <p>$$\mathrm{INEP\text{-}KNOW},\ \mathrm{INEP\text{-}EXEC},\ \mathrm{XEP\text{-}KNOW},\ \mathrm{XEP\text{-}EXEC}$$</p>
+        <p>每个 cell 都有针对性子任务，使得"这个 memory 系统对哪类任务有用"可以被精确归因。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② INEP-KNOW：FactConsolidation 任务</strong>
+        <p>评测 in-episode 中的 retention（记住 1 次提到的事实）和 revision（在 conflicting evidence 出现时正确 update）。后者是更难的——大多数 memory 系统能记，但当新证据与旧证据冲突时<strong>多步 revision</strong> 很少做对。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ INEP-EXEC：四个 tool-use 任务族（Gorilla File System / Vehicle Control / Trading Bots / Travel Booking）</strong>
+        <p>设计上把 implicit reference（用代词/省略提到的实体）和 multi-op turn 拆解（一句话里多个工具调用）作为关键挑战，强迫 agent 跨 step 对齐 execution state。每个任务在 16K / 32K / 64K / 128K 四个 context 长度下评测——这正是 memory 真正起作用的"context-budget × execution-load"二维空间。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ XEP-KNOW & XEP-EXEC：跨 episode 共享 context</strong>
+        <p>每个 context 下有 ≥5 个 episode，agent 必须 reuse 上一个 episode 学到的 facts/rules/patterns。XEP-EXEC 测的是"上次成功的 action template 是否能被复用"——这是 procedural memory（AWM、SkillWeaver、AgentKB、ReasoningBank、ACE）真正的战场。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例：INEP-EXEC 上 ReasoningBank 的"反 long-context"胜利</h4>
+      <div class="example-box">
+        <strong>设定</strong>：DeepSeek-V3.2 backbone，4 个工具 task（Gorilla / Vehicle / Trading / Travel），各 4 个 context 长度。<br>
+        <strong>无 memory 基线（DeepSeek-V3.2）overall</strong>：16K=28.5%, 32K=35.5%, 64K=45.3%, 128K=39.5%。<br>
+        <strong>关键观察 1：Memory 在 context 受限时收益最大</strong>。最佳 memory 方法相对 backbone 在 16K 提升 +14.5 pt、32K +14.0、64K +7.8、128K +8.5。当 context 充裕（128K）时多数 memory 反而<em>低于 baseline</em>——append memory 引入噪声、占用 useful context space。<br>
+        <strong>关键观察 2：Procedural memory 全面胜出 retrieval/long-term memory</strong>。ReasoningBank 在 16K=43.0、32K=49.5、128K=48.0 三档拿到最优。AWM 在 64K=53.1 拿到最优。它们存的不是"raw fact"而是"reusable strategy"——在工具调用任务上比 BM25/Mem0/A-MEM 这种存 fact 的高 5-10 pt。<br>
+        <strong>关键观察 3：Short-term compression 危险</strong>。MemAgent / MemoBrain 在 16K-32K 上甚至低于 no-memory baseline（25.0–26.0 vs 28.5）。原因：execution-state tracking 需要 fine-grained tool 参数细节，简单 summarize 会丢掉关键信息。<br>
+        <strong>结论性 takeaway</strong>：当工具调用 agent 部署在受限 GPU/context 预算下（这是<em>真实生产环境</em>），优先选 procedural memory（ReasoningBank/AWM 类），而不是事实型存储。
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（INEP-EXEC overall success rate, %）</h4>
+      <table>
+        <thead><tr><th>类别</th><th>方法</th><th>16K</th><th>32K</th><th>64K</th><th>128K</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Long-Context</td><td>Gemini-3-Flash</td><td>50.5</td><td>65.5</td><td>66.9</td><td>62.0</td></tr>
+          <tr><td>GPT-5-mini</td><td>35.0</td><td>42.5</td><td>49.4</td><td>42.5</td></tr>
+          <tr><td>DeepSeek-V3.2 (baseline)</td><td>28.5</td><td>35.5</td><td>45.3</td><td>39.5</td></tr>
+          <tr><td rowspan="3">Retrieval</td><td>BM25</td><td>36.5</td><td>44.5</td><td>47.2</td><td>40.5</td></tr>
+          <tr><td>Qwen3-Emb-4B</td><td>34.5</td><td>39.5</td><td>46.2</td><td>42.0</td></tr>
+          <tr><td>GraphRAG</td><td>35.0</td><td>36.5</td><td>52.0</td><td>41.0</td></tr>
+          <tr><td rowspan="2">Short-Term Mem</td><td>MemAgent</td><td>26.0</td><td>36.5</td><td>47.4</td><td>37.0</td></tr>
+          <tr><td>MemoBrain</td><td>25.0</td><td>30.5</td><td>40.5</td><td>39.0</td></tr>
+          <tr><td rowspan="2">General LT Mem</td><td>Mem0</td><td>35.0</td><td>38.5</td><td>44.7</td><td>39.0</td></tr>
+          <tr><td>A-MEM</td><td>37.5</td><td>39.5</td><td>49.5</td><td>40.0</td></tr>
+          <tr><td rowspan="5" class="best">Procedural LT</td><td>AWM</td><td>31.5</td><td>43.0</td><td class="best">53.1</td><td>35.0</td></tr>
+          <tr><td>SkillWeaver</td><td>34.0</td><td>40.5</td><td>51.5</td><td>44.5</td></tr>
+          <tr><td>AgentKB</td><td>22.5</td><td>31.0</td><td>49.3</td><td>42.5</td></tr>
+          <tr><td>ACE</td><td>32.0</td><td>35.0</td><td>50.6</td><td>41.5</td></tr>
+          <tr><td class="best">ReasoningBank</td><td class="best">43.0</td><td class="best">49.5</td><td>47.1</td><td class="best">48.0</td></tr>
+          <tr><td>Meta-Evol</td><td>MemEvolve</td><td>36.0</td><td>41.0</td><td>50.7</td><td>43.0</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:#8b97b0;">完整 INEP-EXEC 结果：四个工具 task × 四个 context 长度 = 16 列。Procedural memory 类（ReasoningBank、AWM、SkillWeaver）整体最强；Short-term compression 类（MemAgent、MemoBrain）反而是 worst。Long-context Gemini-3-Flash 仍是最强单一系统（无 memory 模块），但在 16K 等极小预算下 procedural memory 反超。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融分析：(1) <strong>INEP-KNOW Finding 1</strong>：当 context 充足时，直接长上下文 LLM（Gemini-3-Flash）在 retention/revision 上仍最强——不要无谓地往 memory pipeline 上堆复杂度。(2) <strong>Finding 2</strong>：现有 memory 方法擅长 retention（"还记得吗"），但 revision（"事实变了，请更新"）几乎全军覆没——FactConsolidation multi-hop 是当前所有 memory 系统的共同短板。(3) <strong>Finding 3 重申</strong>：context budget 越紧 memory 价值越大；context 充裕时 memory 是 noise source。(4) <strong>Finding 4</strong>：procedural > general long-term > retrieval > short-term compression（在 execution 任务上）。<strong>局限</strong>：(a) checkpoints 数量与 task 数仍偏小（Travel Booking 仅 50 个实例），统计置信度有限；(b) 跨 episode 设置需要 ≥5 episode 共享 context，对动态变化的真实场景未必典型；(c) memory revision benchmark 主要在文本知识层，未覆盖更广义的"belief revision"。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>EvoMemBench 是 2026 年 agent memory 领域最具系统性意义的 benchmark：它把<strong>"memory 类型"和"任务类型"的对齐关系</strong>从隐性经验提升为可量化矩阵，并给出三条对工程实践极有价值的结论：(a) 长上下文模型（Gemini-3-Flash）在<em>知识 retention</em> 任务上仍是 baseline 上限——不要为了"用 memory" 而放弃 long-context；(b) <em>当 context 受限</em>时（≤32K），procedural memory（ReasoningBank、AWM 类存 strategy 的方法）显著优于事实型 retrieval；(c) <em>事实修订</em> (revision) 是当前所有 memory 系统共同的失败模式，未来研究应聚焦"belief revision"机制。对正在评估腾讯 ima 知识库做公众号文章 RAG 问答的实际需求：<strong>如果文章池稳定，纯长上下文 + Gemini-class 模型可能比任何 memory 系统都强；如果文章持续增量，应优先选有 revision 能力的系统而非简单 BM25/Embedding 检索</strong>。这个分类框架完全可以作为产品技术选型的参考矩阵。</p>
+    </div>
+  </div>
+
