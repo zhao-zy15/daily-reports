@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股港股收盘总结 · 2026-05-19</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: #0a0e1a;
+  color: #e2e8f0;
+  line-height: 1.65;
+  padding: 24px 16px;
+}
+.container { max-width: 1180px; margin: 0 auto; }
+.header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d4a7c 50%, #4a6a9c 100%);
+  padding: 36px 32px;
+  border-radius: 14px;
+  margin-bottom: 28px;
+  border: 1px solid #2a3a5c;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+.header h1 { font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 10px; letter-spacing: 0.5px; }
+.header .meta { font-size: 14px; color: #b0c4e0; }
+.header .tagline { margin-top: 12px; font-size: 15px; color: #d8e3f5; line-height: 1.7; }
+h2.section-title {
+  font-size: 22px; font-weight: 700;
+  margin: 36px 0 18px;
+  padding-left: 14px;
+  border-left: 4px solid #4a90e2;
+  color: #fff;
+}
+h3.subsection {
+  font-size: 17px; font-weight: 600;
+  margin: 18px 0 12px;
+  color: #a8c4e8;
+}
+.card {
+  background: #131929;
+  border: 1px solid #1f2a44;
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-bottom: 14px;
+}
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.index-card {
+  background: #131929;
+  border: 1px solid #1f2a44;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.index-card .name { font-size: 13px; color: #8aa1c4; margin-bottom: 6px; }
+.index-card .price { font-size: 22px; font-weight: 700; color: #fff; }
+.index-card .change { font-size: 14px; margin-top: 4px; font-weight: 600; }
+.up { color: #ff5252; }
+.down { color: #26d97f; }
+.neutral { color: #f0c419; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 16px;
+  background: #131929;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 14px;
+}
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #1f2a44; }
+th { background: #1a2238; color: #a8c4e8; font-weight: 600; }
+td { color: #d4dcec; }
+tr:last-child td { border-bottom: none; }
+ul.news-list { list-style: none; padding: 0; }
+ul.news-list li {
+  padding: 10px 14px;
+  background: #1a2238;
+  border-left: 3px solid #4a90e2;
+  margin-bottom: 8px;
+  border-radius: 0 6px 6px 0;
+  font-size: 14px;
+  color: #d4dcec;
+}
+ul.news-list li strong { color: #ffb74d; }
+
+.stock-card {
+  background: #131929;
+  border: 1px solid #1f2a44;
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  border-left-width: 5px;
+}
+.stock-card.bullish { border-left-color: #ff5252; }
+.stock-card.bearish { border-left-color: #26d97f; }
+.stock-card.neutral { border-left-color: #f0c419; }
+.stock-card.pick { border-left-color: #4a90e2; position: relative; }
+.stock-card.pick::after {
+  content: "🔥 精选推荐";
+  position: absolute;
+  top: 14px; right: 18px;
+  background: linear-gradient(90deg, #4a90e2, #66b1ff);
+  color: #fff;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+.stock-card .stock-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.stock-card .stock-name { font-size: 18px; font-weight: 700; color: #fff; }
+.stock-card .stock-code { color: #8aa1c4; font-size: 13px; margin-left: 8px; }
+.stock-card .stock-change { font-size: 17px; font-weight: 700; }
+.stock-card .data-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 8px;
+  font-size: 13px;
+  color: #b0c4e0;
+  margin: 8px 0 12px;
+  background: #0d1322;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+.stock-card .data-row span strong { color: #fff; font-weight: 600; }
+.stock-card p { font-size: 14px; margin: 6px 0; color: #d4dcec; }
+.stock-card p strong { color: #a8c4e8; }
+.stock-card .stars { color: #f0c419; font-size: 14px; }
+.tag {
+  display: inline-block;
+  padding: 2px 9px;
+  font-size: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.tag.bullish { background: rgba(255,82,82,0.15); color: #ff7575; }
+.tag.bearish { background: rgba(38,217,127,0.15); color: #4adf95; }
+.tag.neutral { background: rgba(240,196,25,0.15); color: #f5cd3f; }
+.tag.pick    { background: rgba(74,144,226,0.15); color: #66b1ff; }
+.outlook-box {
+  background: linear-gradient(135deg, #1a2845 0%, #2c3e5f 100%);
+  border: 1px solid #344766;
+  padding: 20px 24px;
+  border-radius: 10px;
+  margin: 18px 0;
+}
+.outlook-box h3 { color: #fff; margin-bottom: 10px; font-size: 17px; }
+.outlook-box p { color: #d4dcec; font-size: 14px; margin: 4px 0; }
+.footer { text-align: center; color: #5a6b85; font-size: 12px; margin-top: 30px; padding: 16px; border-top: 1px solid #1f2a44; }
+.disclaimer { font-size: 12px; color: #6b7a96; padding: 14px 18px; background: #131929; border-left: 3px solid #f0c419; border-radius: 4px; margin: 18px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>📊 A股港股收盘总结报告</h1>
+  <div class="meta">交易日：2026-05-19（周二） · 截止时间：16:30 (HKT)</div>
+  <div class="tagline">
+    沪指 V 形反弹 +0.92%/4169.54 收复阶段失地，<strong style="color:#ff5252;">科创50 大涨 +3.81%</strong> 半导体设备+电力双主线狂飙；创业板 -0.16% 弱势分化，两市成交 2.89 万亿（缩量 74 亿）。<br>
+    港股三大指数齐涨：恒指 +0.48%/25797.85、恒生科技 +0.26%/4857.46、国企指数 +0.49%/8639.96，<strong style="color:#ff5252;">腾讯 +2.40% 领涨</strong>云模型商用化催化。<br>
+    主线：① 普京访华+能源/电力爆发（电力板块净流入 48.91 亿）；② 半导体设备+先进封装爆发（中微 +9.29% 主力净买入 14.07 亿）；③ AI 算力液冷+Token 商用化（中国电信 +4.25%）。
+  </div>
+</div>
+
+<!-- ============ 一、大盘总结 ============ -->
+<h2 class="section-title">一、今日大盘总结</h2>
+
+<div class="index-grid">
+  <div class="index-card"><div class="name">上证指数</div><div class="price">4169.54</div><div class="change up">+0.92% (+38.01)</div></div>
+  <div class="index-card"><div class="name">深证成指</div><div class="price">15569.91</div><div class="change up">+0.26% (+39.68)</div></div>
+  <div class="index-card"><div class="name">创业板指</div><div class="price">3908.44</div><div class="change down">-0.16% (-6.44)</div></div>
+  <div class="index-card"><div class="name">科创50</div><div class="price">1775.13</div><div class="change up">+3.81% (+65.17)</div></div>
+  <div class="index-card"><div class="name">北证50</div><div class="price">1364.83</div><div class="change up">+0.58% (+7.88)</div></div>
+  <div class="index-card"><div class="name">沪深300</div><div class="price">4852.88</div><div class="change up">+0.40% (+19.36)</div></div>
+  <div class="index-card"><div class="name">中证500</div><div class="price">8627.95</div><div class="change up">+0.86% (+73.71)</div></div>
+  <div class="index-card"><div class="name">中证1000</div><div class="price">8808.64</div><div class="change up">+1.01% (+88.43)</div></div>
+  <div class="index-card"><div class="name">恒生指数</div><div class="price">25797.85</div><div class="change up">+0.48% (+122.67)</div></div>
+  <div class="index-card"><div class="name">恒生科技</div><div class="price">4857.46</div><div class="change up">+0.26% (+12.52)</div></div>
+  <div class="index-card"><div class="name">恒生国企</div><div class="price">8639.96</div><div class="change up">+0.49% (+41.99)</div></div>
+</div>
+
+<div class="card">
+<h3 class="subsection">📈 大盘运行特征</h3>
+<p>周二 A 股演绎"低开-急跌-V 形反弹"经典剧本：早盘三大指数集体低开，半导体、AI 算力一度领跌带崩大盘；午后<strong style="color:#ff5252;">普京访华仪式确认+电力板块涨停潮</strong>引爆，沪指一路收复失地至 <strong>4170.29 点</strong>（接近年内新高），收涨 +0.92%。但科技股与权重股严重分化——<strong style="color:#ff5252;">科创 50 单日大涨 3.81%</strong> 创近期最大单日涨幅，<strong>中证 1000 +1.01%、中证 500 +0.86%</strong> 中小盘强势，但<strong style="color:#26d97f;">创业板指反逆 -0.16%</strong>（受新能源车/光伏/锂矿拖累）。两市成交 <strong>2.89 万亿</strong>，缩量 74 亿但仍维持 3 万亿附近的活跃度。</p>
+<p style="margin-top:10px;">港股窄幅整理后小幅收涨：恒指 +0.48% 重新站稳 25800 点附近，<strong>腾讯控股 +2.40%/460.00</strong> 受云模型即将公测收官转商用化催化领涨大型科技股；但 AI 大模型双雄智谱 -9%、MINIMAX-W -7% 大幅杀跌，新能源车整体承压（蔚来 -4%、理想 -4%、小鹏 -3%）。</p>
+</div>
+
+<h3 class="subsection">💰 资金面 & 市场广度</h3>
+<table>
+<tr><th>指标</th><th>数据</th><th>说明</th></tr>
+<tr><td>两市成交</td><td><strong>2.89 万亿</strong></td><td>缩量 74 亿，连续 3 万亿+</td></tr>
+<tr><td>主力资金</td><td class="down"><strong>-225.48 亿</strong></td><td>大盘整体净流出</td></tr>
+<tr><td>陆股通(北向)</td><td class="up"><strong>+42.8 亿</strong></td><td>结束连续流出转为外资回流抢筹（外部数据来源：财联社）</td></tr>
+<tr><td>电力(板块流入)</td><td class="up"><strong>+48.91 亿</strong></td><td>领跑全市场，普京访华能源催化</td></tr>
+<tr><td>有色金属(板块流出)</td><td class="down"><strong>-103.96 亿</strong></td><td>资金大幅撤离</td></tr>
+<tr><td>个股净买入TOP1</td><td class="up">利欧股份 <strong>+14.26亿</strong></td><td>+7.39%(蓝色光标系传媒+AI概念)</td></tr>
+<tr><td>个股净买入TOP2</td><td class="up">中微公司 <strong>+14.07亿</strong></td><td>+9.29%(半导体设备国产替代)</td></tr>
+<tr><td>个股净卖出TOP1</td><td class="down">新易盛 <strong>-26.14亿</strong></td><td>-4.02%(光模块阶段性获利兑现)</td></tr>
+</table>
+
+<h3 class="subsection">🔥 板块热点复盘</h3>
+
+<div class="card">
+<p><strong style="color:#ff5252;">领涨板块（资金流入TOP10）</strong></p>
+<ul class="news-list" style="margin-top:8px;">
+<li><strong>电力 +48.91 亿主力流入：</strong>上海电力 +10.02% 涨停、涪陵电力 +10.02%、长江电力 +1.30%。<strong>普京访华+中俄能源合作深化</strong>是主导催化（西线天然气、原油管道、核能加速）。</li>
+<li><strong>半导体设备/IT服务：</strong>中微公司 +9.29%/479.51 元（主力净买入 14.07 亿）、芯原股份 +10% 一字、沪硅产业涨停、瑞芯微跟涨。AI 算力液冷+先进封装+国产替代多重共振。</li>
+<li><strong>通用设备/工业母机：</strong>主力流入排名前列，配合中国制造 2025 升级周期。</li>
+<li><strong>软件开发/AI 智能体：</strong>南威软件涨停（+10.03%）、电科数字涨停。腾讯云模型即将结束公测转商用化催化。</li>
+<li><strong>公用事业/水电核电：</strong>红利股回流避险+电力涨停潮带动。</li>
+<li><strong>文化传媒/数字媒体：</strong>BK1295 其他数字媒体板块 +10.37% 居板块涨幅榜首；蓝色光标、读者传媒涨停。</li>
+<li><strong>商业航天/军工：</strong>普京访华军工航天合作主题催化。</li>
+<li><strong>双良节能 +10.08% 涨停：</strong>电力+光伏多晶硅业务双驱动。</li>
+</ul>
+</div>
+
+<div class="card">
+<p><strong style="color:#26d97f;">领跌板块（杀跌前10）</strong></p>
+<table style="margin-top:6px;">
+<tr><th>板块</th><th>涨跌幅</th><th>主力资金</th><th>关键词</th></tr>
+<tr><td>钨</td><td class="down">-5.46%</td><td class="down">-10.71 亿</td><td>有色金属持续杀跌</td></tr>
+<tr><td>粘胶</td><td class="down">-4.42%</td><td class="down">-0.44 亿</td><td>化纤需求担忧</td></tr>
+<tr><td>锂</td><td class="down">-4.28%</td><td class="down">-26.73 亿</td><td>赣锋 -4.17%/天齐回吐</td></tr>
+<tr><td>体育Ⅱ/Ⅲ</td><td class="down">-4.07%</td><td class="down">-1.25 亿</td><td>板块情绪降温</td></tr>
+<tr><td>能源金属</td><td class="down">-3.38%</td><td class="down">-31.70 亿</td><td>新能源车销量预期下调</td></tr>
+<tr><td>稀土</td><td class="down">-3.07%</td><td class="down">-12.63 亿</td><td>北方稀土回吐前期涨幅</td></tr>
+<tr><td>油气开采Ⅱ/Ⅲ</td><td class="down">-2.83%</td><td class="down">-2.83 亿</td><td>美延长俄油豁免到期反作用</td></tr>
+<tr><td>煤化工</td><td class="down">-2.70%</td><td class="down">-4.48 亿</td><td>大宗商品偏弱</td></tr>
+</table>
+</div>
+
+<!-- ============ 二、重大消息 ============ -->
+<h2 class="section-title">二、今日重大消息</h2>
+
+<ul class="news-list">
+<li><strong>🇷🇺 普京 5 月 19-20 日正式访华：</strong>恰逢《中俄睦邻友好合作条约》签署 25 周年、上合组织成立 25 周年、中俄全面战略协作伙伴关系 30 周年。两国元首会晤聚焦能源安全、军工航天、农业贸易五大方向。市场预期签署最高级别联合声明及系列文件，能源合作迈出"实质性一步"——<strong>电力板块单日净流入 48.91 亿</strong>领跑两市，上海电力等多股涨停。<span style="color:#8aa1c4;">[来源：东方财富网/财联社]</span></li>
+
+<li><strong>📱 腾讯云大模型公测收官在即转商用：</strong>腾讯云两款模型即将结束免费公测正式商用，腾讯控股 H 股盘中一度涨近 3%，<strong>收涨 +2.40%/460.00 港元</strong>，重回 460 关键位。配合阿里 +1.22%、百度涨超 1%，港股大型科技股集体回暖。<span style="color:#8aa1c4;">[来源：格隆汇]</span></li>
+
+<li><strong>💾 长鑫科技更新港交所招股书：</strong>得益于 2026 年 Q1 DRAM 价格的快速上涨，长鑫科技业绩爆发式增长，存储芯片缺货周期延续到 2028 年。带动兆易创新延续高位、深科技、佰维存储等存储产业链活跃。</li>
+
+<li><strong>🤖 上海十五五推动 10 万台人形机器人进工厂：</strong>5 月 18 日上海市经信委主任宣布，"十五五"末力争推动 10 万台人形机器人进工厂。优必选 2026 年 Q1 人形机器人收入暴增 22 倍至 8.21 亿元，毛利率 54.6%。但今日<strong>优必选 -2.03%/110.80</strong> 因前期累涨获利兑现+机器人板块业绩扰动整体小幅回调。</li>
+
+<li><strong>📊 主力资金净流出 225 亿：</strong>电力(+48.91 亿)、IT 服务、通用设备主力流入居前；有色金属(-103.96 亿)、通信、电子板块流出居前。个股净买入：利欧股份 14.26 亿(蓝色光标传媒系)、中微公司 14.07 亿(半导体设备龙头国产替代)、阳光电源 12.94 亿(电力光伏共振)；净卖出：新易盛 -26.14 亿(光模块阶段获利兑现)。</li>
+
+<li><strong>🌐 AI 算力板块分化：</strong>港股大模型双雄"智谱 -9%、MINIMAX-W -7%" 大幅杀跌；A 股寒武纪 +8.40%/1319.17 续创新高，工业富联高位震荡，光模块新易盛领跌。资金从一线龙头流向半导体设备(中微)+先进封装(沪硅产业)+先进 AI 应用(瑞芯微)等中游环节。</li>
+
+<li><strong>🚗 港股新能源车跌幅扩大：</strong>受 4 月新能源车销量预期下调影响，蔚来 -4%、理想 -4%、小鹏 -3%。但比亚迪 H 股 +0.11%/93.90 抗跌（PE 11x 极致低估）。</li>
+
+<li><strong>📈 5 月 LPR 报价 5/20 公布：</strong>市场预期 1Y LPR 维持 3.0%/5Y 维持 3.5% 不变（央行 Q1 货币政策报告删除"灵活高效"等措辞），降息预期降温。</li>
+
+<li><strong>🛡️ 中证白酒+猪肉+港口航运延续弱势：</strong>食品饮料板块连续走弱，反映消费复苏预期偏弱。</li>
+
+<li><strong>💎 黄金/工业金属深度回调：</strong>钨 -5.46%、稀土 -3.07%、能源金属 -3.38%。前期涨幅过高+美元短期反弹+大宗商品周期切换共振杀跌。</li>
+</ul>
+
+<div class="disclaimer">
+⚠️ <strong>数据来源说明：</strong>大盘指数与个股价格均通过新浪财经/东方财富网实时接口（hq.sinajs.cn / push2.eastmoney.com）截取自 2026-05-19 收盘前后真实数据；新闻信息来自东方财富网、财联社、格隆汇、界面新闻等公开信源。
+</div>
+
+<!-- ============ 三、自选股分析 ============ -->
+<h2 class="section-title">三、9 只自选股逐一收盘分析</h2>
+
+<!-- 腾讯 -->
+<div class="stock-card bullish">
+<div class="stock-header">
+<span><span class="stock-name">腾讯控股</span><span class="stock-code">0700.HK</span><span class="tag bullish">看多</span></span>
+<span class="stock-change up">460.00 港元 (+2.40% / +10.80)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>449.20</strong></span>
+<span>收 <strong>460.00</strong></span>
+<span>高 <strong>468.80</strong></span>
+<span>低 <strong>448.60</strong></span>
+<span>成交 <strong>155.5 亿</strong></span>
+<span>市值 <strong>4.30 万亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>腾讯云两款大模型公测收官，将正式启动商用付费——盘中一度涨近 3%，收复 460 港元关键位。今日表现相对独立，未受 AI 大模型双雄（智谱-9%/MINIMAX-7%）杀跌拖累。</p>
+<p><strong>趋势判断：</strong>看多。已突破 5 月 16 日 -1.53% 低点的回调结构，重新站稳 460 元中长期均线之上。云业务商用化+游戏 4 月同比 +11% 双重催化，目标重看 470/480 阻力区。</p>
+<p><strong>关键技术位：</strong>支撑 450 / 445；压力 470 / 484.4(年内高点)。</p>
+<p><strong>机构目标价：</strong>大摩 540 港元、高盛 525 港元、瑞银 510 港元（均为最新研报，云业务+广告主升周期）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span> 5/5（核心持仓首选）</p>
+</div>
+
+<!-- 阿里 -->
+<div class="stock-card neutral">
+<div class="stock-header">
+<span><span class="stock-name">阿里巴巴</span><span class="stock-code">9988.HK</span><span class="tag neutral">震荡</span></span>
+<span class="stock-change up">133.30 港元 (+1.22% / +1.60)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>131.70</strong></span>
+<span>收 <strong>133.30</strong></span>
+<span>高 <strong>135.30</strong></span>
+<span>低 <strong>130.50</strong></span>
+<span>成交 <strong>101.5 亿</strong></span>
+<span>市值 <strong>2.55 万亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>FY26Q4 财报后第 4 个交易日，财报后累计跌幅约 4-5%（5/15 单日 -4.06%），今日小幅反弹消化负面。盘中触及 135.30 高点，但收盘未能站稳 134。淘宝+千问全面打通的协同效应仍待业绩兑现。</p>
+<p><strong>趋势判断：</strong>震荡偏弱。财报后云增速 24% 但即时零售亏损扩大形成短期估值压制；前一周 130 关键位获得支撑。</p>
+<p><strong>关键技术位：</strong>支撑 130 / 127；压力 135 / 140.2(年内高点)。</p>
+<p><strong>机构目标价：</strong>大摩 PE 12 倍极具吸引力指引、高盛 165 港元、瑞银 158 港元。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（中长期左侧重要持仓）</p>
+</div>
+
+<!-- 美团 -->
+<div class="stock-card neutral">
+<div class="stock-header">
+<span><span class="stock-name">美团-W</span><span class="stock-code">3690.HK</span><span class="tag neutral">震荡</span></span>
+<span class="stock-change up">83.05 港元 (+1.10% / +0.90)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>82.15</strong></span>
+<span>收 <strong>83.05</strong></span>
+<span>高 <strong>84.00</strong></span>
+<span>低 <strong>81.25</strong></span>
+<span>成交 <strong>25.6 亿</strong></span>
+<span>市值 <strong>5,089 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>5 月 22 日（本周四）将披露 Q1 业绩，市场对外卖核心业务增速+即时零售亏损情况关注度高。即时零售竞争担忧持续压制，京东到家+饿了么补贴战不停。</p>
+<p><strong>趋势判断：</strong>震荡。5 月 13 日大摩 300 港元目标价催化的 +4.10% 上涨已被消化，等待 5/22 财报确认下半年增长指引。</p>
+<p><strong>关键技术位：</strong>支撑 79 / 73.6(年内低点)；压力 87 / 90。</p>
+<p><strong>机构目标价：</strong>大摩 300 港元（含其他业务分部估值）、瑞银 110 港元（核心业务）、高盛 105 港元。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 3/5（财报前观望）</p>
+</div>
+
+<!-- 蜜雪 -->
+<div class="stock-card bearish">
+<div class="stock-header">
+<span><span class="stock-name">蜜雪集团</span><span class="stock-code">2097.HK</span><span class="tag bearish">看空</span></span>
+<span class="stock-change down">261.40 港元 (-0.46% / -1.20)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>262.60</strong></span>
+<span>收 <strong>261.40</strong></span>
+<span>高 <strong>266.80</strong></span>
+<span>低 <strong>259.40</strong></span>
+<span>成交 <strong>0.74 亿</strong></span>
+<span>市值 <strong>988 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>盘中触及 259.40 创下 5 月以来新低，走弱与餐饮股、消费股板块整体疲软共振。无明显个股利空。</p>
+<p><strong>趋势判断：</strong>看空。从 4 月初的 290 一路下行，跌破 5/15 的 266.80，260 心理位摇摇欲坠。</p>
+<p><strong>关键技术位：</strong>支撑 259.40 / 250；压力 270 / 282(20 日均线)。</p>
+<p><strong>机构目标价：</strong>中信建投 320 港元、高盛 295 港元（茶饮赛道结构性优势）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐</span> 2/5（短期等待止跌）</p>
+</div>
+
+<!-- 宁德时代 -->
+<div class="stock-card neutral">
+<div class="stock-header">
+<span><span class="stock-name">宁德时代</span><span class="stock-code">300750.SZ</span><span class="tag neutral">震荡</span></span>
+<span class="stock-change up">417.92 元 (+0.17% / +0.69)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>415.86</strong></span>
+<span>收 <strong>417.92</strong></span>
+<span>高 <strong>419.90</strong></span>
+<span>低 <strong>406.80</strong></span>
+<span>成交 <strong>108.05 亿</strong></span>
+<span>市值 <strong>1.84 万亿</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>盘中一度跌破 410 至 406.80（5 月以来新低），但尾盘资金回流收复 420 一线。锂电板块整体走弱（锂 -4.28%、能源金属 -3.38%）+创业板走弱拖累。</p>
+<p><strong>趋势判断：</strong>震荡。从 5 月 6 日的历史新高 460 一路调整至 406，回吐约 12%。但 420 一线长周期均线获得支撑，等待动力电池装机数据催化。</p>
+<p><strong>关键技术位：</strong>支撑 406.80 / 400；压力 425 / 440 / 460(历史高点)。</p>
+<p><strong>机构目标价：</strong>中金 525 元、华泰 510 元、高盛 480 元（动力+储能双轮驱动）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（A 股科技牛旗帜，逢低布局）</p>
+</div>
+
+<!-- 泡泡玛特 -->
+<div class="stock-card bullish">
+<div class="stock-header">
+<span><span class="stock-name">泡泡玛特</span><span class="stock-code">9992.HK</span><span class="tag bullish">看多</span></span>
+<span class="stock-change up">152.50 港元 (+1.19% / +1.80)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>150.70</strong></span>
+<span>收 <strong>152.50</strong></span>
+<span>高 <strong>154.70</strong></span>
+<span>低 <strong>149.80</strong></span>
+<span>成交 <strong>18.4 亿</strong></span>
+<span>市值 <strong>2,031 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>盘中下探 149.80 后强势反弹收复 152，<strong>站稳 150 心理位</strong>。无重大消息驱动，纯技术性反弹+618 大促预热预期。</p>
+<p><strong>趋势判断：</strong>看多。下跌结构告一段落（5/15 触及 152.40 后窄幅震荡），20 日均线 156 一线即将上穿。LABUBU/Molly 等 IP 海外扩张持续，618 大促有望兑现 Q2 收入超预期。</p>
+<p><strong>关键技术位：</strong>支撑 145 / 137.66(年内低点)；压力 160 / 167.40。</p>
+<p><strong>机构目标价：</strong>瑞银 200 港元、高盛 195 港元、中信 185 港元。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（IP 龙头，618 催化在前）</p>
+</div>
+
+<!-- 小米 -->
+<div class="stock-card neutral">
+<div class="stock-header">
+<span><span class="stock-name">小米集团</span><span class="stock-code">1810.HK</span><span class="tag neutral">震荡</span></span>
+<span class="stock-change down">30.64 港元 (-0.07% / -0.02)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>30.66</strong></span>
+<span>收 <strong>30.64</strong></span>
+<span>高 <strong>31.06</strong></span>
+<span>低 <strong>30.34</strong></span>
+<span>成交 <strong>27.5 亿</strong></span>
+<span>市值 <strong>7,663 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>盘中再次测试 30 元心理位（30.34），尾盘小幅企稳收平。仍处于 5 月 15 日跌破 31 后的横盘整理阶段。</p>
+<p><strong>趋势判断：</strong>震荡。等待 5/27 Q1 财报（预期手机+IoT+汽车三引擎数据），SU7 销量与玄戒芯片进展是核心催化。</p>
+<p><strong>关键技术位：</strong>支撑 29.10 / 28.80(年内低点)；压力 31 / 32 / 32.14。</p>
+<p><strong>机构目标价：</strong>大摩 42 港元、高盛 40 港元、瑞银 38 港元（手机+SU7 双引擎）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（财报前左侧加仓窗口）</p>
+</div>
+
+<!-- 快手 -->
+<div class="stock-card neutral">
+<div class="stock-header">
+<span><span class="stock-name">快手-W</span><span class="stock-code">1024.HK</span><span class="tag neutral">震荡</span></span>
+<span class="stock-change up">48.88 港元 (+0.41% / +0.20)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>48.68</strong></span>
+<span>收 <strong>48.88</strong></span>
+<span>高 <strong>49.54</strong></span>
+<span>低 <strong>48.00</strong></span>
+<span>成交 <strong>15.6 亿</strong></span>
+<span>市值 <strong>2,144 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>盘中一度反弹至 49.54 接近 50 关键位，但尾盘回吐至 48.88。可灵 AI 分拆传闻（200 亿美元估值/20 亿融资）已部分消化，等待官方公告。</p>
+<p><strong>趋势判断：</strong>震荡。3-5 月从可灵 2.0 催化的 +7.56% 高点（5/7）后持续回踩，48 心理位获得支撑。</p>
+<p><strong>关键技术位：</strong>支撑 48 / 46.48；压力 50 / 51.35。</p>
+<p><strong>机构目标价：</strong>瑞银 73 港元、高盛 68 港元、中金 65 港元（可灵+电商双引擎）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 3/5（等待可灵分拆官宣）</p>
+</div>
+
+<!-- 优必选 -->
+<div class="stock-card bearish">
+<div class="stock-header">
+<span><span class="stock-name">优必选</span><span class="stock-code">9880.HK</span><span class="tag bearish">看空</span></span>
+<span class="stock-change down">110.80 港元 (-2.03% / -2.30)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>113.10</strong></span>
+<span>收 <strong>110.80</strong></span>
+<span>高 <strong>116.40</strong></span>
+<span>低 <strong>109.80</strong></span>
+<span>成交 <strong>7.32 亿</strong></span>
+<span>市值 <strong>536 亿港元</strong></span>
+</div>
+<p><strong>盘中关键事件：</strong>从昨日 +2.89%/113.80 高位回吐，触及 109.80 创近期 5 日新低。前期累涨较多+人形机器人板块整体业绩扰动+大盘机器人板块今日整体承压（拓斯达等弱势）共振杀跌。</p>
+<p><strong>趋势判断：</strong>看空（短期）。从 5/13 的 112.80 开始横盘，今日跌破 110 心理位。但中长期估值（547 亿稳坐人形机器人全球第一）+ Q1 收入暴增 22 倍至 8.21 亿+毛利率 54.6%+花旗 190 港元目标价仍提供支撑。</p>
+<p><strong>关键技术位：</strong>支撑 109.80 / 105.5；压力 116.40 / 120。</p>
+<p><strong>机构目标价：</strong>花旗 190 港元、瑞银 165 港元（机器人共识首选标的）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 3/5（短期回调，中期分批左侧）</p>
+</div>
+
+<!-- ============ 四、精选推荐 ============ -->
+<h2 class="section-title">四、📌 每日精选推荐 — 非自选股票（8 只）</h2>
+
+<div class="card" style="background:#1a2845; border-left:4px solid #4a90e2;">
+<p style="color:#d4dcec;"><strong style="color:#66b1ff;">选股逻辑（左侧布局+中期趋势）：</strong>本日精选优先聚焦"普京访华+电力涨停潮"主线左侧/二线龙头、半导体设备产业链、AI 算力新方向（液冷/IDC）、港股极致低估资产，同时回避以下今日已经过热的右侧标的：<strong style="color:#ff7575;">中微公司 +9.29%、寒武纪 +8.40%、利欧股份 +7.39%、芯原股份 +10%（一字）、双良节能 +10%、上海电力 +10%（涨停）</strong> 等高位接力股。所有股价数据均来自新浪财经实时接口。</p>
+</div>
+
+<!-- 阳光电源 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">阳光电源</span><span class="stock-code">300274.SZ</span><span class="tag pick">电力新能源</span></span>
+<span class="stock-change up">157.38 元 (+3.37%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>154.00</strong></span>
+<span>收 <strong>157.38</strong></span>
+<span>高 <strong>161.32</strong></span>
+<span>低 <strong>153.72</strong></span>
+<span>成交额 <strong>159.67 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>电力板块涨停潮（净流入 48.91 亿）核心二线龙头之一，<strong>主力净流入 12.94 亿</strong>排名全市场第二（盘中 14:10 时点居首）。<strong>普京访华+中俄能源合作</strong>催化下，光伏逆变器+储能 PCS 全球龙头双驱动。今日涨幅相对克制（+3.37%）未触及 10cm 涨停，左侧布局窗口仍在。</p>
+<p><strong>核心催化剂：</strong>① 5/19-20 普京访华能源合作落地预期；② Q1 海外光伏出货量预期同比 +60%；③ 储能 PCS 在欧洲/澳洲订单持续兑现；④ 中俄能源管线建设带动逆变器+储能配套需求。</p>
+<p><strong>风险提示：</strong>美国 IRA 政策不确定性、人民币兑美元汇率波动、光伏组件价格反弹挤压利润。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span> 5/5（电力主线最具弹性二线龙头）</p>
+</div>
+
+<!-- 长江电力 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">长江电力</span><span class="stock-code">600900.SH</span><span class="tag pick">水电高股息</span></span>
+<span class="stock-change up">27.24 元 (+1.30%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>26.89</strong></span>
+<span>收 <strong>27.24</strong></span>
+<span>高 <strong>27.35</strong></span>
+<span>低 <strong>26.77</strong></span>
+<span>成交额 <strong>46.92 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>电力板块净流入 48.91 亿主导下的"压舱石"龙头。<strong>主力净流入 7.36 亿</strong>。中俄能源合作中重点关注水电+核电+电网协同。当前股息率 3.6%、稳定分红+水电资产折旧期长+ROE 14% 持续高于行业。</p>
+<p><strong>核心催化剂：</strong>① 普京访华能源合作主题持续；② 5/20 LPR 不变后红利股估值修复；③ 三峡集团整合电力资产预期；④ 进入丰水期机组发电量同比 +5%。</p>
+<p><strong>风险提示：</strong>来水偏枯导致发电量低于预期、利率上行压制估值。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（防御+主题催化共振）</p>
+</div>
+
+<!-- 中国电信 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">中国电信</span><span class="stock-code">601728.SH</span><span class="tag pick">算力Token</span></span>
+<span class="stock-change up">7.11 元 (+4.25%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>6.75</strong></span>
+<span>收 <strong>7.11</strong></span>
+<span>高 <strong>7.39</strong></span>
+<span>低 <strong>6.68</strong></span>
+<span>成交额 <strong>58.14 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>5/18 三大运营商联合推出商用 Token 套餐+算力网纳入国家核心基础设施，今日<strong>主力净流入 7.14 亿</strong>排名前 10。盘中触及 7.39 涨停未封后回落，给出 7.0-7.1 区间分批介入窗口。当前 PE 16x、股息率 4.2%，红利+主题双戴维斯击。</p>
+<p><strong>核心催化剂：</strong>① Token 套餐商用化加速 6/30 前完成 1000 万企业客户接入；② 三大运营商算力网建设投资规划披露；③ 高股息红利策略+央企估值重塑预期。</p>
+<p><strong>风险提示：</strong>算力建设资本开支超预期挤压利润、5G 资费战担忧。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span> 5/5（算力+红利+央企三重逻辑）</p>
+</div>
+
+<!-- 科大讯飞 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">科大讯飞</span><span class="stock-code">002230.SZ</span><span class="tag pick">AI大模型</span></span>
+<span class="stock-change up">49.11 元 (+0.82%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>48.71</strong></span>
+<span>收 <strong>49.11</strong></span>
+<span>高 <strong>49.60</strong></span>
+<span>低 <strong>48.35</strong></span>
+<span>成交额 <strong>24.84 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>AI 大模型应用左侧。腾讯云大模型公测收官转商用化催化，AI 商用付费拐点确认。讯飞星火 V5 发布在即，G/B 端收入即将迎来兑现期。涨幅克制（+0.82%）未触及高位接力，标准左侧布局窗口。</p>
+<p><strong>核心催化剂：</strong>① 5 月底-6 月初讯飞星火 V5 发布；② Q2 G/B 端订单回款（教育/医疗/政企）；③ 国资云算力开放采购；④ 6 月世界人工智能大会上海催化。</p>
+<p><strong>风险提示：</strong>大模型行业竞争加剧、G 端订单回款节奏不及预期。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（左侧 AI 应用龙头）</p>
+</div>
+
+<!-- 比亚迪H -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">比亚迪股份</span><span class="stock-code">1211.HK</span><span class="tag pick">新能源车龙头</span></span>
+<span class="stock-change up">93.90 港元 (+0.11%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>93.80</strong></span>
+<span>收 <strong>93.90</strong></span>
+<span>高 <strong>94.60</strong></span>
+<span>低 <strong>92.45</strong></span>
+<span>成交额 <strong>17.26 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>港股新能源车板块整体跌幅扩大（蔚来-4%、理想-4%、小鹏-3%）背景下<strong>仅 +0.11% 显著抗跌</strong>。<strong>PE 11x 极致低估</strong>，海外销量同比 +90% 持续兑现（5 月预计单月出口 8 万+）。中俄合作催化下俄罗斯市场销量预期上修。</p>
+<p><strong>核心催化剂：</strong>① 5 月销量数据预告（目标 60 万+）；② 俄罗斯市场销量翻倍预期；③ 海狮 06 EV 5 月底全球上市；④ 智驾平权策略持续兑现。</p>
+<p><strong>风险提示：</strong>价格战利润率压制、海外政策变动（欧盟反补贴）。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐⭐</span> 5/5（极致低估全球第一）</p>
+</div>
+
+<!-- 药明生物H -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">药明生物</span><span class="stock-code">2269.HK</span><span class="tag pick">CXO港股</span></span>
+<span class="stock-change up">33.00 港元 (+0.18%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>32.94</strong></span>
+<span>收 <strong>33.00</strong></span>
+<span>高 <strong>33.64</strong></span>
+<span>低 <strong>32.68</strong></span>
+<span>成交额 <strong>5.74 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>5/29-6/3 ASCO 美国临床肿瘤年会即将召开，CXO+创新药迎来催化窗口。恒瑞-BMS 152 亿美金合作落地后，国内 CXO 订单加速兑现。当前 PE 24x（5 年分位 16%）+ PB 1.4x 历史最低。无生物安全法案担忧的"防御性 CXO"。</p>
+<p><strong>核心催化剂：</strong>① 5/29-6/3 ASCO 大会催化；② Q1 业绩公告（H1 增速预告）；③ GLP-1 减肥药 CDMO 订单兑现；④ 港股创新药数据保护办法落地。</p>
+<p><strong>风险提示：</strong>美国生物安全法案立法波动、海外大客户订单波动。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（CXO 港股反弹左侧）</p>
+</div>
+
+<!-- 赣锋锂业 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">赣锋锂业</span><span class="stock-code">002460.SZ</span><span class="tag pick">锂周期反转</span></span>
+<span class="stock-change down">76.07 元 (-4.17%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>78.40</strong></span>
+<span>收 <strong>76.07</strong></span>
+<span>高 <strong>78.40</strong></span>
+<span>低 <strong>74.50</strong></span>
+<span>成交额 <strong>47.20 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>锂板块今日<strong>-4.28% 板块大跌+净流出 26.73 亿</strong>，赣锋作为龙头深跌至 74.50 创近期新低。但 PB 仅 1.6x 处于历史 5% 分位，碳酸锂期货价已企稳 7 万/吨上方，<strong>底部反转结构初现</strong>。中俄合作中锂电材料协同空间大。左侧布局周期反转，但需具备较强容忍度。</p>
+<p><strong>核心催化剂：</strong>① 6 月锂矿企业 Q2 业绩预期回升；② 中俄锂电产业链合作；③ 储能装机增速回升；④ 阿根廷锂三角项目投产兑现。</p>
+<p><strong>风险提示：</strong>碳酸锂价格再度破位、供给端释放超预期。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐</span> 3/5（高 Beta 周期左侧，仓位控制）</p>
+</div>
+
+<!-- 中科曙光 -->
+<div class="stock-card pick">
+<div class="stock-header">
+<span><span class="stock-name">中科曙光</span><span class="stock-code">603019.SH</span><span class="tag pick">国产算力</span></span>
+<span class="stock-change down">98.25 元 (-0.46%)</span>
+</div>
+<div class="data-row">
+<span>开 <strong>98.00</strong></span>
+<span>收 <strong>98.25</strong></span>
+<span>高 <strong>98.55</strong></span>
+<span>低 <strong>95.00</strong></span>
+<span>成交额 <strong>62.54 亿</strong></span>
+</div>
+<p><strong>推荐理由：</strong>5/18 公告中科曙光+海光信息合并整合启幕，整合后将打造国产算力平台型龙头。今日小幅回调（-0.46%）给出 98 一线左侧布局窗口。AI 算力国产替代+先进封装+液冷服务器全产业链协同。Token 商用化催化算力需求扩张。</p>
+<p><strong>核心催化剂：</strong>① 5 月底中科曙光+海光合并方案细节披露；② Q2 算力服务器订单数据；③ 6 月世界人工智能大会上海催化；④ 国资云算力采购扩量。</p>
+<p><strong>风险提示：</strong>合并整合不及预期、海外芯片限制升级。</p>
+<p><strong>推荐星级：</strong><span class="stars">⭐⭐⭐⭐</span> 4/5（国产算力一线龙头）</p>
+</div>
+
+<!-- ============ 五、明日展望 ============ -->
+<h2 class="section-title">五、明日展望（2026-05-20）</h2>
+
+<div class="outlook-box">
+<h3>📍 关键技术位</h3>
+<p>· 上证指数：4170 一线突破后，下一阻力 4200/4242（5/13 阶段高点）；支撑 4135/4108（今日低点）。</p>
+<p>· 创业板：3908 弱势震荡，需关注创业板能否企稳 3900 心理位；下方 3850 是关键支撑。</p>
+<p>· 科创 50：1775 大涨后短线超买，关注 1800 关键阻力；支撑 1740/1710（5/18 收盘）。</p>
+<p>· 恒生指数：25800 上方挑战 26000；下方支撑 25500/25200。</p>
+<p>· 恒生科技：4860 上方挑战 5000 心理位；支撑 4800/4750。</p>
+</div>
+
+<div class="outlook-box">
+<h3>🎯 明日关键催化剂 / 风险</h3>
+<p><strong>看多催化：</strong></p>
+<p>① <strong>普京访华第二日（5/20）</strong>：能源协议、军工合作、农业贸易等具体协议签署落地，电力/军工/农业板块预期延续；</p>
+<p>② <strong>5 月 LPR 报价（5/20 上午 9:15）</strong>：市场预期维持 1Y 3.0%/5Y 3.5% 不变。若降息（小概率）将利好地产/银行；</p>
+<p>③ <strong>外资回流确认</strong>：北向 +42.8 亿结束连续流出，连续性需观察；</p>
+<p>④ 腾讯云模型商用启动+游戏 4 月+11% 数据，港股科技股估值修复延续。</p>
+<p style="margin-top:12px;"><strong>看空风险：</strong></p>
+<p>① <strong>主力净流出 225 亿</strong>，若周三续流出存在指数回调风险；</p>
+<p>② 高位接力股（中微+9.29%、寒武纪+8.40%、芯原一字、上海电力涨停）连板风险积累；</p>
+<p>③ <strong>有色金属板块净流出 103.96 亿</strong>，钨/锂/稀土深度回调或继续；</p>
+<p>④ 港股大模型双雄智谱-9%/MINIMAX-7% 杀跌情绪外溢；</p>
+<p>⑤ 美国延长俄油豁免到期、特朗普"对话台湾大选"等地缘扰动。</p>
+</div>
+
+<div class="outlook-box">
+<h3>💡 操作建议</h3>
+<p>1. <strong>主线持仓不动</strong>：电力（长江电力/阳光电源/中国电信）、半导体设备（拓荆/北方华创回调买点）、CXO（药明生物 H）、AI 应用（科大讯飞）。</p>
+<p>2. <strong>回避高位接力</strong>：连板>3 天的妖股、当日涨幅 >9% 的高位股（中微/寒武纪/芯原/双良/上海电力等）。</p>
+<p>3. <strong>港股核心持仓</strong>：腾讯（5/13 财报发布后 460 关键位站稳）、阿里（财报后底部消化）、比亚迪（PE11x 极致低估）。</p>
+<p>4. <strong>左侧布局新方向</strong>：锂矿（赣锋/天齐 -4-5% 后底部反转结构）、新能源车（比亚迪 H 抗跌）、CXO（药明生物 H ASCO 催化）。</p>
+<p>5. <strong>仓位建议</strong>：维持 6-7 成仓位（前一日已减仓），若沪指明日回踩 4135/4108 支撑可加仓至 7-8 成。</p>
+</div>
+
+<div class="disclaimer">
+⚠️ <strong>免责声明：</strong>本报告基于公开信息及实时行情数据整理，仅供参考交流，不构成任何投资建议。股票市场有风险，投资须谨慎。机构目标价均为公开研报历史信息，不代表当前最新观点。
+</div>
+
+<div class="footer">
+📊 A股港股每日收盘总结 · 自动化生成 · 2026-05-19 16:30 (HKT)
+</div>
+
+</div>
+</body>
+</html>
