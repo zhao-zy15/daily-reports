@@ -1,0 +1,841 @@
+LambdaPO: A Lambda Style Policy Optimization
+for Reasoning Language Models
+Zhe Yuan1, Yipeng Zhou 2, Jinghan Li 3, Xinyuan Chen 4∗,
+Bowen Deng 5, Zhiqian Chen 4, Liang Zhao 6
+1Pinterest, San Francisco, CA 94107, USA
+2Facebook, Menlo Park, CA 94025, USA
+3University of Michigan - Ann Arbor, Ann Arbor, MI 48109, USA
+4Mississippi State University, Mississippi State, MS 39762, USA
+5Carnegie Mellon University, Pittsburgh, PA 15213. USA
+6Emory University, Atlanta, GA 30322, USA
+March 11, 2026
+Abstract
+Group Relative Policy Optimization(GRPO) has become a cornerstone
+of modern reinforcement learning alignment, prized for its efficacy in fore-
+going an explicit value-critic by leveraging reward normalization across
+sampled trajectory cohorts. However, the method’s reliance on a mono-
+lithic statistical baseline, such as the group mean, collapses the relational
+topology of the trajectory space into a single scalar, thereby erasing the
+fine-grained preference information essential for navigating complex, rank-
+sensitive reward landscapes. To address this issue, we introduce a novel
+framework, Lambda Policy Optimization (LambdaPO), that addresses
+this information-theoretic bottleneck by re-conceptualizing advantage esti-
+mation from a scalar value to a decomposed, pairwise preference structure.
+Specifically, the advantage for any given trajectory is formulated as the
+integrated sum of reward differentials against all peers in its cohort, where
+each pairwise comparison is dynamically attenuated by the policy’s own
+probabilistic confidence in the established preference. To further mitigate
+the sparsity of binary outcome supervision, we augment the objective with
+a semantic density reward, derived from the precision-recall alignment
+between generated reasoning traces and ground-truth solutions. As a
+result, our method can mine more fine-grained optimization signals from
+a group of rollouts, guiding the LLM to a better optima. Experimental
+results across challenging math reasoning and question-answering tasks
+demonstrates that LambdaPO improves performance compared to the
+baseline methods.
+∗Corresponding author: zchen@cse.msstate.edu.
+1
+arXiv:2605.19416v1  [cs.CL]  19 May 2026
+1 Introduction
+The evolution of Large Language Models (LLMs) has a paradigm shift in user
+expectations, transitioning from mere linguistic fluency to rigorous reasoning
+capabilities in domains such as mathematics and complex question answering.
+Consequently, Reinforcement Learning (RL) has ascended as the basic technology
+for incentivizing and amplifying these cognitive behaviors. While Proximal
+Policy Optimization (PPO)[14] established itself as thede factostandard in early
+human preference alignment, its computational dependence on auxiliary value
+networks presents scalability challenges. Addressing this, recent frameworks such
+as Direct Preference Optimization (DPO)[ 11] have pioneered reference-based
+offline alignment, while DeepSeekMath and DeepSeek-R1 have introduced Group
+Relative Policy Optimization (GRPO)[15], a critic-free refinement of PPO that
+significantly enhances training efficiency while maintaining robust optimization
+stability. Furthermore, recent advances like SimPO[9] and ORPO[6] have further
+streamlined the alignment pipeline by eliminating the need for reference models
+or explicit reward modeling, setting a precedent for the efficiency LambdaPO
+aims to achieve.
+However, GRPO suffers from a fundamental information-theoretic bottleneck:
+it relies on a monolithic statistical baseline (the group mean) for advantage
+estimation. This scalar reduction fundamentally collapses the rich relational
+topology of the trajectory space, consequently erasing the fine-grained, pairwise
+preference signals that are essential for navigating complex, rank-sensitive reward
+landscapes. By treating the entire cohort as an undifferentiated aggregate,
+existing methods incur suboptimal credit assignment and elevated gradient
+variance.
+To resolve this limitation, we draw upon the ”virtual gradient” principles es-
+tablished in Learning-to-Rank (LtR), specifically the LambdaRank framework[ 2],
+to propose Lambda Policy Optimization (LambdaPO). We re-conceptualize the
+advantage function not as a simple deviation from a cohort mean, but as a
+pairwise decomposed gradient. In this novel framework, the advantage for a
+specific trajectory is formulated as the integrated sum of its reward differentials
+against all cohort peers, dynamically attenuated by the policy’s own proba-
+bilistic confidence. Furthermore, we address the challenge of reward sparsity
+in rigorous reasoning tasks—where binary outcome supervision fails to credit
+correct intermediate logic—by introducing a Semantic Density Reward. This
+mechanism augments the optimization landscape with a dense, content-aware
+signal derived from the token-level precision and recall alignment between the
+generated chain-of-thought and the ground-truth solution. This approach ef-
+fectively combines RL with the classical listwise ranking objectives, enabling
+the model to self-anneal its learning rate based on the discordance between its
+internal belief and the external reward structure.
+We validate LambdaPO on complex mathematical reasoning and challenging
+question-answering benchmarks. Our results demonstrate that by recovering
+the pairwise information lost by standard group-relative methods, LambdaPO
+helps the lightweighted LLMs to gain superior reasoning performance. Our
+2
+contributions include:
+• Methodological Innovation:We introduce LambdaPO, a framework
+that leverages pairwise advantage decomposition to materialize the gradi-
+ents of a latent preference manifold, resolving the relational bottleneck of
+scalar baselines.
+• Dense Signal Augmentation:We propose a Semantic Density Reward
+mechanism that mitigates the sparsity of outcome-based supervision by
+explicitly incentivizing the recall of ground-truth reasoning tokens and the
+precision of the generated rationale.
+• Empirical Performance:We demonstrate through extensive experiments
+on mathematical reasoning and challenging question-answering benchmarks
+that LambdaPO significantly outperforms GRPO, establishing a new state-
+of-the-art for critic-free alignment.
+2 Related work
+Research in LLM reasoning:
+Many works have been devoted in enhancing the LLMs’ reasoning capabilities.
+They can be divided into three directions: (1) explicit reasoning traces, (2) tool
+augmentation, and (3) reinforcement-learning based optimization.
+Chain-of-Thought(CoT)[18] first proved that providing step-by-step ratio-
+nales enables models to generalize on arithmetic, logic, and commonsense tasks
+beyond what is achievable with direct answer prompting. Small models can
+acquire strong reasoning skills when explicitly trained on high-quality chain-of-
+thought (CoT) rationales generated by a larger teacher model. This has led to
+self-improvement paradigms such as STaR[23], which leverages self-generated
+rationales to bootstrap reasoning capabilities. To further refine these traces,
+methods like Math-Shepherd[17] utilize automated process-level supervision to
+assign credit to individual reasoning steps, addressing the credit assignment
+problem that LambdaPO seeks to solve via its pairwise decomposition.
+Another area of work focuses on integrating LLMs with external tools to
+improve numerical accuracy and procedural reasoning. ReAct[ 21] introduced a
+unified framework for interleaving natural-language reasoning with tool actions
+(e.g., search, calculator, code execution), enabling LLMs to iteratively think and
+reflect. Toolformer[13] further shows that LLMs can self-supervise tool-usage
+demonstrations, allowing models to autonomously decide when and how to invoke
+tools. Together, these works demonstrate that augmenting LLMs with external
+tools or environments leads to more reliable and interpretable reasoning.
+Recent reasoning-focused models adopt reinforcement learning to optimize
+long-form reasoning traces. Building on earlier RLHF pipelines[ 10], several
+works refine reward design for deliberate reasoning, including grouped-rollout
+methods such as GRPO [ 15]. DeepSeek-R1 [ 5] represents a recent milestone: it
+trains LLMs to perform extended internal reasoning through a combination of
+3
+supervised step-by-step rationales and reinforcement learning over long reasoning
+trajectories. These methods show that reinforcement learning—when applied to
+intermediate reasoning instead of just final answers—can yield significant gains
+in mathematical, logical, and scientific problem solving.
+From PPO to GRPO:Reinforcement learning has become a central
+approach for improving long chain-of-thought reasoning in large language models.
+Early systems relied on Proximal Policy Optimization (PPO)[ 14], but directly
+applying PPO to language generation introduces sparse-reward credit assignment
+issues and unstable updates. Recent work therefore introduced GRPO, a PPO-
+style policy optimization method tailored for LLMs, incorporating token-level
+credit assignment and entropy preservation to enhance stability in long-form
+reasoning tasks, and establishing the baseline for systems such as DeepSeek
+R1-Zero.
+From GRPO to DAPO:While recent reasoning LLMs like OpenAI’s o1
+and DeepSeek’s R1 have demonstrated impressive performance via test-time
+scaling and reinforcement learning (RL), the full set of algorithmic details behind
+their training pipelines remains largely undisclosed. The evolution of these
+methods sits within a broader theoretical effort to refine policy gradients, like
+KTO[4], which frames alignment through the lens of prospect theory. DAPO
+(Decoupled Clip and Dynamic sAmpling Policy Optimization)[ 22] explicitly
+highlights this reproducibility gap: when they ran a na¨ ıve GRPO baseline on a
+Qwen2.5-32B model[20], they only achieved 30 points on the AIME benchmark
+— significantly below DeepSeek-R1’s 47 points. This performance gap motivated
+the design of DAPO’s core techniques and the authors open-sourced not just the
+algorithm but also their training code and data to enable reproducibility.
+3 Preliminary
+3.1 Language Models as Stochastic Polices
+We frame the task of text generation as a sequential decision-making problem. A
+LLM is treated as a stochastic policy, denoted by πθ, parameterized by weights θ.
+For each prompt q, the policy generates a sequence of tokens o = (y1, y2, ..., yr).
+Then the probability of the entire sequence is the product of conditional token
+probabilities:
+πθ(o|q) =
+TY
+t=1
+πθ(yt|q, y<t) (1)
+The goal is to optimize θ such that sequences sampled from πθ are highly valued
+by a given reawrd functionR(o).
+3.2 Group Relative Policy Optimization(GRPO)
+Group Relative Policy Optimization[ 15] is an off-policy, critic-free version of
+the PPO[14] algorithm. It improves sample efficiency and stabilizes training by
+utilizing an off-policy framework and clipping the importance sampling ratio.
+4
+For a given promptq, the old policyπ θold generates a group ofGresponses
+o1, ..., oG. Each response oi receives a sequence-level reward R(oi) and it’s used
+to compute the advantage for each response.
+ˆAi = R(oi)−µ R
+σR +ϵ (2)
+whereµ R andσ R are the mean and standard deviation of rewards inO q.
+Since the policy πθ is autoregressive, the optimization objective must be formu-
+lated at the token level. The advantage ˆAi is a sequence-level quantity, but it is
+distributed as a constant credit to every token-level generation step within that
+sequence. The full GRPO objective is thus given by:
+JGRPO(θ)
+=Eq∼P(Q),{o i}∼πθold
+
+ 1
+G
+GX
+i=1
+1
+|oi|
+|oi|X
+t=1
+Lclip(oi,t, θ)
+
+ (3)
+whereL clip(oi,t, θ) is the token-level clipped surrogate objective:
+Lclip(oi,t, θ) = min
+
+w(oi,t|θ) ˆAi,
+clip(w(oi,t|θ),1−ϵ,1 +ϵ) ˆAi
+ (4)
+The per-token importance ratio is w(oi,t|θ) = πθ(yt|q,y<t)
+πθold(yt|q,y<t), and ε is the clipping
+hyperparameter. Often, a KL-divergence penalty, −βDKL[πθ||πref], is added
+to regularize the policy and prevent it from deviating too far from a trusted
+reference policyπ ref (e.g., the initial SFT model).
+4 Methodology
+In this section, we present Lambda Policy Optimization (LambdaPO). We begin
+by dissecting the information-theoretic limitations of scalar baseline methods like
+GRPO. We then formally derive our Pairwise Decomposed Advantage (PDA)
+estimator, provide a theoretical intuition regarding its gradient dynamics, and
+conclude with the complete algorithmic framework.
+4.1 Revisiting the Relational Bottleneck in GRPO
+Group Relative Policy Optimization (GRPO) departs from conventional actor–
+critic methods by eliminating an explicit, learned value function and instead
+normalizing rewards within a locally sampled cohort of trajectories. Concretely,
+given a query q and its associated output set Oq = {o1, . . . , oK}, the advantage
+assigned to a trajectoryo i is computed via a centered statistic,
+ˆAi ∝R(o i)−µ O,(5)
+5
+q Policy
+Model
+o1
+o2
+oG
+. . .
+r1
+r2
+rG
+. . .
+A1
+A2
+AG
+. . .
+KL
+Reference
+Model
+Reward
+Model
+q Policy
+Model
+o1
+o2
+oG
+. . .
+r1
+r2
+rG
+. . .
+A1
+A2
+AG
+. . .
+KL
+Reference
+Model
+Semantic
+Reward
+Model
+GRPO
+LambdaPO
+Figure 1:The architectural evolution from GRPO to LambdaPO.Both
+frameworks generate a cohort of outputs o1, ..., oG from a query q. GRPO (Top)
+derives advantages via Z-score normalization using a standard reward model.
+In contrast, LambdaPO (Bottom) enhances it by (1) incorporating semantic
+density signals into the reward, and (2) replacing the scalar baseline with a
+fully-connected pairwise comparison mechanism, enabling the policy to learn
+from the relative strengths of all generated trajectories.
+where µO denotes the empirical mean reward over Oq (optionally rescaled by
+the standard deviation σO). This design choice yields substantial computational
+savings and simplifies optimization, as discussed in Section 3.
+Despite these practical benefits, this form of aggregation introduces a fun-
+damental limitation that we refer to as therelational bottleneck. By reducing
+the cohort Oq to a small set of scalar moments—typically ( µO, σO)—GRPO
+discards the richer relational structure encoded in the joint distribution of peer
+trajectories. In particular, the resulting baseline is permutation invariant: it
+is insensitive to which specific peers outperform or underperform oi, and only
+reflects howo i compares to an undifferentiated average.
+This invariance has important consequences for the learning dynamics. From
+an optimization perspective, the mean-centered baseline acts as a form of low-pass
+filter on the policy gradient. High-frequency relational information—such as fine-
+grained rank orderings or asymmetric performance gaps among candidates—is
+suppressed. For example, knowing that trajectory oi is slightly better than
+oj but substantially worse than ok defines a directional preference structure
+that could guide targeted parameter updates. In contrast, a comparison solely
+against µO collapses these distinctions into a single scalar signal, obscuring which
+improvements are most salient.
+The impact of this bottleneck is especially pronounced in rank-sensitive
+domains, including multi-step reasoning, program synthesis, and other structured
+6
+generation tasks. In such settings, progress often hinges on subtle qualitative
+differences between high-performing trajectories rather than coarse separation
+from the mean. By failing to preserve pairwise or higher-order comparisons within
+Oq, GRPO provides an attenuated and sometimes ambiguous credit-assignment
+signal. As a result, even when multiple strong candidates are present, the
+algorithm may struggle to consistently reinforce the most informative distinctions
+among them.
+Taken together, these observations suggest that while GRPO’s statistical
+baseline is efficient, its coarse relational encoding can limit representational and
+optimization fidelity. Addressing this relational bottleneck—by reintroducing
+richer peerwise or distribution-aware comparisons—appears crucial for improving
+credit assignment and achieving finer-grained discrimination among competing
+trajectories, without forfeiting the scalability advantages that motivate GRPO
+in the first place.
+4.2 Lambda Policy Optimization
+To mitigate the relational bottleneck inherent in scalar-baseline policy optimiza-
+tion, we introduceLambda Policy Optimization(LambdaPO). The central idea
+of LambdaPO lies in how the advantage function is conceptualized and computed.
+Instead of defining advantage as a deviation from a single global baseline (e.g.,
+a mean or value estimate), LambdaPO models advantage as an aggregate of
+pairwise preferencesamong trajectories, thereby embedding relational structure
+directly into the optimization signal.
+Concretely, we define thePairwise Decomposed Advantage(PDA), denoted
+by Aλ, for a trajectory oi sampled from a group of G candidate trajectories. The
+PDA is given by
+Aλ(oi) = 1
+G−1
+GX
+j=1
+j̸=i
+∆Rij σ
+∆sij
+τ
+
+,(6)
+where each term in the summation captures the relative dominance of oi over a
+peer trajectoryo j.
+Here, ∆Rij = R(oi) −R (oj) denotes the extrinsic utility difference between
+two trajectories. This reward signal subsumes both binary task correctness and
+dense reasoning-alignment feedback (see Section 4.3), allowing LambdaPO to
+incorporate fine-grained supervision beyond sparse success signals. The quantity
+∆sij = logπ θ(oi |q)−logπ θ(oj |q) (7)
+represents the intrinsic log-probability gap induced by the current policy πθ,
+reflecting the model’s relative confidence in generating oi versus oj given the
+same query q. The logistic sigmoid function σ(·) maps this confidence gap to
+a soft weighting factor, while the temperature parameter τ∈R + controls the
+sharpness of the induced preference surface.
+Intuitively, this construction replaces a static, sample-independent base-
+line with adynamic, peer-conditioned reference. A trajectory receives positive
+7
+advantage not merely by exceeding an average reward, but by consistently out-
+performing alternative trajectories, weighted by how decisively the policy itself
+distinguishes between them. As a result, the learning signal becomes inherently
+comparative and context-aware.
+Equivalently, the PDA can be expressed in expectation form as
+Aπθ(oi) :=E oj ∼πθ
+
+∆R(oi, oj)·σ
+ 1
+τ ∆ logπ θ(oi, oj)
+
+,(8)
+which highlights that LambdaPO estimates advantage by integrating reward
+differentials over a latent pairwise preference manifold induced by the policy.
+Algorithm 1Lambda Policy Optimization (LambdaPO)
+1: Input:Dataset D, Policy πθ, Reference πref, Group size G, Temperature τ,
+KL coefβ.
+2:Initializeθ old ←θ
+3:repeat
+4:Sample prompt batchB∼ D
+5:foreachq∈Bdo
+6:// Rollout Phase
+7:Generate cohortO q ={o 1, . . . , oG} ∼π θold(·|q)
+8:Compute rewardsR={R(o 1), . . . , R(oG)}
+9:Compute sequence log-probss i = logπ θold(oi|q)
+10:// Advantage Estimation Phase
+11:fori= 1toGdo
+12:A i ←0
+13:forj= 1toG,j̸=ido
+14:∆R ij ←R(o i)−R(o j)
+15:∆s ij ←s i −s j
+16:A i ←A i + ∆Rij ·σ(∆s ij/τ)
+17:end for
+18:A λ(oi)←A i/G
+19:end for
+20:NormalizeA λ over cohort (optional)
+21:end for
+22:// Optimization Phase
+23:Updateθby maximizing the surrogate objective:
+24:L (θ) = EOq
+h
+1
+|oi|
+P
+t Lclip(oi,t, θ)−βD KL
+i
+, where Lclip(oi,t, θ) is given by
+Eq. 4
+25:θ old ←θ
+26:untilconvergence
+8
+4.3 Dense Reward Augmentation via Semantic Overlap
+Standard reinforcement learning for reasoning tasks typically relies on a binary
+outcome reward, R∈ { 0, 1} which creates a sparse supervision signal. The policy
+struggles to distinguish between a good attempt that failed at the last step and
+a complete hallucination.
+To mitigate this, we augment the extrinsic utility with a Semantic Density
+Reward, Rsem, which acts as a dense proxy for reasoning quality. Drawing
+inspiration from verification-based RL[ 16], we leverage standard n-gram overlap
+metrics to quantify the alignment between the generated reasoning trace oi and
+the ground-truth solution y∗. Specifically, we utilize the ROUGE-L (Longest
+Common Subsequence)[8] metric, which is particularly well-suited for reasoning
+tasks as it captures both the lexical overlap and the sequential structure of the
+logical deduction.
+We define the semantic reward as the ROUGE-L F1-score:
+Rsem(oi) = ROUGE-LF1(oi, y∗) (9)
+4.4 Theoretical Explanation: Gradient Dynamics
+The efficacy of LambdaPO stems from the unique kinematics of the resulting
+policy gradient. By substituting Aλ(oi) into the policy gradient theorem, the
+update for trajectoryo i becomes proportional to:
+∇θJ∝
+X
+j̸=i
+(R(oi)−R(o j))| {z }
+Direction & Magnitude
+·σ
+ si −s j
+τ
+
+| {z }
+Confidence Weight
+·∇θ logπ θ(oi) (10)
+This structure reveals two critical properties:
+1.Directional Coherence:Unlike GRPO, where the sign of the advantage
+depends on the variance-sensitive group mean, LambdaPO’s gradient sign is
+strictly determined by the pairwise reward differential ∆ Rij. This ensures that
+the optimization landscape is homeomorphic to the true reward landscape.
+2.Self-Annealing via Confidence:The sigmoid term acts as a differentiable
+gate.
+• Case I(Model Confusion):When the policy cannot distinguish between
+oi and oj (i.e., si ≈s j), σ≈ 0.5, allowing the full magnitude of the reward
+difference to drive learning.
+• Case II(Model Misalignment:For example, when the model confidently
+ranks the worse trajectory higher ( sj ≫s i despite Ri > R j), the sigmoid
+term approaches 0, but the gradient with respect to the log-odds (derived
+from the implicit objective) creates a strong correction signal (analogous
+to the LambdaRank mechanism).
+• Case III(Convergence):As the policy aligns with the reward ( si ≫s j
+for Ri > R j), the gradient contribution naturally decays, preventing over-
+9
+optimization on established patterns and focusing capacity on unresolved
+distinctions.
+The temperature τ further modulates this dynamic, serving as a spectral
+regularization term that prevents gradient saturation in the early stages of
+training.
+4.5 The LambdaPO Algorithm
+The complete training procedure integrates the Pairwise Decomposed Advantage
+into the PPO clipping mechanism. The algorithm preserves the critic-free
+efficiency of GRPO while maximizing the information extraction from each
+sampled cohort.
+5 Experiments
+5.1 Experimental Setup
+5.1.1 Datasets
+We focus our evaluation on mathematical reasoning, a domain characterized by
+strict logical dependencies and binary reward signals (correct/incorrect).
+• RL Training Stage: We construct our training corpus using OpenR1-Math-
+220k and GSM8K[ 3]. This combination provides a diverse spectrum of
+problem difficulties, ranging from grade-school arithmetic to competition-
+level mathematics. For each training prompt, rewards are computed based
+on accuracy and format.
+• Evaluation Benchmarks: We report performance on three progressively chal-
+lenging benchmarks: AIME24[ 24], MATH-500[7], and GPQA-Diamond[12].
+5.1.2 Configurations
+• Baseline: We primarily compare LambdaPO against Group Relative Policy
+Optimization (GRPO). Since LambdaPO is architected as a direct, plug-
+and-play replacement for the advantage estimation module of GRPO, this
+comparison strictly isolates the contribution of the pairwise decomposition
+mechanism.
+• Models: We evaluate our method across different architectures and scales
+to assess generalization. Specifically, we utilize the Qwen3 family[ 19] (1.7B
+and 4B parameters) and Phi-4-mini[1](4B).
+•Sampling Config: We employ a group cohort size ofG= 8
+• Reward Function: We utilize a composite reward function R(o) = Racc +
+λRf mt + βRsem. Here, Racc is a binary correctness reward, Rf mt is a
+10
+format compliance reward that penalizes structural deviations and Rsem
+is the semantic density reward.
+• LambdaPO Settings: Unless otherwise stated, we set the temperature
+parameter toτ= 1.0 based on our ablation findings.
+Table 1: Model Performance Comparison on Benchmarks
+Model AIME24 AIME25 MATH-500 GPQA-Diamond Average
+Qwen3-1.7B
+Qwen3-1.7B 41.52 32.08 89.05 40.78 50.86
+Qwen3-1.7B-base-grpo 42.08 32.50 89.30 41.78 51.42
+Qwen3-1.7B-temp0.1 44.17 31.35 89.60 40.40 51.38
+Qwen3-1.7B-temp0.5 43.33 33.33 89.40 41.41 51.87
+Qwen3-1.7B-temp1 44.51 31.87 89.0542.9152.09
+Qwen3-1.7B-temp1.546.6733.3390.2041.9253.03
+Qwen3-1.7B-temp2 45.00 31.46 89.80 41.89 52.04
+Qwen3-1.7B-temp5 44.17 30.78 89.60 42.42 51.74
+Qwen3-4B
+Qwen3-4B 69.95 60.00 95.60 67.17 73.18
+Qwen3-4B-GRPO 71.67 65.83 96.35 67.74 75.40
+Qwen3-4B-LambdaGRPO73.33 67.08 96.60 68.94 76.49
+Phi-4-mini
+Phi-4-mini 46.67 35.10 89.20 45.33 54.08
+Phi-4-mini-GRPO48.3336.67 89.80 46.59 55.35
+Phi-4-mini-LambdaGRPO 47.7138.33 91.05 48.44 56.38
+5.2 Experimental results
+Table 1 presents the comparative performance of LambdaPO versus the GRPO
+baseline across two distinct model architectures (Qwen3 and Phi-4-mini).
+Performance Superiority.LambdaPO consistently outperforms GRPO
+across all evaluated tasks. On the Qwen3-4B model, our method achieves an
+average accuracy of 76.49%, a substantial improvement of +1.45% over the
+baseline. This suggests that pairwise comparisons are particularly effective for
+hard reasoning tasks where distinguishing between high-quality reasoning paths
+is critical.
+Architecture Generalization.The gains are not specific to a single
+architecture. On Phi-4-mini, LambdaPO achieves an average improvement of
++1.86% (55.35% - > 56.38%). The robustness of these improvements across
+different model families validates the universality of the ”Relational Bottleneck”
+hypothesis and the effectiveness of our solution.
+5.3 Ablation Studies and Analysis
+Parameter Sensitivity(τ). The temperature parameter τ in Eq. (4) controls
+the sensitivity of the sigmoid weighting function, effectively determining the
+”softness” of the pairwise ranking. We conducted a sweep of τ∈1,1.5,2,5,7
+using the Qwen3-1.7B model.
+11
+• Low Temperature(τ = 1):The gradient signal becomes too deterministic,
+leading to optimization instability. The performance (58.80%) is better
+than the baseline but suboptimal.
+• Optimal Temperature(τ = 1.5):We observe a performance peak at
+τ = 1.5 with an average score of 59.60%, significantly outperforming the
+base GRPO (57.72%). This validates our hypothesis that a ”soft” ranking
+signal, which accounts for model uncertainty, provides the highest quality
+gradient.
+• High Temperature(τ≥ 5):As τ increases, the sigmoid saturates towards
+linearity (or flatness), washing out the pairwise distinctions. At τ = 7,
+performance degrades to 57.68%, effectively reverting to the performance
+of mean-aggregation.
+Impact of Semantic Density Reward.To disentangle the gains attributed to
+the pairwise optimization algorithm from those provided by the dense supervision
+signal, we conduct an ablation study on the reward composition. We observe
+that the Semantic Density Reward contributes a distinct performance gain on
+the AIME benchmark.
+AIME24 AMIE25
+0
+10
+20
+30
+40
+50
+60Scores
+46.67
+33.33
+48.89
+35.00
+Performance Comparison: Impact of Semantic Reward
+Qwen3-1.7B-LambdaPO
++ Semantic Reward
+Figure 2: Ablation study on Semantic Density Reward.
+Training Dynamics and Stability.To investigate the stability of the
+12
+alignment process, we visualize the evolution of the accuracy reward over 1,800
+optimization steps in Figure 3. The training trajectories reveal a critical diver-
+gence in robustness. While both methods exhibit comparable learning gains in
+the initial phase (steps 0–400), the GRPO baseline (blue line) suffers from severe
+instability in the latter stages, eventually leading to a catastrophic policy collapse
+after step 1,200 where the reward degrades to near-zero. This degradation is
+indicative of the model losing the capacity to generate valid terminal answers,
+likely due to high-variance gradient updates pushing the policy into degenerate
+regions of the solution space. In contrast, LambdaPO (orange line) demonstrates
+superior resilience. By anchoring optimization on pairwise preference differen-
+tials rather than a volatile scalar baseline, LambdaPO maintains a consistently
+higher reward floor and effectively prevents the policy degradation observed in
+the baseline. This confirms that the self-annealing mechanism of the pairwise
+objective acts as a crucial regularizer, preserving generation quality even deep
+into the training stage.
+5.4 Case Studies
+We further analyze specific failure cases of GRPO corrected by LambdaPO. In
+multi-step math problem reasoning, a common failure mode observed in GRPO
+is that the model fails to resolve the mathematical query within the strict token
+budget. In contrast, LambdaPO demonstrates improved generation efficiency,
+successfully converging to valid solution within the allocated constraints. This
+suggests that the pairwise advantage formulation provides a better gradient
+signal that implicitly regularizes the inefficient budget-exhausted trajectories.
+The concrete cases are presented in Table 2.
+13
+Table 2:Qualitative comparison of reasoning trajectories.We illustrate
+the generation process for a geometry problem. The GRPO baseline (top)
+suffers from reasoning loops and verbose repetition, consuming around 8k tokens
+without reaching a conclusion. In contrast, LambdaPO (bottom) produces a
+structured result that is 50% more efficient (around 4k tokens) and successfully
+converges to the correct solution.
+Response(∼8k tokens) from GRPO:
+<think>
+Okay, let’s try to solve this problem step by step. First, I need to
+visualize the square ABCD and the circle O tangent to sides AB and
+AD. The circle intersects BC at points M and P, and we’re given BM=8
+cm and MC=17 cm. The goal is to find the area of the circle.
+First, let me sketch the square ABCD. Let me label the square with AB,
+BC, CD, DA as sides. Let’s assume it’s a standard square with AB as
+the bottom side, BC as the right side, CD as the top, and DA as the
+left side. So, points A, B, C, D are in order.
+...
+Hmm. Let me try to think about the given values. BM = 8 cm, MC
+= 17 cm. So BC is 8 + 17 = 25 cm. Therefore, the side length of the
+square is 25 cm.
+Wait! If BC is 25 cm, then the side length of the square is 25 cm. So a
+= 25 cm.
+So now, with a =
+Response(∼4k tokens) from LambdaPO (Ours):
+<think>
+Okay, let’s try to solve this problem step by step. First, I need to
+visualize the square ABCD. Let me sketch it mentally. Let’s say the
+square is labeled clockwise as A, B, C, D. So, AB is one side, BC is the
+next, and so on. The circle O is tangent to sides AB and AD at points
+L and K, respectively. Also, the circle intersects BC at points M and P.
+Given BM = 8 cm and MC = 17 cm, so BC is 8 + 17 = 25 cm.
+...
+Another way to think: The circle is tangent to AB and AD, so it’s a
+circle in the corner of the square. The center is at (r, r). Then, the
+equation is correct. Then, the intersection with BC is as calculated. So
+all steps are correct.
+Therefore, the area is 169π. So the answer is 169π.
+</think>
+<answer>
+The area of the circle is 169π square centimeters.
+</answer>
+14
+6 Conclusion
+In this work, we presentedLambda Policy Optimization (LambdaPO), a
+principled framework that resolves the relational bottleneck inherent in group-
+relative alignment algorithms. By re-conceptualizing advantage estimation from
+a scalar deviation to a Pairwise Decomposed Advantage, we demonstrated that
+the rich, high-dimensional preference topology within sampled cohorts can be
+effectively harvested to drive policy improvement.Furthermore, we augmented
+the training objective with a Semantic Density Reward, derived from precision-
+recall alignment with ground-truth reasoning, to mitigate the challenge of sparse
+outcome supervision in complex reasoning tasks. Our method synthesizes the
+gradient kinematics of learning-to-rank with the stability of trust-region op-
+timization, yielding a learning signal that is both directionally coherent and
+dynamically self-annealing. Empirical evaluations across the Qwen3 and Phi-
+4 families confirm that this approach significantly outperforms scalar-baseline
+methods on rigorous mathematical reasoning benchmarks, particularly in regimes
+requiring complex, multi-step logic.
+Impact Statement
+This work proposesLambda Policy Optimization (LambdaPO), a rein-
+forcement learning framework for improving the reasoning capabilities of large
+language models via pairwise, ranking-aware policy optimization. The primary
+goal of this research is to advance the methodological foundations of machine
+learning, particularly in the areas of reinforcement learning, learning-to-rank,
+and large-scale model alignment.
+Potential Positive Impacts.By enabling more fine-grained credit assign-
+ment over groups of generated trajectories, LambdaPO has the potential to
+improve the reliability, efficiency, and stability of reasoning-oriented language
+models. Such improvements may benefit downstream applications that rely
+on structured reasoning, including mathematics education, scientific problem
+solving, and complex decision support systems. Additionally, the proposed
+framework enhances sample efficiency and reduces reliance on auxiliary value
+models, which may lower the computational and engineering barriers for training
+aligned language models, thereby promoting broader accessibility to advanced
+ML techniques in both academic and industrial settings.
+Ethical Considerations and Risks.As with most advances in large
+language model training, the techniques introduced in this paper could be misused
+to amplify the persuasive or deceptive capabilities of automated systems if
+deployed without appropriate safeguards. More effective reasoning and alignment
+methods may increase the plausibility of generated outputs, which underscores the
+importance of responsible deployment, transparency, and downstream monitoring.
+Importantly, LambdaPO does not introduce new data sources, does not alter the
+supervision paradigm beyond reward shaping, and does not inherently increase
+model autonomy or agency. The method operates entirely within standard
+15
+reinforcement learning pipelines and inherits the same ethical considerations as
+existing RL-based alignment approaches.
+Societal Implications.We do not foresee immediate negative societal
+consequences that are unique to LambdaPO compared to prior work on rein-
+forcement learning for language models. The societal impact of this research is
+therefore expected to be incremental and aligned with the broader trajectory
+of progress in machine learning. As with all such work, long-term outcomes
+will depend primarily on how the resulting models are deployed, governed, and
+integrated into real-world systems.
+Overall, this paper presents a technical contribution intended to advance the
+state of the art in machine learning optimization methods. We believe that its
+ethical profile is comparable to existing research in reinforcement learning for
+large language models, and that any broader impacts—positive or negative—are
+best addressed through responsible use, evaluation, and governance at the
+system-deployment level.
+References
+[1] M. Abdin, J. Aneja, H. Behl, S. Bubeck, R. Eldan, S. Gunasekar, M. Har-
+rison, R. J. Hewett, M. Javaheripi, P. Kauffmann, et al. Phi-4 technical
+report.arXiv preprint arXiv:2412.08905, 2024.
+[2] C. Burges, R. Ragno, and Q. Le. Learning to rank with nonsmooth cost
+functions. In B. Sch¨ olkopf, J. Platt, and T. Hoffman, editors,Advances in
+Neural Information Processing Systems, volume 19. MIT Press, 2006.
+[3] K. Cobbe, V. Kosaraju, M. Bavarian, M. Chen, H. Jun, L. Kaiser, M. Plap-
+pert, J. Tworek, J. Hilton, R. Nakano, C. Hesse, and J. Schulman. Training
+verifiers to solve math word problems.arXiv preprint arXiv:2110.14168,
+2021.
+[4] K. Ethayarajh, W. Xu, N. Muennighoff, D. Jurafsky, and D. Kiela. Kto:
+Model alignment as prospect theoretic optimization, 2024.
+[5] D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma,
+P. Wang, X. Bi, et al. Deepseek-r1: Incentivizing reasoning capability in
+llms via reinforcement learning.arXiv preprint arXiv:2501.12948, 2025.
+[6] J. Hong, N. Lee, and J. Thorne. Orpo: Monolithic preference optimization
+without reference model, 2024.
+[7] H. Lightman, V. Kosaraju, Y. Burda, H. Edwards, B. Baker, T. Lee, J. Leike,
+J. Schulman, I. Sutskever, and K. Cobbe. Let’s verify step by step.arXiv
+preprint arXiv:2305.20050, 2023.
+[8] C.-Y. Lin. ROUGE: A package for automatic evaluation of summaries. In
+Text Summarization Branches Out, pages 74–81, Barcelona, Spain, July
+2004. Association for Computational Linguistics.
+16
+[9] Y. Meng, M. Xia, and D. Chen. Simpo: Simple preference optimization
+with a reference-free reward, 2024.
+[10] L. Ouyang, J. Wu, X. Jiang, D. Almeida, C. Wainwright, P. Mishkin,
+C. Zhang, S. Agarwal, K. Slama, A. Ray, et al. Training language models to
+follow instructions with human feedback.Advances in neural information
+processing systems, 35:27730–27744, 2022.
+[11] R. Rafailov, A. Sharma, E. Mitchell, S. Ermon, C. D. Manning, and C. Finn.
+Direct preference optimization: Your language model is secretly a reward
+model, 2024.
+[12] D. Rein, B. L. Hou, A. C. Stickland, J. Petty, R. Y. Pang, J. Dirani,
+J. Michael, and S. R. Bowman. Gpqa: A graduate-level google-proof q&a
+benchmark, 2023.
+[13] T. Schick, J. Dwivedi-Yu, R. Dess` ı, R. Raileanu, M. Lomeli, E. Hambro,
+L. Zettlemoyer, N. Cancedda, and T. Scialom. Toolformer: Language
+models can teach themselves to use tools.Advances in Neural Information
+Processing Systems, 36:68539–68551, 2023.
+[14] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal
+policy optimization algorithms.arXiv preprint arXiv:1707.06347, 2017.
+[15] Z. Shao, P. Wang, Q. Zhu, R. Xu, J. Song, X. Bi, H. Zhang, M. Zhang,
+Y. Li, Y. Wu, et al. Deepseekmath: Pushing the limits of mathematical
+reasoning in open language models.arXiv preprint arXiv:2402.03300, 2024.
+[16] J. Uesato, N. Kushman, R. Kumar, F. Song, N. Siegel, L. Wang, A. Creswell,
+G. Irving, and I. Higgins. Solving math word problems with process- and
+outcome-based feedback, 2022.
+[17] P. Wang, L. Li, Z. Shao, R. X. Xu, D. Dai, Y. Li, D. Chen, Y. Wu, and
+Z. Sui. Math-shepherd: Verify and reinforce llms step-by-step without
+human annotations, 2024.
+[18] J. Wei, X. Wang, D. Schuurmans, M. Bosma, F. Xia, E. Chi, Q. V. Le,
+D. Zhou, et al. Chain-of-thought prompting elicits reasoning in large lan-
+guage models.Advances in neural information processing systems, 35:24824–
+24837, 2022.
+[19] A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao,
+C. Huang, C. Lv, C. Zheng, D. Liu, F. Zhou, F. Huang, F. Hu, H. Ge,
+H. Wei, H. Lin, J. Tang, J. Yang, J. Tu, J. Zhang, J. Yang, J. Yang, J. Zhou,
+J. Zhou, J. Lin, K. Dang, K. Bao, K. Yang, L. Yu, L. Deng, M. Li, M. Xue,
+M. Li, P. Zhang, P. Wang, Q. Zhu, R. Men, R. Gao, S. Liu, S. Luo, T. Li,
+T. Tang, W. Yin, X. Ren, X. Wang, X. Zhang, X. Ren, Y. Fan, Y. Su,
+Y. Zhang, Y. Zhang, Y. Wan, Y. Liu, Z. Wang, Z. Cui, Z. Zhang, Z. Zhou,
+and Z. Qiu. Qwen3 technical report.arXiv preprint arXiv:2505.09388, 2025.
+17
+[20] A. Yang, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Li, D. Liu,
+F. Huang, H. Wei, H. Lin, J. Yang, J. Tu, J. Zhang, J. Yang, J. Yang,
+J. Zhou, J. Lin, K. Dang, K. Lu, K. Bao, K. Yang, L. Yu, M. Li, M. Xue,
+P. Zhang, Q. Zhu, R. Men, R. Lin, T. Li, T. Xia, X. Ren, X. Ren, Y. Fan,
+Y. Su, Y. Zhang, Y. Wan, Y. Liu, Z. Cui, Z. Zhang, and Z. Qiu. Qwen2.5
+technical report.arXiv preprint arXiv:2412.15115, 2024.
+[21] S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. R. Narasimhan, and Y. Cao.
+React: Synergizing reasoning and acting in language models. InThe eleventh
+international conference on learning representations, 2022.
+[22] Q. Yu, Z. Zhang, R. Zhu, Y. Yuan, X. Zuo, Y. Yue, W. Dai, T. Fan, G. Liu,
+L. Liu, et al. Dapo: An open-source llm reinforcement learning system at
+scale.arXiv preprint arXiv:2503.14476, 2025.
+[23] E. Zelikman, Y. Wu, J. Mu, and N. D. Goodman. Star: Bootstrapping
+reasoning with reasoning, 2022.
+[24] Y. Zhang and T. Math-AI. American invitational mathematics examination
+(aime) 2024, 2024.
+18
+A Supplementary materials.
+Logging filesThe logging files for the https://swanlab.cn/@zityuen/
+LambdaPO/runs/9i24963tq5rjpzf3zhize/chart
+Visualization of training dynamicsThe training dynamics of Qwen3-
+1.7B, Qwen3-4B, and Phi4-mini in Figure 3.
+19
+0 250 500 750 1000 1250 1500 1750
+Training Steps
+0.0
+0.2
+0.4
+0.6
+0.8
+Accuracy reward
+Qwen3-1.7B Accuracy Reward
+GRPO
+LambdaPO
+0 500 1000 1500 2000
+Training Steps
+0
+500
+1000
+1500
+2000
+2500
+3000
+3500
+Completions Mean Length
+Qwen3-1.7B Completions Mean Length
+GRPO
+LambdaPO
+0 50 100 150 200 250
+Training Steps
+0.0
+0.1
+0.2
+0.3
+0.4
+Accuracy Reward
+Qwen3-4B Accuracy Reward
+GRPO
+LambdaPO
+0 50 100 150 200 250
+Training Steps
+2000
+2250
+2500
+2750
+3000
+3250
+3500
+Completions Mean Length
+Qwen3-4B Completions Mean Length
+GRPO
+LambdaPO
+0 50 100 150 200
+Training Steps
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+Accuracy Reward
+Phi4-mini Accuracy Reward
+GRPO
+LambdaPO
+0 50 100 150 200
+Training Steps
+2200
+2400
+2600
+2800
+3000
+3200
+3400
+3600
+Completions Mean Length
+Phi4-mini Completions Mean Length
+GRPO
+LambdaPO
+Figure 3: Comparison on Qwen3-1.7B, Qwen3-4B, and Phi4-mini.
+20

@@ -1,0 +1,1287 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents</title>
+<!--Generated on Tue May 19 09:36:37 2026 by LaTeXML (version 0.8.8) http://dlmf.nist.gov/LaTeXML/.-->
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="/static/browse/0.3.4/css/arxiv-html-papers-20260131.css" type="text/css">
+<script src="/static/browse/0.3.4/js/arxiv-html-papers-20260131.js"></script>
+<script>
+  // Restore the saved color scheme preference, or
+  // enact the browser preference if "automatic", 
+  // without expecting DOM load to have completed.
+  //
+  // Also restore any saved readingmode and ToC display preferences.
+  function initializeReadingPreferences() {
+    let saved_theme = localStorage.getItem("ar5iv_theme") || "automatic";
+    if (saved_theme === "automatic") {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        saved_theme = "dark";
+      }
+    }
+    if (saved_theme == "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+
+    const tocDisplay = localStorage.getItem('arxiv_html_paper_toc_display');
+    if (tocDisplay) {
+      document.documentElement.setAttribute("data-toc-display", tocDisplay);
+    }
+    const readingMode = localStorage.getItem('arxiv_html_paper_reading_mode');
+    if (readingMode) {
+      document.documentElement.setAttribute("data-reading-mode", readingMode);
+    }
+  }
+  // Run as soon as JS starts, to minimize repainting
+  initializeReadingPreferences();
+</script>
+<link rel="apple-touch-icon" sizes="180x180"
+  href="/static/browse/0.3.4/images/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32"
+  href="/static/browse/0.3.4/images/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16"
+  href="/static/browse/0.3.4/images/icons/favicon-16x16.png">
+<link rel="manifest" href="/static/browse/0.3.4/images/icons/site.webmanifest">
+<link rel="mask-icon" href="/static/browse/0.3.4/images/icons/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="stylesheet" type="text/css" media="screen" href="https://use.typekit.net/utz6mli.css">
+</head>
+<body>
+<dialog id="modal-form" aria-labelledby="modal-title" closedby="any">
+  <form id="modal-form-content" method="dialog" enctype="multipart/form-data">
+    <header class="modal-header">
+      <h5 id="modal-title" class="modal-title">Report GitHub Issue</h5>
+      <button type="submit" formnovalidate class="modal-close" aria-label="Close">×</button>
+    </header>
+
+    <div class="modal-body">
+      <label for="form_title">Title:</label>
+      <input class="form-control" id="form_title" name="form_title" required placeholder="Enter title">
+
+      <p id="selectedTextModalDescription" hidden>Content selection saved. Describe the issue below:</p>
+
+      <label for="description">Description:</label>
+      <textarea class="form-control" id="description" name="description" required maxlength="500"
+        placeholder="500 characters maximum"></textarea>
+    </div>
+
+    <footer class="modal-footer">
+      <button type="submit" value="internal-report" class="sr-only modal-submit">Submit without GitHub</button>
+      <button type="submit" value="github-report" class="modal-submit">Submit in GitHub</button>
+    </footer>
+  </form>
+</dialog>
+
+<header class="arxiv-html-header">
+  <div class="html-header-logo">
+    <a href="/">
+      <img alt="arXiv logo" class="logo desktop-only" width="100"
+        src="/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg">
+      <span class="sr-only">Back to arXiv</span>
+    </a>
+  </div>
+  <!--TOC, dark mode, links-->
+  <nav class="html-header-nav">
+    <a class="header-button hover-effect desktop-only" href="https://info.arxiv.org/about/accessible_HTML.html"
+      target="_blank">Why HTML?</a>
+    <a class="header-button" title="Report an Issue" href="#" title="Report an issue"
+      onclick="event.preventDefault(); showModalForm();">
+      <svg role="presentation" class="mobile-only toggle-icon" aria-hidden="true" height="1.25rem"
+        viewBox="0 0 640 640">
+        <path
+          d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+      </svg>
+      <span class="desktop-only">Report Issue</span></a>
+    <!--back to abstract-->
+    <a class="header-button" title="Back to abstract page" aria-label="Back to abstract page"
+      href="/abs/2605.19604v1">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 512 512" fill="#ffffff"
+        aria-hidden="true">
+        <path
+          d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224 192 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l210.7 0-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l128-128zM160 96c17.7 0 32-14.3 32-32s-14.3-32-32-32L96 32C43 32 0 75 0 128L0 384c0 53 43 96 96 96l64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32l0-256c0-17.7 14.3-32 32-32l64 0z">
+        </path>
+      </svg>
+      <span class="desktop-only">Back to Abstract</span>
+    </a>
+    <!-- PDF download link -->
+    <a class="header-button" title="Download PDF" href="/pdf/2605.19604v1"
+      target="_blank">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 576 542">
+        <path
+          d="M208 48L96 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16l80 0 0 48-80 0c-35.3 0-64-28.7-64-64L32 64C32 28.7 60.7 0 96 0L229.5 0c17 0 33.3 6.7 45.3 18.7L397.3 141.3c12 12 18.7 28.3 18.7 45.3l0 149.5-48 0 0-128-88 0c-39.8 0-72-32.2-72-72l0-88zM348.1 160L256 67.9 256 136c0 13.3 10.7 24 24 24l68.1 0zM240 380l32 0c33.1 0 60 26.9 60 60s-26.9 60-60 60l-12 0 0 28c0 11-9 20-20 20s-20-9-20-20l0-128c0-11 9-20 20-20zm32 80c11 0 20-9 20-20s-9-20-20-20l-12 0 0 40 12 0zm96-80l32 0c28.7 0 52 23.3 52 52l0 64c0 28.7-23.3 52-52 52l-32 0c-11 0-20-9-20-20l0-128c0-11 9-20 20-20zm32 128c6.6 0 12-5.4 12-12l0-64c0-6.6-5.4-12-12-12l-12 0 0 88 12 0zm76-108c0-11 9-20 20-20l48 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 24 28 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 44c0 11-9 20-20 20s-20-9-20-20l0-128z" />
+      </svg>
+      <span class="desktop-only">Download PDF</span></a>
+    <!-- navigational table of contents toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleNavTOC();" title="Toggle navigation"
+      aria-label="Toggle navigation">
+      <svg height="1.25rem" role="presentation" viewBox="0 0 512 512">
+        <path
+          d="M40 48C26.7 48 16 58.7 16 72v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V72c0-13.3-10.7-24-24-24H40zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zM16 232v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V232c0-13.3-10.7-24-24-24H40c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V392c0-13.3-10.7-24-24-24H40z">
+        </path>
+      </svg>
+    </a>
+    <!--- collapsable header / reading mode toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleReadingMode();"
+      title="Disable reading mode, show header and footer">
+      <svg role="presentation" height="1.25rem"
+        viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+        <path
+          d="M32 32C14.3 32 0 46.3 0 64l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 32zM64 352c0-17.7-14.3-32-32-32S0 334.3 0 352l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96z" />
+      </svg>
+    </a>
+    <!--- colored theme toggle -->
+    <button type="button" class="header-button color-tog" onclick="toggleColorScheme();" title="Toggle dark/light mode" aria-label="Toggle color scheme">
+      <span class="toggle-icon automatic-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9h-1.9M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69m-9.15 3.96h2.3L12 9l-1.15 3.65Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon light-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon dark-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+    </button>
+  </nav>
+</header><nav class="ltx_page_navbar">
+<nav class="ltx_TOC">
+<ol class="ltx_toclist">
+<li class="ltx_tocentry ltx_tocentry_abstract"><a href="#abstract1" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title">Abstract</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S1" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">1 </span>Introduction</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S2" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2 </span>Related Work</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S2.SS1" title="In 2 Related Work ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2.1 </span>Prompt-based agent skills and <span class="ltx_text ltx_font_typewriter">SKILL.md</span></span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S2.SS2" title="In 2 Related Work ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2.2 </span>Tool use and structured action interfaces</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S2.SS3" title="In 2 Related Work ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2.3 </span>Agent runtimes and software engineering agents</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S3" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3 </span>Formal Skill Design and Implementation</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS1" title="In 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1 </span>Failure modes of prompt skills</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS2" title="In 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.2 </span>Formal Skill as an executable contract</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS3" title="In 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.3 </span>Hook-governed programming model</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS4" title="In 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.4 </span>Implementation of Formal Skill in FairyClaw</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS5" title="In 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.5 </span>Case Study: <span class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> as a Formal Skill</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S4" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4 </span>Experiments and Analysis</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS1" title="In 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.1 </span>Evaluation protocol</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS2" title="In 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.2 </span>Overall score and token efficiency</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS3" title="In 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.3 </span>Skill-relevant task behavior</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS4" title="In 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.4 </span>Analysis</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S5" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5 </span>Conclusion</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_bibliography"><a href="#bib" title="In Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_title">References</span></a></li>
+</ol></nav>
+</nav>
+<div class="ltx_page_main">
+<div id="infobox" class="infobox">
+  <a id="license-tr" href="https://info.arxiv.org/help/license/index.html#licenses-available">
+    License: CC BY 4.0
+  </a>
+  <div id="watermark-tr">
+arXiv:2605.19604v1 [cs.AI] 19 May 2026</div>
+</div><div class="ltx_page_content">
+<article class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xi Zhang
+&amp;Meijun Gao
+&amp;Yuntian Zhao
+&amp;Xinyu Tan
+&amp;Yilun Yao
+Feiyu Wang
+&amp;Yanshu Wang
+&amp;Dingsiyi
+&amp;Tong Yang
+</span></span>
+</div>
+
+<div id="abstract1" class="ltx_abstract">
+<h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Large Language Model (LLM) agents increasingly act inside real workspaces, where tools and skills determine whether model reasoning becomes reliable action. Existing skills remain largely informal: Markdown skills and instruction packs encode procedures as long natural-language documents, while function calling, Model Context Protocol (MCP) servers, and framework tools structure individual actions but usually leave workflow state, policy enforcement, and completion discipline outside the skill itself. We introduce <span class="ltx_text ltx_font_bold">Formal Skill</span>, a runtime-native abstraction that represents reusable capability with JSON metadata and action schemas, reliable Python executors, hook-governed control logic, Formal Skill routing, and skill-local runtime state. By moving reusable procedure from repeated prompt text into executable state machines and hook policies, Formal Skill gives agents a token-efficient and enforceable control surface. We implement the abstraction in FairyClaw, an open-source event-driven runtime for executable, observable, and composable Formal Skills. On Harness-Bench, FairyClaw obtains highly competitive average scores while using substantially fewer tokens, with especially strong results on tasks that expose the role of Formal Skill.</p>
+</div>
+<section id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p id="S1.p1.1" class="ltx_p">Large Language Model (LLM) agents are rapidly becoming a central interface for software engineering, office automation, research assistance, and operational decision making. Systems such as Claude Code <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib16" title="" class="ltx_ref">16</a>]</cite>, OpenClaw <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib25" title="" class="ltx_ref">25</a>]</cite>, and Hermes <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib30" title="" class="ltx_ref">30</a>]</cite> illustrate a shift from chat-oriented assistants toward agents that inspect repositories, run commands, edit files, call external services, and coordinate multi-step work over time. In these agents, skills and tools are not peripheral conveniences: they are the agent’s hands and feet. They determine whether a language model can move from describing the world to acting on it.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p id="S1.p2.1" class="ltx_p">Existing systems organize reusable agent capability mainly in two ways. First, <em id="S1.p2.1.1" class="ltx_emph ltx_font_italic">text-packaged procedural skills</em> such as Claude-style skills and many <span id="S1.p2.1.2" class="ltx_text ltx_font_typewriter">SKILL.md</span> libraries bundle discovery metadata, Markdown procedures, auxiliary files, and optional scripts; tools may be invoked inside the procedure, but the procedure itself is primarily a document read by the model. Second, <em id="S1.p2.1.3" class="ltx_emph ltx_font_italic">schema-level tool interfaces</em> such as function calling, Model Context Protocol (MCP) tools, framework tools, and API-oriented tool-use methods describe individual actions with names, schemas, and protocol boundaries; they make tool invocation more structured, but usually do not define a skill-level workflow that owns phase order, recovery, and completion. Agent runtimes, workspaces, sandboxes, and benchmark harnesses provide the surrounding execution and evaluation environment for both styles, but they do not by themselves make the reusable procedure formal. By <em id="S1.p2.1.4" class="ltx_emph ltx_font_italic">Informal Skills</em>, we mean skills whose operational semantics live mainly in natural-language instructions, naming conventions, prompt discipline, or external orchestration rather than in a runtime-executable object; across existing approaches, the core limitation is that the skill remains informal in this sense. Informal Skills are costly because long procedural text must be loaded as tokens; ambiguous because natural language remains only semi-structured to the machine; weak because ordering constraints, safety rules, and completion criteria are soft suggestions; and brittle because recovery state is usually implicit in the transcript rather than represented as skill-local runtime state.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p id="S1.p3.1" class="ltx_p">To address these limitations, we propose <span id="S1.p3.1.1" class="ltx_text ltx_font_bold">Formal Skill</span> as a runtime-native alternative. A Formal Skill converts a reusable agent capability from a purely natural-language artifact into a structured executable object with five components: (1) JSON metadata and action schemas that define the model-visible interface, (2) reliable executors that implement actions with deterministic validation and bounded side effects, (3) lifecycle hooks that mediate model calls and tool calls, (4) skill-local runtime state that records phase, evidence, gates, and recovery context, and (5) routing metadata that determines when the skill should be exposed to a task or subtask. It is formal because JSON metadata and schemas describe the skill’s machine-readable surface, while transition points, state variables, side-effect boundaries, and completion gates are represented as runtime data and executable programs rather than as prose alone. The goal is not to remove language from agent behavior, but to assign it the right role: the model reasons and chooses among structured actions, while the runtime owns the procedural invariants. Token-heavy manuals become compact state-conditioned guidance; ambiguous instructions become schemas and hook policies; soft constraints become executable checks; and implicit recovery becomes an observable state machine.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p id="S1.p4.1" class="ltx_p">We build <span id="S1.p4.1.1" class="ltx_text ltx_font_bold">FairyClaw</span> to realize and evaluate the Formal Skill concept. FairyClaw is an event-driven LLM-agent runtime with a single-step planner, typed history Intermediate Representation (IR), capability registry, hook pipeline, persistent session state, sub-agent delegation, and Formal Skill routing. It is therefore not merely a system that uses Formal Skill, but the concrete runtime substrate developed to make Formal Skills routable, executable, observable, and enforceable. We evaluate FairyClaw on the independent Harness-Bench suite <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib33" title="" class="ltx_ref">33</a>]</cite>. Among six evaluated agent harnesses, FairyClaw obtains an average overall score of 0.690, ranking third by mean score across two model families and first in the <span id="S1.p4.1.2" class="ltx_text ltx_font_typewriter">gpt-5.4</span> group, while using 7.35M tokens in total, or 49.0K tokens per task on average. This per-task token use is about 48% lower than the mean of the other five harnesses and about 33% lower than the next most token-efficient harness. On tasks that demonstrate typical Formal Skill effects, FairyClaw achieves especially strong task-level results.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p id="S1.p5.1" class="ltx_p">Our contributions are:</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<ul id="S1.I1" class="ltx_itemize">
+<li id="S1.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i1.p1" class="ltx_para">
+<p id="S1.I1.i1.p1.1" class="ltx_p">We introduce <span id="S1.I1.i1.p1.1.1" class="ltx_text ltx_font_bold">Formal Skill</span>, a token-efficient and enforceable skill abstraction that moves procedural knowledge from long natural-language prompts into JSON metadata and action schemas, reliable Python executors, hook-governed control loops, Formal Skill routing, and skill-local runtime state.</p>
+</div>
+</li>
+<li id="S1.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i2.p1" class="ltx_para">
+<p id="S1.I1.i2.p1.1" class="ltx_p">We implement <span id="S1.I1.i2.p1.1.1" class="ltx_text ltx_font_bold">FairyClaw</span>, an open-source event-driven agent runtime for Formal Skills, integrating single-step planning, typed history IR, persistent session state, sub-agent delegation, Formal Skill routing, and hook-based execution control. The implementation is available at <a href="https://github.com/PKULab1806/FairyClaw" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/PKULab1806/FairyClaw</a>.</p>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<section id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">2.1 </span>Prompt-based agent skills and <span id="S2.SS1.1.1" class="ltx_text ltx_font_typewriter">SKILL.md</span>
+</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p id="S2.SS1.p1.1" class="ltx_p">Prompt-based agent skills are already widely used in practical agent systems. Anthropic’s Agent Skills package discovery metadata written in YAML, a required <span id="S2.SS1.p1.1.1" class="ltx_text ltx_font_typewriter">SKILL.md</span> instruction file, and optional scripts or assets under progressive disclosure <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib13" title="" class="ltx_ref">13</a>, <a href="#bib.bib14" title="" class="ltx_ref">14</a>, <a href="#bib.bib15" title="" class="ltx_ref">15</a>]</cite>; Claude Code adopts this pattern with invocation controls, subagents, allowed tools, plugins, hooks, and MCP integration <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib16" title="" class="ltx_ref">16</a>, <a href="#bib.bib17" title="" class="ltx_ref">17</a>]</cite>. These systems correctly identify reusable procedural knowledge as a missing layer between tools and monolithic prompts. Their limitation is that the procedure itself remains mostly text-level: once selected, the Markdown body is still paid for as prompt tokens, interpreted as semi-structured natural language, and trusted to guide ordering, recovery, and completion. Optional scripts can make subroutines deterministic, but the skill-level workflow usually remains prose. Formal Skill preserves the packaging and progressive-disclosure intuition while moving the reusable procedure into JSON metadata and action schemas, reliable executors, lifecycle hooks, and skill-local runtime state.</p>
+</div>
+</section>
+<section id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">2.2 </span>Tool use and structured action interfaces</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p id="S2.SS2.p1.1" class="ltx_p">Tool-use research shows that structured action interfaces extend model capability: Modular Reasoning, Knowledge and Language (MRKL) routes language models to external modules <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="" class="ltx_ref">2</a>]</cite>, ReAct interleaves reasoning with actions and observations <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>, Toolformer learns API-use decisions <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, and Gorilla, API-Bank, and ToolLLM/ToolBench study API selection and tool-call generation at scale <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib4" title="" class="ltx_ref">4</a>, <a href="#bib.bib5" title="" class="ltx_ref">5</a>, <a href="#bib.bib6" title="" class="ltx_ref">6</a>]</cite>. Production systems instantiate this idea through JSON schemas and protocol boundaries, including OpenAI function calling and Agents Software Development Kit (SDK) tools <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib21" title="" class="ltx_ref">21</a>, <a href="#bib.bib22" title="" class="ltx_ref">22</a>]</cite>, MCP tools and resources over JSON Remote Procedure Call (JSON-RPC) <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib19" title="" class="ltx_ref">19</a>, <a href="#bib.bib20" title="" class="ltx_ref">20</a>]</cite>, and framework tools such as LangChain <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib12" title="" class="ltx_ref">12</a>]</cite>. These interfaces type individual actions, but a typed action is not yet a formal skill: phase order, recovery state, side-effect policy, and completion gates are typically left to prompts or outer orchestration. Formal Skill is complementary because it organizes structured actions under routing, hooks, skill-local runtime state, and gates so that a tool set becomes an enforceable procedure.</p>
+</div>
+</section>
+<section id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">2.3 </span>Agent runtimes and software engineering agents</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p id="S2.SS3.p1.1" class="ltx_p">Agent and coding runtimes demonstrate that performance depends on the action space and feedback channel, not only on the base model. Reflexion, Self-Refine, and Voyager study feedback and reusable executable skills <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib7" title="" class="ltx_ref">7</a>, <a href="#bib.bib8" title="" class="ltx_ref">8</a>, <a href="#bib.bib9" title="" class="ltx_ref">9</a>]</cite>; SWE-agent and AutoCodeRover show that repository navigation, editing, testing, search, and repair workflows are shaped by the agent-computer interface <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib10" title="" class="ltx_ref">10</a>, <a href="#bib.bib11" title="" class="ltx_ref">11</a>]</cite>. Engineering systems such as Claude Code <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib16" title="" class="ltx_ref">16</a>, <a href="#bib.bib18" title="" class="ltx_ref">18</a>]</cite>, Codex CLI <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib23" title="" class="ltx_ref">23</a>, <a href="#bib.bib24" title="" class="ltx_ref">24</a>]</cite>, OpenClaw <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib25" title="" class="ltx_ref">25</a>, <a href="#bib.bib26" title="" class="ltx_ref">26</a>]</cite>, and Hermes Agent <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib30" title="" class="ltx_ref">30</a>, <a href="#bib.bib31" title="" class="ltx_ref">31</a>, <a href="#bib.bib32" title="" class="ltx_ref">32</a>]</cite> expose workspaces, shell and file operations, sandbox or approval policies, MCP integration, subagents, memory, toolsets, and skills. They make agents practically useful, but reusable capability is still usually represented as either individual tools or textual skills. Formal Skill makes the reusable procedure itself a first-class runtime object with compact descriptions, executable policy, lifecycle control, and observable state.</p>
+</div>
+</section>
+</section>
+<section id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">3 </span>Formal Skill Design and Implementation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p id="S3.p1.1" class="ltx_p">Formal Skill is a runtime contract for reusable agent capability. It is motivated by the same failure modes identified in the introduction and related work: prompt skills encode procedures as expensive semi-structured text, leave execution constraints as soft instructions, and lack explicit skill-local runtime state for recovery and completion. This section defines the abstraction, describes its implementation in FairyClaw, and then instantiates it with <span id="S3.p1.1.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span>, a concrete code-repair skill.</p>
+</div>
+<section id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.1 </span>Failure modes of prompt skills</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p id="S3.SS1.p1.1" class="ltx_p">A prompt skill is easy to author because it resembles an onboarding document for a human operator. That convenience becomes a liability when the reader is a model whose actions affect a workspace. The problem is not that natural language instructions are useless; it is that they are a weak boundary between reasoning and side effects.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p id="S3.SS1.p2.1" class="ltx_p">First, prompt skills are <span id="S3.SS1.p2.1.1" class="ltx_text ltx_font_bold">textual procedures</span>. A <span id="S3.SS1.p2.1.2" class="ltx_text ltx_font_typewriter">SKILL.md</span> file can describe ordering constraints, forbidden actions, recovery strategies, and reporting requirements, but all of this material must be loaded as tokens and interpreted from prose. Even with progressive disclosure, the loaded instruction is still semi-structured from the runtime’s perspective: the system can store the text, but it cannot directly execute the procedure encoded in it.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p id="S3.SS1.p3.1" class="ltx_p">Second, prompt skills provide <span id="S3.SS1.p3.1.1" class="ltx_text ltx_font_bold">weak execution constraints</span>. A paragraph can say that the agent must reproduce a failure before patching, must not edit tests, or must verify before finishing. Unless these constraints are reimplemented in code, however, the runtime cannot hide inappropriate tools, reject unsafe arguments, or block a premature final answer. The model may follow the instruction, but the skill itself does not enforce it.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p id="S3.SS1.p4.1" class="ltx_p">Third, prompt skills have <span id="S3.SS1.p4.1.1" class="ltx_text ltx_font_bold">implicit state and recovery</span>. After a failed command, an invalid patch, or a partially written artifact, the transcript contains evidence of what happened, but the skill has no compact execution object that says which phase it is in, what obligations remain, or why completion is blocked. This encourages ad hoc recovery and self-defined checkpoints, especially in long-horizon tasks.</p>
+</div>
+</section>
+<section id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.2 </span>Formal Skill as an executable contract</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p id="S3.SS2.p1.1" class="ltx_p">A Formal Skill replaces the text-only procedure with a skill-local protocol that the runtime can inspect and enforce. The model still reasons about the task and chooses actions, but the action surface is governed by code, schema, state, and hooks. Its structure follows directly from the three failures above.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<ul id="S3.I1" class="ltx_itemize">
+<li id="S3.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S3.I1.i1.p1" class="ltx_para">
+<p id="S3.I1.i1.p1.1" class="ltx_p"><span id="S3.I1.i1.p1.1.1" class="ltx_text ltx_font_bold">Structured skill interfaces</span>: to address text-heavy procedures, a Formal Skill moves most procedural knowledge out of prompt prose and into JSON metadata and action schemas, Python executors, hook code, and configuration. The model sees short tool descriptions and phase guidance, while detailed policies remain executable runtime objects. This reduces repeated token consumption and avoids paying for long natural-language manuals on every relevant turn.</p>
+</div>
+</li>
+<li id="S3.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S3.I1.i2.p1" class="ltx_para">
+<p id="S3.I1.i2.p1.1" class="ltx_p"><span id="S3.I1.i2.p1.1.1" class="ltx_text ltx_font_bold">Executable enforcement</span>: to address weak execution constraints, a Formal Skill turns suggestions into runtime checks. Executors validate arguments and side effects; hooks filter visible tools, reject unsafe calls, and prevent completion when verification or artifact gates remain open. Constraints therefore become part of the agent’s action semantics rather than instructions the model may or may not follow.</p>
+</div>
+</li>
+<li id="S3.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S3.I1.i3.p1" class="ltx_para">
+<p id="S3.I1.i3.p1.1" class="ltx_p"><span id="S3.I1.i3.p1.1.1" class="ltx_text ltx_font_bold">Skill-local runtime state</span>: to address implicit state and recovery, a Formal Skill stores progress in skill-local runtime state consumed by hooks and tools. Fields such as phase, verification status, produced artifacts, required artifacts, and gate-failure reasons make recovery explicit: the runtime can decide whether to continue collecting evidence, return to patching, enter reporting, or block finalization.</p>
+</div>
+</li>
+</ul>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p id="S3.SS2.p3.1" class="ltx_p">The resulting abstraction is not merely a more disciplined prompt. It is a division of labor: natural language remains useful for task-specific reasoning, but reusable procedure is represented as compact interfaces, executable policy, and stateful control.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p id="S3.SS2.p4.1" class="ltx_p">This division also exposes a real trade-off. Prompt skills and <span id="S3.SS2.p4.1.1" class="ltx_text ltx_font_typewriter">Skill.md</span> files are attractive partly because they are easy for non-programmers to author: a user can describe a procedure in natural language without writing schemas, executors, state machines, or hook code. Formal Skill raises the authoring bar because the skill creator must specify JSON metadata, implement reliable Python actions, and sometimes design state transitions enforced by hooks. We view this as a practical cost rather than a conceptual objection. Modern LLMs are already strong code-generation systems, so an informal skill can itself become the source artifact from which an agent synthesizes the corresponding formal components: action schemas, executor skeletons, hook programs, and state definitions. In this sense, Formal Skill can support a bootstrapping path in which users still begin with a human-readable <span id="S3.SS2.p4.1.2" class="ltx_text ltx_font_typewriter">Skill.md</span>, while the runtime or an assisting model compiles it into a token-efficient and enforceable skill representation.</p>
+</div>
+</section>
+<section id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.3 </span>Hook-governed programming model</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p id="S3.SS3.p1.1" class="ltx_p">In FairyClaw, a Formal Skill is packaged as a capability plugin. The manifest declares tools and hooks; configuration files define deterministic policy parameters; scripts implement executors and hook logic. The programming model is intentionally divided along runtime boundaries.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p id="S3.SS3.p2.1" class="ltx_p">The action plane is where model-visible verbs are defined. A code-repair skill, for example, should not expose an unstructured “please fix the code” operation. It should expose smaller actions such as collecting evidence, applying a unified patch, running verification, and writing artifacts. The JSON side tells the model what operation exists and what arguments are valid; the Python side decides what actually happens, including path checks, command allowlists, patch-shape validation, and structured output.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p id="S3.SS3.p3.1" class="ltx_p">The control plane is implemented by hooks around the LLM and tool boundary. Figure <a href="#S3.F1" title="Figure 1 ‣ 3.3 Hook-governed programming model ‣ 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the pipeline. The point is not that each hook is complex; the point is that the runtime has named intervention points where a skill can turn state into visible tools, guidance, validation, and continuation.</p>
+</div>
+<figure id="S3.F1" class="ltx_figure"><img src="2605.19604v1/x1.png" id="S3.F1.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="764" height="387" alt="Refer to caption">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Formal Skill hook pipeline. Hooks convert compact skill-local runtime state into tool visibility, prompt guidance, policy checks, and continuation decisions.</figcaption>
+</figure>
+<div id="S3.SS3.p4" class="ltx_para">
+<p id="S3.SS3.p4.1" class="ltx_p">The state plane makes the procedure an execution object rather than a transcript convention. A repair state may include <span id="S3.SS3.p4.1.1" class="ltx_text ltx_font_typewriter">phase</span>, <span id="S3.SS3.p4.1.2" class="ltx_text ltx_font_typewriter">verification_passed</span>, <span id="S3.SS3.p4.1.3" class="ltx_text ltx_font_typewriter">required_artifacts</span>, <span id="S3.SS3.p4.1.4" class="ltx_text ltx_font_typewriter">produced_artifacts</span>, <span id="S3.SS3.p4.1.5" class="ltx_text ltx_font_typewriter">gate_fail_reasons</span>, and last-tool status. Hooks consume this state to determine which tools are visible, whether another LLM turn is required, and whether the task can finish.</p>
+</div>
+</section>
+<section id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.4 </span>Implementation of Formal Skill in FairyClaw</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p id="S3.SS4.p1.1" class="ltx_p">FairyClaw is the runtime we build to make Formal Skill executable. Its role is not to add another long system prompt, but to provide the concrete runtime services that a Formal Skill requires: plugin loading, capability routing, hook execution, persistent session state, typed history, workspace scoping, and parent-child task collaboration. A Formal Skill is therefore not embedded as an instruction file inside a prompt. It is registered as a capability plugin whose tools, hooks, configuration, and state are resolved by the runtime before each model decision.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p id="S3.SS4.p2.1" class="ltx_p">The most important implementation mechanism is skill routing. FairyClaw separates always-available orchestration tools from domain-specific Formal Skills. The parent planner can create a sub-session with a narrower task, workspace, deliverable contract, and routed skill set; the sub-session then sees only the tools and hook policies required for that work. This reduces token cost and action ambiguity at the same time: the model receives fewer irrelevant tool descriptions, and the enabled skill can inject only phase-local guidance rather than a full procedural manual.</p>
+</div>
+<figure id="alg1" class="ltx_float ltx_float_algorithm ltx_framed ltx_framed_top">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_float"><span id="alg1.2.1.1" class="ltx_text ltx_font_bold">Algorithm 1</span> </span> Sub-agent Formal Skill routing</figcaption>
+<div id="alg1.3" class="ltx_listing ltx_listing">
+<div id="alg1.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l1.1.1.1" class="ltx_text" style="font-size:80%;">1:</span></span><span id="alg1.l1.2" class="ltx_text" style="font-size:80%;">Parent session </span><math id="alg1.l1.m1" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math><span id="alg1.l1.3" class="ltx_text" style="font-size:80%;"> and delegated task </span><math id="alg1.l1.m2" class="ltx_Math" alttext="d" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math><span id="alg1.l1.4" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg1.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l2.1.1.1" class="ltx_text" style="font-size:80%;">2:</span></span><span id="alg1.l2.2" class="ltx_text" style="font-size:80%;">Read </span><math id="alg1.l2.m1" class="ltx_Math" alttext="d" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math><span id="alg1.l2.3" class="ltx_text" style="font-size:80%;">’s task type, workspace root, </span><span id="alg1.l2.4" class="ltx_text ltx_font_typewriter" style="font-size:80%;">done_when</span><span id="alg1.l2.5" class="ltx_text" style="font-size:80%;">, and task text
+</span>
+</div>
+<div id="alg1.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l3.1.1.1" class="ltx_text" style="font-size:80%;">3:</span></span><span id="alg1.l3.2" class="ltx_text" style="font-size:80%;">Select candidate Formal Skills from the capability registry
+</span>
+</div>
+<div id="alg1.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l4.1.1.1" class="ltx_text" style="font-size:80%;">4:</span></span><span id="alg1.l4.2" class="ltx_text" style="font-size:80%;"></span><span id="alg1.l4.3" class="ltx_text ltx_font_bold" style="font-size:80%;">for all</span><span id="alg1.l4.4" class="ltx_text" style="font-size:80%;"> candidate skill </span><math id="alg1.l4.m1" class="ltx_Math" alttext="c" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math><span id="alg1.l4.5" class="ltx_text" style="font-size:80%;"> </span><span id="alg1.l4.6" class="ltx_text ltx_font_bold" style="font-size:80%;">do</span><span id="alg1.l4.7" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg1.l5" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l5.1.1.1" class="ltx_text" style="font-size:80%;">5:</span></span><span id="alg1.l5.2" class="ltx_text" style="font-size:80%;">  Score </span><math id="alg1.l5.m1" class="ltx_Math" alttext="c" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math><span id="alg1.l5.3" class="ltx_text" style="font-size:80%;"> by task type, trigger metadata, and policy constraints
+</span>
+</div>
+<div id="alg1.l6" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l6.1.1.1" class="ltx_text" style="font-size:80%;">6:</span></span><span id="alg1.l6.2" class="ltx_text" style="font-size:80%;"></span><span id="alg1.l6.3" class="ltx_text ltx_font_bold" style="font-size:80%;">end</span><span id="alg1.l6.4" class="ltx_text" style="font-size:80%;"> </span><span id="alg1.l6.5" class="ltx_text ltx_font_bold" style="font-size:80%;">for</span>
+</div>
+<div id="alg1.l7" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l7.1.1.1" class="ltx_text" style="font-size:80%;">7:</span></span><span id="alg1.l7.2" class="ltx_text" style="font-size:80%;">Create sub-session </span><math id="alg1.l7.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="alg1.l7.3" class="ltx_text" style="font-size:80%;"> with workspace root and </span><span id="alg1.l7.4" class="ltx_text ltx_font_typewriter" style="font-size:80%;">done_when</span><span id="alg1.l7.5" class="ltx_text" style="font-size:80%;"> copied from </span><math id="alg1.l7.m2" class="ltx_Math" alttext="d" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math><span id="alg1.l7.6" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg1.l8" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l8.1.1.1" class="ltx_text" style="font-size:80%;">8:</span></span><span id="alg1.l8.2" class="ltx_text" style="font-size:80%;">Attach selected manifests, configs, hooks, and tool schemas to </span><math id="alg1.l8.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="alg1.l8.3" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg1.l9" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l9.1.1.1" class="ltx_text" style="font-size:80%;">9:</span></span><span id="alg1.l9.2" class="ltx_text" style="font-size:80%;">Expose default orchestration tools plus routed skill tools
+</span>
+</div>
+<div id="alg1.l10" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l10.1.1.1" class="ltx_text" style="font-size:80%;">10:</span></span><span id="alg1.l10.2" class="ltx_text" style="font-size:80%;">Run routed hooks around LLM and tool boundaries during each wakeup of </span><math id="alg1.l10.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="alg1.l10.3" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg1.l11" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l11.1.1.1" class="ltx_text" style="font-size:80%;">11:</span></span><span id="alg1.l11.2" class="ltx_text" style="font-size:80%;">Report the result to </span><math id="alg1.l11.m1" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math><span id="alg1.l11.3" class="ltx_text" style="font-size:80%;"> when skill gates and </span><span id="alg1.l11.4" class="ltx_text ltx_font_typewriter" style="font-size:80%;">done_when</span><span id="alg1.l11.5" class="ltx_text" style="font-size:80%;"> are satisfied
+</span>
+</div>
+</div>
+</figure>
+<div id="S3.SS4.p3" class="ltx_para">
+<p id="S3.SS4.p3.1" class="ltx_p">FairyClaw’s single-step inference loop supports this implementation, but it is not the main abstraction. Its role is to provide clean intervention boundaries: after one LLM decision and its tool effects, the runtime persists the turn, updates skill state, and schedules a follow-up event if a gate remains open. This lets Formal Skill hooks observe every step without being hidden inside an opaque long-running planner loop. Dynamic routing, single-step wakeups, and parent-child collaboration are therefore runtime services for implementing Formal Skill.</p>
+</div>
+</section>
+<section id="S3.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.5 </span>Case Study: <span id="S3.SS5.3.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> as a Formal Skill</h3>
+
+<div id="S3.SS5.p1" class="ltx_para">
+<p id="S3.SS5.p1.1" class="ltx_p"><span id="S3.SS5.p1.1.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> instantiates Formal Skill for code repair and test-driven debugging. It is intentionally not a monolithic “repair” tool. The action plane exposes four structured tools for evidence collection, unified patching, verification, and artifact writing; the control plane uses hooks to filter those tools, inject phase-local guidance, validate calls, and keep the sub-session alive until gates pass. The implementation recognizes five phase labels: <span id="S3.SS5.p1.1.2" class="ltx_text ltx_font_typewriter">reproduce</span>, <span id="S3.SS5.p1.1.3" class="ltx_text ltx_font_typewriter">diagnose</span>, <span id="S3.SS5.p1.1.4" class="ltx_text ltx_font_typewriter">patch</span>, <span id="S3.SS5.p1.1.5" class="ltx_text ltx_font_typewriter">verify</span>, and <span id="S3.SS5.p1.1.6" class="ltx_text ltx_font_typewriter">report</span>. Its injected default workflow is shorter, <span id="S3.SS5.p1.1.7" class="ltx_text ltx_font_typewriter">reproduce -&gt; patch -&gt; verify -&gt; report</span>; <span id="S3.SS5.p1.1.8" class="ltx_text ltx_font_typewriter">diagnose</span> is an optional compatibility phase for additional evidence or contextual patching. The session state remains small: phase, verification status, failure signature, produced and required artifacts, gate-failure reasons, and last-tool metadata.</p>
+</div>
+<figure id="S3.F2" class="ltx_figure"><img src="2605.19604v1/x2.png" id="S3.F2.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="362" alt="Refer to caption">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span id="S3.F2.5.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> state vocabulary and main transitions. In the current executor, evidence collection from <span id="S3.F2.6.2" class="ltx_text ltx_font_typewriter">reproduce</span> may advance directly to <span id="S3.F2.7.3" class="ltx_text ltx_font_typewriter">patch</span>; <span id="S3.F2.8.4" class="ltx_text ltx_font_typewriter">diagnose</span> remains a routed phase for extra evidence or contextual patching.</figcaption>
+</figure>
+<div id="S3.SS5.p2" class="ltx_para">
+<p id="S3.SS5.p2.1" class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3.5 Case Study: CodeRepairOps as a Formal Skill ‣ 3 Formal Skill Design and Implementation ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows how the phase field is consumed before each model call. This is the main token-efficiency mechanism: the model receives only the tools and constraints relevant to the next decision, while the complete repair policy remains in executable code.</p>
+</div>
+<div id="S3.SS5.1" class="ltx_logical-block">
+<figure id="S3.T1" class="ltx_table ltx_align_center">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span><span id="S3.T1.3.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> phase policy. Tool names are abbreviated for layout; each maps to the corresponding <span id="S3.T1.4.2" class="ltx_text ltx_font_typewriter">repair_*</span> tool.</figcaption>
+</figure>
+<div id="S3.SS5.1.p1" class="ltx_para">
+<table id="S3.SS5.1.p1.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S3.SS5.1.p1.1.1.1" class="ltx_tr">
+<th id="S3.SS5.1.p1.1.1.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.1.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.1.1.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.1.1.1.1.1.1" class="ltx_text" style="font-size:90%;">Phase</span></span>
+</span>
+</th>
+<th id="S3.SS5.1.p1.1.1.1.2" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.1.1.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.1.1.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.1.1.2.1.1.1" class="ltx_text" style="font-size:90%;">Visible actions</span></span>
+</span>
+</th>
+<th id="S3.SS5.1.p1.1.1.1.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.1.1.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.1.1.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.1.1.3.1.1.1" class="ltx_text" style="font-size:90%;">Hook policy and transition</span></span>
+</span>
+</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S3.SS5.1.p1.1.2.1" class="ltx_tr">
+<td id="S3.SS5.1.p1.1.2.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.2.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.2.1.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.2.1.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">reproduce</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.2.1.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.2.1.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.2.1.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.2.1.2.1.1.1" class="ltx_text" style="font-size:90%;">collect evidence</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.2.1.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.2.1.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.2.1.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.2.1.3.1.1.1" class="ltx_text" style="font-size:90%;">Only evidence collection is visible. Command or log evidence updates the failure signature and advances to </span><span id="S3.SS5.1.p1.1.2.1.3.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:90%;">patch</span><span id="S3.SS5.1.p1.1.2.1.3.1.1.3" class="ltx_text" style="font-size:90%;">.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.1.p1.1.3.2" class="ltx_tr">
+<td id="S3.SS5.1.p1.1.3.2.1" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.3.2.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.3.2.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.3.2.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">diagnose</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.3.2.2" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.3.2.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.3.2.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.3.2.2.1.1.1" class="ltx_text" style="font-size:90%;">collect, patch</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.3.2.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.3.2.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.3.2.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.3.2.3.1.1.1" class="ltx_text" style="font-size:90%;">Routed optional phase. Evidence collection and unified patching are visible; generic mutation tools remain hidden.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.1.p1.1.4.3" class="ltx_tr">
+<td id="S3.SS5.1.p1.1.4.3.1" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.4.3.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.4.3.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.4.3.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">patch</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.4.3.2" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.4.3.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.4.3.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.4.3.2.1.1.1" class="ltx_text" style="font-size:90%;">collect, patch</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.4.3.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.4.3.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.4.3.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.4.3.3.1.1.1" class="ltx_text" style="font-size:90%;">Patching must use the unified patch tool; guards reject protected paths, missing hunks, append-only edits on existing files, and oversized changes. Success advances to </span><span id="S3.SS5.1.p1.1.4.3.3.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:90%;">verify</span><span id="S3.SS5.1.p1.1.4.3.3.1.1.3" class="ltx_text" style="font-size:90%;">.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.1.p1.1.5.4" class="ltx_tr">
+<td id="S3.SS5.1.p1.1.5.4.1" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.5.4.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.5.4.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.5.4.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">verify</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.5.4.2" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.5.4.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.5.4.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.5.4.2.1.1.1" class="ltx_text" style="font-size:90%;">verify</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.5.4.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.5.4.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.5.4.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.5.4.3.1.1.1" class="ltx_text" style="font-size:90%;">Verification accepts structured checks. Passing checks set </span><span id="S3.SS5.1.p1.1.5.4.3.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:90%;">verification_passed</span><span id="S3.SS5.1.p1.1.5.4.3.1.1.3" class="ltx_text" style="font-size:90%;"> and advance to </span><span id="S3.SS5.1.p1.1.5.4.3.1.1.4" class="ltx_text ltx_font_typewriter" style="font-size:90%;">report</span><span id="S3.SS5.1.p1.1.5.4.3.1.1.5" class="ltx_text" style="font-size:90%;">; failures return to </span><span id="S3.SS5.1.p1.1.5.4.3.1.1.6" class="ltx_text ltx_font_typewriter" style="font-size:90%;">patch</span><span id="S3.SS5.1.p1.1.5.4.3.1.1.7" class="ltx_text" style="font-size:90%;">.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.1.p1.1.6.5" class="ltx_tr">
+<td id="S3.SS5.1.p1.1.6.5.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.6.5.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.6.5.1.1.1" class="ltx_p" style="width:60.7pt;"><span id="S3.SS5.1.p1.1.6.5.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">report</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.6.5.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.6.5.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.6.5.2.1.1" class="ltx_p" style="width:91.1pt;"><span id="S3.SS5.1.p1.1.6.5.2.1.1.1" class="ltx_text" style="font-size:90%;">write artifacts, done</span></span>
+</span>
+</td>
+<td id="S3.SS5.1.p1.1.6.5.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.1.p1.1.6.5.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.1.p1.1.6.5.3.1.1" class="ltx_p" style="width:251.5pt;"><span id="S3.SS5.1.p1.1.6.5.3.1.1.1" class="ltx_text" style="font-size:90%;">Artifact writing and completion are visible. Completion is blocked until verification has passed and required artifacts inferred from </span><span id="S3.SS5.1.p1.1.6.5.3.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:90%;">done_when</span><span id="S3.SS5.1.p1.1.6.5.3.1.1.3" class="ltx_text" style="font-size:90%;"> exist.</span></span>
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<figure id="alg2" class="ltx_float ltx_float_algorithm ltx_framed ltx_framed_top">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_float"><span id="alg2.3.1.1" class="ltx_text ltx_font_bold">Algorithm 2</span> </span> <span id="alg2.4.2" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> execution</figcaption>
+<div id="alg2.5" class="ltx_listing ltx_listing">
+<div id="alg2.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l1.1.1.1" class="ltx_text" style="font-size:80%;">1:</span></span><span id="alg2.l1.2" class="ltx_text" style="font-size:80%;">Sub-session </span><math id="alg2.l1.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="alg2.l1.3" class="ltx_text" style="font-size:80%;"> and repair state </span><math id="alg2.l1.m2" class="ltx_Math" alttext="r" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math><span id="alg2.l1.4" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg2.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l2.1.1.1" class="ltx_text" style="font-size:80%;">2:</span></span><span id="alg2.l2.2" class="ltx_text" style="font-size:80%;"></span><span id="alg2.l2.3" class="ltx_text ltx_font_typewriter" style="font-size:80%;">before_llm_call</span><span id="alg2.l2.4" class="ltx_text" style="font-size:80%;"> filters visible tools by </span><math id="alg2.l2.m1" class="ltx_Math" alttext="r.\texttt{phase}" display="inline" intent=":literal"><semantics><mrow><mi mathsize="0.800em">r</mi><mo lspace="0em" mathsize="0.800em" rspace="0.167em">.</mo><mtext class="ltx_mathvariant_monospace" mathsize="0.800em">phase</mtext></mrow><annotation encoding="application/x-tex">r.\texttt{phase}</annotation></semantics></math><span id="alg2.l2.5" class="ltx_text" style="font-size:80%;"> and injects phase-local workflow guidance
+</span>
+</div>
+<div id="alg2.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l3.1.1.1" class="ltx_text" style="font-size:80%;">3:</span></span><span id="alg2.l3.2" class="ltx_text" style="font-size:80%;">The model chooses one visible repair action
+</span>
+</div>
+<div id="alg2.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l4.1.1.1" class="ltx_text" style="font-size:80%;">4:</span></span><span id="alg2.l4.2" class="ltx_text" style="font-size:80%;"></span><span id="alg2.l4.3" class="ltx_text ltx_font_typewriter" style="font-size:80%;">before_tool_call</span><span id="alg2.l4.4" class="ltx_text" style="font-size:80%;"> checks paths, patch shape, command policy, and verification checks
+</span>
+</div>
+<div id="alg2.l5" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l5.1.1.1" class="ltx_text" style="font-size:80%;">5:</span></span><span id="alg2.l5.2" class="ltx_text" style="font-size:80%;">Execute the selected repair action with its Python executor
+</span>
+</div>
+<div id="alg2.l6" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l6.1.1.1" class="ltx_text" style="font-size:80%;">6:</span></span><span id="alg2.l6.2" class="ltx_text" style="font-size:80%;">Update phase, verification status, produced artifacts, and gate reasons
+</span>
+</div>
+<div id="alg2.l7" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l7.1.1.1" class="ltx_text" style="font-size:80%;">7:</span></span><span id="alg2.l7.2" class="ltx_text" style="font-size:80%;"></span><span id="alg2.l7.3" class="ltx_text ltx_font_bold" style="font-size:80%;">if</span><span id="alg2.l7.4" class="ltx_text" style="font-size:80%;"> verification or artifact gates remain open </span><span id="alg2.l7.5" class="ltx_text ltx_font_bold" style="font-size:80%;">then</span><span id="alg2.l7.6" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg2.l8" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l8.1.1.1" class="ltx_text" style="font-size:80%;">8:</span></span><span id="alg2.l8.2" class="ltx_text" style="font-size:80%;">  Schedule a follow-up wakeup for </span><math id="alg2.l8.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="alg2.l8.3" class="ltx_text" style="font-size:80%;">
+</span>
+</div>
+<div id="alg2.l9" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l9.1.1.1" class="ltx_text" style="font-size:80%;">9:</span></span><span id="alg2.l9.2" class="ltx_text" style="font-size:80%;"></span><span id="alg2.l9.3" class="ltx_text ltx_font_bold" style="font-size:80%;">else</span>
+</div>
+<div id="alg2.l10" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l10.1.1.1" class="ltx_text" style="font-size:80%;">10:</span></span><span id="alg2.l10.2" class="ltx_text" style="font-size:80%;">  Allow completion and return the repair report
+</span>
+</div>
+<div id="alg2.l11" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l11.1.1.1" class="ltx_text" style="font-size:80%;">11:</span></span><span id="alg2.l11.2" class="ltx_text" style="font-size:80%;"></span><span id="alg2.l11.3" class="ltx_text ltx_font_bold" style="font-size:80%;">end</span><span id="alg2.l11.4" class="ltx_text" style="font-size:80%;"> </span><span id="alg2.l11.5" class="ltx_text ltx_font_bold" style="font-size:80%;">if</span>
+</div>
+</div>
+</figure>
+<div id="S3.SS5.p3" class="ltx_para">
+<p id="S3.SS5.p3.1" class="ltx_p">The injected workflow message is intentionally compact: current phase, visible tools, fixed workflow order, no-completion-without-verification rule, required-artifact reminders inferred from <span id="S3.SS5.p3.1.1" class="ltx_text ltx_font_typewriter">done_when</span>, patch-only-through-<span id="S3.SS5.p3.1.2" class="ltx_text ltx_font_typewriter">repair_apply_unified_patch</span>, and verification checks shaped as <span id="S3.SS5.p3.1.3" class="ltx_text ltx_font_typewriter">{name,type,args}</span>. This keeps procedural knowledge in executable state and hooks rather than in a long natural-language repair manual.</p>
+</div>
+<div id="S3.SS5.2" class="ltx_logical-block">
+<figure id="S3.T2" class="ltx_table ltx_align_center">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span><span id="S3.T2.2.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> hook program. Each hook is a small deterministic boundary program around a single model or tool step.</figcaption>
+</figure>
+<div id="S3.SS5.2.p1" class="ltx_para">
+<table id="S3.SS5.2.p1.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S3.SS5.2.p1.1.1.1" class="ltx_tr">
+<th id="S3.SS5.2.p1.1.1.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.1.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.1.1.1.1.1" class="ltx_p" style="width:104.1pt;"><span id="S3.SS5.2.p1.1.1.1.1.1.1.1" class="ltx_text" style="font-size:80%;">Hook stage</span></span>
+</span>
+</th>
+<th id="S3.SS5.2.p1.1.1.1.2" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.1.1.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.1.1.2.1.1" class="ltx_p" style="width:138.8pt;"><span id="S3.SS5.2.p1.1.1.1.2.1.1.1" class="ltx_text" style="font-size:80%;">Checks or payload rewrite</span></span>
+</span>
+</th>
+<th id="S3.SS5.2.p1.1.1.1.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.1.1.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.1.1.3.1.1" class="ltx_p" style="width:156.1pt;"><span id="S3.SS5.2.p1.1.1.1.3.1.1.1" class="ltx_text" style="font-size:80%;">State-machine effect</span></span>
+</span>
+</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S3.SS5.2.p1.1.2.1" class="ltx_tr">
+<td id="S3.SS5.2.p1.1.2.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.2.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.2.1.1.1.1" class="ltx_p" style="width:104.1pt;"><span id="S3.SS5.2.p1.1.2.1.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">before_llm_call</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.2.1.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.2.1.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.2.1.2.1.1" class="ltx_p" style="width:138.8pt;"><span id="S3.SS5.2.p1.1.2.1.2.1.1.1" class="ltx_text" style="font-size:80%;">Loads repair state, infers required artifacts from </span><span id="S3.SS5.2.p1.1.2.1.2.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:80%;">done_when</span><span id="S3.SS5.2.p1.1.2.1.2.1.1.3" class="ltx_text" style="font-size:80%;">, filters visible tools by phase, and appends a user-role workflow message.</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.2.1.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_border_t" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.2.1.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.2.1.3.1.1" class="ltx_p" style="width:156.1pt;"><span id="S3.SS5.2.p1.1.2.1.3.1.1.1" class="ltx_text" style="font-size:80%;">Does not advance the phase. It narrows the model’s next action space so invalid actions are usually unreachable.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.2.p1.1.3.2" class="ltx_tr">
+<td id="S3.SS5.2.p1.1.3.2.1" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.3.2.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.3.2.1.1.1" class="ltx_p" style="width:104.1pt;"><span id="S3.SS5.2.p1.1.3.2.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">after_llm_response</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.3.2.2" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.3.2.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.3.2.2.1.1" class="ltx_p" style="width:138.8pt;"><span id="S3.SS5.2.p1.1.3.2.2.1.1.1" class="ltx_text" style="font-size:80%;">If the model emits no tool call, forces evidence collection in </span><span id="S3.SS5.2.p1.1.3.2.2.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:80%;">reproduce</span><span id="S3.SS5.2.p1.1.3.2.2.1.1.3" class="ltx_text" style="font-size:80%;">, forces verification in </span><span id="S3.SS5.2.p1.1.3.2.2.1.1.4" class="ltx_text ltx_font_typewriter" style="font-size:80%;">verify</span><span id="S3.SS5.2.p1.1.3.2.2.1.1.5" class="ltx_text" style="font-size:80%;">, or schedules a report-stage follow-up when gates remain unresolved.</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.3.2.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.3.2.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.3.2.3.1.1" class="ltx_p" style="width:156.1pt;"><span id="S3.SS5.2.p1.1.3.2.3.1.1.1" class="ltx_text" style="font-size:80%;">Prevents silent completion and re-enters the loop at the same phase with an explicit required action.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.2.p1.1.4.3" class="ltx_tr">
+<td id="S3.SS5.2.p1.1.4.3.1" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.4.3.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.4.3.1.1.1" class="ltx_p" style="width:104.1pt;"><span id="S3.SS5.2.p1.1.4.3.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">before_tool_call</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.4.3.2" class="ltx_td ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.4.3.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.4.3.2.1.1" class="ltx_p" style="width:138.8pt;"><span id="S3.SS5.2.p1.1.4.3.2.1.1.1" class="ltx_text" style="font-size:80%;">Parses tool arguments. For patch calls, checks target existence, protected path patterns, and required hunk markers. For verification, requires a non-empty check list.</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.4.3.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.4.3.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.4.3.3.1.1" class="ltx_p" style="width:156.1pt;"><span id="S3.SS5.2.p1.1.4.3.3.1.1.1" class="ltx_text" style="font-size:80%;">Blocks malformed calls before side effects. Protected edits are redirected to an artifact message; invalid patch or verification calls force another turn.</span></span>
+</span>
+</td>
+</tr>
+<tr id="S3.SS5.2.p1.1.5.4" class="ltx_tr">
+<td id="S3.SS5.2.p1.1.5.4.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.5.4.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.5.4.1.1.1" class="ltx_p" style="width:104.1pt;"><span id="S3.SS5.2.p1.1.5.4.1.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">after_tool_call</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.5.4.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.5.4.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.5.4.2.1.1" class="ltx_p" style="width:138.8pt;"><span id="S3.SS5.2.p1.1.5.4.2.1.1.1" class="ltx_text" style="font-size:80%;">Records last tool metadata, applies phase updates after patch, verification, or artifact writing, evaluates verification and artifact gates, and publishes follow-up events when needed.</span></span>
+</span>
+</td>
+<td id="S3.SS5.2.p1.1.5.4.3" class="ltx_td ltx_nopad_r ltx_align_justify ltx_align_top ltx_border_bb" style="padding-left:3.0pt;padding-right:3.0pt;">
+<span id="S3.SS5.2.p1.1.5.4.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S3.SS5.2.p1.1.5.4.3.1.1" class="ltx_p" style="width:156.1pt;"><span id="S3.SS5.2.p1.1.5.4.3.1.1.1" class="ltx_text" style="font-size:80%;">Advances </span><span id="S3.SS5.2.p1.1.5.4.3.1.1.2" class="ltx_text ltx_font_typewriter" style="font-size:80%;">patch -&gt; verify</span><span id="S3.SS5.2.p1.1.5.4.3.1.1.3" class="ltx_text" style="font-size:80%;">, </span><span id="S3.SS5.2.p1.1.5.4.3.1.1.4" class="ltx_text ltx_font_typewriter" style="font-size:80%;">verify -&gt; report</span><span id="S3.SS5.2.p1.1.5.4.3.1.1.5" class="ltx_text" style="font-size:80%;"> on pass, </span><span id="S3.SS5.2.p1.1.5.4.3.1.1.6" class="ltx_text ltx_font_typewriter" style="font-size:80%;">verify -&gt; patch</span><span id="S3.SS5.2.p1.1.5.4.3.1.1.7" class="ltx_text" style="font-size:80%;"> on fail, and keeps </span><span id="S3.SS5.2.p1.1.5.4.3.1.1.8" class="ltx_text ltx_font_typewriter" style="font-size:80%;">report</span><span id="S3.SS5.2.p1.1.5.4.3.1.1.9" class="ltx_text" style="font-size:80%;"> open until completion gates pass.</span></span>
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="S3.SS5.p4" class="ltx_para">
+<p id="S3.SS5.p4.1" class="ltx_p">The same three limitations of prompt skills appear concretely here. Instead of asking the model to follow a repair order, <span id="S3.SS5.p4.1.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> changes tool visibility by phase. Instead of asking the model not to edit protected files, the patch tool and pre-tool hook reject unsafe edits. Instead of asking for verification before completion, after-response and after-tool hooks keep the session alive until verification and artifact gates pass. The result is not a black-box repair command but a compact executable protocol distributed across JSON schemas, Python executors, hooks, and state.</p>
+</div>
+</section>
+</section>
+<section id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">4 </span>Experiments and Analysis</h2>
+
+<section id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.1 </span>Evaluation protocol</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p id="S4.SS1.p1.1" class="ltx_p">We evaluate the Formal Skill approach as implemented in FairyClaw on the independent Harness-Bench suite <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib33" title="" class="ltx_ref">33</a>]</cite>. Harness-Bench evaluates agents in real workspaces with task fixtures, executable oracles, and usage accounting. From the benchmark repository, we use 75 tasks for this study. The evaluation compares FairyClaw, Moltis <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib27" title="" class="ltx_ref">27</a>]</cite>, NullClaw <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib28" title="" class="ltx_ref">28</a>]</cite>, ZeroClaw <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib29" title="" class="ltx_ref">29</a>]</cite>, Hermes <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib30" title="" class="ltx_ref">30</a>, <a href="#bib.bib31" title="" class="ltx_ref">31</a>]</cite>, and OpenClaw <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib25" title="" class="ltx_ref">25</a>, <a href="#bib.bib26" title="" class="ltx_ref">26</a>]</cite> with two model families, <span id="S4.SS1.p1.1.1" class="ltx_text ltx_font_typewriter">gpt-5.4</span> and <span id="S4.SS1.p1.1.2" class="ltx_text ltx_font_typewriter">gemini-3.1-pro</span>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p id="S4.SS1.p2.1" class="ltx_p">For each task, the harness creates a fresh sandbox workspace, copies task fixtures into <span id="S4.SS1.p2.1.1" class="ltx_text ltx_font_typewriter">workspace/in</span>, renders the task prompt with workspace-local paths, and launches the target agent through a harness adapter. During execution, a local usage proxy is injected through environment variables and placed between the agent runtime and its upstream model endpoint. The proxy records every model request and response into <span id="S4.SS1.p2.1.2" class="ltx_text ltx_font_typewriter">requests.jsonl</span> and <span id="S4.SS1.p2.1.3" class="ltx_text ltx_font_typewriter">responses/*.json</span>, including provider, response model, normalized input/output/cache/total token fields, assistant messages, and tool calls. For process grading, Harness-Bench reconstructs a compact call chain from these proxy records: it removes system messages, keeps user/assistant/tool-call content, tracks main-agent and sub-agent histories separately, skips context-compression calls, and emits only incremental conversation deltas plus the corresponding assistant response. Token totals are aggregated from the complete proxy log rather than from the shortened trace.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p id="S4.SS1.p3.2" class="ltx_p">Scoring then combines executable task outcomes with process evidence. Each task provides an oracle module that inspects the final workspace and returns an <span id="S4.SS1.p3.2.3" class="ltx_text ltx_font_typewriter">outcome_score</span>; tasks that require semantic judgment may additionally attach an LLM-based quality score. The reconstructed call chain is passed to a rubric grader that scores tool-use appropriateness, consistency or flow coherence, robustness or error handling, and a binary security gate. The final benchmark score is computed as <span id="S4.SS1.p3.2.2" class="ltx_text ltx_font_typewriter">combined = outcome_effective <math id="S4.SS1.p3.1.1.m1" class="ltx_Math" alttext="\times" display="inline" intent=":literal"><semantics><mo>×</mo><annotation encoding="application/x-tex">\times</annotation></semantics></math> process_effective <math id="S4.SS1.p3.2.2.m2" class="ltx_Math" alttext="\times" display="inline" intent=":literal"><semantics><mo>×</mo><annotation encoding="application/x-tex">\times</annotation></semantics></math> security</span>. The reported metrics are this combined score, total token usage, and average tokens per completed task. Our analysis asks three questions aligned with the paper’s mechanism: whether FairyClaw is competitive on overall score, whether it improves token efficiency, and whether routed Formal Skills help on tasks that require controlled evidence, action, verification, and recovery.</p>
+</div>
+</section>
+<section id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.2 </span>Overall score and token efficiency</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p id="S4.SS2.p1.1" class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Overall score and token efficiency ‣ 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> summarizes the evaluated runs. On <span id="S4.SS2.p1.1.1" class="ltx_text ltx_font_typewriter">gpt-5.4</span>, FairyClaw achieves the strongest combined score among the compared agents, 0.746 over 75 tasks, while also using the fewest total tokens: 3.51M total and 46.8K per task. This is a favorable score–cost point: Moltis and Hermes are close in score, but use 6.29M and 7.28M tokens respectively; OpenClaw, NullClaw, and ZeroClaw score lower in this snapshot.</p>
+</div>
+<figure id="S4.T3" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Harness-Bench comparison across evaluated agent harnesses.</figcaption>
+<table id="S4.T3.3" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S4.T3.3.3" class="ltx_tr">
+<th id="S4.T3.3.3.4" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S4.T3.3.3.4.1" class="ltx_text" style="font-size:80%;">Agent</span></th>
+<th id="S4.T3.3.3.5" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S4.T3.3.3.5.1" class="ltx_text" style="font-size:80%;">Model</span></th>
+<th id="S4.T3.3.3.6" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S4.T3.3.3.6.1" class="ltx_text" style="font-size:80%;">Tasks</span></th>
+<th id="S4.T3.1.1.1" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T3.1.1.1.1" class="ltx_text" style="font-size:80%;">Combined </span><math id="S4.T3.1.1.1.m1" class="ltx_Math" alttext="\uparrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↑</mo><annotation encoding="application/x-tex">\uparrow</annotation></semantics></math>
+</th>
+<th id="S4.T3.2.2.2" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T3.2.2.2.1" class="ltx_text" style="font-size:80%;">Total tok. </span><math id="S4.T3.2.2.2.m1" class="ltx_Math" alttext="\downarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↓</mo><annotation encoding="application/x-tex">\downarrow</annotation></semantics></math>
+</th>
+<th id="S4.T3.3.3.3" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T3.3.3.3.1" class="ltx_text" style="font-size:80%;">Avg. tok. </span><math id="S4.T3.3.3.3.m1" class="ltx_Math" alttext="\downarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↓</mo><annotation encoding="application/x-tex">\downarrow</annotation></semantics></math>
+</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S4.T3.3.4.1" class="ltx_tr">
+<th id="S4.T3.3.4.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.4.1.1.1" class="ltx_text" style="font-size:80%;">FairyClaw</span></th>
+<th id="S4.T3.3.4.1.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.4.1.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.4.1.3" class="ltx_td ltx_align_right ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.4.1.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.4.1.4" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.4.1.4.1" class="ltx_text" style="font-size:80%;">0.746</span></td>
+<td id="S4.T3.3.4.1.5" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.4.1.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">3.51M</span></td>
+<td id="S4.T3.3.4.1.6" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.4.1.6.1" class="ltx_text" style="font-size:80%;">46.8K</span></td>
+</tr>
+<tr id="S4.T3.3.5.2" class="ltx_tr">
+<th id="S4.T3.3.5.2.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.5.2.1.1" class="ltx_text" style="font-size:80%;">Moltis</span></th>
+<th id="S4.T3.3.5.2.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.5.2.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.5.2.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.5.2.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.5.2.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.5.2.4.1" class="ltx_text" style="font-size:80%;">0.744</span></td>
+<td id="S4.T3.3.5.2.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.5.2.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.29M</span></td>
+<td id="S4.T3.3.5.2.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.5.2.6.1" class="ltx_text" style="font-size:80%;">83.8K</span></td>
+</tr>
+<tr id="S4.T3.3.6.3" class="ltx_tr">
+<th id="S4.T3.3.6.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.6.3.1.1" class="ltx_text" style="font-size:80%;">Hermes</span></th>
+<th id="S4.T3.3.6.3.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.6.3.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.6.3.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.6.3.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.6.3.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.6.3.4.1" class="ltx_text" style="font-size:80%;">0.740</span></td>
+<td id="S4.T3.3.6.3.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.6.3.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">7.28M</span></td>
+<td id="S4.T3.3.6.3.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.6.3.6.1" class="ltx_text" style="font-size:80%;">97.0K</span></td>
+</tr>
+<tr id="S4.T3.3.7.4" class="ltx_tr">
+<th id="S4.T3.3.7.4.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.7.4.1.1" class="ltx_text" style="font-size:80%;">OpenClaw</span></th>
+<th id="S4.T3.3.7.4.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.7.4.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.7.4.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.7.4.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.7.4.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.7.4.4.1" class="ltx_text" style="font-size:80%;">0.693</span></td>
+<td id="S4.T3.3.7.4.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.7.4.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.03M</span></td>
+<td id="S4.T3.3.7.4.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.7.4.6.1" class="ltx_text" style="font-size:80%;">80.4K</span></td>
+</tr>
+<tr id="S4.T3.3.8.5" class="ltx_tr">
+<th id="S4.T3.3.8.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.8.5.1.1" class="ltx_text" style="font-size:80%;">NullClaw</span></th>
+<th id="S4.T3.3.8.5.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.8.5.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.8.5.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.8.5.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.8.5.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.8.5.4.1" class="ltx_text" style="font-size:80%;">0.685</span></td>
+<td id="S4.T3.3.8.5.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.8.5.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">8.16M</span></td>
+<td id="S4.T3.3.8.5.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.8.5.6.1" class="ltx_text" style="font-size:80%;">108.9K</span></td>
+</tr>
+<tr id="S4.T3.3.9.6" class="ltx_tr">
+<th id="S4.T3.3.9.6.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.9.6.1.1" class="ltx_text" style="font-size:80%;">ZeroClaw</span></th>
+<th id="S4.T3.3.9.6.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.9.6.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></th>
+<th id="S4.T3.3.9.6.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.9.6.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.9.6.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.9.6.4.1" class="ltx_text" style="font-size:80%;">0.587</span></td>
+<td id="S4.T3.3.9.6.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.9.6.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.09M</span></td>
+<td id="S4.T3.3.9.6.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.9.6.6.1" class="ltx_text" style="font-size:80%;">81.2K</span></td>
+</tr>
+<tr id="S4.T3.3.10.7" class="ltx_tr">
+<th id="S4.T3.3.10.7.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.10.7.1.1" class="ltx_text" style="font-size:80%;">OpenClaw</span></th>
+<th id="S4.T3.3.10.7.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.10.7.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.10.7.3" class="ltx_td ltx_align_right ltx_th ltx_th_row ltx_border_t"><span id="S4.T3.3.10.7.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.10.7.4" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.10.7.4.1" class="ltx_text" style="font-size:80%;">0.689</span></td>
+<td id="S4.T3.3.10.7.5" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.10.7.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.58M</span></td>
+<td id="S4.T3.3.10.7.6" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T3.3.10.7.6.1" class="ltx_text" style="font-size:80%;">87.7K</span></td>
+</tr>
+<tr id="S4.T3.3.11.8" class="ltx_tr">
+<th id="S4.T3.3.11.8.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.11.8.1.1" class="ltx_text" style="font-size:80%;">NullClaw</span></th>
+<th id="S4.T3.3.11.8.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.11.8.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.11.8.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.11.8.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.11.8.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.11.8.4.1" class="ltx_text" style="font-size:80%;">0.645</span></td>
+<td id="S4.T3.3.11.8.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.11.8.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">12.70M</span></td>
+<td id="S4.T3.3.11.8.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.11.8.6.1" class="ltx_text" style="font-size:80%;">169.3K</span></td>
+</tr>
+<tr id="S4.T3.3.12.9" class="ltx_tr">
+<th id="S4.T3.3.12.9.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.12.9.1.1" class="ltx_text" style="font-size:80%;">Moltis</span></th>
+<th id="S4.T3.3.12.9.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.12.9.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.12.9.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.12.9.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.12.9.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.12.9.4.1" class="ltx_text" style="font-size:80%;">0.643</span></td>
+<td id="S4.T3.3.12.9.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.12.9.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.27M</span></td>
+<td id="S4.T3.3.12.9.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.12.9.6.1" class="ltx_text" style="font-size:80%;">83.6K</span></td>
+</tr>
+<tr id="S4.T3.3.13.10" class="ltx_tr">
+<th id="S4.T3.3.13.10.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.13.10.1.1" class="ltx_text" style="font-size:80%;">FairyClaw</span></th>
+<th id="S4.T3.3.13.10.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.13.10.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.13.10.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.13.10.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.13.10.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.13.10.4.1" class="ltx_text" style="font-size:80%;">0.635</span></td>
+<td id="S4.T3.3.13.10.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.13.10.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">3.84M</span></td>
+<td id="S4.T3.3.13.10.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.13.10.6.1" class="ltx_text" style="font-size:80%;">51.2K</span></td>
+</tr>
+<tr id="S4.T3.3.14.11" class="ltx_tr">
+<th id="S4.T3.3.14.11.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.14.11.1.1" class="ltx_text" style="font-size:80%;">Hermes</span></th>
+<th id="S4.T3.3.14.11.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T3.3.14.11.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.14.11.3" class="ltx_td ltx_align_right ltx_th ltx_th_row"><span id="S4.T3.3.14.11.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.14.11.4" class="ltx_td ltx_align_right"><span id="S4.T3.3.14.11.4.1" class="ltx_text" style="font-size:80%;">0.622</span></td>
+<td id="S4.T3.3.14.11.5" class="ltx_td ltx_align_right"><span id="S4.T3.3.14.11.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">6.21M</span></td>
+<td id="S4.T3.3.14.11.6" class="ltx_td ltx_align_right"><span id="S4.T3.3.14.11.6.1" class="ltx_text" style="font-size:80%;">82.8K</span></td>
+</tr>
+<tr id="S4.T3.3.15.12" class="ltx_tr">
+<th id="S4.T3.3.15.12.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb"><span id="S4.T3.3.15.12.1.1" class="ltx_text" style="font-size:80%;">ZeroClaw</span></th>
+<th id="S4.T3.3.15.12.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb"><span id="S4.T3.3.15.12.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></th>
+<th id="S4.T3.3.15.12.3" class="ltx_td ltx_align_right ltx_th ltx_th_row ltx_border_bb"><span id="S4.T3.3.15.12.3.1" class="ltx_text" style="font-size:80%;">75</span></th>
+<td id="S4.T3.3.15.12.4" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T3.3.15.12.4.1" class="ltx_text" style="font-size:80%;">0.506</span></td>
+<td id="S4.T3.3.15.12.5" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T3.3.15.12.5.1" class="ltx_text ltx_font_bold" style="font-size:80%;">4.86M</span></td>
+<td id="S4.T3.3.15.12.6" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T3.3.15.12.6.1" class="ltx_text" style="font-size:80%;">64.8K</span></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<div id="S4.SS2.p2" class="ltx_para">
+<p id="S4.SS2.p2.1" class="ltx_p">Across both model families, FairyClaw’s automatic context-compression mechanism before reaching the maximum context window was disabled. The observed token reduction therefore comes from routed Formal Skills, compact phase guidance, and narrower tool exposure rather than from aggressive transcript compression. On <span id="S4.SS2.p2.1.1" class="ltx_text ltx_font_typewriter">gemini-3.1-pro</span>, FairyClaw is not the highest aggregate-scoring agent, but it remains competitive while preserving the strongest token-efficiency profile. It uses 3.84M total tokens, compared with 4.86M for ZeroClaw, 6.21M for Hermes, 6.27M for Moltis, 6.58M for OpenClaw, and 12.70M for NullClaw.</p>
+</div>
+</section>
+<section id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.3 </span>Skill-relevant task behavior</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p id="S4.SS3.p1.1" class="ltx_p">The aggregate comparison is only one view of Formal Skill. Its mechanism should matter most on procedural tasks where the agent must avoid unsafe shortcuts and premature completion. Table <a href="#S4.T4" title="Table 4 ‣ 4.3 Skill-relevant task behavior ‣ 4 Experiments and Analysis ‣ Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> reports one such code-debugging task from the benchmark: the workspace contains <span id="S4.SS3.p1.1.1" class="ltx_text ltx_font_typewriter">buggy_code.py</span> with five layered bugs, only the current layer is exposed in each round, and the agent must edit the file, validate it, and stop after the current layer passes. FairyClaw obtains the strongest combined score in both model families: 0.865 with <span id="S4.SS3.p1.1.2" class="ltx_text ltx_font_typewriter">gpt-5.4</span> and 0.843 with <span id="S4.SS3.p1.1.3" class="ltx_text ltx_font_typewriter">gemini-3.1-pro</span>. This is consistent with <span id="S4.SS3.p1.1.4" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span>’ purpose: make the repair loop executable through phase-specific tool visibility, patch guards, verification checks, and completion gates.</p>
+</div>
+<figure id="S4.T4" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Representative code-debugging task results. This task stresses evidence collection, workspace modification, verification, and recovery.</figcaption>
+<table id="S4.T4.3" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S4.T4.3.3" class="ltx_tr">
+<th id="S4.T4.3.3.4" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_border_tt"><span id="S4.T4.3.3.4.1" class="ltx_text" style="font-size:80%;">Agent</span></th>
+<th id="S4.T4.3.3.5" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_border_tt"><span id="S4.T4.3.3.5.1" class="ltx_text" style="font-size:80%;">Model</span></th>
+<th id="S4.T4.1.1.1" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T4.1.1.1.1" class="ltx_text" style="font-size:80%;">Combined </span><math id="S4.T4.1.1.1.m1" class="ltx_Math" alttext="\uparrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↑</mo><annotation encoding="application/x-tex">\uparrow</annotation></semantics></math>
+</th>
+<th id="S4.T4.2.2.2" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T4.2.2.2.1" class="ltx_text" style="font-size:80%;">Total tok. </span><math id="S4.T4.2.2.2.m1" class="ltx_Math" alttext="\downarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↓</mo><annotation encoding="application/x-tex">\downarrow</annotation></semantics></math>
+</th>
+<th id="S4.T4.3.3.3" class="ltx_td ltx_align_right ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T4.3.3.3.1" class="ltx_text" style="font-size:80%;">Rounds </span><math id="S4.T4.3.3.3.m1" class="ltx_Math" alttext="\downarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">↓</mo><annotation encoding="application/x-tex">\downarrow</annotation></semantics></math>
+</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S4.T4.3.4.1" class="ltx_tr">
+<td id="S4.T4.3.4.1.1" class="ltx_td ltx_align_left ltx_border_t"><span id="S4.T4.3.4.1.1.1" class="ltx_text" style="font-size:80%;">FairyClaw</span></td>
+<td id="S4.T4.3.4.1.2" class="ltx_td ltx_align_left ltx_border_t"><span id="S4.T4.3.4.1.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.4.1.3" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.4.1.3.1" class="ltx_text" style="font-size:80%;">0.865</span></td>
+<td id="S4.T4.3.4.1.4" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.4.1.4.1" class="ltx_text" style="font-size:80%;">193.0K</span></td>
+<td id="S4.T4.3.4.1.5" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.4.1.5.1" class="ltx_text" style="font-size:80%;">48</span></td>
+</tr>
+<tr id="S4.T4.3.5.2" class="ltx_tr">
+<td id="S4.T4.3.5.2.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.5.2.1.1" class="ltx_text" style="font-size:80%;">NullClaw</span></td>
+<td id="S4.T4.3.5.2.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.5.2.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.5.2.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.5.2.3.1" class="ltx_text" style="font-size:80%;">0.858</span></td>
+<td id="S4.T4.3.5.2.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.5.2.4.1" class="ltx_text" style="font-size:80%;">193.0K</span></td>
+<td id="S4.T4.3.5.2.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.5.2.5.1" class="ltx_text" style="font-size:80%;">21</span></td>
+</tr>
+<tr id="S4.T4.3.6.3" class="ltx_tr">
+<td id="S4.T4.3.6.3.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.6.3.1.1" class="ltx_text" style="font-size:80%;">Hermes</span></td>
+<td id="S4.T4.3.6.3.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.6.3.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.6.3.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.6.3.3.1" class="ltx_text" style="font-size:80%;">0.807</span></td>
+<td id="S4.T4.3.6.3.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.6.3.4.1" class="ltx_text" style="font-size:80%;">750.5K</span></td>
+<td id="S4.T4.3.6.3.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.6.3.5.1" class="ltx_text" style="font-size:80%;">99</span></td>
+</tr>
+<tr id="S4.T4.3.7.4" class="ltx_tr">
+<td id="S4.T4.3.7.4.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.7.4.1.1" class="ltx_text" style="font-size:80%;">Moltis</span></td>
+<td id="S4.T4.3.7.4.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.7.4.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.7.4.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.7.4.3.1" class="ltx_text" style="font-size:80%;">0.793</span></td>
+<td id="S4.T4.3.7.4.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.7.4.4.1" class="ltx_text" style="font-size:80%;">306.8K</span></td>
+<td id="S4.T4.3.7.4.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.7.4.5.1" class="ltx_text" style="font-size:80%;">24</span></td>
+</tr>
+<tr id="S4.T4.3.8.5" class="ltx_tr">
+<td id="S4.T4.3.8.5.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.8.5.1.1" class="ltx_text" style="font-size:80%;">OpenClaw</span></td>
+<td id="S4.T4.3.8.5.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.8.5.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.8.5.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.8.5.3.1" class="ltx_text" style="font-size:80%;">0.730</span></td>
+<td id="S4.T4.3.8.5.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.8.5.4.1" class="ltx_text" style="font-size:80%;">349.1K</span></td>
+<td id="S4.T4.3.8.5.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.8.5.5.1" class="ltx_text" style="font-size:80%;">24</span></td>
+</tr>
+<tr id="S4.T4.3.9.6" class="ltx_tr">
+<td id="S4.T4.3.9.6.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.9.6.1.1" class="ltx_text" style="font-size:80%;">ZeroClaw</span></td>
+<td id="S4.T4.3.9.6.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.9.6.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gpt-5.4</span></td>
+<td id="S4.T4.3.9.6.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.9.6.3.1" class="ltx_text" style="font-size:80%;">0.700</span></td>
+<td id="S4.T4.3.9.6.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.9.6.4.1" class="ltx_text" style="font-size:80%;">207.8K</span></td>
+<td id="S4.T4.3.9.6.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.9.6.5.1" class="ltx_text" style="font-size:80%;">24</span></td>
+</tr>
+<tr id="S4.T4.3.10.7" class="ltx_tr">
+<td id="S4.T4.3.10.7.1" class="ltx_td ltx_align_left ltx_border_t"><span id="S4.T4.3.10.7.1.1" class="ltx_text" style="font-size:80%;">FairyClaw</span></td>
+<td id="S4.T4.3.10.7.2" class="ltx_td ltx_align_left ltx_border_t"><span id="S4.T4.3.10.7.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.10.7.3" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.10.7.3.1" class="ltx_text" style="font-size:80%;">0.843</span></td>
+<td id="S4.T4.3.10.7.4" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.10.7.4.1" class="ltx_text" style="font-size:80%;">209.3K</span></td>
+<td id="S4.T4.3.10.7.5" class="ltx_td ltx_align_right ltx_border_t"><span id="S4.T4.3.10.7.5.1" class="ltx_text" style="font-size:80%;">54</span></td>
+</tr>
+<tr id="S4.T4.3.11.8" class="ltx_tr">
+<td id="S4.T4.3.11.8.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.11.8.1.1" class="ltx_text" style="font-size:80%;">Hermes</span></td>
+<td id="S4.T4.3.11.8.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.11.8.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.11.8.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.11.8.3.1" class="ltx_text" style="font-size:80%;">0.836</span></td>
+<td id="S4.T4.3.11.8.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.11.8.4.1" class="ltx_text" style="font-size:80%;">330.2K</span></td>
+<td id="S4.T4.3.11.8.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.11.8.5.1" class="ltx_text" style="font-size:80%;">89</span></td>
+</tr>
+<tr id="S4.T4.3.12.9" class="ltx_tr">
+<td id="S4.T4.3.12.9.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.12.9.1.1" class="ltx_text" style="font-size:80%;">OpenClaw</span></td>
+<td id="S4.T4.3.12.9.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.12.9.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.12.9.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.12.9.3.1" class="ltx_text" style="font-size:80%;">0.706</span></td>
+<td id="S4.T4.3.12.9.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.12.9.4.1" class="ltx_text" style="font-size:80%;">290.5K</span></td>
+<td id="S4.T4.3.12.9.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.12.9.5.1" class="ltx_text" style="font-size:80%;">23</span></td>
+</tr>
+<tr id="S4.T4.3.13.10" class="ltx_tr">
+<td id="S4.T4.3.13.10.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.13.10.1.1" class="ltx_text" style="font-size:80%;">NullClaw</span></td>
+<td id="S4.T4.3.13.10.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.13.10.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.13.10.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.13.10.3.1" class="ltx_text" style="font-size:80%;">0.692</span></td>
+<td id="S4.T4.3.13.10.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.13.10.4.1" class="ltx_text" style="font-size:80%;">293.0K</span></td>
+<td id="S4.T4.3.13.10.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.13.10.5.1" class="ltx_text" style="font-size:80%;">29</span></td>
+</tr>
+<tr id="S4.T4.3.14.11" class="ltx_tr">
+<td id="S4.T4.3.14.11.1" class="ltx_td ltx_align_left"><span id="S4.T4.3.14.11.1.1" class="ltx_text" style="font-size:80%;">Moltis</span></td>
+<td id="S4.T4.3.14.11.2" class="ltx_td ltx_align_left"><span id="S4.T4.3.14.11.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.14.11.3" class="ltx_td ltx_align_right"><span id="S4.T4.3.14.11.3.1" class="ltx_text" style="font-size:80%;">0.657</span></td>
+<td id="S4.T4.3.14.11.4" class="ltx_td ltx_align_right"><span id="S4.T4.3.14.11.4.1" class="ltx_text" style="font-size:80%;">154.8K</span></td>
+<td id="S4.T4.3.14.11.5" class="ltx_td ltx_align_right"><span id="S4.T4.3.14.11.5.1" class="ltx_text" style="font-size:80%;">19</span></td>
+</tr>
+<tr id="S4.T4.3.15.12" class="ltx_tr">
+<td id="S4.T4.3.15.12.1" class="ltx_td ltx_align_left ltx_border_bb"><span id="S4.T4.3.15.12.1.1" class="ltx_text" style="font-size:80%;">ZeroClaw</span></td>
+<td id="S4.T4.3.15.12.2" class="ltx_td ltx_align_left ltx_border_bb"><span id="S4.T4.3.15.12.2.1" class="ltx_text ltx_font_typewriter" style="font-size:80%;">gemini-3.1-pro</span></td>
+<td id="S4.T4.3.15.12.3" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T4.3.15.12.3.1" class="ltx_text" style="font-size:80%;">0.537</span></td>
+<td id="S4.T4.3.15.12.4" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T4.3.15.12.4.1" class="ltx_text" style="font-size:80%;">138.4K</span></td>
+<td id="S4.T4.3.15.12.5" class="ltx_td ltx_align_right ltx_border_bb"><span id="S4.T4.3.15.12.5.1" class="ltx_text" style="font-size:80%;">21</span></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<div id="S4.SS3.p2" class="ltx_para">
+<p id="S4.SS3.p2.1" class="ltx_p">These task-level results should not be interpreted as a claim that every task is solved by <span id="S4.SS3.p2.1.1" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span>. Rather, they identify the regime in which Formal Skill is most visible: the task has a meaningful procedure and the procedure has unsafe shortcuts. FairyClaw may spend more rounds than some baselines, but those rounds are governed by Formal Skill routing and hook-controlled state transitions rather than by an unstructured transcript. Its lower token consumption is evidence that this longer trajectory is not driven by verbose prompt accumulation, but by compact state-conditioned control.</p>
+</div>
+</section>
+<section id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.4 </span>Analysis</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p id="S4.SS4.p1.1" class="ltx_p">The experiments show three main results. First, FairyClaw is competitive on overall Harness-Bench score: across the six evaluated harnesses, it ranks third by mean score over the two model families and is the top-scoring harness in the <span id="S4.SS4.p1.1.1" class="ltx_text ltx_font_typewriter">gpt-5.4</span> group. Second, FairyClaw uses substantially fewer tokens than the compared systems. Because context compression was disabled during these runs, the token reduction is attributable to Formal Skill routing, compact phase guidance, and narrower tool exposure rather than transcript summarization. Third, FairyClaw performs especially well on the representative code-debugging task, where <span id="S4.SS4.p1.1.2" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> makes evidence collection, patching, verification, and completion gates explicit. Together, these results suggest that Formal Skill improves agent efficiency while preserving, and in some procedural tasks improving, task performance.</p>
+</div>
+</section>
+</section>
+<section id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p id="S5.p1.1" class="ltx_p">We presented <span id="S5.p1.1.1" class="ltx_text ltx_font_bold">Formal Skill</span>, a runtime-native way to turn reusable agent skills from long prompt instructions into programmable protocols with JSON schemas, reliable executors, hooks, routing metadata, and skill-local state. FairyClaw implements this concept as an event-driven agent runtime, and <span id="S5.p1.1.2" class="ltx_text ltx_font_smallcaps">CodeRepairOps</span> shows how it becomes a concrete workflow for code repair. On Harness-Bench, FairyClaw achieves competitive overall scores, ranks first in the <span id="S5.p1.1.3" class="ltx_text ltx_font_typewriter">gpt-5.4</span> group and third by mean score across the six evaluated harnesses, and uses substantially fewer tokens. These results support the view that agent skills should be token-efficient, runtime-governed protocols rather than natural-language documents alone.</p>
+</div>
+</section>
+<section id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock">
+Yao, S., Zhao, J., Yu, D., et al. ReAct: Synergizing reasoning and acting in language models. ICLR, 2023. <a href="https://arxiv.org/abs/2210.03629" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2210.03629</a>.
+
+</span>
+</li>
+<li id="bib.bib2" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[2]</span>
+<span class="ltx_bibblock">
+Karpas, E., Abend, O., Belinkov, Y., et al. MRKL systems: A modular, neuro-symbolic architecture that combines large language models, external knowledge sources and discrete reasoning. arXiv:2205.00445, 2022. <a href="https://arxiv.org/abs/2205.00445" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2205.00445</a>.
+
+</span>
+</li>
+<li id="bib.bib3" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[3]</span>
+<span class="ltx_bibblock">
+Schick, T., Dwivedi-Yu, J., Dessi, R., et al. Toolformer: Language models can teach themselves to use tools. NeurIPS, 2023. <a href="https://proceedings.neurips.cc/paper_files/paper/2023/hash/d842425e4bf79ba039352da0f658a906-Abstract-Conference.html" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://proceedings.neurips.cc/paper_files/paper/2023/hash/d842425e4bf79ba039352da0f658a906-Abstract-Conference.html</a>.
+
+</span>
+</li>
+<li id="bib.bib4" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[4]</span>
+<span class="ltx_bibblock">
+Patil, S. G., Zhang, T., Wang, X., and Gonzalez, J. E. Gorilla: Large language model connected with massive APIs. NeurIPS, 2024. <a href="https://arxiv.org/abs/2305.15334" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2305.15334</a>.
+
+</span>
+</li>
+<li id="bib.bib5" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[5]</span>
+<span class="ltx_bibblock">
+Li, M., Zhao, Y., Yu, B., Song, F., Li, H., Yu, H., Li, Z., Huang, F., and Li, Y. API-Bank: A comprehensive benchmark for tool-augmented LLMs. EMNLP, 2023. <a href="https://aclanthology.org/2023.emnlp-main.187/" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://aclanthology.org/2023.emnlp-main.187/</a>.
+
+</span>
+</li>
+<li id="bib.bib6" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[6]</span>
+<span class="ltx_bibblock">
+Qin, Y., Liang, S., Ye, Y., et al. ToolLLM: Facilitating large language models to master 16000+ real-world APIs. ICLR, 2024. <a href="https://arxiv.org/abs/2307.16789" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2307.16789</a>.
+
+</span>
+</li>
+<li id="bib.bib7" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[7]</span>
+<span class="ltx_bibblock">
+Shinn, N., Cassano, F., Berman, E., et al. Reflexion: Language agents with verbal reinforcement learning. NeurIPS, 2023. <a href="https://arxiv.org/abs/2303.11366" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2303.11366</a>.
+
+</span>
+</li>
+<li id="bib.bib8" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[8]</span>
+<span class="ltx_bibblock">
+Madaan, A., Tandon, N., Gupta, P., et al. Self-Refine: Iterative refinement with self-feedback. NeurIPS, 2023. <a href="https://arxiv.org/abs/2303.17651" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2303.17651</a>.
+
+</span>
+</li>
+<li id="bib.bib9" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[9]</span>
+<span class="ltx_bibblock">
+Wang, G., Xie, Y., Jiang, Y., et al. Voyager: An open-ended embodied agent with large language models. arXiv:2305.16291, 2023. <a href="https://arxiv.org/abs/2305.16291" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2305.16291</a>.
+
+</span>
+</li>
+<li id="bib.bib10" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[10]</span>
+<span class="ltx_bibblock">
+Yang, J., Jimenez, C. E., Wettig, A., Lieret, K., Yao, S., Narasimhan, K. R., and Press, O. SWE-agent: Agent-computer interfaces enable automated software engineering. NeurIPS, 2024. <a href="https://openreview.net/forum?id=mXpq6ut8J3" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://openreview.net/forum?id=mXpq6ut8J3</a>.
+
+</span>
+</li>
+<li id="bib.bib11" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[11]</span>
+<span class="ltx_bibblock">
+Zhang, Y., Ruan, H., Fan, Z., and Roychoudhury, A. AutoCodeRover: Autonomous program improvement. ISSTA, 2024. <a href="https://arxiv.org/abs/2404.05427" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://arxiv.org/abs/2404.05427</a>.
+
+</span>
+</li>
+<li id="bib.bib12" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[12]</span>
+<span class="ltx_bibblock">
+Chase, H. LangChain: Building applications with LLMs through composability. GitHub repository, 2022. <a href="https://github.com/langchain-ai/langchain" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/langchain-ai/langchain</a>.
+
+</span>
+</li>
+<li id="bib.bib13" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[13]</span>
+<span class="ltx_bibblock">
+Anthropic. Agent Skills. Claude documentation. <a href="https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview</a>.
+
+</span>
+</li>
+<li id="bib.bib14" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[14]</span>
+<span class="ltx_bibblock">
+Anthropic. Agent Skills specification. <a href="https://agentskills.io/specification" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://agentskills.io/specification</a>.
+
+</span>
+</li>
+<li id="bib.bib15" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[15]</span>
+<span class="ltx_bibblock">
+Anthropic. Equipping agents for the real world with Agent Skills. Anthropic Engineering Blog, 2025. <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills</a>.
+
+</span>
+</li>
+<li id="bib.bib16" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[16]</span>
+<span class="ltx_bibblock">
+Anthropic. Extend Claude with skills. Claude Code documentation. <a href="https://docs.anthropic.com/en/docs/claude-code/skills" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://docs.anthropic.com/en/docs/claude-code/skills</a>.
+
+</span>
+</li>
+<li id="bib.bib17" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[17]</span>
+<span class="ltx_bibblock">
+Anthropic. Create plugins. Claude Code documentation. <a href="https://code.claude.com/docs/en/plugins" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://code.claude.com/docs/en/plugins</a>.
+
+</span>
+</li>
+<li id="bib.bib18" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[18]</span>
+<span class="ltx_bibblock">
+Anthropic. Give Claude custom tools. Claude Code Agent SDK documentation. <a href="https://code.claude.com/docs/en/agent-sdk/custom-tools" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://code.claude.com/docs/en/agent-sdk/custom-tools</a>.
+
+</span>
+</li>
+<li id="bib.bib19" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[19]</span>
+<span class="ltx_bibblock">
+Model Context Protocol. Overview. <a href="https://modelcontextprotocol.io/specification/latest/basic" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://modelcontextprotocol.io/specification/latest/basic</a>.
+
+</span>
+</li>
+<li id="bib.bib20" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[20]</span>
+<span class="ltx_bibblock">
+Model Context Protocol. Tools. <a href="https://modelcontextprotocol.io/specification/draft/server/tools" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://modelcontextprotocol.io/specification/draft/server/tools</a>.
+
+</span>
+</li>
+<li id="bib.bib21" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[21]</span>
+<span class="ltx_bibblock">
+OpenAI. Function calling. OpenAI API documentation. <a href="https://platform.openai.com/docs/guides/function-calling" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://platform.openai.com/docs/guides/function-calling</a>.
+
+</span>
+</li>
+<li id="bib.bib22" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[22]</span>
+<span class="ltx_bibblock">
+OpenAI. Tools. OpenAI Agents SDK documentation. <a href="https://openai.github.io/openai-agents-python/tools/" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://openai.github.io/openai-agents-python/tools/</a>.
+
+</span>
+</li>
+<li id="bib.bib23" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[23]</span>
+<span class="ltx_bibblock">
+OpenAI. Codex CLI. OpenAI Developers documentation. <a href="https://developers.openai.com/codex/cli/" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://developers.openai.com/codex/cli/</a>.
+
+</span>
+</li>
+<li id="bib.bib24" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[24]</span>
+<span class="ltx_bibblock">
+OpenAI. Sandbox. Codex documentation. <a href="https://developers.openai.com/codex/concepts/sandboxing" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://developers.openai.com/codex/concepts/sandboxing</a>.
+
+</span>
+</li>
+<li id="bib.bib25" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[25]</span>
+<span class="ltx_bibblock">
+OpenClaw. Agent runtime. OpenClaw documentation. <a href="https://docs.openclaw.ai/concepts/agent.md" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://docs.openclaw.ai/concepts/agent.md</a>.
+
+</span>
+</li>
+<li id="bib.bib26" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[26]</span>
+<span class="ltx_bibblock">
+OpenClaw. Tools. OpenClaw documentation. <a href="https://github.com/openclaw/openclaw/blob/bf6ec64f/docs/tools/index.md" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/openclaw/openclaw/blob/bf6ec64f/docs/tools/index.md</a>.
+
+</span>
+</li>
+<li id="bib.bib27" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[27]</span>
+<span class="ltx_bibblock">
+Moltis. A secure persistent personal agent server in Rust. GitHub repository. <a href="https://github.com/moltis-org/moltis" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/moltis-org/moltis</a>.
+
+</span>
+</li>
+<li id="bib.bib28" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[28]</span>
+<span class="ltx_bibblock">
+NullClaw. Autonomous AI assistant infrastructure. GitHub repository. <a href="https://github.com/nullclaw/nullclaw" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/nullclaw/nullclaw</a>.
+
+</span>
+</li>
+<li id="bib.bib29" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[29]</span>
+<span class="ltx_bibblock">
+ZeroClaw. Autonomous AI agent runtime. GitHub repository. <a href="https://github.com/zeroclaw-labs/zeroclaw" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/zeroclaw-labs/zeroclaw</a>.
+
+</span>
+</li>
+<li id="bib.bib30" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[30]</span>
+<span class="ltx_bibblock">
+Nous Research. Hermes Agent documentation. <a href="https://hermes-agent.nousresearch.com/docs/" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://hermes-agent.nousresearch.com/docs/</a>.
+
+</span>
+</li>
+<li id="bib.bib31" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[31]</span>
+<span class="ltx_bibblock">
+Nous Research. Hermes Agent architecture. <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/architecture/" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://hermes-agent.nousresearch.com/docs/developer-guide/architecture/</a>.
+
+</span>
+</li>
+<li id="bib.bib32" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[32]</span>
+<span class="ltx_bibblock">
+Nous Research. Environments, benchmarks and data generation. Hermes Agent documentation. <a href="https://hermes-agent.nousresearch.com/docs/developer-guide/environments" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://hermes-agent.nousresearch.com/docs/developer-guide/environments</a>.
+
+</span>
+</li>
+<li id="bib.bib33" class="ltx_bibitem">
+<span class="ltx_tag ltx_tag_bibitem">[33]</span>
+<span class="ltx_bibblock">
+Qihoo360. Harness-Bench: A real-workspace benchmark for evaluating agent and claw-style frameworks under executable task conditions. GitHub repository. <a href="https://github.com/Qihoo360/harness-bench" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://github.com/Qihoo360/harness-bench</a>.
+
+</span>
+</li>
+</ul>
+</section>
+</article>
+</div>
+</div>
+<footer class="arxiv-html-footer">
+  <div class="ltx_page_logo">
+    Experimental support, please
+    <a href="./2605.19604v1/__stdout.txt" class="ltx_ref"
+    target="_blank" rel="nofollow">view the build logs</a>
+    for errors. Generated by
+    <a href="https://math.nist.gov/~BMiller/LaTeXML/" target="_blank" class="ltx_ref ltx_LaTeXML_logo">
+      <span style="letter-spacing: -0.2em; margin-right: 0.1em;">
+        L
+        <span style="font-size: 70%; position: relative; bottom: 2.2pt;">A</span>
+        T
+        <span style="position: relative; bottom: -0.4ex;">E</span>
+      </span>
+      <span class="ltx_font_smallcaps">xml</span>
+      <img alt="[LOGO]"
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==">
+    </a>.
+  </div>
+  <div class="keyboard-glossary">
+    <h2>Instructions for reporting errors</h2>
+    <p>We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:</p>
+    <ul>
+      <li>Click the "Report Issue" <span class="mobile-only">(<svg role="presentation"
+            style="display: inline-block; vertical-align: middle; fill: var(--text-color);" aria-hidden="true"
+            height="1em" viewBox="0 0 640 640">
+            <path
+              d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+          </svg>)</span> button, located in the page header.</li>
+    </ul>
+    <p><strong>Tip:</strong> You can select the relevant text first, to include it in your report.</p>
+    <p>Our team has already identified <a class="ltx_ref" href="https://github.com/arXiv/html_feedback/issues"
+        target="_blank">the following issues</a>. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.</p>
+    <p>Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a <a
+        class="ltx_ref" href="https://github.com/brucemiller/LaTeXML/wiki/Porting-LaTeX-packages-for-LaTeXML"
+        target="_blank">list of packages that need conversion</a>, and welcome <a class="ltx_ref"
+        href="https://github.com/brucemiller/LaTeXML/issues" target="_blank">developer contributions</a>.</p>
+  </div>
+</footer>
+<div id="fixed-buttons-container">
+  <div id="beta-badge" aria-hidden="true">BETA</div>
+  <a id="disable-reading-mode-btn" class="header-button" href="javascript:toggleReadingMode();"
+    title="Disable reading mode, show header and footer">
+    <svg role="presentation" height="1.25rem"
+      viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+      <path
+        d="M0 96C0 78.3 14.3 64 32 64l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 128C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 288c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32L32 448c-17.7 0-32-14.3-32-32s14.3-32 32-32l384 0c17.7 0 32 14.3 32 32z" />
+    </svg>
+  </a>
+</div></body>
+</html>

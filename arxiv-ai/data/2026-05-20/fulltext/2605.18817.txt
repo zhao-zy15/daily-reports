@@ -1,0 +1,853 @@
+Multi-Token Residual Prediction
+Yufeng Xu1,2 Zishuo Bao1,2 Qian Wang2 Zeshen Zhang1 Haoqi Zhang2
+Bowen Peng3 Ang Li4 Rahul Chalamala4 Yucheng Lu1,2
+1New York University 2New York University Shanghai 3Nous Research 4Modal
+{xu.yufeng, lu.yucheng}@nyu.edu
+Code
+ Models
+Abstract
+Diffusion Language Models (DLMs) generate text by iteratively denoising masked token sequences, offering a tradeoff
+between parallelism and quality compared to autoregressive models. In current practice, the number of tokens decoded
+per step is controlled by a confidence threshold, and quality degrades monotonically as more tokens are denoised per
+step. We introduceMulti-token Residual Prediction (MRP), a lightweight module that enables dependency-aware
+multi-token denoising within a single backbone forward pass. MRP exploits a key property of the denoising process: the
+logit distributions at adjacent denoising steps are remarkably similar. Rather than running the backbone a second time
+to obtain the next-step logits, MRP predicts the residual between steps from the backbone’s hidden states, effectively
+denoising more tokens per backbone forward at a fraction of the cost. We deploy MRP in two inference modes:direct
+decoding, which uses the corrected logits without verification for a tunable quality–speed tradeoff; andspeculative decoding,
+which verifies MRP’s proposals against the backbone for lossless acceleration. Experiments on SDAR models at the 1.7B,
+4B, and 8B scales across reasoning and code generation benchmarks demonstrate up to1 .42× lossless speedup in SGLang.
+1 Introduction
+The design of language models involves a fundamental tension betweensequential dependencyandparallelism. Autore-
+gressive models resolve this tension in favor of dependencies: each token is generated conditioned on the full history
+of preceding tokens, yielding high-quality text at the cost of strictly sequential decoding [7, 23, 35]. Diffusion Language
+Models (DLMs) make the opposite choice, predicting all the subsequent tokens simultaneously and refining them through
+iterative denoising [17, 24, 27, 28]. This enables significant parallelism, but often at the cost of generation quality.
+Recent efforts have sought to interpolate between these two extremes. Block diffusion [2] applies diffusion within fixed-
+length blocks while maintaining autoregressive ordering across blocks. Threshold-based decoding [10, 16, 33, 34] adaptively
+controls how many tokens to unmask per step according to model confidence. These methods offer practical improvements,
+but they operate along the same quality–throughput Pareto frontier: unmasking additional tokens in a single step increases
+throughput at the expense of quality, precisely because each token is decoded without awareness of the other tokens
+resolved in the same step. The central question thus remains open:can we decode multiple tokens per step in a DLM while
+preserving the inter-token dependencies that are essential for generation quality?
+We answer this question affirmatively with a key insight: the logit distributions produced by a diffusion backbone at
+adjacent denoising steps are remarkably similar. When only a few tokens are unmasked between two consecutive steps,
+the backbone’s output barely changes, yet computing it requires a full forward pass. The residual between the two outputs
+is significantly smaller in magnitude than the outputs themselves, making it a far easier prediction target: the zero function
+is already a reasonable approximation, and a small module only needs to learn corrections to an already-good prediction,
+following the same principle underlying residual learning [14].
+Building on this observation, we introduceMulti-token Residual Prediction (MRP), a lightweight module that predicts
+the inter-step logit residual directly from the backbone’s hidden states. At inference time, a single backbone forward
+pass produces both the current logits and the hidden representation from which MRP infers the residual correction. The
+corrected logits approximate the output of a second backbone forward pass at a fraction of the computational cost, enabling
+1
+arXiv:2605.18817v1  [cs.LG]  12 May 2026
+Target Layers
+M
+ D
+M
+ D
+M
+ M
+ D
+LM Head
+MRP
+D
+ M
+ D
+Embedding
+D
+ D
+ D
+ M
+ D
+M
+ D
+ D
+ M
+ D
+MRP
+D
+ D
+ D
+ D
+ D
+D
+ D
+ D
+ M
+ D
+M ₁
+M ₂
+M ₃
+M ₄
+M ₁
+M ₂
+M ₃
+M ₄
+C ₁
+C ₂
+C ₃
+C ₄
+( b )  T r a i n i n g
+C ₅
+P ₁  
+P ₂
+P ₃
+P ₄
+C ₅
+( c )  I n f e r e n c e  ( D i r e c t  &  S p e c u l a t i v e )
+C ₅ ¹
+C ₅ ²
+C ₅ ³  
+C ₅ ⁴
+P ₁  
+P ₂
+P ₃
+P ₄
+C ₅ ¹
+C ₅ ²
+C ₅ ³  
+C ₅ ⁴
+( d )  I n f e r e n c e  ( V e r i f y )
+( a )  M u l t i - t o k e n  R e s i d u a l  P r e d i c t i o n  A r c h i t e c t u r e
+M
+ D
+Masked Token Denoised Token Residual Connection
+ Masked Block Clean Block Invisible BlockFrozen
+Figure 1: The figure above illustrates the training and inference pipeline of our multi-token residual prediction (MRP) method.(a)
+Architecture.A frozen DLM backbone embeds the input sequence, target layers produce hidden states for the masked positions, and
+a chain of lightweight MRP heads sequentially predict the residual of the next logit state and decode the next probable token[D]at
+the adjacent masked[M]position through the shared LM head.(b) Training.The sequence is duplicated and one half is randomly
+masked; loss is computed only on the masked half, where each masked block 𝑀𝑖 attends to itself and to all preceding clean blocks 𝐶1:𝑖−1 .
+(c) Inference & drafting.A single new block is decoded in parallel given the committed clean prefix 𝑃1:𝑖−1 , supporting both direct and
+speculative generation under an identical attention pattern.(d) Verification.The 𝐾+1draft candidates 𝐶0:𝐾
+𝑖 are verified jointly against the
+backbone, where candidate 𝐶𝑘
+𝑖 embeds the first 𝑘 draft tokens and attends only to the clean prefix 𝑃1:𝑖−1 and to itself, so all candidates
+are scored in one forward pass.
+additional tokens to be decoded without running the backbone again.
+We deploy MRP in two complementary inference modes. Indirect decoding, the corrected log-density is used without
+verification, providing a quality–speed tradeoff that is strictly more favorable than threshold-based decoding at matched
+throughput. Inspeculative decoding, the MRP module serves as a lightweight drafter whose proposals are verified by the
+backbone in its subsequent forward pass; accepted tokens incur no quality loss, yieldinglosslessacceleration.
+Our contributions are as follows:
+• We identify and theoretically characterize the inter-step log-density residual in masked diffusion language models
+(Section 3). This characterization motivates and justifies the design of a lightweight residual predictor.
+• We introduce MRP, a residual prediction module trained with a tailored objective. We propose two inference algorithms,
+and analyze their respective operating regimes (Section 3).
+• We integrate our method into the open-sourced inference engine SGLang [37] and demonstrate that MRP achieves up to
+1.42×lossless speedup on SDAR models across three scales and multiple benchmarks (Section 4).
+2 Preliminary
+We start by describing the decoding procedure of Diffusion Language Models (DLMs) and establish notation used throughout
+the paper.
+Denoising loop.A DLM generates a sequence of 𝐿 tokens by iteratively reversing a masking process [27, 28]. Generation
+begins from a fully masked sequence 𝒙𝑇 in which every position is set to a special [MASK] token. At each denoising
+step 𝑡=𝑇 , 𝑇− 1, . . . , 1, a bidirectional Transformer 𝑓 (thebackbone) takes the partially masked sequence 𝒙𝑡 as input
+and produces logits ℓ𝑡 =𝑓(𝒙 𝑡 ) ∈R 𝐿×𝑉 , where 𝑉 is the vocabulary size. These logits are unnormalized log-densities:
+2
+log𝑝(𝑥 𝑖
+0=𝑣|𝒙 𝑡 ).
+After each forward pass, the model unmasks the positions where the prediction is most confident, replacing their [MASK]
+tokens with the predicted tokens to form 𝒙𝑡−1 . This process repeats until all positions are revealed. The specific criterion
+for selecting which positions to unmask, whether a fixed schedule [27, 28] or a confidence threshold [10, 34], varies across
+systems but does not affect the applicability of our method.
+Block diffusion.In the block diffusion variant [2], generation is partitioned into blocks of tokens produced left to right.
+Previously generated blocks serve as fully unmasked context while the current block is denoised through the loop described
+above. Our method applies identically within each block; all results in this paper use the block diffusion setting.
+3 Multi-Token Residual Prediction
+3.1 Motivation
+Our motivation starts with a natural question following Section 2:how close are the logits ℓ𝑡 and ℓ𝑡−1 in practice, and
+can we characterize the structure of their difference?We address this question empirically and then provide theoretical
+grounding.
+Empirical characterization of the residual.We define the per-step logit residual as
+𝜹𝑡 =ℓ 𝑡−1 −ℓ 𝑡 ∈R 𝐿×𝑉 ,(1)
+where ℓ𝑡 and ℓ𝑡−1 are the backbone logits before and after unmasking a set of positions. Analogously, we define the
+per-step hidden-state residual 𝚫𝑡 =𝒉 𝑡−1 −𝒉 𝑡 between the backbone hidden states at adjacent denoising steps. To probe
+the residual at different effective step sizes, we run greedy block-diffusion decoding on the GSM8K evaluation set with
+SDAR-1.7B/4B/8B, and compare backbone states that are𝑘 revealed-token steps apart, with denoised token count𝑘 ranging
+from1to16(a full block). Figure 2 reports the resulting residuals; see Appendix B for the full measurement protocol.
+The key observation here is themagnitude gap: the RMS magnitude of 𝜹𝑡 is consistently and significantly smaller than that
+of the full logits ℓ𝑡. At 𝑘= 1, the residual is around 20% of the magnitude of the logits; even at 𝑘= 16(unmasking an entire
+block at once), the residual remains below the full logits in magnitude across all model scales. This gap widens for smaller
+𝑘, which is precisely the operating regime of practical denoising. This suggests that predicting 𝜹𝑡 requires capturing a
+signal with substantially lower dynamic range than predictingℓ 𝑡−1 from scratch.
+Theoretical justification.The empirical observations above can be grounded in the Markov chain structure of the
+denoising process. The sequence of partially masked states 𝒙𝑇 ,𝒙 𝑇−1 , . . . ,𝒙 0 forms a Markov chain: each state 𝒙𝑡−1 is
+obtained from 𝒙𝑡 by unmasking a subset of positions R𝑡, so the transition depends only on the current state. The
+backbone output ℓ𝑡 =𝑓(𝒙 𝑡 ) is a deterministic function of the chain’s state. We exploit this structure to bound the residual
+𝜹𝑡 =ℓ 𝑡−1 −ℓ 𝑡.
+The key observation is that the transition 𝒙𝑡 →𝒙 𝑡−1 is asmall perturbation: it modifies only |R𝑡 | out of 𝐿 positions, leaving
+the remaining 𝐿− |R 𝑡 | positions unchanged. For any masked position 𝑖∉R 𝑡, the change in its predictive distribution is
+driven entirely by the indirect influence of the newly revealed tokens through the backbone’s attention mechanism. Let
+𝝅𝑖
+𝑡 =softmax(ℓ 𝑖
+𝑡 ) denote the predictive distribution at position 𝑖 and step 𝑡. We bound the change across one transition as
+follows.
+Proposition 1(One-step contraction).If the backbone 𝑓 is 𝜅-Lipschitz with respect to its input embeddings, then for any
+masked position𝑖∉R 𝑡 :
+𝐷TV (𝝅 𝑖
+𝑡−1 ,𝝅 𝑖
+𝑡 ) ≤𝜅· |R𝑡 |
+𝐿 ·max
+𝑗∈ R 𝑡
+∥𝒆 𝑣 𝑗 −𝒆 [MASK] ∥2,(2)
+where 𝒆𝑣 denotes the embedding of token 𝑣, 𝒆[MASK] denotes the embedding of mask token and 𝐷TV is the total variation distance.
+The bound is controlled by three intuitive quantities: the model’s sensitivity𝜅, the fraction of positions perturbed |R𝑡 |/𝐿,
+and the embedding distance between the revealed tokens and the mask token. Since|R𝑡 | ≪𝐿 at each step1, the perturbation
+ratio is small and the TV distance is correspondingly bounded.
+Applying this bound recursively along the chain yields a cumulative characterization:
+1In some recent models such as SDAR,𝐿could be small for a single block (e.g., 16). However, this doesn’t violate our bound or assumption.
+3
+1 2 4 6 8 10 12 14 16
+r
+2
+4
+6
+8
+10RMS magnitude
+t
+t
+1 2 4 6 8 10 12 14 16
+r
+1.0
+1.5
+2.0
+2.5
+3.0
+3.5
+4.0
+h
+ht
+SDAR-1.7B SDAR-4B SDAR-8B
+Figure 2: Magnitudes of the per-step residual versus the full backbone state, measured on GSM8K and averaged per entry (RMS). The
+horizontal axis 𝑟 is the number of tokens unmasked between two adjacent denoising states 𝒙𝑡 and 𝒙𝑡−1 ; line color indicates the SDAR
+backbone scale (1.7B / 4B / 8B).Left:logits. Solid curves with markers show the residual 𝜹𝑡 =ℓ 𝑡−1 −ℓ 𝑡 ; dashed lines show the average
+magnitude of the backbone logits ℓ𝑡 for reference.Right:hidden states. Solid curves show the residual 𝚫=𝒉 𝑡−1 −𝒉 𝑡 ; dashed lines show
+the average magnitude of the backbone hidden states 𝒉𝑡 . Across all three scales and both representations, the residual is consistently
+smaller than the underlying state, with the gap widening sharply for small𝑟(the practical decoding regime).
+Corollary 3.1(Cumulative residual decay).As denoising progresses, the number of remaining masked positions 𝑚𝑡 =|{𝑖 :
+𝑥𝑖
+𝑡 =[MASK]}| decreases monotonically. At later steps, the perturbation ratio |R𝑡 |/𝐿 remains small while the predictions 𝝅𝑖
+𝑡
+concentrate (the backbone becomes more confident on fewer remaining positions). Consequently, ∥𝜹𝑡 ∥ decreases along the
+chain: later denoising steps produce smaller residuals than earlier ones.
+We provide the full proofs in Appendix E. These results justify the design of MRP: the residual 𝜹𝑡 is a low-complexity
+prediction target, learnable by a module far smaller than the backbone.
+3.2 Architecture
+The MRP module follows an architectural pattern similar to EAGLE [21] and Multi-Token Prediction (MTP) [23]: a
+lightweight head that receives hidden states from a frozen backbone and produces additional token predictions. The key
+difference is that MRP outputs aresidual correctionrather than the entire distribution. The final logits are obtained by
+summing the backbone logits and the MRP output, ℓ𝑡 +𝜹 𝑡, so the module only needs to learn the deviation from the
+backbone’s prediction rather than a complete distribution over the vocabulary. The MRP module takes the backbone’s
+hidden states 𝒉 and the token embeddings of the revealed sequence as input, fuses them via a learned projection, passes
+the result through a small number of transformer layers, and reuses the backbone’s language model head to produce the
+residual logits𝜹 𝑡. The corrected logits areℓ 𝑡 +𝜹 𝑡. The full architecture is illustrated in Figure 1.
+3.3 Training
+The MRP module is trained to predict the log-density residual between two consecutive denoising states. Given a clean
+sequence 𝒙0, we first corrupt it by independently masking response tokens with probability Uniform(0, 1) to obtain the
+noisy input 𝒙𝑡. We then reveal 𝑘 ground-truth tokens per block to form the partially revealed input 𝒙𝑡−1 , simulating one
+denoising step. The frozen backbone 𝑓 is run twice: once on 𝒙𝑡 to produce hidden states 𝒉 and log-densities log𝑝(𝒙 0|𝒙𝑡 ),
+and once on 𝒙𝑡−1 to produce the teacher target log𝑝(𝒙 0|𝒙𝑡−1 ) without gradients. The MRP module 𝑔 takes 𝒙𝑡−1 and the
+backbone hidden states 𝒉 as input and predicts the residual 𝜹𝑡. Training encourages 𝜹𝑡 to match the teacher output
+log𝑝(𝒙 0|𝒙𝑡−1 ) −log𝑝(𝒙 0|𝒙𝑡 )via a KL divergence objective restricted to still-masked positions:
+L=KL
+
+softmax ℓ𝑡−1
+  softmax ℓ𝑡 +𝜹 𝑡
+ 
+masked
+,(3)
+4
+where ℓ𝑡 =𝑓(𝒙 𝑡 ) and ℓ𝑡−1 =𝑓(𝒙 𝑡−1 ) are the backbone logits on the noisy and revealed inputs respectively. Since the logits
+are unnormalized log-densities, and the KL divergence is computed after softmax, the normalizing constants cancel and
+the objective is equivalent to matching the true conditional distributions. The only trainable parameters are those of the
+MRP module𝑔. Algorithm 1 summarizes the full procedure.
+Algorithm 1MRP Training
+Require:Backbone𝑓(frozen), MRP module𝑔(trainable)
+1:foreach training sequence𝒙 0 do
+2:Mask response tokens independently with probabilityUniform(0,1)to obtain𝒙 𝑡
+3:𝒉,ℓ 𝑡 ←𝑓(𝒙 𝑡 )⊲backbone forward: hidden states + logits
+4:Reveal𝑘masked positions per block to obtain𝒙 𝑡−1
+5:𝜹 𝑡 ←𝑔(𝒙 𝑡,𝒉)⊲MRP residual prediction
+6:ℓ 𝑡−1 ←𝑓(𝒙 𝑡−1 )⊲Obtain teacher target
+7:L ←KL
+
+softmax ℓ𝑡−1
+  softmax ℓ𝑡 +𝜹 𝑡
+ 
+masked
+8:Update𝑔with∇L
+9:end for
+3.4 Inference
+At inference time, the MRP module augments each backbone forward pass with additional rounds of unmasking. After
+the backbone processes 𝒙𝑡 and unmasks high-confidence positions to form 𝒙𝑡−1 , the MRP module predicts the residual 𝜹𝑡
+from the backbone’s hidden states and the updated sequence. The corrected logits ℓ𝑡 +𝜹 𝑡 are then used to unmask further
+positions within the same iteration, effectively decoding two denoising steps for the cost of one backbone forward plus a
+lightweight MRP forward. We instantiate this in two modes.
+Direct decoding (Algorithm 2).After the backbone unmasks high-confidence positions, the MRP module runs 𝐾
+additional decoding steps. At each step, the module predicts both a hidden state residual 𝚫 and a logit residual 𝜹, which
+are accumulated into the running hidden states and logits: 𝒉←𝒉+𝚫 , ℓ←ℓ+𝜹 . Positions where the accumulated logits
+exceed the threshold 𝜏 are unmasked immediately. This introduces a small approximation error. Larger 𝐾 unmasks more
+tokens per backbone forward at the cost of compounding approximation error; we study this tradeoff in Section 4.
+Algorithm 2MRP Inference (Direct Decoding Mode)
+Require:backbone𝑓, MRP module𝑔, MRP steps𝐾, threshold𝜏, fully masked sequence𝒙 𝑇
+1:𝑡←𝑇
+2:while𝒙 𝑡 contains[MASK]tokensdo
+3:𝒉,ℓ←𝑓(𝒙 𝑡 )⊲backbone forward to produce hidden states and logits
+4:Unmask positions whereℓ>𝜏in𝒙 𝑡
+5:for𝑘=1, . . . , 𝐾do
+6:𝚫,𝜹←𝑔(𝒙 𝑡,𝒉)⊲MRP step to produce hidden residual and logits residual
+7:𝒉←𝒉+𝚫;ℓ←ℓ+𝜹
+8:Unmask positions whereℓ>𝜏in𝒙 𝑡
+9:end for
+10:𝑡←𝑡−1
+11:end while
+12:return𝒙 𝑡
+Speculative decoding (Algorithm 3).The MRP-decoded tokens can also be used as draft for the backbone, as in speculative
+decoding for autoregressive models [23]. We adopt the verification framework of Self Speculative Decoding (SSD) [13]: after
+all 𝐾 MRP steps complete, the backbone runs a single verification forward pass on the updated sequence 𝒙𝑡−1 , producing
+ℓ′ =𝑓(𝒙 𝑡−1 ). Drafted positions where the backbone’s prediction matches the draft (arg maxℓ ′𝑖 =arg maxℓ 𝑖) are accepted;
+positions where it disagrees are remasked. This position-wise verification is natural for diffusion models, where all positions
+are predicted simultaneously in a single forward pass. The verification pass is not wasted: its hidden states and logits seed
+5
+the next iteration, so when the acceptance rate is high, the verification forward effectively serves as the backbone forward
+for the next step, amortizing its cost.
+Algorithm 3MRP Inference (Speculative Decoding Mode)
+Require:backbone𝑓, MRP module𝑔, MRP steps𝐾, threshold𝜏, fully masked sequence𝒙 𝑇
+1:𝑡←𝑇
+2:while𝒙 𝑡 contains[MASK]tokensdo
+3:𝒉,ℓ←𝑓(𝒙 𝑡 )⊲backbone forward
+4:Unmask positions whereℓ>𝜏in𝒙 𝑡
+5:for𝑘=1, . . . , 𝐾do⊲MRP drafting
+6:𝚫,𝜹←𝑔(𝒙 𝑡,𝒉)
+7:𝒉←𝒉+𝚫;ℓ←ℓ+𝜹
+8:Draft token with highest confidence into𝒙 𝑡−1
+9:end for
+10:𝒉 ′,ℓ ′ ←𝑓(𝒙 𝑡−1 )⊲backbone verify
+11:Reject drafted positions wherearg maxℓ ′𝑖 ≠arg maxℓ 𝑖; remask rejected positions in𝒙 𝑡−1
+12:𝑡←𝑡−1
+13:end while
+14:return𝒙 𝑡
+Complementary operating regimes.The two modes are not competing alternatives but address different deployment
+scenarios. Direct decoding is preferable when throughput is the primary objective and small quality degradation is
+acceptable: for instance, in interactive chat where latency matters more than precision. Speculative decoding is preferable
+when output quality must be preserved exactly, such as in evaluation benchmarks or safety-critical applications. Both
+modes share the same trained MRP module; the choice is made at serving time with no retraining.
+4 Experiments
+In this section, we present our main empirical results. We first validate the residual learning hypothesis by showing that
+predicting the inter-step residual is substantially easier than predicting the full next-step distribution (Section 4.2). We then
+evaluate MRP under both budget-based static denoising (Section 4.3) and threshold-based dynamic denoising (Section 4.4),
+and investigate how the MRP module scales with MRP depth (Section 4.5).
+4.1 Setup
+Models.We attach our MRP module to the SDAR-Chat family of block-diffusion language models [10] at three scales
+(1.7B, 4B, 8B), all trained with block size 16. The MRP module is a 𝐷=3-layer transformer that follows the architecture of
+Section 3.2; the backbone, language-modeling head, and token embeddings remainfrozenduring training.
+Dataset.We adopt the training dataset SFTDatasetV3 [31], a 12.4M-conversation supervised fine-tuning corpus assembled
+from three public instruction-tuning sources: OpenHermes-2.5 [30], GenQA [8], and Infinity-Instruct [5], and reformatted
+into a uniform two- to eight-turn user/assistant message schema. The mixture spans diverse domains (reasoning, mathe-
+matics, code, dialogue) at a scale large enough that the MRP module never revisits a sample, which is well-suited to the
+distillation-style residual objective we train against.
+Training.We train with the residual KD loss of Algorithm 1 at temperature 𝑇KD=1.0in the forward direction KL, restricted
+to still-masked positions, and unroll 𝐾=2MRP iterations per backward with uniform per-step weighting. We use AdamW
+with peak learning rate1e −3 on a cosine schedule for a single epoch. The full hyperparameter list is given in Appendix C
+(Table 4).
+Evaluation.We follow the evaluation protocol of SDAR [10] and focus on the two generation task categories:(i)
+Mathematics– GSM8K (0-shot, CoT) [12] and MATH500 (0-shot, CoT) [15, 22]; and(ii) Code Generation– HumanEval [9]
+and MBPP [4], both evaluated zero-shot. Following SDAR, we use greedy decoding for all models (temperature1.0, Top-K=1,
+6
+1.7B 4B 8B
+Type𝐾=1𝐾=2𝐾=3𝐾=4𝐾=1𝐾=2𝐾=3𝐾=4𝐾=1𝐾=2𝐾=3𝐾=4
+Direct Modeling76.5 73.1 62.4 48.0 84.8 19.6 5.9 1.9 90.5 72.0 34.2 6.7
+Residual Modeling76.7 73.9 66.7 60.9 88.6 84.9 70.9 57.2 90.1 88.6 84.8 79.8
+Δ(Res.−Dir.) +0.2+0.8+4.3+12.9+3.8+65.3+65.0+55.3-0.4+16.6+50.6+73.1
+Table 1: GSM8K (0-shot, CoT) accuracy (%) of MRP trained with theresidualobjective versus adirectdistillation objective, evaluated
+at 𝐾={1, 2, 3, 4} MRP steps per backbone forward. Both variants share identical architecture and hyperparameters and are trained on
+the same data (sftdatasetv3 [31]); they are evaluated under static low-confidence decoding. The Δ row reports the improvement of
+residual over direct training, with green indicating residual is better and red indicating residual is worse.
+Model Setting
+GSM8K MATH500 HumanEval MBPP
+Acc. TPS Acc. TPS Acc. TPS Acc. TPS
+1.7B
+Base (𝑟=1) 78.7 267.4 55.0 277.6 53.7 252.5 52.9 213.1
+Base (𝑟=2)70.8 1.86×45.8 0.92×29.9 1.74×32.3 1.64×
+Direct (𝐾=1)77.5 1.50×54.2 1.50×48.2 1.49×45.5 1.49×
+Direct (𝐾=2)74.8 1.67×50.6 1.67×41.5 1.63×42.4 1.63×
+Spec (𝐾=3)77.8 1.20×58.4 1.23×55.5 1.22×53.3 1.20×
+4B
+Base (𝑟=1) 90.1 152.6 71.4 165.4 67.1 143.0 66.5 122.6
+Base (𝑟=2)86.4 1.90×64.0 1.02×45.7 1.75×37.7 1.78×
+Direct (𝐾=1)88.9 1.62×64.4 1.60×62.8 1.61×55.6 1.62×
+Direct (𝐾=2)87.6 1.82×60.4 1.79×53.0 1.78×51.0 1.84×
+Spec (𝐾=3)90.6 1.36×68.0 1.30×67.7 1.33×66.5 1.31×
+8B
+Base (𝑟=1) 91.0 105.8 72.2 114.0 73.8 100.4 67.7 83.0
+Base (𝑟=2)87.7 1.89×68.4 1.04×42.1 1.75×48.2 1.69×
+Direct (𝐾=1)90.2 1.62×71.4 1.60×67.1 1.58×63.8 1.58×
+Direct (𝐾=2)90.2 1.86×70.8 1.84×64.0 1.79×59.9 1.80×
+Spec (𝐾=3)90.7 1.40×74.8 1.35×72.6 1.38×67.3 1.42×
+Table 2: MRP under static denoising across model scales.Base ( 𝑟 )denotes the backbone-only baseline that unmasks 𝑟 tokens per
+denoising step.Directmode runs MRP with𝐾={1,2}steps;speculativemode runs MRP with𝐾=3steps.
+Top-P=1.0) with a maximum generation length of4096tokens. The SDAR-Chat backbones we build on are the block-size-16
+variants, so block length and number of denoising steps per block are both set to16.
+System.We implement MRP in the SGLang inference engine [37]. Unless otherwise stated, all the experimental numbers
+are obtained on a single NVIDIA H100 GPU.
+Denoising Mode.We evaluate MRP under both denoising modes described in SDAR [10]. Instatic denoising, each
+denoising step unmasks a fixed number of𝑟 positions per block by selecting the highest-confidence predictions. Indynamic
+denoising, all positions whose confidence exceeds a threshold 𝜏 are unmasked simultaneously, with a minimum of one
+position revealed per step to guarantee progress.
+4.2 Residual Modeling
+We start by comparing two modeling variants trained with identical protocols: (i)Residual Modeling, which predicts
+𝜹𝑡 =log𝑝(𝒙 0|𝒙𝑡−1 ) −log𝑝(𝒙 0|𝒙𝑡 ) on top of the frozen backbone logits, and (ii)Direct Modeling, which is distilled to predict
+log𝑝(𝒙 0|𝒙𝑡−1 ) directly without the residual reparameterization. Table 1 reports GSM8K accuracy under direct decoding
+(𝜏=1.0) at 𝐾∈ { 1, 2, 3, 4} MRP steps across all three SDAR scales. The two objectives are close at 𝐾=1(gaps of +0.2, +3.8,
+and −0.4on 1.7B, 4B, and 8B), but the gap opens sharply as 𝐾 increases: at 𝐾=2residual training already leads by +65.3on
+4B and +16.6on 8B, and by 𝐾=4the direct model has collapsed at every scale ( Δ of +12.9, +55.3, and +73.1). The reason is
+that direct distillation must reproduce the full log-density at every iteration, so per-step errors compound across steps,
+whereas residual training only models a low-magnitude correction and extrapolates more reliably to deeper MRP steps.
+7
+This substantiates our motivation for residual modeling.
+4.3 MRP with Static Denoising
+Table 2 reports the static denoising results. For each task we compare the unmodified backbone (Base,𝑟=1token unmasked
+per step) against ourDirectmode at 𝐾∈{ 1, 2} MRP steps and ourSpecmode at 𝐾=3, and report task accuracy together with
+end-to-end throughput.
+Speculative mode preserves quality at meaningful speedup.In every setting, the speculative mode has no quality
+drop as expected. It delivers1 .20–1.42× speed up in throughput across all configurations, with the largest absolute speedups
+on the smaller backbone where the verification cost is best amortized (i.e.,1.42×on 8B/MBPP).
+Direct mode buys further throughput at a controlled quality cost.At 𝐾=1, the direct mode has close quality compared
+to backbone (e.g., 88.9 vs. 90.1 GSM8K at 4B; 90.2 vs. 91.0 at 8B) while running1 .49–1.65× faster. Pushing to 𝐾=2adds
+another step of speedup (1.63–1.86×) with a modest accuracy hit concentrated on code benchmarks (e.g., HumanEval).
+The clean monotonic tradeoff between 𝐾 and accuracy lets practitioners pick the operating point:Speculative Modewhen
+quality is non-negotiable,Direct Mode(𝐾=1or2) when latency dominates.
+4.4 MRP with Dynamic Denoising
+Table 3 sweeps the unmasking threshold𝜏∈ { 0.9, 0.925, 0.95, 0.975, 1.0} on SDAR-8B. For each 𝜏 we compare the backbone-
+onlyBaseagainst MRP at 𝐾∈{ 1, 2} direct steps, reporting accuracy and decoding throughput speedup (relative toBaseat
+the same𝜏) on each benchmark.
+Threshold𝜏Setting
+GSM8K MATH500 HumanEval MBPP
+Acc. Speed Up Acc. Speed Up Acc. Speed Up Acc. Speed Up
+1.000
+Base 91.0 1.00× 72.2 1.00× 73.8 1.00× 67.7 1.00×
+Direct (𝐾=1)90.2 1.62×71.4 1.60×67.1 1.58×63.8 1.58×
+Direct (𝐾=2)90.2 1.86×70.8 1.84×64.0 1.79×59.9 1.80×
+0.975
+Base 90.9 1.00× 70.6 1.00× 72.0 1.00× 67.7 1.00×
+Direct (𝐾=1)90.4 1.12×71.0 1.11×65.9 1.05×63.4 1.23×
+Direct (𝐾=2)90.2 1.22×66.0 1.17×64.0 1.05×58.4 1.28×
+0.950
+Base 90.8 1.00× 70.8 1.00× 73.2 1.00× 66.9 1.00×
+Direct (𝐾=1)90.8 1.09×70.4 1.09×64.6 1.01×63.4 1.20×
+Direct (𝐾=2)89.5 1.18×68.4 1.13×61.6 1.04×57.6 1.23×
+0.925
+Base 91.0 1.00× 71.2 1.00× 72.6 1.00× 66.9 1.00×
+Direct (𝐾=1)90.8 1.08×69.4 1.07×65.2 0.99×62.6 1.12×
+Direct (𝐾=2)89.2 1.14×69.2 1.07×62.8 1.02×58.4 1.16×
+0.900
+Base 90.1 1.00× 70.8 1.00× 72.6 1.00× 65.8 1.00×
+Direct (𝐾=1)89.6 1.05×67.8 1.07×64.6 0.98×62.3 1.11×
+Direct (𝐾=2)89.0 1.10×65.8 1.10×60.4 0.99×57.6 1.16×
+Table 3: Efficiency–accuracy trade-off on SDAR-8B across four benchmarks (GSM8K, MATH500, HumanEval, MBPP). For each unmasking
+threshold 𝜏∈ { 0.9, 0.925, 0.95, 0.975, 1.0} we report the backbone-onlyBasetogether with MRP at 𝐾=1and 𝐾=2direct steps (Direct ( 𝐾=1),
+Direct (𝐾=2)). “Acc. ” is task accuracy (%) and “Speed Up” is decoding throughput speedup over theBaserow at the same𝜏. Lowering 𝜏
+already accelerates the baseline (more tokens are unmasked per step), so the marginal MRP speedup shrinks with 𝜏, while accuracy
+follows the same ordering as in Table 2.
+MRP improves throughput at matched threshold.The additional tokens unmasked by the residual head reduce
+the total number of backbone forward passes needed to complete each block. However, this speedup diminishes as the
+threshold 𝜏 decreases. At conservative thresholds (𝜏= 0.95), the backbone unmasks few tokens per step, leaving ample
+room for MRP to contribute additional unmaskings; at aggressive thresholds (𝜏= 0.9), the backbone already unmasks most
+high-confidence positions on its own, and MRP’s marginal contribution shrinks.
+The quality impact of MRP is task-dependent.On reasoning benchmarks (GSM8K, MATH), MRP maintains accuracy
+8
+1 2 3 4 8
+0.45
+0.50
+0.55Acc
+math500
+1 2 3 4 8
+0.4
+0.5
+humaneval
+1 2 3 4 8
+0.35
+0.40
+0.45
+0.50
+mbpp
+1 2 3 4 8
+0.72
+0.74
+0.76
+gsm8k
+1 2 3 4 8
+0.50
+0.55
+0.60
+avg
+1 2 3 4 8
+#Layers D
+700
+800
+900TPS
+1 2 3 4 8
+#Layers D
+600
+700
+800
+1 2 3 4 8
+#Layers D
+300
+350
+400
+1 2 3 4 8
+#Layers D
+500
+600
+700
+1 2 3 4 8
+#Layers D
+500
+600
+700
+MRP step1 MRP step2 spec step2 spec step3
+Figure 3: Effect of MRP depth on SDAR-1.7B. We sweep the number of MRP transformer layers𝐷∈ { 1, 2, 3, 4, 8} on the 𝑥-axis and report,
+per benchmark column (and an averaged column at the right), accuracy on the top row and decoding throughput on the bottom row.
+Each subplot draws four curves corresponding to the four decoding configurations:directwith 𝐾∈{ 1, 2} MRP steps andspeculativewith
+𝐾∈{2,3}MRP steps. The underlying numerical values are reported in Table 5 (Appendix D).
+close to the baseline across all operating points, indicating that the residual predictions are reliable for tasks dominated
+by natural-language reasoning. On code generation (HumanEval), accuracy degrades more noticeably, likely because
+code tokens exhibit sharper, less predictable distributional shifts between denoising steps, making the residual harder to
+approximate. This also suggests that co-designing the threshold schedule with MRP is a promising future direction.
+4.5 Scaling Law
+Holding the backbone fixed at SDAR-1.7B, we vary the number of MRP transformer layers 𝐷∈ { 1, 2, 3, 4, 8}. A deeper MRP
+module has more capacity to predict the residual but adds non-trivial cost per inference step. Figure 3 reports accuracy and
+throughput across the four benchmarks for bothdirect(𝐾∈{1,2}) andspeculative(𝐾∈{2,3}) decoding modes.
+A sweet spot exists at 2 and 3 layers.Increasing depth from 1 to 3 layers steadily improves accuracy, confirming that the
+residual prediction task benefits from additional capacity. Beyond 3 layers, however, accuracy plateaus while throughput
+drops: the extra parameters do not capture meaningfully more signal, but they do increase the per-step latency of the MRP
+forward pass. At 8 layers the throughput penalty outweighs the accuracy gain entirely, resulting in a worse speed–quality
+tradeoff than the 3-layer variant. This is consistent with our theoretical characterization: the inter-step residual has limited
+complexity, and a small module suffices to capture the bulk of the signal.
+The optimal depth depends on the inference mode.In direct decoding, where MRP predictions are used without
+verification, deeper modules improve quality more noticeably: the accuracy gap between 1-layer and 3-layer MRP is larger
+than in speculative mode. In speculative decoding, verification corrects MRP errors, so a shallower (and faster) module can
+achieve comparable final quality while maintaining higher throughput. This suggests a practical guideline: use deeper MRP
+for direct decoding when quality is prioritized, and shallower MRP for speculative decoding when lossless acceleration is
+the goal.
+5 Conclusion and Future Work
+We introduced Multi-token Residual Prediction (MRP), a lightweight module that accelerates diffusion language model
+inference by predicting the logit residual between adjacent denoising steps. MRP supports two inference modes: direct
+decoding for a tunable quality–speed tradeoff, and speculative decoding for lossless acceleration. Experiments on SDAR
+models at three scales demonstrate up to1 .42× lossless speedup in SGLang, with consistent gains across reasoning and
+9
+code generation benchmarks. All training data, code, and model weights are publicly available.
+Several directions remain open. First, our dynamic decoding results show that MRP is most effective under conservative
+thresholds, where the backbone unmasks few tokens per step. Co-designing the threshold schedule with MRP, for instance
+using a more aggressive base threshold while relying on MRP’s predictions to recover quality, could unlock stronger
+acceleration without sacrificing accuracy. Second, the current MRP module uses a fixed number of residual steps 𝐾
+throughout generation. An adaptive schedule that allocates more MRP steps when the backbone is likely to unmask
+few tokens, and skips MRP entirely when the backbone is already making rapid progress, would better match compute
+to difficulty. Third, while MRP performs robustly on reasoning tasks, we observe larger quality degradation on code
+generation, suggesting that the inter-step residual structure differs across domains. Understanding and addressing this gap,
+potentially through domain-aware training or architecture modifications, is an important next step.
+Acknowledgements
+This work was supported in part through STCSM 25PJA108 and NYU IT High Performance Computing resources, services,
+and staff expertise. We gratefully acknowledge Nous Research and Modal for providing the GPU compute.
+References
+[1] Sudhanshu Agrawal, Risheek Garrepalli, Raghavv Goel, Mingu Lee, Christopher Lott, and Fatih Porikli. “Spiffy:
+Multiplying Diffusion LLM Acceleration via Lossless Speculative Decoding”. In:arXiv preprint arXiv:2509.18085
+(2025).
+[2] Marianne Arriola, Aaron Gokaslan, Justin T. Chiu, Zhihan Yang, Zhixuan Qi, Jiaqi Han, Subham Sekhar Sahoo, and
+Volodymyr Kuleshov. “Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models”. In:
+ICLR. 2025.
+[3] Jacob Austin, Daniel D. Johnson, Jonathan Ho, Daniel Tarlow, and Rianne van den Berg. “Structured Denoising
+Diffusion Models in Discrete State-Spaces”. In:NeurIPS. 2021.
+[4] Jacob Austin, Augustus Odena, Maxwell Nye, Maarten Bosma, Henryk Michalewski, David Dohan, Ellen Jiang,
+Carrie Cai, Michael Terry, Quoc Le, and Charles Sutton. “Program Synthesis with Large Language Models”. In:arXiv
+preprint arXiv:2108.07732(2021).
+[5] BAAI.Infinity Instruct: Scaling Instruction Selection and Synthesis to Enhance Language Models. https :
+//huggingface.co/datasets/BAAI/Infinity-Instruct. 2024.
+[6] Wenrui Bao, Zhiben Chen, Dan Xu, and Yuzhang Shang. “Learning to Parallel: Accelerating Diffusion Large Language
+Models via Learnable Parallel Decoding”. In:ICLR. 2026.
+[7] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan,
+Pranav Shyam, Girish Sastry, Amanda Askell, et al. “Language models are few-shot learners”. In:Advances in neural
+information processing systems33 (2020), pp. 1877–1901.
+[8] Jiuhai Chen, Rifaa Qadri, Yuxin Wen, Neel Jain, John Kirchenbauer, Tianyi Zhou, and Tom Goldstein. “GenQA:
+Generating Millions of Instructions from a Handful of Prompts”. In:arXiv preprint arXiv:2406.10323(2024).
+[9] Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Pondé de Oliveira Pinto, Jared Kaplan, Harri Edwards,
+Yuri Burda, Nicholas Joseph, Greg Brockman, et al. “Evaluating Large Language Models Trained on Code”. In:arXiv
+preprint arXiv:2107.03374(2021).
+[10] Shuang Cheng, Yihan Bian, Dawei Liu, Linfeng Zhang, Qian Yao, Zhongbo Tian, Wenhai Wang, Qipeng Guo, Kai
+Chen, Biqing Qi, and Bowen Zhou. “SDAR: A Synergistic Diffusion-AutoRegression Paradigm for Scalable Sequence
+Generation”. In:arXiv preprint arXiv:2510.06303(2025).
+[11] Jacob K. Christopher, Brian R. Bartoldson, Tal Ben-Nun, Michael Cardei, Bhavya Kailkhura, and Ferdinando Fioretto.
+“Speculative Diffusion Decoding: Accelerating Language Generation through Diffusion”. In:NAACL. 2025.
+[12] Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser, Matthias Plappert,
+Jerry Tworek, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman. “Training Verifiers to Solve
+Math Word Problems”. In:arXiv preprint arXiv:2110.14168(2021).
+[13] Yifeng Gao, Ziang Ji, Yuxuan Wang, Biqing Qi, Hanlin Xu, and Linfeng Zhang. “Self Speculative Decoding for
+Diffusion Large Language Models”. In:arXiv preprint arXiv:2510.04147(2025).
+[14] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. “Deep residual learning for image recognition”. In:
+Proceedings of the IEEE conference on computer vision and pattern recognition. 2016, pp. 770–778.
+10
+[15] Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, and Jacob
+Steinhardt. “Measuring Mathematical Problem Solving with the MATH Dataset”. In:NeurIPS Datasets and Benchmarks.
+2021.
+[16] Feng Hong, Geng Yu, Yushi Ye, Haicheng Huang, Huangjie Zheng, Ya Zhang, Yanfeng Wang, and Jiangchao Yao.
+“Wide-In, Narrow-Out: Revokable Decoding for Efficient and Effective DLLMs”. In:arXiv preprint arXiv:2507.18578
+(2025).
+[17] Yuezhou Hu, Harman Singh, Monishwaran Maheswaran, Haocheng Xi, Coleman Hooper, Jintao Zhang, Aditya
+Tomar, Michael W Mahoney, Sewon Min, Mehrdad Farajtabar, et al. “Residual Context Diffusion Language Models”.
+In:arXiv preprint arXiv:2601.22954(2026).
+[18] Daniel Israel, Guy Van den Broeck, and Aditya Grover. “Accelerating Diffusion LLMs via Adaptive Parallel Decoding”.
+In:NeurIPS. 2025.
+[19] Guanghao Li, Zhihui Fu, Min Fang, Qibin Zhao, Ming Tang, Chun Yuan, and Jun Wang. “DiffuSpec: Unlocking
+Diffusion Language Models for Speculative Decoding”. In:arXiv preprint arXiv:2510.02358(2025).
+[20] Pengxiang Li, Yefan Zhou, Dilxat Muhtar, Lu Yin, Shilin Yan, Li Shen, Soroush Vosoughi, and Shiwei Liu. “Diffusion
+Language Models Know the Answer Before Decoding”. In:NeurIPS. 2025.
+[21] Yuhui Li, Fangyun Wei, Chao Zhang, and Hongyang Zhang. “Eagle: Speculative sampling requires rethinking feature
+uncertainty”. In:arXiv preprint arXiv:2401.15077(2024).
+[22] Hunter Lightman, Vineet Kosaraju, Yura Burda, Harri Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman,
+Ilya Sutskever, and Karl Cobbe. “Let’s Verify Step by Step”. In:ICLR. 2024.
+[23] Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu
+Zhang, Chong Ruan, et al. “Deepseek-v3 technical report”. In:arXiv preprint arXiv:2412.19437(2024).
+[24] Aaron Lou, Chenlin Meng, and Stefano Ermon. “Discrete Diffusion Modeling by Estimating the Ratios of the Data
+Distribution”. In:ICML. 2024.
+[25] Amr Mohamed, Yang Zhang, Michalis Vazirgiannis, and Guokan Shang. “Fast-Decoding Diffusion Language Models
+via Progress-Aware Confidence Schedules”. In:arXiv preprint arXiv:2512.02892(2025).
+[26] Pravin Nair. “Softmax is1 /2-Lipschitz: A tight bound across all ℓ𝑝 norms”. In:arXiv preprint arXiv:2510.23012(2025).
+[27] Shen Nie, Fengqi Zhu, Zebin You, Xiaolu Zhang, Jingyang Ou, Jun Hu, Jun Zhou, Yankai Lin, Ji-Rong Wen, and
+Chongxuan Li. “Large Language Diffusion Models”. In:NeurIPS. 2025.
+[28] Subham Sekhar Sahoo, Marianne Arriola, Yair Schiff, Aaron Gokaslan, Edgar Marroquin, Justin T. Chiu, Alexander
+Rush, and Volodymyr Kuleshov. “Simple and Effective Masked Diffusion Language Models”. In:NeurIPS. 2024.
+[29] Yeongbin Seo, Dongha Lee, Jaehyung Kim, and Jinyoung Yeo. “Fast and Fluent Diffusion Language Models via
+Convolutional Decoding and Rejective Fine-tuning”. In:NeurIPS. 2025.
+[30] Teknium.OpenHermes 2.5: An Open Dataset of Synthetic Data for Generalist LLM Assistants. https://huggingface.
+co/datasets/teknium/OpenHermes-2.5. 2024.
+[31] Junxiong Wang, Daniele Paliotta, Avner May, Alexander M. Rush, and Tri Dao. “The Mamba in the Llama: Distilling
+and Accelerating Hybrid Models”. In:NeurIPS. 2024.
+[32] Xu Wang, Chenkai Xu, Yijie Jin, Jiachun Jin, Hao Zhang, and Zhijie Deng. “Diffusion LLMs Can Do Faster-Than-AR
+Inference via Discrete Diffusion Forcing”. In:ICLR. 2026.
+[33] Chengyue Wu, Hao Zhang, Shuchen Xue, Shizhe Diao, Yonggan Fu, Zhijian Liu, Pavlo Molchanov, Ping Luo, Song
+Han, and Enze Xie. “Fast-dllm v2: Efficient block-diffusion llm”. In:arXiv preprint arXiv:2509.26328(2025).
+[34] Chengyue Wu, Hao Zhang, Shuchen Xue, Zhijian Liu, Shizhe Diao, Ligeng Zhu, Ping Luo, Song Han, and Enze Xie.
+“Fast-dLLM: Training-free Acceleration of Diffusion LLM by Enabling KV Cache and Parallel Decoding”. In:ICLR.
+2026.
+[35] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang,
+Chenxu Lv, et al. “Qwen3 technical report”. In:arXiv preprint arXiv:2505.09388(2025).
+[36] Jiacheng Ye, Zhihui Xie, Lin Zheng, Jiahui Gao, Zirui Wu, Xin Jiang, Zhenguo Li, and Lingpeng Kong. “Dream 7B:
+Diffusion Large Language Models”. In:arXiv preprint arXiv:2508.15487(2025).
+[37] Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Sun, Jeff Huang, Cody H Yu, Shiyi Cao, Christos Kozyrakis,
+Ion Stoica, Joseph E Gonzalez, et al. “Sglang: Efficient execution of structured language model programs”. In:Advances
+in neural information processing systems37 (2024), pp. 62557–62583.
+11
+A Related Work
+A.1 Diffusion Language Models
+Discrete-sequence diffusion was formalized by D3PM [3], whose absorbing-state ([MASK]) variant seeded masked diffusion
+language modeling. SEDD [24] and MDLM [28] subsequently sharpened the training objective, with MDLM’s Rao-
+Blackwellized loss reducing masked diffusion training to a weighted mixture of masked language modeling losses. This
+recipe enabled the first wave of large-scale DLMs. LLaDA [27] scaled masked diffusion to 8B parameters and matched
+strong AR LLMs on broad reasoning benchmarks. BD3-LM [2] introduced a block-causal design that generates tokens
+block-by-block with discrete diffusion within each block, addressing fixed-length generation and the absence of KV
+caching. This paradigm has since become dominant, with Dream 7B [36], D2F [32], and most recently SDAR [10] further
+validating the recipe at scale. SDAR is particularly relevant to our work: it lightly adapts a pre-trained AR backbone into a
+block-diffusion sampler, and serves as the backbone for all experiments in this paper. Our contribution is orthogonal to
+these efforts: we accelerateinferenceof any such backbone rather than proposing a new training paradigm.
+A.2 Fast Decoding for Diffusion Language Models
+As discussed in Section 1, naively unmasking many tokens per step degrades quality because the unmasking decisions at
+different positions are made simultaneously from a single forward pass. Existing approaches to accelerating DLM inference
+can be organized into two families:threshold-basedmethods, which use the backbone’s own per-token confidence as the
+unmasking criterion, andspeculativemethods, which introduce auxiliary mechanisms such as drafting, learned predictors,
+or structural priors to decode additional tokens beyond what confidence alone would permit.
+Threshold-based methods.Fast-dLLM [34] established the standard recipe: at each denoising step, unmask every
+position whose top-1 confidence exceeds a fixed threshold𝜏, and enable a KV cache for block-diffusion models. Subsequent
+work refines this recipe along several axes. WINO [16] allows the bidirectional context to re-mask previously committed
+tokens in later steps, relaxing the irrevocable commitment of Fast-dLLM. Prophet [20] takes the opposite approach,
+committing all remaining tokens at once when a global confidence margin indicates that further refinement would be
+wasteful. SchED [25] generalizes the static threshold to a progress-aware schedule 𝜏(𝑡) that aggregates full-span logit
+margins. Despite these advances, all threshold-based methods rely on backbone confidence as the sole unmasking signal,
+and therefore cannot decode tokens whose confidence has not yet crossed the threshold, even when the inter-step residual
+suggests they are already close to their final value.
+Speculative methods.A complementary line of work introduces explicit drafting mechanisms. SpecDiff [11] uses a
+discrete diffusion model as a drafter inside a speculative decoding loop with an autoregressive verifier, while DiffuSpec [19]
+reverses this arrangement, using a DLM to draft for AR verifiers via causal-consistency path search. Within the DLM family
+itself, Spiffy [1] drafts block states from the model’s own distribution and verifies them through a directed draft graph, and
+SSD [13] eliminates the auxiliary drafter entirely by using the backbone as both drafter and hierarchical-tree verifier in a
+single forward pass. Learn2PD [6] takes a different approach, training a lightweight filter that predicts whether each draft
+token already matches its final committed value, avoiding unnecessary recomputation. APD [18] and Conv/R2FT [29]
+explore orthogonal directions: APD modulates the joint decoding distribution, while Conv/R2FT exploits positional locality
+through a convolutional decoding window over the masked positions.
+Position of our work.MRP sits at the intersection of these two families. Like threshold-based methods, it uses
+the backbone’s confidence for verification, preserving plug-in compatibility with any block-diffusion backbone. Like
+speculative methods, it generates additional token candidates beyond what the threshold alone would yield, through a
+chain of lightweight residual heads whose proposals the backbone then accepts or rejects. The key distinction from prior
+speculative approaches such as SSD [13] and Learn2PD [6] is MRP’sresidualparameterization: rather than predicting the
+full next-step distribution or learning a binary accept/reject filter, MRP predicts only the small correction between adjacent
+denoising steps, which we show in Section 3 is decisive for keeping the module lightweight while matching backbone
+quality at high parallelism.
+12
+B Residual Magnitude Measurement (Figure 2)
+This appendix specifies the protocol used to produce Figure 2, which compares the magnitude of the per-step residual
+against the magnitude of the underlying backbone state.
+Models and data.We measure on three frozen SDAR-Chat backbones [10] at the 1.7B, 4B, and 8B scales (block size 𝐵=16).
+Prompts are sampled from the GSM8K test set [12] with a fixed seed; questions are wrapped in the SDAR chat template
+with the prefix“Let’s think step by step. ”and prompts longer than1024tokens are skipped. We collect statistics from the
+first four decoded blocks of each prompt and stop after at least200blocks per model.
+Decoding.Each block of16positions is decoded with greedy, low-confidence-static unmasking, revealing exactly one
+token per denoising step (the position with the highest argmax-softmax confidence among the still-masked positions).
+Decoding stops early on EOS tokens. This procedure traverses17block states 𝑠= 0, 1, . . . , 16, where 𝑠 counts the number
+of revealed positions in the current block.
+What we record.At every state 𝑠 we save both the backbone final-layer hidden states 𝒉(𝑠) ∈R 𝐵×𝑑 and the post-projection
+logits ℓ (𝑠) ∈R 𝐵×𝑉 , restricted to the current block’s positions. For brevity we let𝑋 (𝑠) ∈ {ℓ (𝑠) ,𝒉 (𝑠) } denote either tensor
+below.
+Residual and reference quantities.For each𝑘∈ {1, . . . ,16}and each valid offset𝑡, we compute the residual
+𝜹𝑡,𝑘 =𝑋 (𝑡+𝑘) −𝑋 (𝑡) , 𝑡=0,1, . . . ,16−𝑘,
+which is the change in 𝑋 produced by revealing 𝑘 additional tokens. The backbone reference is taken over the partially
+decoded states𝑋 (𝑠) for𝑠=1, . . . ,16.
+Magnitude metric.Throughout the figure we report the root-mean-square magnitude per entry, ∥𝑌∥ RMS =
+√︃
+1
+|𝑌|
+Í
+𝑖 𝑌 2
+𝑖 ,
+computed in float64 to avoid bf16 underflow. For each model, space (logits or hidden states), and value of𝑘, we average
+∥𝜹𝑡,𝑘 ∥RMS over all collected (block, 𝑡) pairs; the dashed reference lines show the average of ∥𝑋 (𝑠) ∥RMS over all collected
+(block, 𝑠)pairs.
+C Implementation Details
+Table 4 lists the full set of training hyperparameters used for all three model scales.
+D MRP Depth Sweep on SDAR-1.7B (Figure 3)
+Table 5 reports the raw accuracy and decoding throughput numbers underlying Figure 3. The MRP module depth is varied
+over 𝐷∈ { 1, 2, 3, 4, 8} on top of a frozen SDAR-1.7B-Chat backbone, and we evaluate the four decoding configurations
+shown in the figure:directwith 𝐾∈{ 1, 2} MRP steps andspeculativewith 𝐾∈{ 2, 3} MRP steps. All other settings follow
+Table 4; throughput is reported in tokens per second on a single H100, and accuracy is the standard task metric (%).
+E Proofs and Derivations
+We provide complete proofs for the results stated in Section 3. Throughout, we use the notation established in Section 2:𝒙𝑡
+is the partially masked sequence at step 𝑡, 𝑓 is the backbone, ℓ𝑡 =𝑓(𝒙 𝑡 ) ∈R 𝐿×𝑉 are the logits, 𝝅𝑖
+𝑡 =softmax(ℓ 𝑖
+𝑡 ) ∈Δ 𝑉 is
+the predictive distribution at position 𝑖, R𝑡 is the set of positions unmasked at step 𝑡, and 𝒆𝑣 ∈R 𝑑𝑒 denotes the embedding
+of token𝑣.
+E.1 Proof of Proposition 1
+Proof. The transition 𝒙𝑡 →𝒙 𝑡−1 replaces the [MASK] token at each position 𝑗∈ R 𝑡 with the predicted token 𝑣 𝑗, leaving all
+other positions unchanged. In embedding space, the perturbation 𝑬𝑡−1 −𝑬 𝑡 is nonzero at exactly |R𝑡 | rows, with Frobenius
+norm:
+∥𝑬𝑡−1 −𝑬 𝑡 ∥𝐹 =
+√︄∑︁
+𝑗∈ R 𝑡
+∥𝒆 𝑣 𝑗 −𝒆 [MASK]∥2
+2 ≤
+√︁
+|R𝑡 | ·max
+𝑗∈ R 𝑡
+∥𝒆 𝑣 𝑗 −𝒆 [MASK] ∥2.(4)
+13
+Hyperparameter Value
+Architecture
+Backbone (frozen) SDAR-{1.7B, 4B, 8B}-Chat (block size 16)
+MRP transformer layers𝐷3
+Frozen modules backbone, LM head, token embeddings
+MRP init. std.𝜎 init 0.2
+Objective
+Loss forward KD on residual logits
+KD temperature𝑇 KD 1.0
+Reveal mode ground-truth,𝑘=1token per block
+MRP unroll steps𝐾2
+Per-step loss weighting uniform
+Optimization
+Optimizer AdamW
+Peak learning rate1e−3
+LR schedule cosine with min-LR
+Epochs 1
+Sequence length 4096
+Block length 16
+Global / micro batch size 16 / 1
+Gradient checkpointing enabled
+Data
+Dataset SFTDatasetV3 [31]
+Supervised tokens assistant response tokens only
+Table 4: Training hyperparameters used for all three model scales.
+Since 𝑓 is 𝜅-Lipschitz with respect to the input embedding matrix in Frobenius norm, and the Lipschitz condition applies
+to the full output tensorℓ∈R 𝐿×𝑉 while we bound a single row, the per-position logit change satisfies:
+∥ℓ 𝑖
+𝑡−1 −ℓ 𝑖
+𝑡 ∥2 ≤ 𝜅
+√︁
+|R𝑡 |
+𝐿 ·max
+𝑗∈ R 𝑡
+∥𝒆 𝑣 𝑗 −𝒆 [MASK]∥2.(5)
+To convert this into a total variation bound, we invoke the fact that softmax is1
+2-Lipschitz in all ℓ𝑝 norms [26]. In particular,
+for theℓ 2 →ℓ 1 case:
+𝐷TV (𝝅 𝑖
+𝑡−1 ,𝝅 𝑖
+𝑡 )= 1
+2 ∥𝝅 𝑖
+𝑡−1 −𝝅 𝑖
+𝑡 ∥1 ≤ 1
+2 ∥ℓ 𝑖
+𝑡−1 −ℓ 𝑖
+𝑡 ∥2.(6)
+Substituting (5) and using
+√︁
+|R𝑡 | ≤ |R 𝑡 |for|R 𝑡 | ≥1, absorbing the factor of 1
+2 into𝜅:
+𝐷TV (𝝅 𝑖
+𝑡−1 ,𝝅 𝑖
+𝑡 ) ≤𝜅· |R𝑡 |
+𝐿 ·max
+𝑗∈ R 𝑡
+∥𝒆 𝑣 𝑗 −𝒆 [MASK]∥2.(7)
+□
+E.2 Proof of Corollary 3.1
+Proof. The bound in Proposition 1 tightens as denoising progresses through two mechanisms. First, the number of tokens
+revealed per step |R𝑡 | is bounded by the number of remaining masked positions 𝑚𝑡, which decreases monotonically along
+the chain. In threshold-based decoding, later steps reveal fewer tokens because the remaining positions are those where
+the backbone had low confidence; in fixed-schedule decoding, |R𝑡 | is typically non-increasing by design. Second, as more
+context is revealed, predictions at remaining positions become more concentrated — when max𝑣 𝜋𝑖,𝑣
+𝑡 ≥ 1 −𝜂 for small 𝜂,
+no perturbation can shift the distribution by more than𝑂(𝜂)in total variation, regardless of the Lipschitz constant.
+Combining these, the average per-position TV distance at step𝑡satisfies:
+1
+𝑚𝑡−1
+∑︁
+𝑖∉R 𝑡
+𝐷TV (𝝅 𝑖
+𝑡−1 ,𝝅 𝑖
+𝑡 ) ≤𝜅𝐷 max · 𝑚𝑡
+𝐿 ,(8)
+14
+Depth𝐷Setting
+GSM8K MATH500 HumanEval MBPP
+Acc. TPS Acc. TPS Acc. TPS Acc. TPS
+1
+Direct (𝐾=1)74.8 715.3 48.4 924.6 45.7 682.5 46.7 389.3
+Direct (𝐾=2)71.3 746.2 44.2 954.8 35.4 768.0 35.4 422.2
+Speculative (𝐾=2)77.3 593.6 55.6 763.2 53.7 615.7 52.5 323.7
+Speculative (𝐾=3)76.2 573.3 53.0 739.8 54.3 647.1 53.3 310.9
+2
+Direct (𝐾=1)75.7 694.4 51.2 865.8 49.4 676.7 47.5 374.4
+Direct (𝐾=2)72.3 709.7 47.0 914.1 39.6 835.3 37.7 388.4
+Speculative (𝐾=2)77.1 555.6 55.4 712.0 53.7 573.1 52.5 302.0
+Speculative (𝐾=3)76.4 561.8 53.8 729.3 54.3 634.8 53.3 308.0
+3
+Direct (𝐾=1)75.0 666.7 49.8 855.8 47.6 720.1 45.9 369.1
+Direct (𝐾=2)73.9 695.3 50.4 933.7 37.8 746.9 40.9 399.6
+Speculative (𝐾=2)76.9 571.5 55.6 694.6 54.3 591.3 52.5 311.1
+Speculative (𝐾=3)76.0 535.0 54.2 676.2 54.3 590.2 53.3 284.2
+4
+Direct (𝐾=1)77.6 669.5 50.8 834.3 46.3 714.3 47.9 364.7
+Direct (𝐾=2)74.8 708.2 46.2 851.6 37.2 692.9 40.5 382.0
+Speculative (𝐾=2)77.3 532.9 55.8 689.6 53.7 550.8 52.5 288.2
+Speculative (𝐾=3)76.3 543.2 53.4 663.4 54.3 604.2 53.3 288.9
+8
+Direct (𝐾=1)77.1 624.5 50.2 803.4 43.9 708.0 49.8 334.6
+Direct (𝐾=2)74.7 645.6 46.4 817.7 38.4 702.2 41.2 353.7
+Speculative (𝐾=2)77.0 520.7 55.4 636.8 53.7 538.3 52.5 278.9
+Speculative (𝐾=3)76.3 496.8 53.4 632.7 54.3 550.8 53.3 261.6
+Table 5: Raw numerical results for the SDAR-1.7B MRP depth sweep plotted in Figure 3. Accuracy (Acc., %) and decoding throughput
+(TPS, tokens per second) are reported per benchmark for MRP depths 𝐷∈ { 1, 2, 3, 4, 8} and the four decoding configurations.Directuses
+MRP predictions without verification;Speculativeuses the backbone to verify and correct MRP drafts.
+where 𝐷max =max 𝑣 ∥𝒆 𝑣 −𝒆 [MASK]∥2. Since 𝑚𝑡 /𝐿 decreases monotonically from1to0, the residual magnitude decays along
+the chain. □
+15

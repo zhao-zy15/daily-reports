@@ -1,0 +1,84 @@
+  <div class="paper" id="p12">
+    <h3 class="paper-title">Medical-2 · Prompting Language Effect: 英语 vs 法语提示对 5 个 LLM 临床诊断准确率的影响</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19173">arXiv:2605.19173</a></span><br>
+      <span>🏛 Data Clinic, Nantes University Hospital, France</span><br>
+      <span class="tag tag-medical">Medical</span><span class="tag tag-medical">Equity</span><span class="tag tag-medical">Multilingual</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM 临床诊断辅助大多在英语评测，<strong>其他语言下的可靠性几乎未知</strong>。但部署到法国、西班牙、德国等非英语医疗系统时，提示语言可能显著影响诊断质量。本文用 180 个临床短文（vignettes，覆盖 16 个医学专科），由 2 位执业医生用 18 分制评估 5 个 LLM（o3、DeepSeek-R1、GPT-4-Turbo、Llama-3.1-405B-Instruct、BioMistral-7B），系统性测量<strong>英语 vs 法语 prompting 的 diagnostic reasoning 与 accuracy 差异</strong>。这是 LLM 临床部署<strong>equity & access</strong> 议题的核心证据。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 实验设计（21,600 评分 items）</strong>
+        <p>$$n_{\text{items}} = 180 \text{ vignettes} \times 2 \text{ raters} \times 5 \text{ LLMs} \times 2 \text{ languages} \times 6 \text{ score components} = 21{,}600$$</p>
+        <p>180 个临床短文 + 双盲双评。每个 LLM 输出由两位医生独立打分，6 个 score component：differential diagnosis（鉴别诊断）、reasoning quality（推理质量）、logical structure（逻辑结构）、internal validity（内在效度）、justification（依据充分性）、final accuracy（最终诊断准确性）。Overall score 0-18。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 统计分析方法（高规格）</strong>
+        <p>用<strong>linear mixed models (LMM)</strong> 建模：</p>
+        <p>$$\text{Score}_{ijklm} = \beta_0 + \beta_1 \cdot \text{Language}_l + u_{i(\text{vignette})} + u_{k(\text{rater})} + \epsilon$$</p>
+        <p>vignette 和 rater 作为 random intercept，language 作为 fixed effect。p-value 用 one-sided（EN > FR）+ Bonferroni adjusted（k=5 多重比较）。Inter-rater reliability 用 ICC（two-way random, single measures, absolute agreement）+ quadratic-weighted Cohen's kappa。Wald 95% CI + bootstrap 2000 resamples。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Sensitivity Analysis</strong>
+        <p>对 residual normality 用 Shapiro-Wilk test（all $p &lt; 0.001$，皆非正态），所以补充 <strong>paired Wilcoxon signed-rank test</strong> 作 sensitivity。Spearman 秩相关 + Fisher's z-transformation 测试 EN vs FR 的 reasoning–accuracy 相关性差异。<strong>所有分析在 R 4.5.1 + lme4 + lmerTest + irr 包完成</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 6 个 sub-score 的分解</strong>
+        <p>Overall 18 分由 6 component 各 0-3 分构成。这样可以定位 language gap 是<strong>来自哪个 reasoning 环节</strong>：是 differential diagnosis 列得少？还是 logical structure 乱？还是 justification 弱？精细分解 + LMM 是这篇论文方法学最大亮点。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>Llama-405B 在英法两种 prompt 下的表现差异：</strong>
+        <ol>
+          <li><strong>Vignette（中文翻译）：</strong>"45岁男性，3 天来右上腹痛伴黄疸、低热。BMI 32，5 年前接受过 cholecystectomy。Lab: WBC 14×10<sup>9</sup>, ALT 320, AST 280, ALP 580, T-Bil 6.8 mg/dL, D-Bil 5.2 mg/dL。考虑诊断？"</li>
+          <li><strong>EN prompt：</strong>Llama-405B 输出 ① choledocholithiasis (residual stone in CBD) ② cholangitis ③ Klatskin tumor。差异性鉴别完整，logical structure 清晰，引用了"post-cholecystectomy bile duct dilation" 机制。</li>
+          <li><strong>FR prompt：</strong>同模型输出 ① cholécystite (但患者已无胆囊!) ② cholangite ③ tumeur des voies biliaires。出现<strong>逻辑硬伤</strong>——把 post-cholecystectomy 病人诊断为"胆囊炎"，忽略了 history。</li>
+          <li><strong>评分差距：</strong>EN 17/18, FR 12/18，差 5 分。这反映 LMM 中 Llama-405B 的 mean diff 0.91 [95% CI 0.66, 1.17]，是<strong>所有模型中差距最大</strong>。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（论文 Table 1：Overall 0-18 分对比）</h4>
+      <table>
+        <tr><th>Model</th><th>ICC EN [95% CI]</th><th>EN median [IQR]</th><th>ICC FR [95% CI]</th><th>FR median [IQR]</th><th>Mean diff (EN–FR)</th><th>Adj. p (LMM)</th></tr>
+        <tr><td class="best">o3</td><td>0.22</td><td class="best">18.00 [16, 18]</td><td>0.15</td><td class="best">18.00 [16, 18]</td><td>0.08 [-0.12, 0.27]</td><td class="best">p = 1.0 (无显著差)</td></tr>
+        <tr><td>DeepSeek-R1</td><td>0.37</td><td>16.00 [15, 18]</td><td>0.40</td><td>16.00 [15, 17]</td><td>0.37 [0.10, 0.64]</td><td>0.0207</td></tr>
+        <tr><td>GPT-4-Turbo</td><td>0.31</td><td>17.00 [15, 18]</td><td>0.52</td><td>16.00 [14, 17]</td><td>0.49 [0.25, 0.73]</td><td>&lt; 0.001</td></tr>
+        <tr><td>Llama-405B</td><td>0.61</td><td>17.00 [15, 18]</td><td>0.56</td><td>16.00 [13, 17]</td><td>0.91 [0.66, 1.17]</td><td>&lt; 0.001</td></tr>
+        <tr><td>BioMistral-7B</td><td>0.82</td><td>9.00 [6.75, 11]</td><td>0.84</td><td>8.00 [6, 10]</td><td>0.78 [0.28, 1.28]</td><td>0.00611</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">关键发现：(1) <strong>5 个模型中 4 个英文显著优于法文</strong>（DeepSeek-R1 / GPT-4-Turbo / Llama-405B / BioMistral-7B，Bonferroni adj p &lt; 0.05）。(2) <strong>o3 是唯一无显著语言差异</strong>的模型（mean diff 0.08, p=1.0）——o3 的多语言对齐显著优于其他模型。(3) Llama-405B 语言差异最大（0.91 pt），mean diff 95% CI 完全 above 0；尽管 EN 表现强，FR 退化最大。(4) BioMistral-7B 即使作为<strong>medical domain-specialized</strong> model，也出现 EN > FR 差异——医学预训练 ≠ 跨语言鲁棒性。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>多重 robustness 检验：</strong>(i) Wilcoxon signed-rank（替代 LMM）给出一致结论；(ii) Inter-rater ICC 在 BioMistral 上最高（0.82+）——小模型一致性更高反而说明输出更"刻板"；前沿模型 ICC 较低（0.22-0.37）是因为输出更丰富，rater 主观判断空间大。(iii) 6 个 sub-score 分解显示，FR 退化主要发生在 differential diagnosis 完整性、logical structure 清晰度、internal validity——而非 medical fact 准确性。这意味着<strong>问题出在推理表达而非知识本身</strong>。<strong>局限：</strong>仅测试 EN ↔ FR，未覆盖中文、西班牙语、阿拉伯语等；vignette 是简化场景，真实临床更复杂；2 个 rater 都在法国受训，可能 culturally bias 法语 reasoning style。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>这篇论文是 <strong>2026 年 LLM 临床部署最重要的政策相关论文之一</strong>。它用高规格统计方法（LMM + Bonferroni + bootstrap CI + sensitivity Wilcoxon）证明：</p>
+      <ul>
+        <li><strong>大多数 LLM 在非英语 prompt 下有可测量、有统计学显著性的诊断质量退化</strong>。</li>
+        <li>即使是医学专用模型（BioMistral-7B）也无法免疫。</li>
+        <li>只有 OpenAI o3 实现了真正的 cross-lingual parity。</li>
+      </ul>
+      <p>对 FDA / EMA / NMPA 等 AI 医疗器械审批机构：<strong>multilingual benchmark 应该成为 LLM clinical deployment 的强制评测维度</strong>。对中国市场（中英 prompt 都常见）：这意味着 DeepSeek、Qwen、文心一言、混元等模型必须在<strong>中文 medical scenario</strong> 上独立评测，不能依赖英文 benchmark 推断；对真实临床部署平台（如腾讯医典、好大夫），需要做 language-specific QA gating。<strong>更深的启示：</strong>LLM 临床部署的瓶颈正在从"模型能不能答对"转向"在哪种语言、哪种文化、哪类患者群体下能公平地答对"——AI equity 是新前沿。</p>
+    </div>
+
+  <h2 class="section-title mm">🌐 Multimodal</h2>
+

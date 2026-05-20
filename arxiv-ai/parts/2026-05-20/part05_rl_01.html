@@ -1,0 +1,84 @@
+  <div class="paper" id="p4">
+    <h3 class="paper-title">RL-1 · LambdaPO: Lambda 风格的 Policy Optimization，用成对偏好结构替代 GRPO 的标量优势</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19416">arXiv:2605.19416</a></span><br>
+      <span>🏛 Pinterest, Facebook (Meta), University of Michigan（+ Mississippi State, CMU, Emory）</span><br>
+      <span class="tag tag-rl">RL</span><span class="tag tag-rl">GRPO</span><span class="tag tag-rl">Math Reasoning</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>GRPO 已成为 reasoning LLM 的 RLHF 主流——通过 group 内 reward 归一化避开 value critic。但其优势函数定义为对单一 group mean 的偏离，<strong>把 group 内 G 条轨迹之间的丰富关系压缩成一个标量</strong>，这是"关系信息瓶颈"。例如 4 条 reward 分别为 [1, 1, 0, 0] 的轨迹与 [0.7, 0.5, 0.3, 0.1] 在 GRPO 看来给出几乎相同的优势分布，但前者其实是"两强两弱"，后者是"严格排序"——后者对优化更有价值。在 rank-sensitive 的 reward landscape（如数学推理 partial credit）上，GRPO 抹去了 partial preference 信号，导致 training 后期出现 catastrophic policy collapse（论文 Figure 3：1200 步后 reward 趋零）。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Pairwise Decomposed Advantage (PDA)</strong>
+        <p>对 group $\{o_1, \ldots, o_G\}$ 中的轨迹 $o_i$，定义：</p>
+        <p>$$A_\lambda(o_i) = \frac{1}{G-1} \sum_{j \ne i} \Delta R_{ij} \cdot \sigma\!\left(\frac{\Delta s_{ij}}{\tau}\right)$$</p>
+        <p>其中 $\Delta R_{ij} = R(o_i) - R(o_j)$ 是 reward 差，$\Delta s_{ij} = \log \pi_\theta(o_i|q) - \log \pi_\theta(o_j|q)$ 是策略 log-prob 差，$\sigma(\cdot)$ sigmoid，$\tau$ 温度。<strong>静态 baseline 被换成动态 peer-conditioned reference</strong>——每对比较都有自己的 confidence 权重。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 三种 Gradient Kinematics</strong>
+        <p>由 PDA 代回 policy gradient theorem：</p>
+        <p>$$\nabla_\theta J \propto \sum_{j \ne i} \underbrace{(R_i - R_j)}_{\text{direction}} \cdot \underbrace{\sigma\!\left(\frac{s_i - s_j}{\tau}\right)}_{\text{confidence gate}} \cdot \nabla_\theta \log \pi_\theta(o_i)$$</p>
+        <p>三种工作机制：(I) <em>Model Confusion</em>：$s_i \approx s_j$ 时 $\sigma \approx 0.5$，让 reward 差驱动学习；(II) <em>Misalignment</em>：模型对 worse trajectory 反而自信（$s_j \gg s_i$ 但 $R_i > R_j$），sigmoid → 0 但 log-odds 梯度产生强校正（LambdaRank 机制）；(III) <em>Convergence</em>：策略已对齐，梯度自然衰减，防止 over-optimization。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Semantic Density Reward（密集化稀疏奖励）</strong>
+        <p>仅有 binary correctness 太稀疏。作者额外加 ROUGE-L F1 作为推理密度奖励：</p>
+        <p>$$R(o) = R_{\text{acc}} + \lambda R_{\text{fmt}} + \beta R_{\text{sem}}, \quad R_{\text{sem}}(o_i) = \text{ROUGE-L}_{\text{F1}}(o_i, y^*)$$</p>
+        <p>这使得即使最终答案错，但推理痕迹接近 ground truth solution 的轨迹也能拿到部分 reward。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Self-Annealing 温度调节</strong>
+        <p>温度 $\tau$ 作为 spectral regularizer：$\tau$ 太小（$\tau=1$）梯度 deterministic，不稳；$\tau$ 太大（$\tau \ge 5$）sigmoid 饱和趋平，退化回 mean aggregation。论文 ablation 显示 $\tau=1.5$ 是 sweet spot（59.60% avg，比 baseline 57.72% 高 +1.88 pt）。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>Qwen3-1.7B 在 AIME24 上的 group rollout：</strong>
+        <ol>
+          <li><strong>Group：</strong>G=8 条 trajectory，reward 为 [1.0, 0.7, 0.5, 0.3, 0.2, 0.1, 0.0, 0.0]。</li>
+          <li><strong>GRPO 优势：</strong>group mean = 0.35，所以 advantages = [+0.65, +0.35, +0.15, -0.05, -0.15, -0.25, -0.35, -0.35]。前 3 条都得正向更新，后 5 条都被打压——但 trajectory 2 与 3 之间的 0.2 reward 差距被无差别处理。</li>
+          <li><strong>LambdaPO PDA：</strong>对 $o_1$ vs $o_2$，$\Delta R = 0.3$，$\Delta s$ 视 policy 而定。如果 policy 对 $o_1$ 略更自信（$\Delta s = 0.2$），则 $\sigma(0.2/1.5) = 0.53$，贡献 $0.3 \times 0.53 = 0.159$。对 $o_1$ vs $o_8$（reward 差 1.0），$\sigma$ 接近 1.0，贡献完整 1.0。这样每对都按 confidence 加权聚合。</li>
+          <li><strong>结果：</strong>1800 步训练后 GRPO 因策略坍塌 reward 跌至 0，LambdaPO 稳定在 ~0.55。AIME24 accuracy GRPO 71.67% → LambdaPO 73.33%。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（论文 Table 1，三个模型）</h4>
+      <table>
+        <tr><th>Model</th><th>Method</th><th>AIME24</th><th>AIME25</th><th>MATH-500</th><th>GPQA-Diamond</th><th>Avg</th></tr>
+        <tr><td rowspan="3">Qwen3-1.7B</td><td>Base</td><td>41.52</td><td>32.08</td><td>89.05</td><td>40.78</td><td>50.86</td></tr>
+        <tr><td>GRPO</td><td>42.08</td><td>32.50</td><td>89.30</td><td>41.78</td><td>51.42</td></tr>
+        <tr><td class="best">LambdaPO (τ=1.5)</td><td class="best">46.67</td><td class="best">33.33</td><td class="best">90.20</td><td>41.92</td><td class="best">53.03</td></tr>
+        <tr><td rowspan="3">Qwen3-4B</td><td>Base</td><td>69.95</td><td>60.00</td><td>95.60</td><td>67.17</td><td>73.18</td></tr>
+        <tr><td>GRPO</td><td>71.67</td><td>65.83</td><td>96.35</td><td>67.74</td><td>75.40</td></tr>
+        <tr><td class="best">LambdaPO</td><td class="best">73.33</td><td class="best">67.08</td><td class="best">96.60</td><td class="best">68.94</td><td class="best">76.49</td></tr>
+        <tr><td rowspan="3">Phi-4-mini</td><td>Base</td><td>46.67</td><td>35.10</td><td>89.20</td><td>45.33</td><td>54.08</td></tr>
+        <tr><td>GRPO</td><td>48.33</td><td>36.67</td><td>89.80</td><td>46.59</td><td>55.35</td></tr>
+        <tr><td class="best">LambdaPO</td><td>47.71</td><td class="best">38.33</td><td class="best">91.05</td><td class="best">48.44</td><td class="best">56.38</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">Qwen3-4B 上 LambdaPO 比 GRPO 平均 +1.45 pt，Phi-4-mini 上 +1.86 pt；跨架构泛化良好。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>温度 sweep：</strong>$\tau \in \{1, 1.5, 2, 5, 7\}$，$\tau=1$ 训练不稳（58.80%），$\tau=1.5$ 最佳（59.60%），$\tau=7$ 退化回 GRPO 水平（57.68%）。<strong>Semantic Reward 消融：</strong>仅加 ROUGE-L 语义密度 reward 在 AIME24 上 +2.22 pt（46.67 → 48.89）。<strong>训练稳定性：</strong>GRPO 在 step 1200 后崩溃，LambdaPO 始终保持 reward floor，证明 pairwise 自退火机制起 regularizer 作用。<strong>局限：</strong>group size G=8 时 PDA 计算 $O(G^2)$，对大 G 开销显著；ROUGE-L sem reward 对 code/科学问题未必适用，需要 task-specific dense reward 替代。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>LambdaPO 把信息检索领域的 LambdaRank 思想移植到 LLM RL，本质上把"标量 baseline"扩展为"$\binom{G}{2}$ 对偏好"。这与 DMPO（RL-4）的"前向 KL → 分布匹配"思想相互呼应——两者都意识到 <strong>standard GRPO 对 group 内信息的处理过于粗粒度</strong>。对 LLM post-training 工程的启示：reward design 应当保留 partial credit 信号，而 advantage estimator 应当保留 ranking 信号，二者不能在 group mean 这一步同时被压扁。LambdaPO 是 plug-and-play 替换 GRPO advantage module，几乎零额外训练成本，值得开源社区跟进。</p>
+    </div>
+  </div>
+

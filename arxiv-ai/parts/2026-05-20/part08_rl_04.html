@@ -1,0 +1,89 @@
+  <div class="paper" id="p7">
+    <h3 class="paper-title">RL-4 · DMPO: Beyond Mode Collapse — Distribution Matching for Diverse Reasoning</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19461">arXiv:2605.19461</a></span><br>
+      <span>🏛 Tongji University, Shanghai AI Laboratory, Fudan University（+ ZJU, CUHK）</span><br>
+      <span class="tag tag-rl">RL</span><span class="tag tag-rl">Mode Collapse</span><span class="tag tag-rl">Forward KL</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>GRPO 等 on-policy RL 算法存在<strong>系统性 mode collapse</strong>：一旦发现一条高 reward trajectory，概率质量迅速集中到该单一解，停止探索替代策略。本文证明这<strong>不是实现 bug，而是 reverse-KL 优化目标的必然结果</strong>——reverse KL 是 mode-seeking 的，会"奖励第一个找到的成功解"。理想方案是 forward KL（mode-covering），但它需要从 reward-weighted target distribution $p^*(\tau) \propto \exp(r(\tau)/\alpha)$ 采样，需计算指数大的 partition function $Z$（如 TSP-20 有 $\sim 10^{18}$ 条 tour），全局求 forward KL 不可行。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 理论诊断：GRPO 即 reverse KL</strong>
+        <p>论文 Theorem 1 证明：standard on-policy RL 最大化 expected reward 等价于最小化 reverse KL $D_{KL}(\pi_\theta \| p^*)$，其中 $p^*(\tau) \propto \exp(r(\tau)/\alpha)$。当 $\alpha \to 0$，$p^*$ 退化为 Dirac delta on highest-reward trajectory，policy gradient 不可避免地收敛到 mode-seeking。GRPO 中的 $D_{KL}(\pi_\theta \| \pi_{\text{ref}})$ 只防 reference drift，<strong>不能解决朝高 reward mode 的塌缩</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Group-Level Forward KL 近似</strong>
+        <p>核心 trick：放弃全局 forward KL，在 <strong>group level</strong>（$G$ 条 sampled trajectories 之间）做 forward KL。定义 group-conditional Boltzmann target：</p>
+        <p>$$p(o_i | \mathcal{O}) = \frac{\exp(r(o_i)/\alpha)}{\sum_{j=1}^G \exp(r(o_j)/\alpha)}$$</p>
+        <p>这只需 group-level partition $Z_{\text{group}}$，trivially computable。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Length-Normalized Policy Distribution</strong>
+        <p>policy 的 group 分布需要规避 length bias（$\pi_\theta(o) = \prod \pi_\theta(o_t)$ 指数衰减）。用 length-normalized log-likelihood：</p>
+        <p>$$\varphi(o_i) = \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \log \pi_\theta(o_{i,t} | o_{i,&lt;t}, x)$$</p>
+        <p>$$q_\theta(o_i | \mathcal{O}) = \frac{\exp(\varphi(o_i))}{\sum_{j=1}^G \exp(\varphi(o_j))}$$</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ DMPO 目标函数</strong>
+        <p>最小化 group-level forward KL：</p>
+        <p>$$\mathcal{L}_{\text{DMPO}} = \mathbb{E}_{x, \mathcal{O} \sim \pi_\theta} D_{KL}\big(p(\cdot|\mathcal{O}) \| q_\theta(\cdot|\mathcal{O})\big) = -\mathbb{E}\sum_i p(o_i | \mathcal{O}) \log q_\theta(o_i | \mathcal{O}) + \text{const}$$</p>
+        <p>梯度对每条 trajectory 推动 policy 的 length-normalized log-prob 朝 reward-weighted target 对齐。<strong>不需要 group mean baseline，不需要 critic，与 GRPO loop 等价计算成本</strong>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>TSP-20 NP-hard 实例：</strong>
+        <ol>
+          <li><strong>Setup：</strong>20 城市 TSP，存在 ~10<sup>18</sup> 条 tour，多个 local optima 长度仅相差 1-2%。</li>
+          <li><strong>GRPO 训练 1000 步：</strong>policy 100% 输出同一条 tour（mode collapse），SR=87%（学到约束），但 QR=67.4%（没找到更短解）。</li>
+          <li><strong>DMPO 训练同样步数：</strong>group 内 8 条 sample 在 5+ 不同 tour 区域分布。SR=98.5%（约束学得更好），QR=73.1%（找到更短解）。<strong>多样性带来质量提升而非牺牲。</strong></li>
+          <li><strong>Mode 数：</strong>DMPO 在 trained policy 下 sample 100 条 tour，能 cover 12+ distinct local optima；GRPO 仅 1-2 个。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（MM-NP-Bench，Qwen2.5-7B-Instruct backbone）</h4>
+      <table>
+        <tr><th>Method</th><th>Constraint SR/QR</th><th>Covering SR/QR</th><th>Partition SR/QR</th><th>Subgraph SR/QR</th><th>Path SR/QR</th><th>Overall SR</th><th>Overall QR</th></tr>
+        <tr><td>Qwen2.5-7B-Instruct</td><td>23.0/6.9</td><td>24.0/12.3</td><td>69.5/32.7</td><td>46.5/20.0</td><td>20.0/6.6</td><td>36.6</td><td>15.7</td></tr>
+        <tr><td>GRPO</td><td>54.5/21.2</td><td>18.0/17.7</td><td>87.0/67.4</td><td>68.0/65.9</td><td>51.0/19.6</td><td>55.7</td><td>38.4</td></tr>
+        <tr><td>GSPO</td><td>62.0/31.1</td><td>29.5/27.7</td><td>80.5/58.7</td><td>65.5/62.3</td><td>51.0/18.6</td><td>57.7</td><td>39.7</td></tr>
+        <tr><td>ClipCov</td><td>54.5/26.2</td><td>23.5/19.0</td><td>82.5/63.9</td><td>70.0/63.8</td><td>51.5/18.8</td><td>56.4</td><td>38.3</td></tr>
+        <tr><td>FlowRL</td><td>56.5/23.8</td><td>36.0/26.2</td><td>88.0/64.1</td><td>68.5/64.5</td><td>44.0/16.1</td><td>58.6</td><td>38.9</td></tr>
+        <tr><td>GRPOPass@K (Seed)</td><td>64.5/23.4</td><td>47.0/18.4</td><td>83.0/56.4</td><td class="best">73.5/59.6</td><td>45.5/16.1</td><td class="best">62.7</td><td>34.8</td></tr>
+        <tr><td class="best">DMPO (Ours)</td><td class="best">62.5/31.5</td><td>25.5/22.1</td><td class="best">98.5/73.1</td><td>72.0/67.4</td><td class="best">51.0/21.6</td><td>61.9</td><td class="best">43.1</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">DMPO 在 Overall QR（质量比）达到 43.1，超越所有 baseline 4-9 pt。Partition 任务 SR 达到 98.5（vs GRPO 87.0）。论文还报告了 OOD 任务 +2.3%，数学推理任务 +2.0% 的额外提升，证明 diversity 训练带来通用增益。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>Length normalization 消融：</strong>不做 length-normalize 导致 policy 偏好短 trajectory，QR 下降 5+ pt。<strong>温度 $\alpha$ sweep：</strong>太小（0.01）退回 reverse-KL mode-seek，太大（10）approach uniform，最佳 $\alpha=0.5$。<strong>vs Forward-KL Approximation 其他方案：</strong>flow-based 方法（FlowRL）效率更低但效果接近；DMPO 是<strong>最简单、最 plug-and-play 的 forward KL 近似</strong>。<strong>局限：</strong>group size G 较小（论文用 G=8）时近似精度低；与 SAGE 的 pseudo-KL 引导扩展 support 思想互补但未做组合实验；测试主要在 NP-hard，常规推理（math, code）的全面对比缺失。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>DMPO 提供了 RLVR mode collapse 问题<strong>最干净的理论 + 算法解</strong>：identify 病因（reverse KL）、给出 ideal cure（forward KL）、用 group-level 近似让 cure tractable。它与 RL-1 LambdaPO（pairwise advantage）、RL-2 SAGE（pseudo-KL anchor shaping）构成 2026 年 5 月 RLVR 多样性研究的"三剑客"：</p>
+      <ul>
+        <li><strong>LambdaPO</strong>：从 advantage estimator 角度治</li>
+        <li><strong>SAGE</strong>：从 anchor/KL regularizer 角度治</li>
+        <li><strong>DMPO</strong>：从 KL direction（reverse → forward）角度治</li>
+      </ul>
+      <p>三种角度可叠加，预计未来 6 个月会出现整合三者的统一 RLVR 框架。对于工业团队，DMPO 是<strong>最小代码改动</strong>的 GRPO 升级版——只需把 advantage normalization 改为 group-level forward KL loss。</p>
+    </div>
+
+  <h2 class="section-title agent">🤖 Agent</h2>
+

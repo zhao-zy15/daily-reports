@@ -1,0 +1,1490 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models</title>
+<!--Generated on Tue May 19 06:10:03 2026 by LaTeXML (version 0.8.8) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on March 11, 2026.-->
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="/static/browse/0.3.4/css/arxiv-html-papers-20260131.css" type="text/css">
+<script src="/static/browse/0.3.4/js/arxiv-html-papers-20260131.js"></script>
+<script>
+  // Restore the saved color scheme preference, or
+  // enact the browser preference if "automatic", 
+  // without expecting DOM load to have completed.
+  //
+  // Also restore any saved readingmode and ToC display preferences.
+  function initializeReadingPreferences() {
+    let saved_theme = localStorage.getItem("ar5iv_theme") || "automatic";
+    if (saved_theme === "automatic") {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        saved_theme = "dark";
+      }
+    }
+    if (saved_theme == "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+
+    const tocDisplay = localStorage.getItem('arxiv_html_paper_toc_display');
+    if (tocDisplay) {
+      document.documentElement.setAttribute("data-toc-display", tocDisplay);
+    }
+    const readingMode = localStorage.getItem('arxiv_html_paper_reading_mode');
+    if (readingMode) {
+      document.documentElement.setAttribute("data-reading-mode", readingMode);
+    }
+  }
+  // Run as soon as JS starts, to minimize repainting
+  initializeReadingPreferences();
+</script>
+<link rel="apple-touch-icon" sizes="180x180"
+  href="/static/browse/0.3.4/images/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32"
+  href="/static/browse/0.3.4/images/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16"
+  href="/static/browse/0.3.4/images/icons/favicon-16x16.png">
+<link rel="manifest" href="/static/browse/0.3.4/images/icons/site.webmanifest">
+<link rel="mask-icon" href="/static/browse/0.3.4/images/icons/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="stylesheet" type="text/css" media="screen" href="https://use.typekit.net/utz6mli.css">
+</head>
+<body>
+<dialog id="modal-form" aria-labelledby="modal-title" closedby="any">
+  <form id="modal-form-content" method="dialog" enctype="multipart/form-data">
+    <header class="modal-header">
+      <h5 id="modal-title" class="modal-title">Report GitHub Issue</h5>
+      <button type="submit" formnovalidate class="modal-close" aria-label="Close">×</button>
+    </header>
+
+    <div class="modal-body">
+      <label for="form_title">Title:</label>
+      <input class="form-control" id="form_title" name="form_title" required placeholder="Enter title">
+
+      <p id="selectedTextModalDescription" hidden>Content selection saved. Describe the issue below:</p>
+
+      <label for="description">Description:</label>
+      <textarea class="form-control" id="description" name="description" required maxlength="500"
+        placeholder="500 characters maximum"></textarea>
+    </div>
+
+    <footer class="modal-footer">
+      <button type="submit" value="internal-report" class="sr-only modal-submit">Submit without GitHub</button>
+      <button type="submit" value="github-report" class="modal-submit">Submit in GitHub</button>
+    </footer>
+  </form>
+</dialog>
+
+<header class="arxiv-html-header">
+  <div class="html-header-logo">
+    <a href="/">
+      <img alt="arXiv logo" class="logo desktop-only" width="100"
+        src="/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg">
+      <span class="sr-only">Back to arXiv</span>
+    </a>
+  </div>
+  <!--TOC, dark mode, links-->
+  <nav class="html-header-nav">
+    <a class="header-button hover-effect desktop-only" href="https://info.arxiv.org/about/accessible_HTML.html"
+      target="_blank">Why HTML?</a>
+    <a class="header-button" title="Report an Issue" href="#" title="Report an issue"
+      onclick="event.preventDefault(); showModalForm();">
+      <svg role="presentation" class="mobile-only toggle-icon" aria-hidden="true" height="1.25rem"
+        viewBox="0 0 640 640">
+        <path
+          d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+      </svg>
+      <span class="desktop-only">Report Issue</span></a>
+    <!--back to abstract-->
+    <a class="header-button" title="Back to abstract page" aria-label="Back to abstract page"
+      href="/abs/2605.19416v1">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 512 512" fill="#ffffff"
+        aria-hidden="true">
+        <path
+          d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224 192 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l210.7 0-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l128-128zM160 96c17.7 0 32-14.3 32-32s-14.3-32-32-32L96 32C43 32 0 75 0 128L0 384c0 53 43 96 96 96l64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32l0-256c0-17.7 14.3-32 32-32l64 0z">
+        </path>
+      </svg>
+      <span class="desktop-only">Back to Abstract</span>
+    </a>
+    <!-- PDF download link -->
+    <a class="header-button" title="Download PDF" href="/pdf/2605.19416v1"
+      target="_blank">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 576 542">
+        <path
+          d="M208 48L96 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16l80 0 0 48-80 0c-35.3 0-64-28.7-64-64L32 64C32 28.7 60.7 0 96 0L229.5 0c17 0 33.3 6.7 45.3 18.7L397.3 141.3c12 12 18.7 28.3 18.7 45.3l0 149.5-48 0 0-128-88 0c-39.8 0-72-32.2-72-72l0-88zM348.1 160L256 67.9 256 136c0 13.3 10.7 24 24 24l68.1 0zM240 380l32 0c33.1 0 60 26.9 60 60s-26.9 60-60 60l-12 0 0 28c0 11-9 20-20 20s-20-9-20-20l0-128c0-11 9-20 20-20zm32 80c11 0 20-9 20-20s-9-20-20-20l-12 0 0 40 12 0zm96-80l32 0c28.7 0 52 23.3 52 52l0 64c0 28.7-23.3 52-52 52l-32 0c-11 0-20-9-20-20l0-128c0-11 9-20 20-20zm32 128c6.6 0 12-5.4 12-12l0-64c0-6.6-5.4-12-12-12l-12 0 0 88 12 0zm76-108c0-11 9-20 20-20l48 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 24 28 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 44c0 11-9 20-20 20s-20-9-20-20l0-128z" />
+      </svg>
+      <span class="desktop-only">Download PDF</span></a>
+    <!-- navigational table of contents toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleNavTOC();" title="Toggle navigation"
+      aria-label="Toggle navigation">
+      <svg height="1.25rem" role="presentation" viewBox="0 0 512 512">
+        <path
+          d="M40 48C26.7 48 16 58.7 16 72v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V72c0-13.3-10.7-24-24-24H40zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zM16 232v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V232c0-13.3-10.7-24-24-24H40c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V392c0-13.3-10.7-24-24-24H40z">
+        </path>
+      </svg>
+    </a>
+    <!--- collapsable header / reading mode toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleReadingMode();"
+      title="Disable reading mode, show header and footer">
+      <svg role="presentation" height="1.25rem"
+        viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+        <path
+          d="M32 32C14.3 32 0 46.3 0 64l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 32zM64 352c0-17.7-14.3-32-32-32S0 334.3 0 352l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96z" />
+      </svg>
+    </a>
+    <!--- colored theme toggle -->
+    <button type="button" class="header-button color-tog" onclick="toggleColorScheme();" title="Toggle dark/light mode" aria-label="Toggle color scheme">
+      <span class="toggle-icon automatic-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9h-1.9M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69m-9.15 3.96h2.3L12 9l-1.15 3.65Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon light-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon dark-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+    </button>
+  </nav>
+</header><nav class="ltx_page_navbar">
+<nav class="ltx_TOC">
+<ol class="ltx_toclist">
+<li class="ltx_tocentry ltx_tocentry_abstract"><a href="#abstract1" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title">Abstract</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S1" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">1 </span>Introduction</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S2" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2 </span>Related work</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S3" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3 </span>Preliminary</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS1" title="In 3 Preliminary ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1 </span>Language Models as Stochastic Polices</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S3.SS2" title="In 3 Preliminary ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.2 </span>Group Relative Policy Optimization(GRPO)</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S4" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4 </span>Methodology</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS1" title="In 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.1 </span>Revisiting the Relational Bottleneck in GRPO</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS2" title="In 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.2 </span>Lambda Policy Optimization</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS3" title="In 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.3 </span>Dense Reward Augmentation via Semantic Overlap</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS4" title="In 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.4 </span>Theoretical Explanation: Gradient Dynamics</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S4.SS5" title="In 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4.5 </span>The LambdaPO Algorithm</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S5" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5 </span>Experiments</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection">
+<a href="#S5.SS1" title="In 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1 </span>Experimental Setup</span></a>
+<ol class="ltx_toclist ltx_toclist_subsection">
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S5.SS1.SSS1" title="In 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1.1 </span>Datasets</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S5.SS1.SSS2" title="In 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1.2 </span>Configurations</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS2" title="In 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.2 </span>Experimental results</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS3" title="In 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.3 </span>Ablation Studies and Analysis</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS4" title="In 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.4 </span>Case Studies</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S6" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">6 </span>Conclusion</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_bibliography"><a href="#bib" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title">References</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_appendix">
+<a href="#A1" title="In LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">A </span>Supplementary materials.</span></a>
+<ol class="ltx_toclist ltx_toclist_appendix">
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#A1.SS0.SSS0.Px1" title="In Appendix A Supplementary materials. ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title">Logging files</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#A1.SS0.SSS0.Px2" title="In Appendix A Supplementary materials. ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_title">Visualization of training dynamics</span></a></li>
+</ol>
+</li>
+</ol></nav>
+</nav>
+<div class="ltx_page_main">
+<div id="infobox" class="infobox">
+  <a id="license-tr" href="https://info.arxiv.org/help/license/index.html#licenses-available">
+    License: CC BY 4.0
+  </a>
+  <div id="watermark-tr">
+arXiv:2605.19416v1 [cs.CL] 19 May 2026</div>
+</div><div class="ltx_page_content">
+<article class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Zhe Yuan<sup id="id1.1.id1" class="ltx_sup">1</sup>, Yipeng Zhou<sup id="id2.2.id2" class="ltx_sup">2</sup>, Jinghan Li<sup id="id3.3.id3" class="ltx_sup">3</sup>, Xinyuan Chen<sup id="id4.4.id4" class="ltx_sup">4</sup>, 
+<br class="ltx_break">Bowen Deng<sup id="id5.5.id5" class="ltx_sup">5</sup>, Zhiqian Chen<sup id="id6.6.id6" class="ltx_sup">4</sup>, Liang Zhao<sup id="id7.7.id7" class="ltx_sup">6</sup> 
+<br class="ltx_break"><sup id="id8.8.id8" class="ltx_sup"><span id="id8.8.id8.1" class="ltx_text" style="font-size:90%;">1</span></sup><span id="id9.9.id9" class="ltx_text" style="font-size:90%;">Pinterest, San Francisco, CA 94107, USA 
+<br class="ltx_break"><sup id="id9.9.id9.1" class="ltx_sup">2</sup>Facebook, Menlo Park, CA 94025, USA 
+<br class="ltx_break"><sup id="id9.9.id9.2" class="ltx_sup">3</sup>University of Michigan - Ann Arbor, Ann Arbor, MI 48109, USA 
+<br class="ltx_break"><sup id="id9.9.id9.3" class="ltx_sup">4</sup>Mississippi State University, Mississippi State, MS 39762, USA 
+<br class="ltx_break"><sup id="id9.9.id9.4" class="ltx_sup">5</sup>Carnegie Mellon University, Pittsburgh, PA 15213. USA 
+<br class="ltx_break"><sup id="id9.9.id9.5" class="ltx_sup">6</sup>Emory University, Atlanta, GA 30322, USA 
+<br class="ltx_break"></span>
+</span><span class="ltx_author_notes">Corresponding author: zchen@cse.msstate.edu.</span></span>
+</div>
+<div class="ltx_dates">(March 11, 2026)</div>
+
+<div id="abstract1" class="ltx_abstract">
+<h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Group Relative Policy Optimization(GRPO) has become a cornerstone of modern reinforcement learning alignment, prized for its efficacy in foregoing an explicit value-critic by leveraging reward normalization across sampled trajectory cohorts. However, the method’s reliance on a monolithic statistical baseline, such as the group mean, collapses the relational topology of the trajectory space into a single scalar, thereby erasing the fine-grained preference information essential for navigating complex, rank-sensitive reward landscapes. To address this issue, we introduce a novel framework, Lambda Policy Optimization (LambdaPO), that addresses this information-theoretic bottleneck by re-conceptualizing advantage estimation from a scalar value to a decomposed, pairwise preference structure. Specifically, the advantage for any given trajectory is formulated as the integrated sum of reward differentials against all peers in its cohort, where each pairwise comparison is dynamically attenuated by the policy’s own probabilistic confidence in the established preference. To further mitigate the sparsity of binary outcome supervision, we augment the objective with a semantic density reward, derived from the precision-recall alignment between generated reasoning traces and ground-truth solutions. As a result, our method can mine more fine-grained optimization signals from a group of rollouts, guiding the LLM to a better optima. Experimental results across challenging math reasoning and question-answering tasks demonstrates that LambdaPO improves performance compared to the baseline methods.</p>
+</div>
+<section id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p id="S1.p1.1" class="ltx_p">The evolution of Large Language Models (LLMs) has a paradigm shift in user expectations, transitioning from mere linguistic fluency to rigorous reasoning capabilities in domains such as mathematics and complex question answering. Consequently, Reinforcement Learning (RL) has ascended as the basic technology for incentivizing and amplifying these cognitive behaviors. While Proximal Policy Optimization (PPO)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="Proximal policy optimization algorithms" class="ltx_ref">14</a>]</cite> established itself as the <span id="S1.p1.1.1" class="ltx_text ltx_font_italic">de facto</span> standard in early human preference alignment, its computational dependence on auxiliary value networks presents scalability challenges. Addressing this, recent frameworks such as Direct Preference Optimization (DPO)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib18" title="Direct preference optimization: your language model is secretly a reward model" class="ltx_ref">11</a>]</cite> have pioneered reference-based offline alignment, while DeepSeekMath and DeepSeek-R1 have introduced Group Relative Policy Optimization (GRPO)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="Deepseekmath: pushing the limits of mathematical reasoning in open language models" class="ltx_ref">15</a>]</cite>, a critic-free refinement of PPO that significantly enhances training efficiency while maintaining robust optimization stability. Furthermore, recent advances like SimPO<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib19" title="SimPO: simple preference optimization with a reference-free reward" class="ltx_ref">9</a>]</cite> and ORPO<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib20" title="ORPO: monolithic preference optimization without reference model" class="ltx_ref">6</a>]</cite> have further streamlined the alignment pipeline by eliminating the need for reference models or explicit reward modeling, setting a precedent for the efficiency LambdaPO aims to achieve.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p id="S1.p2.1" class="ltx_p">However, GRPO suffers from a fundamental information-theoretic bottleneck: it relies on a monolithic statistical baseline (the group mean) for advantage estimation. This scalar reduction fundamentally collapses the rich relational topology of the trajectory space, consequently erasing the fine-grained, pairwise preference signals that are essential for navigating complex, rank-sensitive reward landscapes. By treating the entire cohort as an undifferentiated aggregate, existing methods incur suboptimal credit assignment and elevated gradient variance.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p id="S1.p3.1" class="ltx_p">To resolve this limitation, we draw upon the ”virtual gradient” principles established in Learning-to-Rank (LtR), specifically the LambdaRank framework<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib4" title="Learning to rank with nonsmooth cost functions" class="ltx_ref">2</a>]</cite>, to propose Lambda Policy Optimization (LambdaPO). We re-conceptualize the advantage function not as a simple deviation from a cohort mean, but as a pairwise decomposed gradient. In this novel framework, the advantage for a specific trajectory is formulated as the integrated sum of its reward differentials against all cohort peers, dynamically attenuated by the policy’s own probabilistic confidence. Furthermore, we address the challenge of reward sparsity in rigorous reasoning tasks—where binary outcome supervision fails to credit correct intermediate logic—by introducing a Semantic Density Reward. This mechanism augments the optimization landscape with a dense, content-aware signal derived from the token-level precision and recall alignment between the generated chain-of-thought and the ground-truth solution. This approach effectively combines RL with the classical listwise ranking objectives, enabling the model to self-anneal its learning rate based on the discordance between its internal belief and the external reward structure.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p id="S1.p4.1" class="ltx_p">We validate LambdaPO on complex mathematical reasoning and challenging question-answering benchmarks. Our results demonstrate that by recovering the pairwise information lost by standard group-relative methods, LambdaPO helps the lightweighted LLMs to gain superior reasoning performance. Our contributions include:</p>
+<ul id="S1.I1" class="ltx_itemize">
+<li id="S1.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i1.p1" class="ltx_para">
+<p id="S1.I1.i1.p1.1" class="ltx_p"><span id="S1.I1.i1.p1.1.1" class="ltx_text ltx_font_bold">Methodological Innovation:</span> We introduce LambdaPO, a framework that leverages pairwise advantage decomposition to materialize the gradients of a latent preference manifold, resolving the relational bottleneck of scalar baselines.</p>
+</div>
+</li>
+<li id="S1.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i2.p1" class="ltx_para">
+<p id="S1.I1.i2.p1.1" class="ltx_p"><span id="S1.I1.i2.p1.1.1" class="ltx_text ltx_font_bold">Dense Signal Augmentation:</span> We propose a Semantic Density Reward mechanism that mitigates the sparsity of outcome-based supervision by explicitly incentivizing the recall of ground-truth reasoning tokens and the precision of the generated rationale.</p>
+</div>
+</li>
+<li id="S1.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i3.p1" class="ltx_para">
+<p id="S1.I1.i3.p1.1" class="ltx_p"><span id="S1.I1.i3.p1.1.1" class="ltx_text ltx_font_bold">Empirical Performance:</span> We demonstrate through extensive experiments on mathematical reasoning and challenging question-answering benchmarks that LambdaPO significantly outperforms GRPO, establishing a new state-of-the-art for critic-free alignment.</p>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p id="S2.p1.1" class="ltx_p"><span id="S2.p1.1.1" class="ltx_text ltx_font_bold">Research in LLM reasoning:</span></p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p id="S2.p2.1" class="ltx_p">Many works have been devoted in enhancing the LLMs’ reasoning capabilities. They can be divided into three directions: (1) explicit reasoning traces, (2) tool augmentation, and (3) reinforcement-learning based optimization.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p id="S2.p3.1" class="ltx_p">Chain-of-Thought(CoT)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib5" title="Chain-of-thought prompting elicits reasoning in large language models" class="ltx_ref">18</a>]</cite> first proved that providing step-by-step rationales enables models to generalize on arithmetic, logic, and commonsense tasks beyond what is achievable with direct answer prompting. Small models can acquire strong reasoning skills when explicitly trained on high-quality chain-of-thought (CoT) rationales generated by a larger teacher model. This has led to self-improvement paradigms such as STaR<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib21" title="STaR: bootstrapping reasoning with reasoning" class="ltx_ref">23</a>]</cite>, which leverages self-generated rationales to bootstrap reasoning capabilities. To further refine these traces, methods like Math-Shepherd<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib22" title="Math-shepherd: verify and reinforce llms step-by-step without human annotations" class="ltx_ref">17</a>]</cite> utilize automated process-level supervision to assign credit to individual reasoning steps, addressing the credit assignment problem that LambdaPO seeks to solve via its pairwise decomposition.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p id="S2.p4.1" class="ltx_p">Another area of work focuses on integrating LLMs with external tools to improve numerical accuracy and procedural reasoning. ReAct<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib6" title="React: synergizing reasoning and acting in language models" class="ltx_ref">21</a>]</cite> introduced a unified framework for interleaving natural-language reasoning with tool actions (e.g., search, calculator, code execution), enabling LLMs to iteratively think and reflect. Toolformer<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib7" title="Toolformer: language models can teach themselves to use tools" class="ltx_ref">13</a>]</cite> further shows that LLMs can self-supervise tool-usage demonstrations, allowing models to autonomously decide when and how to invoke tools. Together, these works demonstrate that augmenting LLMs with external tools or environments leads to more reliable and interpretable reasoning.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p id="S2.p5.1" class="ltx_p">Recent reasoning-focused models adopt reinforcement learning to optimize long-form reasoning traces. Building on earlier RLHF pipelines<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="Training language models to follow instructions with human feedback" class="ltx_ref">10</a>]</cite>, several works refine reward design for deliberate reasoning, including grouped-rollout methods such as GRPO <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="Deepseekmath: pushing the limits of mathematical reasoning in open language models" class="ltx_ref">15</a>]</cite>. DeepSeek-R1 <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib12" title="Deepseek-r1: incentivizing reasoning capability in llms via reinforcement learning" class="ltx_ref">5</a>]</cite> represents a recent milestone: it trains LLMs to perform extended internal reasoning through a combination of supervised step-by-step rationales and reinforcement learning over long reasoning trajectories. These methods show that reinforcement learning—when applied to intermediate reasoning instead of just final answers—can yield significant gains in mathematical, logical, and scientific problem solving.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p id="S2.p6.1" class="ltx_p"><span id="S2.p6.1.1" class="ltx_text ltx_font_bold">From PPO to GRPO:</span>
+Reinforcement learning has become a central approach for improving long chain-of-thought reasoning in large language models. Early systems relied on Proximal Policy Optimization (PPO)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="Proximal policy optimization algorithms" class="ltx_ref">14</a>]</cite>, but directly applying PPO to language generation introduces sparse-reward credit assignment issues and unstable updates. Recent work therefore introduced GRPO, a PPO-style policy optimization method tailored for LLMs, incorporating token-level credit assignment and entropy preservation to enhance stability in long-form reasoning tasks, and establishing the baseline for systems such as DeepSeek R1-Zero.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p id="S2.p7.1" class="ltx_p"><span id="S2.p7.1.1" class="ltx_text ltx_font_bold">From GRPO to DAPO:</span>
+While recent reasoning LLMs like OpenAI’s o1 and DeepSeek’s R1 have demonstrated impressive performance via test-time scaling and reinforcement learning (RL), the full set of algorithmic details behind their training pipelines remains largely undisclosed. The evolution of these methods sits within a broader theoretical effort to refine policy gradients, like KTO<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib23" title="KTO: model alignment as prospect theoretic optimization" class="ltx_ref">4</a>]</cite>, which frames alignment through the lens of prospect theory. DAPO (Decoupled Clip and Dynamic sAmpling Policy Optimization)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib14" title="Dapo: an open-source llm reinforcement learning system at scale" class="ltx_ref">22</a>]</cite> explicitly highlights this reproducibility gap: when they ran a naïve GRPO baseline on a Qwen2.5-32B model<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib15" title="Qwen2.5 technical report" class="ltx_ref">20</a>]</cite>, they only achieved  30 points on the AIME benchmark — significantly below DeepSeek-R1’s  47 points. This performance gap motivated the design of DAPO’s core techniques and the authors open-sourced not just the algorithm but also their training code and data to enable reproducibility.</p>
+</div>
+</section>
+<section id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">3 </span>Preliminary</h2>
+
+<section id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.1 </span>Language Models as Stochastic Polices</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p id="S3.SS1.p1.4" class="ltx_p">We frame the task of text generation as a sequential decision-making problem. A LLM is treated as a stochastic policy, denoted by <math id="S3.SS1.p1.1.m1" class="ltx_Math" alttext="\pi_{\theta}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mi>θ</mi></msub><annotation encoding="application/x-tex">\pi_{\theta}</annotation></semantics></math>, parameterized by weights <math id="S3.SS1.p1.2.m2" class="ltx_Math" alttext="\theta" display="inline" intent=":literal"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math>. For each prompt <math id="S3.SS1.p1.3.m3" class="ltx_Math" alttext="q" display="inline" intent=":literal"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>, the policy generates a sequence of tokens <math id="S3.SS1.p1.4.m4" class="ltx_Math" alttext="o=(y_{1},y_{2},...,y_{r})" display="inline" intent=":literal"><semantics><mrow><mi>o</mi><mo>=</mo><mrow><mo stretchy="false">(</mo><msub><mi>y</mi><mn>1</mn></msub><mo>,</mo><msub><mi>y</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>y</mi><mi>r</mi></msub><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">o=(y_{1},y_{2},...,y_{r})</annotation></semantics></math>. Then the probability of the entire sequence is the product of conditional token probabilities:</p>
+<table id="S3.E1" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S3.E1.m1" class="ltx_Math" alttext="\pi_{\theta}(o|q)=\prod_{t=1}^{T}\pi_{\theta}(y_{t}|q,y_{&lt;t})" display="block" intent=":literal"><semantics><mrow><mrow><msub><mi>π</mi><mi>θ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><mi>o</mi><mo fence="false">|</mo><mi>q</mi></mrow><mo stretchy="false">)</mo></mrow></mrow><mo rspace="0.111em">=</mo><mrow><munderover><mo movablelimits="false">∏</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>T</mi></munderover><mrow><msub><mi>π</mi><mi>θ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>y</mi><mi>t</mi></msub><mo fence="false">|</mo><mrow><mi>q</mi><mo>,</mo><msub><mi>y</mi><mrow><mi></mi><mo>&lt;</mo><mi>t</mi></mrow></msub></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\pi_{\theta}(o|q)=\prod_{t=1}^{T}\pi_{\theta}(y_{t}|q,y_{&lt;t})</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(1)</span></td>
+</tr></tbody>
+</table>
+<p id="S3.SS1.p1.7" class="ltx_p">The goal is to optimize <math id="S3.SS1.p1.5.m1" class="ltx_Math" alttext="\theta" display="inline" intent=":literal"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math> such that sequences sampled from <math id="S3.SS1.p1.6.m2" class="ltx_Math" alttext="\pi_{\theta}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mi>θ</mi></msub><annotation encoding="application/x-tex">\pi_{\theta}</annotation></semantics></math> are highly valued by a given reawrd function <math id="S3.SS1.p1.7.m3" class="ltx_Math" alttext="R(o)" display="inline" intent=":literal"><semantics><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">R(o)</annotation></semantics></math>.</p>
+</div>
+</section>
+<section id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.2 </span>Group Relative Policy Optimization(GRPO)</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p id="S3.SS2.p1.1" class="ltx_p">Group Relative Policy Optimization<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="Deepseekmath: pushing the limits of mathematical reasoning in open language models" class="ltx_ref">15</a>]</cite> is an off-policy, critic-free version of the PPO<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="Proximal policy optimization algorithms" class="ltx_ref">14</a>]</cite> algorithm. It improves sample efficiency and stabilizes training by utilizing an off-policy framework and clipping the importance sampling ratio.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p id="S3.SS2.p2.6" class="ltx_p">For a given prompt <math id="S3.SS2.p2.1.m1" class="ltx_Math" alttext="q" display="inline" intent=":literal"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>, the old policy <math id="S3.SS2.p2.2.m2" class="ltx_Math" alttext="\pi_{\theta_{old}}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><msub><mi>θ</mi><mrow><mi>o</mi><mo lspace="0em" rspace="0em">​</mo><mi>l</mi><mo lspace="0em" rspace="0em">​</mo><mi>d</mi></mrow></msub></msub><annotation encoding="application/x-tex">\pi_{\theta_{old}}</annotation></semantics></math> generates a group of <math id="S3.SS2.p2.3.m3" class="ltx_Math" alttext="G" display="inline" intent=":literal"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math> responses <math id="S3.SS2.p2.4.m4" class="ltx_Math" alttext="{o_{1},...,o_{G}}" display="inline" intent=":literal"><semantics><mrow><msub><mi>o</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>o</mi><mi>G</mi></msub></mrow><annotation encoding="application/x-tex">{o_{1},...,o_{G}}</annotation></semantics></math>. Each response <math id="S3.SS2.p2.5.m5" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> receives a sequence-level reward <math id="S3.SS2.p2.6.m6" class="ltx_Math" alttext="R(o_{i})" display="inline" intent=":literal"><semantics><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">R(o_{i})</annotation></semantics></math> and it’s used to compute the advantage for each response.</p>
+<table id="S3.E2" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S3.E2.m1" class="ltx_Math" alttext="\hat{A_{i}}=\frac{R(o_{i})-\mu_{R}}{\sigma_{R}+\epsilon}" display="block" intent=":literal"><semantics><mrow><mover accent="true"><msub><mi>A</mi><mi>i</mi></msub><mo>^</mo></mover><mo>=</mo><mfrac><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><msub><mi>μ</mi><mi>R</mi></msub></mrow><mrow><msub><mi>σ</mi><mi>R</mi></msub><mo>+</mo><mi>ϵ</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\hat{A_{i}}=\frac{R(o_{i})-\mu_{R}}{\sigma_{R}+\epsilon}</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(2)</span></td>
+</tr></tbody>
+</table>
+<p id="S3.SS2.p2.11" class="ltx_p">where <math id="S3.SS2.p2.7.m1" class="ltx_Math" alttext="\mu_{R}" display="inline" intent=":literal"><semantics><msub><mi>μ</mi><mi>R</mi></msub><annotation encoding="application/x-tex">\mu_{R}</annotation></semantics></math> and <math id="S3.SS2.p2.8.m2" class="ltx_Math" alttext="\sigma_{R}" display="inline" intent=":literal"><semantics><msub><mi>σ</mi><mi>R</mi></msub><annotation encoding="application/x-tex">\sigma_{R}</annotation></semantics></math> are the mean and standard deviation of rewards in <math id="S3.SS2.p2.9.m3" class="ltx_Math" alttext="O_{q}" display="inline" intent=":literal"><semantics><msub><mi>O</mi><mi>q</mi></msub><annotation encoding="application/x-tex">O_{q}</annotation></semantics></math>.
+
+<br class="ltx_break">Since the policy <math id="S3.SS2.p2.10.m4" class="ltx_Math" alttext="\pi_{\theta}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mi>θ</mi></msub><annotation encoding="application/x-tex">\pi_{\theta}</annotation></semantics></math> is autoregressive, the optimization objective must be formulated at the token level. The advantage <math id="S3.SS2.p2.11.m5" class="ltx_Math" alttext="\hat{A_{i}}" display="inline" intent=":literal"><semantics><mover accent="true"><msub><mi>A</mi><mi>i</mi></msub><mo>^</mo></mover><annotation encoding="application/x-tex">\hat{A_{i}}</annotation></semantics></math> is a sequence-level quantity, but it is distributed as a constant credit to every token-level generation step within that sequence. The full GRPO objective is thus given by:</p>
+<table id="S3.E3" class="ltx_equationgroup ltx_eqn_table">
+<tbody>
+<tr id="S3.E3X" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_eqn_cell"></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math id="S3.E3X.2.1.1.m1" class="ltx_Math" alttext="\displaystyle\mathcal{J}_{\text{GRPO}}(\theta)" display="inline" intent=":literal"><semantics><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒥</mi><mtext>GRPO</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\displaystyle\mathcal{J}_{\text{GRPO}}(\theta)</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="2" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup ltx_align_right">(3)</span></td>
+</tr>
+<tr id="S3.E3Xa" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math id="S3.E3Xa.2.1.1.m1" class="ltx_Math" alttext="\displaystyle=" display="inline" intent=":literal"><semantics><mo>=</mo><annotation encoding="application/x-tex">\displaystyle=</annotation></semantics></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math id="S3.E3Xa.3.2.2.m1" class="ltx_Math" alttext="\displaystyle\mathbb{E}_{q\sim P(Q),\{o_{i}\}\sim\pi_{\theta_{\text{old}}}}\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_{i}|}\sum_{t=1}^{|o_{i}|}L_{\text{clip}}(o_{i,t},\theta)\right]" display="inline" intent=":literal"><semantics><mrow><msub><mi>𝔼</mi><mrow><mrow><mi>q</mi><mo>∼</mo><mrow><mi>P</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>Q</mi><mo stretchy="false">)</mo></mrow></mrow></mrow><mo>,</mo><mrow><mrow><mo stretchy="false">{</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">}</mo></mrow><mo>∼</mo><msub><mi>π</mi><msub><mi>θ</mi><mtext>old</mtext></msub></msub></mrow></mrow></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo>[</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>G</mi></mfrac></mstyle><mo lspace="0em" rspace="0em">​</mo><mrow><mstyle displaystyle="true"><munderover><mo movablelimits="false">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover></mstyle><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mo stretchy="false">|</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">|</mo></mrow></mfrac></mstyle><mo lspace="0em" rspace="0em">​</mo><mrow><mstyle displaystyle="true"><munderover><mo movablelimits="false">∑</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo stretchy="false">|</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">|</mo></mrow></munderover></mstyle><mrow><msub><mi>L</mi><mtext>clip</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></mrow></mrow><mo>]</mo></mrow></mrow><annotation encoding="application/x-tex">\displaystyle\mathbb{E}_{q\sim P(Q),\{o_{i}\}\sim\pi_{\theta_{\text{old}}}}\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_{i}|}\sum_{t=1}^{|o_{i}|}L_{\text{clip}}(o_{i,t},\theta)\right]</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p id="S3.SS2.p3.1" class="ltx_p">where <math id="S3.SS2.p3.1.m1" class="ltx_Math" alttext="L_{\text{clip}}(o_{i,t},\theta)" display="inline" intent=":literal"><semantics><mrow><msub><mi>L</mi><mtext>clip</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">L_{\text{clip}}(o_{i,t},\theta)</annotation></semantics></math> is the token-level clipped surrogate objective:</p>
+<table id="S3.E4" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S3.E4.m1" class="ltx_Math" alttext="\begin{split}\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)&amp;=\min\left(w(\mathbf{o}_{i,t}|\theta)\hat{A}_{i},\right.\\
+&amp;\quad\left.\text{clip}(w(\mathbf{o}_{i,t}|\theta),1-\epsilon,1+\epsilon)\hat{A}_{i}\right)\end{split}" display="block" intent=":literal"><semantics><mtable columnspacing="0pt" displaystyle="true" rowspacing="0pt"><mtr><mtd class="ltx_align_right" columnalign="right"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mtext>clip</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow></mtd><mtd class="ltx_align_left" columnalign="left"><mrow><mo>=</mo><mi>min</mi><mrow><mo>(</mo><mi>w</mi><mrow><mo stretchy="false">(</mo><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo fence="false" rspace="0.167em" stretchy="false">|</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow><msub><mover accent="true"><mi>A</mi><mo>^</mo></mover><mi>i</mi></msub><mo>,</mo></mrow></mrow></mtd></mtr><mtr><mtd></mtd><mtd class="ltx_align_left" columnalign="left"><mrow><mtext>clip</mtext><mrow><mo stretchy="false">(</mo><mi>w</mi><mrow><mo stretchy="false">(</mo><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo fence="false" rspace="0.167em" stretchy="false">|</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow><mo>,</mo><mn>1</mn><mo>−</mo><mi>ϵ</mi><mo>,</mo><mn>1</mn><mo>+</mo><mi>ϵ</mi><mo stretchy="false">)</mo></mrow><msub><mover accent="true"><mi>A</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{split}\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)&amp;=\min\left(w(\mathbf{o}_{i,t}|\theta)\hat{A}_{i},\right.\\
+&amp;\quad\left.\text{clip}(w(\mathbf{o}_{i,t}|\theta),1-\epsilon,1+\epsilon)\hat{A}_{i}\right)\end{split}</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(4)</span></td>
+</tr></tbody>
+</table>
+<p id="S3.SS2.p3.5" class="ltx_p">The per-token importance ratio is <math id="S3.SS2.p3.2.m1" class="ltx_Math" alttext="w(\mathbf{o}_{i,t}|\theta)=\frac{\pi_{\theta}(y_{t}|q,y_{&lt;t})}{\pi_{\theta_{\text{old}}}(y_{t}|q,y_{&lt;t})}" display="inline" intent=":literal"><semantics><mrow><mrow><mi>w</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo fence="false">|</mo><mi>θ</mi></mrow><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi>π</mi><mi>θ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>y</mi><mi>t</mi></msub><mo fence="false">|</mo><mrow><mi>q</mi><mo>,</mo><msub><mi>y</mi><mrow><mi></mi><mo>&lt;</mo><mi>t</mi></mrow></msub></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow><mrow><msub><mi>π</mi><msub><mi>θ</mi><mtext>old</mtext></msub></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>y</mi><mi>t</mi></msub><mo fence="false">|</mo><mrow><mi>q</mi><mo>,</mo><msub><mi>y</mi><mrow><mi></mi><mo>&lt;</mo><mi>t</mi></mrow></msub></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac></mrow><annotation encoding="application/x-tex">w(\mathbf{o}_{i,t}|\theta)=\frac{\pi_{\theta}(y_{t}|q,y_{&lt;t})}{\pi_{\theta_{\text{old}}}(y_{t}|q,y_{&lt;t})}</annotation></semantics></math>, and <math id="S3.SS2.p3.3.m2" class="ltx_Math" alttext="\varepsilon" display="inline" intent=":literal"><semantics><mi>ε</mi><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math> is the clipping hyperparameter. Often, a KL-divergence penalty, <math id="S3.SS2.p3.4.m3" class="ltx_math_unparsed" alttext="-\beta D_{\text{KL}}[\pi_{\theta}||\pi_{\text{ref}}]" display="inline" intent=":literal"><semantics><mrow><mo>−</mo><mi>β</mi><msub><mi>D</mi><mtext>KL</mtext></msub><mrow><mo stretchy="false">[</mo><msub><mi>π</mi><mi>θ</mi></msub><mo fence="false" rspace="0.167em" stretchy="false">|</mo><mo fence="false" rspace="0.167em" stretchy="false">|</mo><msub><mi>π</mi><mtext>ref</mtext></msub><mo stretchy="false">]</mo></mrow></mrow><annotation encoding="application/x-tex">-\beta D_{\text{KL}}[\pi_{\theta}||\pi_{\text{ref}}]</annotation></semantics></math>, is added to regularize the policy and prevent it from deviating too far from a trusted reference policy <math id="S3.SS2.p3.5.m4" class="ltx_Math" alttext="\pi_{\text{ref}}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mtext>ref</mtext></msub><annotation encoding="application/x-tex">\pi_{\text{ref}}</annotation></semantics></math> (e.g., the initial SFT model).</p>
+</div>
+</section>
+</section>
+<section id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">4 </span>Methodology</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p id="S4.p1.1" class="ltx_p">In this section, we present Lambda Policy Optimization (LambdaPO). We begin by dissecting the information-theoretic limitations of scalar baseline methods like GRPO. We then formally derive our Pairwise Decomposed Advantage (PDA) estimator, provide a theoretical intuition regarding its gradient dynamics, and conclude with the complete algorithmic framework.</p>
+</div>
+<figure id="S4.F1" class="ltx_figure"><img src="2605.19416v1/x1.png" id="S4.F1.g1" class="ltx_graphics ltx_img_landscape" width="830" height="410" alt="Refer to caption">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span id="S4.F1.6.1" class="ltx_text ltx_font_bold">The architectural evolution from GRPO to LambdaPO.</span> Both frameworks generate a cohort of outputs <math id="S4.F1.3.m1" class="ltx_Math" alttext="{o_{1},...,o_{G}}" display="inline" intent=":literal"><semantics><mrow><msub><mi>o</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>o</mi><mi>G</mi></msub></mrow><annotation encoding="application/x-tex">{o_{1},...,o_{G}}</annotation></semantics></math> from a query <math id="S4.F1.4.m2" class="ltx_Math" alttext="q" display="inline" intent=":literal"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>. GRPO (Top) derives advantages via Z-score normalization using a standard reward model. In contrast, LambdaPO (Bottom) enhances it by (1) incorporating semantic density signals into the reward, and (2) replacing the scalar baseline with a fully-connected pairwise comparison mechanism, enabling the policy to learn from the relative strengths of all generated trajectories.</figcaption>
+</figure>
+<section id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.1 </span>Revisiting the Relational Bottleneck in GRPO</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p id="S4.SS1.p1.3" class="ltx_p">Group Relative Policy Optimization (GRPO) departs from conventional actor–critic methods by eliminating an explicit, learned value function and instead normalizing rewards within a locally sampled cohort of trajectories. Concretely, given a query <math id="S4.SS1.p1.1.m1" class="ltx_Math" alttext="q" display="inline" intent=":literal"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math> and its associated output set <math id="S4.SS1.p1.2.m2" class="ltx_Math" alttext="\mathcal{O}_{q}=\{o_{1},\dots,o_{K}\}" display="inline" intent=":literal"><semantics><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub><mo>=</mo><mrow><mo stretchy="false">{</mo><msub><mi>o</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>o</mi><mi>K</mi></msub><mo stretchy="false">}</mo></mrow></mrow><annotation encoding="application/x-tex">\mathcal{O}_{q}=\{o_{1},\dots,o_{K}\}</annotation></semantics></math>, the advantage assigned to a trajectory <math id="S4.SS1.p1.3.m3" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> is computed via a centered statistic,</p>
+<table id="S4.E5" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E5.m1" class="ltx_Math" alttext="\hat{A}_{i}\;\propto\;R(o_{i})-\mu_{\mathcal{O}}," display="block" intent=":literal"><semantics><mrow><mrow><msub><mover accent="true"><mi>A</mi><mo>^</mo></mover><mi>i</mi></msub><mo lspace="0.558em" rspace="0.558em">∝</mo><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><msub><mi>μ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub></mrow></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">\hat{A}_{i}\;\propto\;R(o_{i})-\mu_{\mathcal{O}},</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(5)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS1.p1.6" class="ltx_p">where <math id="S4.SS1.p1.4.m1" class="ltx_Math" alttext="\mu_{\mathcal{O}}" display="inline" intent=":literal"><semantics><msub><mi>μ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub><annotation encoding="application/x-tex">\mu_{\mathcal{O}}</annotation></semantics></math> denotes the empirical mean reward over <math id="S4.SS1.p1.5.m2" class="ltx_Math" alttext="\mathcal{O}_{q}" display="inline" intent=":literal"><semantics><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub><annotation encoding="application/x-tex">\mathcal{O}_{q}</annotation></semantics></math> (optionally rescaled by the standard deviation <math id="S4.SS1.p1.6.m3" class="ltx_Math" alttext="\sigma_{\mathcal{O}}" display="inline" intent=":literal"><semantics><msub><mi>σ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub><annotation encoding="application/x-tex">\sigma_{\mathcal{O}}</annotation></semantics></math>). This design choice yields substantial computational savings and simplifies optimization, as discussed in Section 3.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p id="S4.SS1.p2.4" class="ltx_p">Despite these practical benefits, this form of aggregation introduces a fundamental limitation that we refer to as the <em id="S4.SS1.p2.4.1" class="ltx_emph ltx_font_italic">relational bottleneck</em>. By reducing the cohort <math id="S4.SS1.p2.1.m1" class="ltx_Math" alttext="\mathcal{O}_{q}" display="inline" intent=":literal"><semantics><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub><annotation encoding="application/x-tex">\mathcal{O}_{q}</annotation></semantics></math> to a small set of scalar moments—typically <math id="S4.SS1.p2.2.m2" class="ltx_Math" alttext="(\mu_{\mathcal{O}},\sigma_{\mathcal{O}})" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">(</mo><msub><mi>μ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub><mo>,</mo><msub><mi>σ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(\mu_{\mathcal{O}},\sigma_{\mathcal{O}})</annotation></semantics></math>—GRPO discards the richer relational structure encoded in the joint distribution of peer trajectories. In particular, the resulting baseline is permutation invariant: it is insensitive to which specific peers outperform or underperform <math id="S4.SS1.p2.3.m3" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math>, and only reflects how <math id="S4.SS1.p2.4.m4" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> compares to an undifferentiated average.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p id="S4.SS1.p3.4" class="ltx_p">This invariance has important consequences for the learning dynamics. From an optimization perspective, the mean-centered baseline acts as a form of low-pass filter on the policy gradient. High-frequency relational information—such as fine-grained rank orderings or asymmetric performance gaps among candidates—is suppressed. For example, knowing that trajectory <math id="S4.SS1.p3.1.m1" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> is slightly better than <math id="S4.SS1.p3.2.m2" class="ltx_Math" alttext="o_{j}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>j</mi></msub><annotation encoding="application/x-tex">o_{j}</annotation></semantics></math> but substantially worse than <math id="S4.SS1.p3.3.m3" class="ltx_Math" alttext="o_{k}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>k</mi></msub><annotation encoding="application/x-tex">o_{k}</annotation></semantics></math> defines a directional preference structure that could guide targeted parameter updates. In contrast, a comparison solely against <math id="S4.SS1.p3.4.m4" class="ltx_Math" alttext="\mu_{\mathcal{O}}" display="inline" intent=":literal"><semantics><msub><mi>μ</mi><mi class="ltx_font_mathcaligraphic">𝒪</mi></msub><annotation encoding="application/x-tex">\mu_{\mathcal{O}}</annotation></semantics></math> collapses these distinctions into a single scalar signal, obscuring which improvements are most salient.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p id="S4.SS1.p4.1" class="ltx_p">The impact of this bottleneck is especially pronounced in rank-sensitive domains, including multi-step reasoning, program synthesis, and other structured generation tasks. In such settings, progress often hinges on subtle qualitative differences between high-performing trajectories rather than coarse separation from the mean. By failing to preserve pairwise or higher-order comparisons within <math id="S4.SS1.p4.1.m1" class="ltx_Math" alttext="\mathcal{O}_{q}" display="inline" intent=":literal"><semantics><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub><annotation encoding="application/x-tex">\mathcal{O}_{q}</annotation></semantics></math>, GRPO provides an attenuated and sometimes ambiguous credit-assignment signal. As a result, even when multiple strong candidates are present, the algorithm may struggle to consistently reinforce the most informative distinctions among them.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p id="S4.SS1.p5.1" class="ltx_p">Taken together, these observations suggest that while GRPO’s statistical baseline is efficient, its coarse relational encoding can limit representational and optimization fidelity. Addressing this relational bottleneck—by reintroducing richer peerwise or distribution-aware comparisons—appears crucial for improving credit assignment and achieving finer-grained discrimination among competing trajectories, without forfeiting the scalability advantages that motivate GRPO in the first place.</p>
+</div>
+</section>
+<section id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.2 </span>Lambda Policy Optimization</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p id="S4.SS2.p1.1" class="ltx_p">To mitigate the relational bottleneck inherent in scalar-baseline policy optimization, we introduce <em id="S4.SS2.p1.1.1" class="ltx_emph ltx_font_italic">Lambda Policy Optimization</em> (LambdaPO). The central idea of LambdaPO lies in how the advantage function is conceptualized and computed. Instead of defining advantage as a deviation from a single global baseline (e.g., a mean or value estimate), LambdaPO models advantage as an aggregate of <em id="S4.SS2.p1.1.2" class="ltx_emph ltx_font_italic">pairwise preferences</em> among trajectories, thereby embedding relational structure directly into the optimization signal.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p id="S4.SS2.p2.3" class="ltx_p">Concretely, we define the <em id="S4.SS2.p2.3.1" class="ltx_emph ltx_font_italic">Pairwise Decomposed Advantage</em> (PDA), denoted by <math id="S4.SS2.p2.1.m1" class="ltx_Math" alttext="A_{\lambda}" display="inline" intent=":literal"><semantics><msub><mi>A</mi><mi>λ</mi></msub><annotation encoding="application/x-tex">A_{\lambda}</annotation></semantics></math>, for a trajectory <math id="S4.SS2.p2.2.m2" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> sampled from a group of <math id="S4.SS2.p2.3.m3" class="ltx_Math" alttext="G" display="inline" intent=":literal"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math> candidate trajectories. The PDA is given by</p>
+<table id="S4.E6" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E6.m1" class="ltx_Math" alttext="A_{\lambda}(o_{i})=\frac{1}{G-1}\sum_{\begin{subarray}{c}j=1\\
+j\neq i\end{subarray}}^{G}\Delta R_{ij}\;\sigma\!\left(\frac{\Delta s_{ij}}{\tau}\right)," display="block" intent=":literal"><semantics><mrow><mrow><mrow><msub><mi>A</mi><mi>λ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mrow><mi>G</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><munderover><mo movablelimits="false">∑</mo><mtable rowspacing="0pt"><mtr><mtd><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow></mtd></mtr><mtr><mtd><mrow><mi>j</mi><mo>≠</mo><mi>i</mi></mrow></mtd></mtr></mtable><mi>G</mi></munderover><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub><mo lspace="0em" rspace="0em">​</mo><mpadded style="width:0.437em;" width="0.437em"><mi>σ</mi></mpadded><mo lspace="0em" rspace="0em">​</mo><mrow><mo>(</mo><mfrac><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>s</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mi>τ</mi></mfrac><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">A_{\lambda}(o_{i})=\frac{1}{G-1}\sum_{\begin{subarray}{c}j=1\\
+j\neq i\end{subarray}}^{G}\Delta R_{ij}\;\sigma\!\left(\frac{\Delta s_{ij}}{\tau}\right),</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(6)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS2.p2.5" class="ltx_p">where each term in the summation captures the relative dominance of <math id="S4.SS2.p2.4.m1" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> over a peer trajectory <math id="S4.SS2.p2.5.m2" class="ltx_Math" alttext="o_{j}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>j</mi></msub><annotation encoding="application/x-tex">o_{j}</annotation></semantics></math>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p id="S4.SS2.p3.1" class="ltx_p">Here, <math id="S4.SS2.p3.1.m1" class="ltx_Math" alttext="\Delta R_{ij}=R(o_{i})-R(o_{j})" display="inline" intent=":literal"><semantics><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo>=</mo><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>j</mi></msub><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\Delta R_{ij}=R(o_{i})-R(o_{j})</annotation></semantics></math> denotes the extrinsic utility difference between two trajectories. This reward signal subsumes both binary task correctness and dense reasoning-alignment feedback (see <a href="#S4.SS3" title="4.3 Dense Reward Augmentation via Semantic Overlap ‣ 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Section</span> <span class="ltx_text ltx_ref_tag">4.3</span></a>), allowing LambdaPO to incorporate fine-grained supervision beyond sparse success signals. The quantity</p>
+<table id="S4.E7" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E7.m1" class="ltx_Math" alttext="\Delta s_{ij}=\log\pi_{\theta}(o_{i}\mid q)-\log\pi_{\theta}(o_{j}\mid q)" display="block" intent=":literal"><semantics><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>s</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo>=</mo><mrow><mrow><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><msub><mi>π</mi><mi>θ</mi></msub></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>o</mi><mi>i</mi></msub><mo>∣</mo><mi>q</mi></mrow><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><mrow><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><msub><mi>π</mi><mi>θ</mi></msub></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>o</mi><mi>j</mi></msub><mo>∣</mo><mi>q</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\Delta s_{ij}=\log\pi_{\theta}(o_{i}\mid q)-\log\pi_{\theta}(o_{j}\mid q)</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(7)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS2.p3.7" class="ltx_p">represents the intrinsic log-probability gap induced by the current policy <math id="S4.SS2.p3.2.m1" class="ltx_Math" alttext="\pi_{\theta}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mi>θ</mi></msub><annotation encoding="application/x-tex">\pi_{\theta}</annotation></semantics></math>, reflecting the model’s relative confidence in generating <math id="S4.SS2.p3.3.m2" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> versus <math id="S4.SS2.p3.4.m3" class="ltx_Math" alttext="o_{j}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>j</mi></msub><annotation encoding="application/x-tex">o_{j}</annotation></semantics></math> given the same query <math id="S4.SS2.p3.5.m4" class="ltx_Math" alttext="q" display="inline" intent=":literal"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>. The logistic sigmoid function <math id="S4.SS2.p3.6.m5" class="ltx_Math" alttext="\sigma(\cdot)" display="inline" intent=":literal"><semantics><mrow><mi>σ</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mo lspace="0em" rspace="0em">⋅</mo><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\sigma(\cdot)</annotation></semantics></math> maps this confidence gap to a soft weighting factor, while the temperature parameter <math id="S4.SS2.p3.7.m6" class="ltx_Math" alttext="\tau\in\mathbb{R}^{+}" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>∈</mo><msup><mi>ℝ</mi><mo>+</mo></msup></mrow><annotation encoding="application/x-tex">\tau\in\mathbb{R}^{+}</annotation></semantics></math> controls the sharpness of the induced preference surface.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p id="S4.SS2.p4.1" class="ltx_p">Intuitively, this construction replaces a static, sample-independent baseline with a <em id="S4.SS2.p4.1.1" class="ltx_emph ltx_font_italic">dynamic, peer-conditioned reference</em>. A trajectory receives positive advantage not merely by exceeding an average reward, but by consistently outperforming alternative trajectories, weighted by how decisively the policy itself distinguishes between them. As a result, the learning signal becomes inherently comparative and context-aware.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p id="S4.SS2.p5.1" class="ltx_p">Equivalently, the PDA can be expressed in expectation form as</p>
+<table id="S4.E8" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E8.m1" class="ltx_Math" alttext="A_{\pi_{\theta}}(o_{i}):=\mathbb{E}_{o_{j}\sim\pi_{\theta}}\left[\Delta R(o_{i},o_{j})\cdot\sigma\!\left(\frac{1}{\tau}\Delta\log\pi_{\theta}(o_{i},o_{j})\right)\right]," display="block" intent=":literal"><semantics><mrow><mrow><mrow><msub><mi>A</mi><msub><mi>π</mi><mi>θ</mi></msub></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>:=</mo><mrow><msub><mi>𝔼</mi><mrow><msub><mi>o</mi><mi>j</mi></msub><mo>∼</mo><msub><mi>π</mi><mi>θ</mi></msub></mrow></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo>[</mo><mrow><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo>,</mo><msub><mi>o</mi><mi>j</mi></msub><mo rspace="0.055em" stretchy="false">)</mo></mrow></mrow><mo rspace="0.222em">⋅</mo><mpadded style="width:0.437em;" width="0.437em"><mi>σ</mi></mpadded></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo>(</mo><mrow><mfrac><mn>1</mn><mi>τ</mi></mfrac><mo lspace="0em" rspace="0em">​</mo><mi mathvariant="normal">Δ</mi><mo lspace="0.167em" rspace="0em">​</mo><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><msub><mi>π</mi><mi>θ</mi></msub></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo>,</mo><msub><mi>o</mi><mi>j</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">A_{\pi_{\theta}}(o_{i}):=\mathbb{E}_{o_{j}\sim\pi_{\theta}}\left[\Delta R(o_{i},o_{j})\cdot\sigma\!\left(\frac{1}{\tau}\Delta\log\pi_{\theta}(o_{i},o_{j})\right)\right],</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(8)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS2.p5.2" class="ltx_p">which highlights that LambdaPO estimates advantage by integrating reward differentials over a latent pairwise preference manifold induced by the policy.</p>
+</div>
+<figure id="alg1" class="ltx_float ltx_float_algorithm ltx_framed ltx_framed_top">
+<figcaption class="ltx_caption"><span class="ltx_tag ltx_tag_float"><span id="alg1.2.1.1" class="ltx_text ltx_font_bold">Algorithm 1</span> </span> Lambda Policy Optimization (LambdaPO)</figcaption>
+<div id="alg1.3" class="ltx_listing ltx_listing">
+<div id="alg1.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l1.1.1.1" class="ltx_text" style="font-size:80%;">1:</span></span> <span id="alg1.l1.2" class="ltx_text ltx_font_bold">Input:</span> Dataset <math id="alg1.l1.m1" class="ltx_Math" alttext="\mathcal{D}" display="inline" intent=":literal"><semantics><mi class="ltx_font_mathcaligraphic">𝒟</mi><annotation encoding="application/x-tex">\mathcal{D}</annotation></semantics></math>, Policy <math id="alg1.l1.m2" class="ltx_Math" alttext="\pi_{\theta}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mi>θ</mi></msub><annotation encoding="application/x-tex">\pi_{\theta}</annotation></semantics></math>, Reference <math id="alg1.l1.m3" class="ltx_Math" alttext="\pi_{\text{ref}}" display="inline" intent=":literal"><semantics><msub><mi>π</mi><mtext>ref</mtext></msub><annotation encoding="application/x-tex">\pi_{\text{ref}}</annotation></semantics></math>, Group size <math id="alg1.l1.m4" class="ltx_Math" alttext="G" display="inline" intent=":literal"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math>, Temperature <math id="alg1.l1.m5" class="ltx_Math" alttext="\tau" display="inline" intent=":literal"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>, KL coef <math id="alg1.l1.m6" class="ltx_Math" alttext="\beta" display="inline" intent=":literal"><semantics><mi>β</mi><annotation encoding="application/x-tex">\beta</annotation></semantics></math>.
+
+</div>
+<div id="alg1.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l2.1.1.1" class="ltx_text" style="font-size:80%;">2:</span></span> Initialize <math id="alg1.l2.m1" class="ltx_Math" alttext="\theta_{\text{old}}\leftarrow\theta" display="inline" intent=":literal"><semantics><mrow><msub><mi>θ</mi><mtext>old</mtext></msub><mo stretchy="false">←</mo><mi>θ</mi></mrow><annotation encoding="application/x-tex">\theta_{\text{old}}\leftarrow\theta</annotation></semantics></math>
+
+</div>
+<div id="alg1.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l3.1.1.1" class="ltx_text" style="font-size:80%;">3:</span></span> <span id="alg1.l3.2" class="ltx_text ltx_font_bold">repeat</span>
+
+
+</div>
+<div id="alg1.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l4.1.1.1" class="ltx_text" style="font-size:80%;">4:</span></span>  Sample prompt batch <math id="alg1.l4.m1" class="ltx_Math" alttext="B\sim\mathcal{D}" display="inline" intent=":literal"><semantics><mrow><mi>B</mi><mo>∼</mo><mi class="ltx_font_mathcaligraphic">𝒟</mi></mrow><annotation encoding="application/x-tex">B\sim\mathcal{D}</annotation></semantics></math>
+
+</div>
+<div id="alg1.l5" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l5.1.1.1" class="ltx_text" style="font-size:80%;">5:</span></span>  <span id="alg1.l5.2" class="ltx_text ltx_font_bold">for</span> each <math id="alg1.l5.m1" class="ltx_Math" alttext="q\in B" display="inline" intent=":literal"><semantics><mrow><mi>q</mi><mo>∈</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">q\in B</annotation></semantics></math> <span id="alg1.l5.3" class="ltx_text ltx_font_bold">do</span>
+
+
+
+</div>
+<div id="alg1.l6" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l6.1.1.1" class="ltx_text" style="font-size:80%;">6:</span></span>   <em id="alg1.l6.2" class="ltx_emph ltx_font_italic">// Rollout Phase</em>
+
+</div>
+<div id="alg1.l7" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l7.1.1.1" class="ltx_text" style="font-size:80%;">7:</span></span>   Generate cohort <math id="alg1.l7.m1" class="ltx_math_unparsed" alttext="\mathcal{O}_{q}=\{o_{1},\dots,o_{G}\}\sim\pi_{\theta_{\text{old}}}(\cdot|q)" display="inline" intent=":literal"><semantics><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub><mo>=</mo><mrow><mo stretchy="false">{</mo><msub><mi>o</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>o</mi><mi>G</mi></msub><mo stretchy="false">}</mo></mrow><mo>∼</mo><msub><mi>π</mi><msub><mi>θ</mi><mtext>old</mtext></msub></msub><mrow><mo stretchy="false">(</mo><mo lspace="0em" rspace="0em">⋅</mo><mo fence="false" rspace="0.167em" stretchy="false">|</mo><mi>q</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mathcal{O}_{q}=\{o_{1},\dots,o_{G}\}\sim\pi_{\theta_{\text{old}}}(\cdot|q)</annotation></semantics></math>
+
+</div>
+<div id="alg1.l8" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l8.1.1.1" class="ltx_text" style="font-size:80%;">8:</span></span>   Compute rewards <math id="alg1.l8.m1" class="ltx_Math" alttext="\mathcal{R}=\{R(o_{1}),\dots,R(o_{G})\}" display="inline" intent=":literal"><semantics><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>=</mo><mrow><mo stretchy="false">{</mo><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mn>1</mn></msub><mo stretchy="false">)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>G</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo stretchy="false">}</mo></mrow></mrow><annotation encoding="application/x-tex">\mathcal{R}=\{R(o_{1}),\dots,R(o_{G})\}</annotation></semantics></math>
+
+</div>
+<div id="alg1.l9" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l9.1.1.1" class="ltx_text" style="font-size:80%;">9:</span></span>   Compute sequence log-probs <math id="alg1.l9.m1" class="ltx_Math" alttext="s_{i}=\log\pi_{\theta_{\text{old}}}(o_{i}|q)" display="inline" intent=":literal"><semantics><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>=</mo><mrow><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><msub><mi>π</mi><msub><mi>θ</mi><mtext>old</mtext></msub></msub></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><msub><mi>o</mi><mi>i</mi></msub><mo fence="false">|</mo><mi>q</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">s_{i}=\log\pi_{\theta_{\text{old}}}(o_{i}|q)</annotation></semantics></math>
+
+</div>
+<div id="alg1.l10" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l10.1.1.1" class="ltx_text" style="font-size:80%;">10:</span></span>   <em id="alg1.l10.2" class="ltx_emph ltx_font_italic">// Advantage Estimation Phase</em>
+
+</div>
+<div id="alg1.l11" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l11.1.1.1" class="ltx_text" style="font-size:80%;">11:</span></span>   <span id="alg1.l11.2" class="ltx_text ltx_font_bold">for</span> <math id="alg1.l11.m1" class="ltx_Math" alttext="i=1" display="inline" intent=":literal"><semantics><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">i=1</annotation></semantics></math> <span id="alg1.l11.3" class="ltx_text ltx_font_bold">to</span> <math id="alg1.l11.m2" class="ltx_Math" alttext="G" display="inline" intent=":literal"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math> <span id="alg1.l11.4" class="ltx_text ltx_font_bold">do</span>
+
+
+
+</div>
+<div id="alg1.l12" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l12.1.1.1" class="ltx_text" style="font-size:80%;">12:</span></span>    <math id="alg1.l12.m1" class="ltx_Math" alttext="A_{i}\leftarrow 0" display="inline" intent=":literal"><semantics><mrow><msub><mi>A</mi><mi>i</mi></msub><mo stretchy="false">←</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">A_{i}\leftarrow 0</annotation></semantics></math>
+
+</div>
+<div id="alg1.l13" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l13.1.1.1" class="ltx_text" style="font-size:80%;">13:</span></span>    <span id="alg1.l13.2" class="ltx_text ltx_font_bold">for</span> <math id="alg1.l13.m1" class="ltx_Math" alttext="j=1" display="inline" intent=":literal"><semantics><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">j=1</annotation></semantics></math> <span id="alg1.l13.3" class="ltx_text ltx_font_bold">to</span> <math id="alg1.l13.m2" class="ltx_Math" alttext="G" display="inline" intent=":literal"><semantics><mi>G</mi><annotation encoding="application/x-tex">G</annotation></semantics></math>, <math id="alg1.l13.m3" class="ltx_Math" alttext="j\neq i" display="inline" intent=":literal"><semantics><mrow><mi>j</mi><mo>≠</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j\neq i</annotation></semantics></math> <span id="alg1.l13.4" class="ltx_text ltx_font_bold">do</span>
+
+
+
+</div>
+<div id="alg1.l14" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l14.1.1.1" class="ltx_text" style="font-size:80%;">14:</span></span>     <math id="alg1.l14.m1" class="ltx_Math" alttext="\Delta R_{ij}\leftarrow R(o_{i})-R(o_{j})" display="inline" intent=":literal"><semantics><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo stretchy="false">←</mo><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>j</mi></msub><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\Delta R_{ij}\leftarrow R(o_{i})-R(o_{j})</annotation></semantics></math>
+
+</div>
+<div id="alg1.l15" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l15.1.1.1" class="ltx_text" style="font-size:80%;">15:</span></span>     <math id="alg1.l15.m1" class="ltx_Math" alttext="\Delta s_{ij}\leftarrow s_{i}-s_{j}" display="inline" intent=":literal"><semantics><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>s</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo stretchy="false">←</mo><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>−</mo><msub><mi>s</mi><mi>j</mi></msub></mrow></mrow><annotation encoding="application/x-tex">\Delta s_{ij}\leftarrow s_{i}-s_{j}</annotation></semantics></math>
+
+</div>
+<div id="alg1.l16" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l16.1.1.1" class="ltx_text" style="font-size:80%;">16:</span></span>     <math id="alg1.l16.m1" class="ltx_Math" alttext="A_{i}\leftarrow A_{i}+\Delta R_{ij}\cdot\sigma(\Delta s_{ij}/\tau)" display="inline" intent=":literal"><semantics><mrow><msub><mi>A</mi><mi>i</mi></msub><mo stretchy="false">←</mo><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>+</mo><mrow><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo lspace="0.222em" rspace="0.222em">⋅</mo><mi>σ</mi></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>s</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><mo>/</mo><mi>τ</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">A_{i}\leftarrow A_{i}+\Delta R_{ij}\cdot\sigma(\Delta s_{ij}/\tau)</annotation></semantics></math>
+
+</div>
+<div id="alg1.l17" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l17.1.1.1" class="ltx_text" style="font-size:80%;">17:</span></span>    <span id="alg1.l17.2" class="ltx_text ltx_font_bold">end</span> <span id="alg1.l17.3" class="ltx_text ltx_font_bold">for</span>
+</div>
+<div id="alg1.l18" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l18.1.1.1" class="ltx_text" style="font-size:80%;">18:</span></span>    <math id="alg1.l18.m1" class="ltx_Math" alttext="A_{\lambda}(o_{i})\leftarrow A_{i}/G" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>A</mi><mi>λ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo stretchy="false">←</mo><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>/</mo><mi>G</mi></mrow></mrow><annotation encoding="application/x-tex">A_{\lambda}(o_{i})\leftarrow A_{i}/G</annotation></semantics></math>
+
+</div>
+<div id="alg1.l19" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l19.1.1.1" class="ltx_text" style="font-size:80%;">19:</span></span>   <span id="alg1.l19.2" class="ltx_text ltx_font_bold">end</span> <span id="alg1.l19.3" class="ltx_text ltx_font_bold">for</span>
+</div>
+<div id="alg1.l20" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l20.1.1.1" class="ltx_text" style="font-size:80%;">20:</span></span>   Normalize <math id="alg1.l20.m1" class="ltx_Math" alttext="A_{\lambda}" display="inline" intent=":literal"><semantics><msub><mi>A</mi><mi>λ</mi></msub><annotation encoding="application/x-tex">A_{\lambda}</annotation></semantics></math> over cohort (optional)
+
+</div>
+<div id="alg1.l21" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l21.1.1.1" class="ltx_text" style="font-size:80%;">21:</span></span>  <span id="alg1.l21.2" class="ltx_text ltx_font_bold">end</span> <span id="alg1.l21.3" class="ltx_text ltx_font_bold">for</span>
+</div>
+<div id="alg1.l22" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l22.1.1.1" class="ltx_text" style="font-size:80%;">22:</span></span>  <em id="alg1.l22.2" class="ltx_emph ltx_font_italic">// Optimization Phase</em>
+
+</div>
+<div id="alg1.l23" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l23.1.1.1" class="ltx_text" style="font-size:80%;">23:</span></span>  Update <math id="alg1.l23.m1" class="ltx_Math" alttext="\theta" display="inline" intent=":literal"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math> by maximizing the surrogate objective:
+
+</div>
+<div id="alg1.l24" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l24.1.1.1" class="ltx_text" style="font-size:80%;">24:</span></span>  <math id="alg1.l24.m1" class="ltx_Math" alttext="\mathcal{L}(\theta)=\mathbb{E}_{\mathcal{O}_{q}}\left[\frac{1}{|o_{i}|}\sum_{t}\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)-\beta\mathbb{D}_{\text{KL}}\right]" display="inline" intent=":literal"><semantics><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msub><mi>𝔼</mi><msub><mi class="ltx_font_mathcaligraphic">𝒪</mi><mi>q</mi></msub></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo>[</mo><mrow><mrow><mfrac><mn>1</mn><mrow><mo stretchy="false">|</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">|</mo></mrow></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><msub><mo>∑</mo><mi>t</mi></msub><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mtext>clip</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>−</mo><mrow><mi>β</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>𝔻</mi><mtext>KL</mtext></msub></mrow></mrow><mo>]</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">\mathcal{L}(\theta)=\mathbb{E}_{\mathcal{O}_{q}}\left[\frac{1}{|o_{i}|}\sum_{t}\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)-\beta\mathbb{D}_{\text{KL}}\right]</annotation></semantics></math>, where <math id="alg1.l24.m2" class="ltx_Math" alttext="\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)" display="inline" intent=":literal"><semantics><mrow><msub><mi class="ltx_font_mathcaligraphic">ℒ</mi><mtext>clip</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>𝐨</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>,</mo><mi>θ</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mathcal{L}_{\text{clip}}(\mathbf{o}_{i,t},\theta)</annotation></semantics></math> is given by Eq. <a href="#S3.E4" title="Equation 4 ‣ 3.2 Group Relative Policy Optimization(GRPO) ‣ 3 Preliminary ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+
+</div>
+<div id="alg1.l25" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l25.1.1.1" class="ltx_text" style="font-size:80%;">25:</span></span>  <math id="alg1.l25.m1" class="ltx_Math" alttext="\theta_{\text{old}}\leftarrow\theta" display="inline" intent=":literal"><semantics><mrow><msub><mi>θ</mi><mtext>old</mtext></msub><mo stretchy="false">←</mo><mi>θ</mi></mrow><annotation encoding="application/x-tex">\theta_{\text{old}}\leftarrow\theta</annotation></semantics></math>
+
+</div>
+<div id="alg1.l26" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l26.1.1.1" class="ltx_text" style="font-size:80%;">26:</span></span> <span id="alg1.l26.2" class="ltx_text ltx_font_bold">until</span> convergence
+
+</div>
+</div>
+</figure>
+</section>
+<section id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.3 </span>Dense Reward Augmentation via Semantic Overlap</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p id="S4.SS3.p1.1" class="ltx_p">Standard reinforcement learning for reasoning tasks typically relies on a binary outcome reward, <math id="S4.SS3.p1.1.m1" class="ltx_Math" alttext="R\in\{0,1\}" display="inline" intent=":literal"><semantics><mrow><mi>R</mi><mo>∈</mo><mrow><mo stretchy="false">{</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">}</mo></mrow></mrow><annotation encoding="application/x-tex">R\in\{0,1\}</annotation></semantics></math> which creates a sparse supervision signal. The policy struggles to distinguish between a good attempt that failed at the last step and a complete hallucination.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p id="S4.SS3.p2.3" class="ltx_p">To mitigate this, we augment the extrinsic utility with a Semantic Density Reward, <math id="S4.SS3.p2.1.m1" class="ltx_Math" alttext="R_{sem}" display="inline" intent=":literal"><semantics><msub><mi>R</mi><mrow><mi>s</mi><mo lspace="0em" rspace="0em">​</mo><mi>e</mi><mo lspace="0em" rspace="0em">​</mo><mi>m</mi></mrow></msub><annotation encoding="application/x-tex">R_{sem}</annotation></semantics></math>, which acts as a dense proxy for reasoning quality. Drawing inspiration from verification-based RL<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib24" title="Solving math word problems with process- and outcome-based feedback" class="ltx_ref">16</a>]</cite>, we leverage standard n-gram overlap metrics to quantify the alignment between the generated reasoning trace <math id="S4.SS3.p2.2.m2" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> and the ground-truth solution <math id="S4.SS3.p2.3.m3" class="ltx_Math" alttext="y^{*}" display="inline" intent=":literal"><semantics><msup><mi>y</mi><mo>∗</mo></msup><annotation encoding="application/x-tex">y^{*}</annotation></semantics></math>. Specifically, we utilize the ROUGE-L (Longest Common Subsequence)<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib13" title="ROUGE: a package for automatic evaluation of summaries" class="ltx_ref">8</a>]</cite> metric, which is particularly well-suited for reasoning tasks as it captures both the lexical overlap and the sequential structure of the logical deduction.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p id="S4.SS3.p3.1" class="ltx_p">We define the semantic reward as the ROUGE-L F1-score:</p>
+<table id="S4.E9" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E9.m1" class="ltx_Math" alttext="R_{\text{sem}}(o_{i})=\text{ROUGE-L}_{\text{F1}}(o_{i},y^{*})" display="block" intent=":literal"><semantics><mrow><mrow><msub><mi>R</mi><mtext>sem</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msub><mtext>ROUGE-L</mtext><mtext>F1</mtext></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo>,</mo><msup><mi>y</mi><mo>∗</mo></msup><mo stretchy="false">)</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">R_{\text{sem}}(o_{i})=\text{ROUGE-L}_{\text{F1}}(o_{i},y^{*})</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(9)</span></td>
+</tr></tbody>
+</table>
+</div>
+</section>
+<section id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.4 </span>Theoretical Explanation: Gradient Dynamics</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p id="S4.SS4.p1.2" class="ltx_p">The efficacy of LambdaPO stems from the unique kinematics of the resulting policy gradient. By substituting <math id="S4.SS4.p1.1.m1" class="ltx_Math" alttext="A_{\lambda}(o_{i})" display="inline" intent=":literal"><semantics><mrow><msub><mi>A</mi><mi>λ</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">A_{\lambda}(o_{i})</annotation></semantics></math> into the policy gradient theorem, the update for trajectory <math id="S4.SS4.p1.2.m2" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> becomes proportional to:</p>
+<table id="S4.E10" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E10.m1" class="ltx_Math" alttext="\nabla_{\theta}J\propto\sum_{j\neq i}\underbrace{(R(o_{i})-R(o_{j}))}_{\text{Direction \&amp; Magnitude}}\cdot\underbrace{\sigma\left(\frac{s_{i}-s_{j}}{\tau}\right)}_{\text{Confidence Weight}}\cdot\nabla_{\theta}\log\pi_{\theta}(o_{i})" display="block" intent=":literal"><semantics><mrow><mrow><msub><mo>∇</mo><mi>θ</mi></msub><mi>J</mi></mrow><mo rspace="0.111em">∝</mo><mrow><munder><mo movablelimits="false" rspace="0em">∑</mo><mrow><mi>j</mi><mo>≠</mo><mi>i</mi></mrow></munder><mrow><mrow><munder><munder accentunder="true"><mrow><mo stretchy="false">(</mo><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>j</mi></msub><mo stretchy="false">)</mo></mrow></mrow></mrow><mo rspace="0.055em" stretchy="false">)</mo></mrow><mo stretchy="true">⏟</mo></munder><mtext>Direction &amp; Magnitude</mtext></munder><mo rspace="0.222em">⋅</mo><munder><munder accentunder="true"><mrow><mi>σ</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo>(</mo><mfrac><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>−</mo><msub><mi>s</mi><mi>j</mi></msub></mrow><mi>τ</mi></mfrac><mo rspace="0.055em">)</mo></mrow></mrow><mo stretchy="true">⏟</mo></munder><mtext>Confidence Weight</mtext></munder><mo rspace="0.222em">⋅</mo><mrow><mrow><msub><mo rspace="0.167em">∇</mo><mi>θ</mi></msub><mi>log</mi></mrow><mo lspace="0.167em">⁡</mo><msub><mi>π</mi><mi>θ</mi></msub></mrow></mrow><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>o</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\nabla_{\theta}J\propto\sum_{j\neq i}\underbrace{(R(o_{i})-R(o_{j}))}_{\text{Direction \&amp; Magnitude}}\cdot\underbrace{\sigma\left(\frac{s_{i}-s_{j}}{\tau}\right)}_{\text{Confidence Weight}}\cdot\nabla_{\theta}\log\pi_{\theta}(o_{i})</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(10)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS4.p1.3" class="ltx_p">This structure reveals two critical properties:</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p id="S4.SS4.p2.1" class="ltx_p">1.<span id="S4.SS4.p2.1.1" class="ltx_text ltx_font_bold">Directional Coherence:</span> Unlike GRPO, where the sign of the advantage depends on the variance-sensitive group mean, LambdaPO’s gradient sign is strictly determined by the pairwise reward differential <math id="S4.SS4.p2.1.m1" class="ltx_Math" alttext="\Delta R_{ij}" display="inline" intent=":literal"><semantics><mrow><mi mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>i</mi><mo lspace="0em" rspace="0em">​</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\Delta R_{ij}</annotation></semantics></math>. This ensures that the optimization landscape is homeomorphic to the true reward landscape.</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<p id="S4.SS4.p3.1" class="ltx_p">2.<span id="S4.SS4.p3.1.1" class="ltx_text ltx_font_bold">Self-Annealing via Confidence:</span> The sigmoid term acts as a differentiable gate.</p>
+<ul id="S4.I1" class="ltx_itemize">
+<li id="S4.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S4.I1.i1.p1" class="ltx_para">
+<p id="S4.I1.i1.p1.4" class="ltx_p"><span id="S4.I1.i1.p1.4.1" class="ltx_text ltx_font_bold">Case I(Model Confusion):</span> When the policy cannot distinguish between <math id="S4.I1.i1.p1.1.m1" class="ltx_Math" alttext="o_{i}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>i</mi></msub><annotation encoding="application/x-tex">o_{i}</annotation></semantics></math> and <math id="S4.I1.i1.p1.2.m2" class="ltx_Math" alttext="o_{j}" display="inline" intent=":literal"><semantics><msub><mi>o</mi><mi>j</mi></msub><annotation encoding="application/x-tex">o_{j}</annotation></semantics></math> (i.e., <math id="S4.I1.i1.p1.3.m3" class="ltx_Math" alttext="s_{i}\approx s_{j}" display="inline" intent=":literal"><semantics><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>≈</mo><msub><mi>s</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">s_{i}\approx s_{j}</annotation></semantics></math>), <math id="S4.I1.i1.p1.4.m4" class="ltx_Math" alttext="\sigma\approx 0.5" display="inline" intent=":literal"><semantics><mrow><mi>σ</mi><mo>≈</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\sigma\approx 0.5</annotation></semantics></math>, allowing the full magnitude of the reward difference to drive learning.</p>
+</div>
+</li>
+<li id="S4.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S4.I1.i2.p1" class="ltx_para">
+<p id="S4.I1.i2.p1.2" class="ltx_p"><span id="S4.I1.i2.p1.2.1" class="ltx_text ltx_font_bold">Case II(Model Misalignment:</span> For example, when the model confidently ranks the worse trajectory higher (<math id="S4.I1.i2.p1.1.m1" class="ltx_Math" alttext="s_{j}\gg s_{i}" display="inline" intent=":literal"><semantics><mrow><msub><mi>s</mi><mi>j</mi></msub><mo>≫</mo><msub><mi>s</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">s_{j}\gg s_{i}</annotation></semantics></math> despite <math id="S4.I1.i2.p1.2.m2" class="ltx_Math" alttext="R_{i}&gt;R_{j}" display="inline" intent=":literal"><semantics><mrow><msub><mi>R</mi><mi>i</mi></msub><mo>&gt;</mo><msub><mi>R</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">R_{i}&gt;R_{j}</annotation></semantics></math>), the sigmoid term approaches 0, but the gradient with respect to the log-odds (derived from the implicit objective) creates a strong correction signal (analogous to the LambdaRank mechanism).</p>
+</div>
+</li>
+<li id="S4.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S4.I1.i3.p1" class="ltx_para">
+<p id="S4.I1.i3.p1.2" class="ltx_p"><span id="S4.I1.i3.p1.2.1" class="ltx_text ltx_font_bold">Case III(Convergence):</span> As the policy aligns with the reward (<math id="S4.I1.i3.p1.1.m1" class="ltx_Math" alttext="s_{i}\gg s_{j}" display="inline" intent=":literal"><semantics><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>≫</mo><msub><mi>s</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">s_{i}\gg s_{j}</annotation></semantics></math> for <math id="S4.I1.i3.p1.2.m2" class="ltx_Math" alttext="R_{i}&gt;R_{j}" display="inline" intent=":literal"><semantics><mrow><msub><mi>R</mi><mi>i</mi></msub><mo>&gt;</mo><msub><mi>R</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">R_{i}&gt;R_{j}</annotation></semantics></math>), the gradient contribution naturally decays, preventing over-optimization on established patterns and focusing capacity on unresolved distinctions.</p>
+</div>
+</li>
+</ul>
+</div>
+<div id="S4.SS4.p4" class="ltx_para">
+<p id="S4.SS4.p4.1" class="ltx_p">The temperature <math id="S4.SS4.p4.1.m1" class="ltx_Math" alttext="\tau" display="inline" intent=":literal"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math> further modulates this dynamic, serving as a spectral regularization term that prevents gradient saturation in the early stages of training.</p>
+</div>
+</section>
+<section id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">4.5 </span>The LambdaPO Algorithm</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p id="S4.SS5.p1.1" class="ltx_p">The complete training procedure integrates the Pairwise Decomposed Advantage into the PPO clipping mechanism. The algorithm preserves the critic-free efficiency of GRPO while maximizing the information extraction from each sampled cohort.</p>
+</div>
+</section>
+</section>
+<section id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<section id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.1 </span>Experimental Setup</h3>
+
+<section id="S5.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">5.1.1 </span>Datasets</h4>
+
+<div id="S5.SS1.SSS1.p1" class="ltx_para">
+<p id="S5.SS1.SSS1.p1.1" class="ltx_p">We focus our evaluation on mathematical reasoning, a domain characterized by strict logical dependencies and binary reward signals (correct/incorrect).</p>
+<ul id="S5.I1" class="ltx_itemize">
+<li id="S5.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i1.p1" class="ltx_para">
+<p id="S5.I1.i1.p1.1" class="ltx_p">RL Training Stage: We construct our training corpus using OpenR1-Math-220k and GSM8K<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib8" title="Training verifiers to solve math word problems" class="ltx_ref">3</a>]</cite>. This combination provides a diverse spectrum of problem difficulties, ranging from grade-school arithmetic to competition-level mathematics. For each training prompt, rewards are computed based on accuracy and format.</p>
+</div>
+</li>
+<li id="S5.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i2.p1" class="ltx_para">
+<p id="S5.I1.i2.p1.1" class="ltx_p">Evaluation Benchmarks: We report performance on three progressively challenging benchmarks: AIME24<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib9" title="American invitational mathematics examination (aime) 2024" class="ltx_ref">24</a>]</cite>, MATH-500<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib11" title="Let’s verify step by step" class="ltx_ref">7</a>]</cite>, and GPQA-Diamond<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib10" title="GPQA: a graduate-level google-proof q&amp;a benchmark" class="ltx_ref">12</a>]</cite>.</p>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section id="S5.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">5.1.2 </span>Configurations</h4>
+
+<div id="S5.SS1.SSS2.p1" class="ltx_para">
+<ul id="S5.I2" class="ltx_itemize">
+<li id="S5.I2.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I2.i1.p1" class="ltx_para">
+<p id="S5.I2.i1.p1.1" class="ltx_p">Baseline: We primarily compare LambdaPO against Group Relative Policy Optimization (GRPO). Since LambdaPO is architected as a direct, plug-and-play replacement for the advantage estimation module of GRPO, this comparison strictly isolates the contribution of the pairwise decomposition mechanism.</p>
+</div>
+</li>
+<li id="S5.I2.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I2.i2.p1" class="ltx_para">
+<p id="S5.I2.i2.p1.1" class="ltx_p">Models: We evaluate our method across different architectures and scales to assess generalization. Specifically, we utilize the Qwen3 family<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib16" title="Qwen3 technical report" class="ltx_ref">19</a>]</cite> (1.7B and 4B parameters) and Phi-4-mini<cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib17" title="Phi-4 technical report" class="ltx_ref">1</a>]</cite>(4B).</p>
+</div>
+</li>
+<li id="S5.I2.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I2.i3.p1" class="ltx_para">
+<p id="S5.I2.i3.p1.1" class="ltx_p">Sampling Config: We employ a group cohort size of <math id="S5.I2.i3.p1.1.m1" class="ltx_Math" alttext="G=8" display="inline" intent=":literal"><semantics><mrow><mi>G</mi><mo>=</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">G=8</annotation></semantics></math></p>
+</div>
+</li>
+<li id="S5.I2.i4" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I2.i4.p1" class="ltx_para">
+<p id="S5.I2.i4.p1.4" class="ltx_p">Reward Function: We utilize a composite reward function <math id="S5.I2.i4.p1.1.m1" class="ltx_Math" alttext="R(o)=R_{acc}+\lambda R_{fmt}+\beta R_{sem}" display="inline" intent=":literal"><semantics><mrow><mrow><mi>R</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msub><mi>R</mi><mrow><mi>a</mi><mo lspace="0em" rspace="0em">​</mo><mi>c</mi><mo lspace="0em" rspace="0em">​</mo><mi>c</mi></mrow></msub><mo>+</mo><mrow><mi>λ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>f</mi><mo lspace="0em" rspace="0em">​</mo><mi>m</mi><mo lspace="0em" rspace="0em">​</mo><mi>t</mi></mrow></msub></mrow><mo>+</mo><mrow><mi>β</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi>R</mi><mrow><mi>s</mi><mo lspace="0em" rspace="0em">​</mo><mi>e</mi><mo lspace="0em" rspace="0em">​</mo><mi>m</mi></mrow></msub></mrow></mrow></mrow><annotation encoding="application/x-tex">R(o)=R_{acc}+\lambda R_{fmt}+\beta R_{sem}</annotation></semantics></math>. Here, <math id="S5.I2.i4.p1.2.m2" class="ltx_Math" alttext="R_{acc}" display="inline" intent=":literal"><semantics><msub><mi>R</mi><mrow><mi>a</mi><mo lspace="0em" rspace="0em">​</mo><mi>c</mi><mo lspace="0em" rspace="0em">​</mo><mi>c</mi></mrow></msub><annotation encoding="application/x-tex">R_{acc}</annotation></semantics></math> is a binary correctness reward, <math id="S5.I2.i4.p1.3.m3" class="ltx_Math" alttext="R_{fmt}" display="inline" intent=":literal"><semantics><msub><mi>R</mi><mrow><mi>f</mi><mo lspace="0em" rspace="0em">​</mo><mi>m</mi><mo lspace="0em" rspace="0em">​</mo><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">R_{fmt}</annotation></semantics></math> is a format compliance reward that penalizes structural deviations and <math id="S5.I2.i4.p1.4.m4" class="ltx_Math" alttext="R_{sem}" display="inline" intent=":literal"><semantics><msub><mi>R</mi><mrow><mi>s</mi><mo lspace="0em" rspace="0em">​</mo><mi>e</mi><mo lspace="0em" rspace="0em">​</mo><mi>m</mi></mrow></msub><annotation encoding="application/x-tex">R_{sem}</annotation></semantics></math> is the semantic density reward.</p>
+</div>
+</li>
+<li id="S5.I2.i5" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I2.i5.p1" class="ltx_para">
+<p id="S5.I2.i5.p1.1" class="ltx_p">LambdaPO Settings: Unless otherwise stated, we set the temperature parameter to <math id="S5.I2.i5.p1.1.m1" class="ltx_Math" alttext="\tau=1.0" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>1.0</mn></mrow><annotation encoding="application/x-tex">\tau=1.0</annotation></semantics></math> based on our ablation findings.</p>
+</div>
+</li>
+</ul>
+</div>
+<figure id="S5.T1" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Model Performance Comparison on Benchmarks</figcaption>
+<div id="S5.T1.1" class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:338.1pt;height:160.9pt;vertical-align:-78.6pt;"><span class="ltx_transformed_inner" style="transform:translate(-60.0pt,28.5pt) scale(0.738141195228658,0.738141195228658) ;">
+<table id="S5.T1.1.1" class="ltx_tabular ltx_guessed_headers ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr id="S5.T1.1.1.1.1" class="ltx_tr">
+<th id="S5.T1.1.1.1.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_tt"><span id="S5.T1.1.1.1.1.1.1" class="ltx_text ltx_font_bold">Model</span></th>
+<td id="S5.T1.1.1.1.1.2" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T1.1.1.1.1.2.1" class="ltx_text ltx_font_bold">AIME24</span></td>
+<td id="S5.T1.1.1.1.1.3" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T1.1.1.1.1.3.1" class="ltx_text ltx_font_bold">AIME25</span></td>
+<td id="S5.T1.1.1.1.1.4" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T1.1.1.1.1.4.1" class="ltx_text ltx_font_bold">MATH-500</span></td>
+<td id="S5.T1.1.1.1.1.5" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T1.1.1.1.1.5.1" class="ltx_text ltx_font_bold">GPQA-Diamond</span></td>
+<td id="S5.T1.1.1.1.1.6" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T1.1.1.1.1.6.1" class="ltx_text ltx_font_bold">Average</span></td>
+</tr>
+<tr id="S5.T1.1.1.2.2" class="ltx_tr">
+<th id="S5.T1.1.1.2.2.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t" colspan="6"><span id="S5.T1.1.1.2.2.1.1" class="ltx_text ltx_font_italic">Qwen3-1.7B</span></th>
+</tr>
+<tr id="S5.T1.1.1.3.3" class="ltx_tr">
+<th id="S5.T1.1.1.3.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B</th>
+<td id="S5.T1.1.1.3.3.2" class="ltx_td ltx_align_center">41.52</td>
+<td id="S5.T1.1.1.3.3.3" class="ltx_td ltx_align_center">32.08</td>
+<td id="S5.T1.1.1.3.3.4" class="ltx_td ltx_align_center">89.05</td>
+<td id="S5.T1.1.1.3.3.5" class="ltx_td ltx_align_center">40.78</td>
+<td id="S5.T1.1.1.3.3.6" class="ltx_td ltx_align_center">50.86</td>
+</tr>
+<tr id="S5.T1.1.1.4.4" class="ltx_tr">
+<th id="S5.T1.1.1.4.4.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-base-grpo</th>
+<td id="S5.T1.1.1.4.4.2" class="ltx_td ltx_align_center">42.08</td>
+<td id="S5.T1.1.1.4.4.3" class="ltx_td ltx_align_center">32.50</td>
+<td id="S5.T1.1.1.4.4.4" class="ltx_td ltx_align_center">89.30</td>
+<td id="S5.T1.1.1.4.4.5" class="ltx_td ltx_align_center">41.78</td>
+<td id="S5.T1.1.1.4.4.6" class="ltx_td ltx_align_center">51.42</td>
+</tr>
+<tr id="S5.T1.1.1.5.5" class="ltx_tr">
+<th id="S5.T1.1.1.5.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp0.1</th>
+<td id="S5.T1.1.1.5.5.2" class="ltx_td ltx_align_center">44.17</td>
+<td id="S5.T1.1.1.5.5.3" class="ltx_td ltx_align_center">31.35</td>
+<td id="S5.T1.1.1.5.5.4" class="ltx_td ltx_align_center">89.60</td>
+<td id="S5.T1.1.1.5.5.5" class="ltx_td ltx_align_center">40.40</td>
+<td id="S5.T1.1.1.5.5.6" class="ltx_td ltx_align_center">51.38</td>
+</tr>
+<tr id="S5.T1.1.1.6.6" class="ltx_tr">
+<th id="S5.T1.1.1.6.6.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp0.5</th>
+<td id="S5.T1.1.1.6.6.2" class="ltx_td ltx_align_center">43.33</td>
+<td id="S5.T1.1.1.6.6.3" class="ltx_td ltx_align_center">33.33</td>
+<td id="S5.T1.1.1.6.6.4" class="ltx_td ltx_align_center">89.40</td>
+<td id="S5.T1.1.1.6.6.5" class="ltx_td ltx_align_center">41.41</td>
+<td id="S5.T1.1.1.6.6.6" class="ltx_td ltx_align_center">51.87</td>
+</tr>
+<tr id="S5.T1.1.1.7.7" class="ltx_tr">
+<th id="S5.T1.1.1.7.7.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp1</th>
+<td id="S5.T1.1.1.7.7.2" class="ltx_td ltx_align_center">44.51</td>
+<td id="S5.T1.1.1.7.7.3" class="ltx_td ltx_align_center">31.87</td>
+<td id="S5.T1.1.1.7.7.4" class="ltx_td ltx_align_center">89.05</td>
+<td id="S5.T1.1.1.7.7.5" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.7.7.5.1" class="ltx_text ltx_font_bold">42.91</span></td>
+<td id="S5.T1.1.1.7.7.6" class="ltx_td ltx_align_center">52.09</td>
+</tr>
+<tr id="S5.T1.1.1.8.8" class="ltx_tr">
+<th id="S5.T1.1.1.8.8.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp1.5</th>
+<td id="S5.T1.1.1.8.8.2" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.8.8.2.1" class="ltx_text ltx_font_bold">46.67</span></td>
+<td id="S5.T1.1.1.8.8.3" class="ltx_td ltx_align_center">33.33</td>
+<td id="S5.T1.1.1.8.8.4" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.8.8.4.1" class="ltx_text ltx_font_bold">90.20</span></td>
+<td id="S5.T1.1.1.8.8.5" class="ltx_td ltx_align_center">41.92</td>
+<td id="S5.T1.1.1.8.8.6" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.8.8.6.1" class="ltx_text ltx_font_bold">53.03</span></td>
+</tr>
+<tr id="S5.T1.1.1.9.9" class="ltx_tr">
+<th id="S5.T1.1.1.9.9.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp2</th>
+<td id="S5.T1.1.1.9.9.2" class="ltx_td ltx_align_center">45.00</td>
+<td id="S5.T1.1.1.9.9.3" class="ltx_td ltx_align_center">31.46</td>
+<td id="S5.T1.1.1.9.9.4" class="ltx_td ltx_align_center">89.80</td>
+<td id="S5.T1.1.1.9.9.5" class="ltx_td ltx_align_center">41.89</td>
+<td id="S5.T1.1.1.9.9.6" class="ltx_td ltx_align_center">52.04</td>
+</tr>
+<tr id="S5.T1.1.1.10.10" class="ltx_tr">
+<th id="S5.T1.1.1.10.10.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-1.7B-temp5</th>
+<td id="S5.T1.1.1.10.10.2" class="ltx_td ltx_align_center">44.17</td>
+<td id="S5.T1.1.1.10.10.3" class="ltx_td ltx_align_center">30.78</td>
+<td id="S5.T1.1.1.10.10.4" class="ltx_td ltx_align_center">89.60</td>
+<td id="S5.T1.1.1.10.10.5" class="ltx_td ltx_align_center">42.42</td>
+<td id="S5.T1.1.1.10.10.6" class="ltx_td ltx_align_center">51.74</td>
+</tr>
+<tr id="S5.T1.1.1.11.11" class="ltx_tr">
+<th id="S5.T1.1.1.11.11.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t" colspan="6"><span id="S5.T1.1.1.11.11.1.1" class="ltx_text ltx_font_italic">Qwen3-4B</span></th>
+</tr>
+<tr id="S5.T1.1.1.12.12" class="ltx_tr">
+<th id="S5.T1.1.1.12.12.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-4B</th>
+<td id="S5.T1.1.1.12.12.2" class="ltx_td ltx_align_center">69.95</td>
+<td id="S5.T1.1.1.12.12.3" class="ltx_td ltx_align_center">60.00</td>
+<td id="S5.T1.1.1.12.12.4" class="ltx_td ltx_align_center">95.60</td>
+<td id="S5.T1.1.1.12.12.5" class="ltx_td ltx_align_center">67.17</td>
+<td id="S5.T1.1.1.12.12.6" class="ltx_td ltx_align_center">73.18</td>
+</tr>
+<tr id="S5.T1.1.1.13.13" class="ltx_tr">
+<th id="S5.T1.1.1.13.13.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-4B-GRPO</th>
+<td id="S5.T1.1.1.13.13.2" class="ltx_td ltx_align_center">71.67</td>
+<td id="S5.T1.1.1.13.13.3" class="ltx_td ltx_align_center">65.83</td>
+<td id="S5.T1.1.1.13.13.4" class="ltx_td ltx_align_center">96.35</td>
+<td id="S5.T1.1.1.13.13.5" class="ltx_td ltx_align_center">67.74</td>
+<td id="S5.T1.1.1.13.13.6" class="ltx_td ltx_align_center">75.40</td>
+</tr>
+<tr id="S5.T1.1.1.14.14" class="ltx_tr">
+<th id="S5.T1.1.1.14.14.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Qwen3-4B-LambdaGRPO</th>
+<td id="S5.T1.1.1.14.14.2" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.14.14.2.1" class="ltx_text ltx_font_bold">73.33</span></td>
+<td id="S5.T1.1.1.14.14.3" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.14.14.3.1" class="ltx_text ltx_font_bold">67.08</span></td>
+<td id="S5.T1.1.1.14.14.4" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.14.14.4.1" class="ltx_text ltx_font_bold">96.60</span></td>
+<td id="S5.T1.1.1.14.14.5" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.14.14.5.1" class="ltx_text ltx_font_bold">68.94</span></td>
+<td id="S5.T1.1.1.14.14.6" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.14.14.6.1" class="ltx_text ltx_font_bold">76.49</span></td>
+</tr>
+<tr id="S5.T1.1.1.15.15" class="ltx_tr">
+<th id="S5.T1.1.1.15.15.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t" colspan="6"><span id="S5.T1.1.1.15.15.1.1" class="ltx_text ltx_font_italic">Phi-4-mini</span></th>
+</tr>
+<tr id="S5.T1.1.1.16.16" class="ltx_tr">
+<th id="S5.T1.1.1.16.16.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Phi-4-mini</th>
+<td id="S5.T1.1.1.16.16.2" class="ltx_td ltx_align_center">46.67</td>
+<td id="S5.T1.1.1.16.16.3" class="ltx_td ltx_align_center">35.10</td>
+<td id="S5.T1.1.1.16.16.4" class="ltx_td ltx_align_center">89.20</td>
+<td id="S5.T1.1.1.16.16.5" class="ltx_td ltx_align_center">45.33</td>
+<td id="S5.T1.1.1.16.16.6" class="ltx_td ltx_align_center">54.08</td>
+</tr>
+<tr id="S5.T1.1.1.17.17" class="ltx_tr">
+<th id="S5.T1.1.1.17.17.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Phi-4-mini-GRPO</th>
+<td id="S5.T1.1.1.17.17.2" class="ltx_td ltx_align_center"><span id="S5.T1.1.1.17.17.2.1" class="ltx_text ltx_font_bold">48.33</span></td>
+<td id="S5.T1.1.1.17.17.3" class="ltx_td ltx_align_center">36.67</td>
+<td id="S5.T1.1.1.17.17.4" class="ltx_td ltx_align_center">89.80</td>
+<td id="S5.T1.1.1.17.17.5" class="ltx_td ltx_align_center">46.59</td>
+<td id="S5.T1.1.1.17.17.6" class="ltx_td ltx_align_center">55.35</td>
+</tr>
+<tr id="S5.T1.1.1.18.18" class="ltx_tr">
+<th id="S5.T1.1.1.18.18.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb">Phi-4-mini-LambdaGRPO</th>
+<td id="S5.T1.1.1.18.18.2" class="ltx_td ltx_align_center ltx_border_bb">47.71</td>
+<td id="S5.T1.1.1.18.18.3" class="ltx_td ltx_align_center ltx_border_bb"><span id="S5.T1.1.1.18.18.3.1" class="ltx_text ltx_font_bold">38.33</span></td>
+<td id="S5.T1.1.1.18.18.4" class="ltx_td ltx_align_center ltx_border_bb"><span id="S5.T1.1.1.18.18.4.1" class="ltx_text ltx_font_bold">91.05</span></td>
+<td id="S5.T1.1.1.18.18.5" class="ltx_td ltx_align_center ltx_border_bb"><span id="S5.T1.1.1.18.18.5.1" class="ltx_text ltx_font_bold">48.44</span></td>
+<td id="S5.T1.1.1.18.18.6" class="ltx_td ltx_align_center ltx_border_bb"><span id="S5.T1.1.1.18.18.6.1" class="ltx_text ltx_font_bold">56.38</span></td>
+</tr>
+</tbody>
+</table>
+</span></div>
+</figure>
+</section>
+</section>
+<section id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.2 </span>Experimental results</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p id="S5.SS2.p1.1" class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5.1.2 Configurations ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> presents the comparative performance of LambdaPO versus the GRPO baseline across two distinct model architectures (Qwen3 and Phi-4-mini).</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p id="S5.SS2.p2.1" class="ltx_p"><span id="S5.SS2.p2.1.1" class="ltx_text ltx_font_bold">Performance Superiority.</span> LambdaPO consistently outperforms GRPO across all evaluated tasks. On the Qwen3-4B model, our method achieves an average accuracy of 76.49%, a substantial improvement of +1.45% over the baseline. This suggests that pairwise comparisons are particularly effective for hard reasoning tasks where distinguishing between high-quality reasoning paths is critical.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p id="S5.SS2.p3.1" class="ltx_p"><span id="S5.SS2.p3.1.1" class="ltx_text ltx_font_bold">Architecture Generalization.</span> The gains are not specific to a single architecture. On Phi-4-mini, LambdaPO achieves an average improvement of +1.86% (55.35% -<math id="S5.SS2.p3.1.m1" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math> 56.38%). The robustness of these improvements across different model families validates the universality of the ”Relational Bottleneck” hypothesis and the effectiveness of our solution.</p>
+</div>
+</section>
+<section id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.3 </span>Ablation Studies and Analysis</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p id="S5.SS3.p1.3" class="ltx_p"><span id="S5.SS3.p1.1.1" class="ltx_text ltx_font_bold">Parameter Sensitivity(<math id="S5.SS3.p1.1.1.m1" class="ltx_Math" alttext="\tau" display="inline" intent=":literal"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>)</span>. The temperature parameter <math id="S5.SS3.p1.2.m1" class="ltx_Math" alttext="\tau" display="inline" intent=":literal"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math> in Eq. (4) controls the sensitivity of the sigmoid weighting function, effectively determining the ”softness” of the pairwise ranking. We conducted a sweep of <math id="S5.SS3.p1.3.m2" class="ltx_Math" alttext="\tau\in{1,1.5,2,5,7}" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>∈</mo><mrow><mn>1</mn><mo>,</mo><mn>1.5</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>7</mn></mrow></mrow><annotation encoding="application/x-tex">\tau\in{1,1.5,2,5,7}</annotation></semantics></math> using the Qwen3-1.7B model.</p>
+<ul id="S5.I3" class="ltx_itemize">
+<li id="S5.I3.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I3.i1.p1" class="ltx_para">
+<p id="S5.I3.i1.p1.1" class="ltx_p"><span id="S5.I3.i1.p1.1.1" class="ltx_text ltx_font_bold">Low Temperature(<math id="S5.I3.i1.p1.1.1.m1" class="ltx_Math" alttext="\tau=1" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\tau=1</annotation></semantics></math>):</span>The gradient signal becomes too deterministic, leading to optimization instability. The performance (58.80%) is better than the baseline but suboptimal.</p>
+</div>
+</li>
+<li id="S5.I3.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I3.i2.p1" class="ltx_para">
+<p id="S5.I3.i2.p1.2" class="ltx_p"><span id="S5.I3.i2.p1.1.1" class="ltx_text ltx_font_bold">Optimal Temperature(<math id="S5.I3.i2.p1.1.1.m1" class="ltx_Math" alttext="\tau=1.5" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>1.5</mn></mrow><annotation encoding="application/x-tex">\tau=1.5</annotation></semantics></math>):</span> We observe a performance peak at <math id="S5.I3.i2.p1.2.m1" class="ltx_Math" alttext="\tau=1.5" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>1.5</mn></mrow><annotation encoding="application/x-tex">\tau=1.5</annotation></semantics></math> with an average score of 59.60%, significantly outperforming the base GRPO (57.72%). This validates our hypothesis that a ”soft” ranking signal, which accounts for model uncertainty, provides the highest quality gradient.</p>
+</div>
+</li>
+<li id="S5.I3.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I3.i3.p1" class="ltx_para">
+<p id="S5.I3.i3.p1.3" class="ltx_p"><span id="S5.I3.i3.p1.1.1" class="ltx_text ltx_font_bold">High Temperature(<math id="S5.I3.i3.p1.1.1.m1" class="ltx_Math" alttext="\tau\geq 5" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>≥</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">\tau\geq 5</annotation></semantics></math>):</span> As <math id="S5.I3.i3.p1.2.m1" class="ltx_Math" alttext="\tau" display="inline" intent=":literal"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math> increases, the sigmoid saturates towards linearity (or flatness), washing out the pairwise distinctions. At <math id="S5.I3.i3.p1.3.m2" class="ltx_Math" alttext="\tau=7" display="inline" intent=":literal"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">\tau=7</annotation></semantics></math>, performance degrades to 57.68%, effectively reverting to the performance of mean-aggregation.</p>
+</div>
+</li>
+</ul>
+<p id="S5.SS3.p1.4" class="ltx_p"><span id="S5.SS3.p1.4.1" class="ltx_text ltx_font_bold">Impact of Semantic Density Reward.</span>
+To disentangle the gains attributed to the pairwise optimization algorithm from those provided by the dense supervision signal, we conduct an ablation study on the reward composition. We observe that the Semantic Density Reward contributes a distinct performance gain on the AIME benchmark.</p>
+</div>
+<figure id="S5.F2" class="ltx_figure"><img src="2605.19416v1/x2.png" id="S5.F2.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="619" alt="Refer to caption">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Ablation study on Semantic Density Reward.</figcaption>
+</figure>
+<div id="S5.SS3.p2" class="ltx_para">
+<p id="S5.SS3.p2.1" class="ltx_p"><span id="S5.SS3.p2.1.1" class="ltx_text ltx_font_bold">Training Dynamics and Stability.</span>
+To investigate the stability of the alignment process, we visualize the evolution of the accuracy reward over 1,800 optimization steps in <a href="#A1.F3" title="In Visualization of training dynamics ‣ Appendix A Supplementary materials. ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Figure</span> <span class="ltx_text ltx_ref_tag">3</span></a>. The training trajectories reveal a critical divergence in robustness. While both methods exhibit comparable learning gains in the initial phase (steps 0–400), the GRPO baseline (blue line) suffers from severe instability in the latter stages, eventually leading to a catastrophic policy collapse after step 1,200 where the reward degrades to near-zero. This degradation is indicative of the model losing the capacity to generate valid terminal answers, likely due to high-variance gradient updates pushing the policy into degenerate regions of the solution space. In contrast, LambdaPO (orange line) demonstrates superior resilience. By anchoring optimization on pairwise preference differentials rather than a volatile scalar baseline, LambdaPO maintains a consistently higher reward floor and effectively prevents the policy degradation observed in the baseline. This confirms that the self-annealing mechanism of the pairwise objective acts as a crucial regularizer, preserving generation quality even deep into the training stage.</p>
+</div>
+<figure id="S5.T2" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span><span id="S5.T2.17.1" class="ltx_text ltx_font_bold">Qualitative comparison of reasoning trajectories.</span> We illustrate the generation process for a geometry problem. The GRPO baseline (top) suffers from reasoning loops and verbose repetition, consuming around 8k tokens without reaching a conclusion. In contrast, LambdaPO (bottom) produces a structured result that is 50% more efficient (around 4k tokens) and successfully converges to the correct solution.</figcaption>
+<table id="S5.T2.15" class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr id="S5.T2.1.1" class="ltx_tr">
+<td id="S5.T2.1.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r ltx_border_t">
+<span id="S5.T2.1.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.1.1.1.1.1" class="ltx_p" style="width:390.3pt;"><span id="S5.T2.1.1.1.1.1.1" class="ltx_text ltx_font_bold">Response(<math id="S5.T2.1.1.1.1.1.1.m1" class="ltx_Math" alttext="\sim" display="inline" intent=":literal"><semantics><mo>∼</mo><annotation encoding="application/x-tex">\sim</annotation></semantics></math> 8k tokens) from GRPO:</span></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.3.3" class="ltx_tr">
+<td id="S5.T2.3.3.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.3.3.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.3.3.2.2.2" class="ltx_p" style="width:390.3pt;"><math id="S5.T2.2.2.1.1.1.m1" class="ltx_Math" alttext="&lt;" display="inline" intent=":literal"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>think<math id="S5.T2.3.3.2.2.2.m2" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.16.1" class="ltx_tr">
+<td id="S5.T2.15.16.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.16.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.16.1.1.1.1" class="ltx_p" style="width:390.3pt;">Okay, let’s try to solve this problem step by step. First, I need to visualize the square ABCD and the circle O tangent to sides AB and AD. The circle intersects BC at points M and P, and we’re given BM=8 cm and MC=17 cm. The goal is to find the area of the circle.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.17.2" class="ltx_tr">
+<td id="S5.T2.15.17.2.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.17.2.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.17.2.1.1.1" class="ltx_p" style="width:390.3pt;">First, let me sketch the square ABCD. Let me label the square with AB, BC, CD, DA as sides. Let’s assume it’s a standard square with AB as the bottom side, BC as the right side, CD as the top, and DA as the left side. So, points A, B, C, D are in order.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.18.3" class="ltx_tr">
+<td id="S5.T2.15.18.3.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.18.3.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.18.3.1.1.1" class="ltx_p" style="width:390.3pt;">…</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.19.4" class="ltx_tr">
+<td id="S5.T2.15.19.4.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.19.4.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.19.4.1.1.1" class="ltx_p" style="width:390.3pt;">Hmm. Let me try to think about the given values. BM = 8 cm, MC = 17 cm. So BC is 8 + 17 = 25 cm. Therefore, the side length of the square is 25 cm.</span>
+<span id="S5.T2.15.19.4.1.1.2" class="ltx_p">Wait! If BC is 25 cm, then the side length of the square is 25 cm. So a = 25 cm.</span>
+<span id="S5.T2.15.19.4.1.1.3" class="ltx_p">So now, with a =</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.4.4" class="ltx_tr">
+<td id="S5.T2.4.4.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r ltx_border_t">
+<span id="S5.T2.4.4.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.4.4.1.1.1" class="ltx_p" style="width:390.3pt;"><span id="S5.T2.4.4.1.1.1.1" class="ltx_text ltx_font_bold">Response(<math id="S5.T2.4.4.1.1.1.1.m1" class="ltx_Math" alttext="\sim" display="inline" intent=":literal"><semantics><mo>∼</mo><annotation encoding="application/x-tex">\sim</annotation></semantics></math> 4k tokens) from LambdaPO (Ours):</span></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.6.6" class="ltx_tr">
+<td id="S5.T2.6.6.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.6.6.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.6.6.2.2.2" class="ltx_p" style="width:390.3pt;"><math id="S5.T2.5.5.1.1.1.m1" class="ltx_Math" alttext="&lt;" display="inline" intent=":literal"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>think<math id="S5.T2.6.6.2.2.2.m2" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.20.5" class="ltx_tr">
+<td id="S5.T2.15.20.5.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.20.5.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.20.5.1.1.1" class="ltx_p" style="width:390.3pt;">Okay, let’s try to solve this problem step by step. First, I need to visualize the square ABCD. Let me sketch it mentally. Let’s say the square is labeled clockwise as A, B, C, D. So, AB is one side, BC is the next, and so on. The circle O is tangent to sides AB and AD at points L and K, respectively. Also, the circle intersects BC at points M and P. Given BM = 8 cm and MC = 17 cm, so BC is 8 + 17 = 25 cm.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.21.6" class="ltx_tr">
+<td id="S5.T2.15.21.6.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.21.6.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.21.6.1.1.1" class="ltx_p" style="width:390.3pt;">…</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.22.7" class="ltx_tr">
+<td id="S5.T2.15.22.7.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.15.22.7.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.22.7.1.1.1" class="ltx_p" style="width:390.3pt;">Another way to think: The circle is tangent to AB and AD, so it’s a circle in the corner of the square. The center is at (r, r). Then, the equation is correct. Then, the intersection with BC is as calculated. So all steps are correct.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.8.8" class="ltx_tr">
+<td id="S5.T2.8.8.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.8.8.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.8.8.2.2.2" class="ltx_p" style="width:390.3pt;">Therefore, the area is <math id="S5.T2.7.7.1.1.1.m1" class="ltx_Math" alttext="169\pi" display="inline" intent=":literal"><semantics><mrow><mn>169</mn><mo lspace="0em" rspace="0em">​</mo><mi>π</mi></mrow><annotation encoding="application/x-tex">169\pi</annotation></semantics></math>. So the answer is <math id="S5.T2.8.8.2.2.2.m2" class="ltx_Math" alttext="169\pi" display="inline" intent=":literal"><semantics><mrow><mn>169</mn><mo lspace="0em" rspace="0em">​</mo><mi>π</mi></mrow><annotation encoding="application/x-tex">169\pi</annotation></semantics></math>.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.10.10" class="ltx_tr">
+<td id="S5.T2.10.10.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.10.10.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.10.10.2.2.2" class="ltx_p" style="width:390.3pt;"><math id="S5.T2.9.9.1.1.1.m1" class="ltx_Math" alttext="&lt;" display="inline" intent=":literal"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>/think<math id="S5.T2.10.10.2.2.2.m2" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.12.12" class="ltx_tr">
+<td id="S5.T2.12.12.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.12.12.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.12.12.2.2.2" class="ltx_p" style="width:390.3pt;"><math id="S5.T2.11.11.1.1.1.m1" class="ltx_Math" alttext="&lt;" display="inline" intent=":literal"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>answer<math id="S5.T2.12.12.2.2.2.m2" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.13.13" class="ltx_tr">
+<td id="S5.T2.13.13.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_l ltx_border_r">
+<span id="S5.T2.13.13.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.13.13.1.1.1" class="ltx_p" style="width:390.3pt;">The area of the circle is <math id="S5.T2.13.13.1.1.1.m1" class="ltx_Math" alttext="\boxed{169\pi}" display="inline" intent=":literal"><semantics><menclose notation="box"><mrow><mn>169</mn><mo lspace="0em" rspace="0em">​</mo><mi>π</mi></mrow></menclose><annotation encoding="application/x-tex">\boxed{169\pi}</annotation></semantics></math> square centimeters.</span>
+</span>
+</td>
+</tr>
+<tr id="S5.T2.15.15" class="ltx_tr">
+<td id="S5.T2.15.15.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_b ltx_border_l ltx_border_r">
+<span id="S5.T2.15.15.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S5.T2.15.15.2.2.2" class="ltx_p" style="width:390.3pt;"><math id="S5.T2.14.14.1.1.1.m1" class="ltx_Math" alttext="&lt;" display="inline" intent=":literal"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>/answer<math id="S5.T2.15.15.2.2.2.m2" class="ltx_Math" alttext="&gt;" display="inline" intent=":literal"><semantics><mo>&gt;</mo><annotation encoding="application/x-tex">&gt;</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+</figure>
+</section>
+<section id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.4 </span>Case Studies</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p id="S5.SS4.p1.1" class="ltx_p">We further analyze specific failure cases of GRPO corrected by LambdaPO. In multi-step math problem reasoning, a common failure mode observed in GRPO is that the model fails to resolve the mathematical query within the strict token budget. In contrast, LambdaPO demonstrates improved generation efficiency, successfully converging to valid solution within the allocated constraints. This suggests that the pairwise advantage formulation provides a better gradient signal that implicitly regularizes the inefficient budget-exhausted trajectories. The concrete cases are presented in Table <a href="#S5.T2" title="Table 2 ‣ 5.3 Ablation Studies and Analysis ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+</section>
+</section>
+<section id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p id="S6.p1.1" class="ltx_p">In this work, we presented <span id="S6.p1.1.1" class="ltx_text ltx_font_bold">Lambda Policy Optimization (LambdaPO)</span>, a principled framework that resolves the relational bottleneck inherent in group-relative alignment algorithms. By re-conceptualizing advantage estimation from a scalar deviation to a Pairwise Decomposed Advantage, we demonstrated that the rich, high-dimensional preference topology within sampled cohorts can be effectively harvested to drive policy improvement.Furthermore, we augmented the training objective with a Semantic Density Reward, derived from precision-recall alignment with ground-truth reasoning, to mitigate the challenge of sparse outcome supervision in complex reasoning tasks. Our method synthesizes the gradient kinematics of learning-to-rank with the stability of trust-region optimization, yielding a learning signal that is both directionally coherent and dynamically self-annealing. Empirical evaluations across the Qwen3 and Phi-4 families confirm that this approach significantly outperforms scalar-baseline methods on rigorous mathematical reasoning benchmarks, particularly in regimes requiring complex, multi-step logic.</p>
+</div>
+</section>
+<section id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Impact Statement</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p id="Sx1.p1.1" class="ltx_p">This work proposes <span id="Sx1.p1.1.1" class="ltx_text ltx_font_bold">Lambda Policy Optimization (LambdaPO)</span>, a reinforcement learning framework for improving the reasoning capabilities of large language models via pairwise, ranking-aware policy optimization. The primary goal of this research is to advance the methodological foundations of machine learning, particularly in the areas of reinforcement learning, learning-to-rank, and large-scale model alignment.</p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p id="Sx1.p2.1" class="ltx_p"><span id="Sx1.p2.1.1" class="ltx_text ltx_font_bold">Potential Positive Impacts.</span>
+By enabling more fine-grained credit assignment over groups of generated trajectories, LambdaPO has the potential to improve the reliability, efficiency, and stability of reasoning-oriented language models. Such improvements may benefit downstream applications that rely on structured reasoning, including mathematics education, scientific problem solving, and complex decision support systems. Additionally, the proposed framework enhances sample efficiency and reduces reliance on auxiliary value models, which may lower the computational and engineering barriers for training aligned language models, thereby promoting broader accessibility to advanced ML techniques in both academic and industrial settings.</p>
+</div>
+<div id="Sx1.p3" class="ltx_para">
+<p id="Sx1.p3.1" class="ltx_p"><span id="Sx1.p3.1.1" class="ltx_text ltx_font_bold">Ethical Considerations and Risks.</span>
+As with most advances in large language model training, the techniques introduced in this paper could be misused to amplify the persuasive or deceptive capabilities of automated systems if deployed without appropriate safeguards. More effective reasoning and alignment methods may increase the plausibility of generated outputs, which underscores the importance of responsible deployment, transparency, and downstream monitoring. Importantly, LambdaPO does not introduce new data sources, does not alter the supervision paradigm beyond reward shaping, and does not inherently increase model autonomy or agency. The method operates entirely within standard reinforcement learning pipelines and inherits the same ethical considerations as existing RL-based alignment approaches.</p>
+</div>
+<div id="Sx1.p4" class="ltx_para">
+<p id="Sx1.p4.1" class="ltx_p"><span id="Sx1.p4.1.1" class="ltx_text ltx_font_bold">Societal Implications.</span>
+We do not foresee immediate negative societal consequences that are unique to LambdaPO compared to prior work on reinforcement learning for language models. The societal impact of this research is therefore expected to be incremental and aligned with the broader trajectory of progress in machine learning. As with all such work, long-term outcomes will depend primarily on how the resulting models are deployed, governed, and integrated into real-world systems.</p>
+</div>
+<div id="Sx1.p5" class="ltx_para">
+<p id="Sx1.p5.1" class="ltx_p">Overall, this paper presents a technical contribution intended to advance the state of the art in machine learning optimization methods. We believe that its ethical profile is comparable to existing research in reinforcement learning for large language models, and that any broader impacts—positive or negative—are best addressed through responsible use, evaluation, and governance at the system-deployment level.</p>
+</div>
+</section>
+<section id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="bib.L1" class="ltx_biblist">
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Abdin, J. Aneja, H. Behl, S. Bubeck, R. Eldan, S. Gunasekar, M. Harrison, R. J. Hewett, M. Javaheripi, P. Kauffmann, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Phi-4 technical report</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2412.08905</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I2.i2.p1.1" title="In 5.1.2 Configurations ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2nd item</span></a>.
+</span>
+</li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Burges, R. Ragno, and Q. Le</span><span class="ltx_text ltx_bib_year"> (2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to rank with nonsmooth cost functions</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems</span>,  <span class="ltx_text ltx_bib_editor">B. Schölkopf, J. Platt, and T. Hoffman (Eds.)</span>,
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">19</span>, <span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="https://proceedings.neurips.cc/paper_files/paper/2006/file/af44c4c56f385c43f2529f9b1b018f6a-Paper.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>.
+</span>
+</li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Cobbe, V. Kosaraju, M. Bavarian, M. Chen, H. Jun, L. Kaiser, M. Plappert, J. Tworek, J. Hilton, R. Nakano, C. Hesse, and J. Schulman</span><span class="ltx_text ltx_bib_year"> (2021)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training verifiers to solve math word problems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2110.14168</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I1.i1.p1.1" title="In 5.1.1 Datasets ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1st item</span></a>.
+</span>
+</li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Ethayarajh, W. Xu, N. Muennighoff, D. Jurafsky, and D. Kiela</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">KTO: model alignment as prospect theoretic optimization</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2402.01306</span>,
+<a href="https://arxiv.org/abs/2402.01306" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma, P. Wang, X. Bi, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2025)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deepseek-r1: incentivizing reasoning capability in llms via reinforcement learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2501.12948</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hong, N. Lee, and J. Thorne</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ORPO: monolithic preference optimization without reference model</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2403.07691</span>,
+<a href="https://arxiv.org/abs/2403.07691" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>.
+</span>
+</li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lightman, V. Kosaraju, Y. Burda, H. Edwards, B. Baker, T. Lee, J. Leike, J. Schulman, I. Sutskever, and K. Cobbe</span><span class="ltx_text ltx_bib_year"> (2023)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Let’s verify step by step</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2305.20050</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I1.i2.p1.1" title="In 5.1.1 Datasets ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2nd item</span></a>.
+</span>
+</li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Lin</span><span class="ltx_text ltx_bib_year"> (2004-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ROUGE: a package for automatic evaluation of summaries</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Text Summarization Branches Out</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 74–81</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="https://aclanthology.org/W04-1013/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2.3" title="4.3 Dense Reward Augmentation via Semantic Overlap ‣ 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§4.3</span></a>.
+</span>
+</li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Meng, M. Xia, and D. Chen</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SimPO: simple preference optimization with a reference-free reward</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2405.14734</span>,
+<a href="https://arxiv.org/abs/2405.14734" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>.
+</span>
+</li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Ouyang, J. Wu, X. Jiang, D. Almeida, C. Wainwright, P. Mishkin, C. Zhang, S. Agarwal, K. Slama, A. Ray, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2022)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Training language models to follow instructions with human feedback</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in neural information processing systems</span> <span class="ltx_text ltx_bib_volume">35</span>, <span class="ltx_text ltx_bib_pages"> pp. 27730–27744</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rafailov, A. Sharma, E. Mitchell, S. Ermon, C. D. Manning, and C. Finn</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Direct preference optimization: your language model is secretly a reward model</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2305.18290</span>,
+<a href="https://arxiv.org/abs/2305.18290" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>.
+</span>
+</li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Rein, B. L. Hou, A. C. Stickland, J. Petty, R. Y. Pang, J. Dirani, J. Michael, and S. R. Bowman</span><span class="ltx_text ltx_bib_year"> (2023)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">GPQA: a graduate-level google-proof q&amp;a benchmark</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2311.12022</span>,
+<a href="https://arxiv.org/abs/2311.12022" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I1.i2.p1.1" title="In 5.1.1 Datasets ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2nd item</span></a>.
+</span>
+</li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Schick, J. Dwivedi-Yu, R. Dessì, R. Raileanu, M. Lomeli, E. Hambro, L. Zettlemoyer, N. Cancedda, and T. Scialom</span><span class="ltx_text ltx_bib_year"> (2023)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Toolformer: language models can teach themselves to use tools</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in Neural Information Processing Systems</span> <span class="ltx_text ltx_bib_volume">36</span>, <span class="ltx_text ltx_bib_pages"> pp. 68539–68551</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov</span><span class="ltx_text ltx_bib_year"> (2017)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Proximal policy optimization algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1707.06347</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>,
+<a href="#S2.p6.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>,
+<a href="#S3.SS2.p1.1" title="3.2 Group Relative Policy Optimization(GRPO) ‣ 3 Preliminary ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§3.2</span></a>.
+</span>
+</li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Shao, P. Wang, Q. Zhu, R. Xu, J. Song, X. Bi, H. Zhang, M. Zhang, Y. Li, Y. Wu, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deepseekmath: pushing the limits of mathematical reasoning in open language models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2402.03300</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1.1" title="1 Introduction ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§1</span></a>,
+<a href="#S2.p5.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>,
+<a href="#S3.SS2.p1.1" title="3.2 Group Relative Policy Optimization(GRPO) ‣ 3 Preliminary ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§3.2</span></a>.
+</span>
+</li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Uesato, N. Kushman, R. Kumar, F. Song, N. Siegel, L. Wang, A. Creswell, G. Irving, and I. Higgins</span><span class="ltx_text ltx_bib_year"> (2022)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Solving math word problems with process- and outcome-based feedback</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2211.14275</span>,
+<a href="https://arxiv.org/abs/2211.14275" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2.3" title="4.3 Dense Reward Augmentation via Semantic Overlap ‣ 4 Methodology ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§4.3</span></a>.
+</span>
+</li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Wang, L. Li, Z. Shao, R. X. Xu, D. Dai, Y. Li, D. Chen, Y. Wu, and Z. Sui</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Math-shepherd: verify and reinforce llms step-by-step without human annotations</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2312.08935</span>,
+<a href="https://arxiv.org/abs/2312.08935" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Wei, X. Wang, D. Schuurmans, M. Bosma, F. Xia, E. Chi, Q. V. Le, D. Zhou, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2022)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chain-of-thought prompting elicits reasoning in large language models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Advances in neural information processing systems</span> <span class="ltx_text ltx_bib_volume">35</span>, <span class="ltx_text ltx_bib_pages"> pp. 24824–24837</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv, C. Zheng, D. Liu, F. Zhou, F. Huang, F. Hu, H. Ge, H. Wei, H. Lin, J. Tang, J. Yang, J. Tu, J. Zhang, J. Yang, J. Yang, J. Zhou, J. Zhou, J. Lin, K. Dang, K. Bao, K. Yang, L. Yu, L. Deng, M. Li, M. Xue, M. Li, P. Zhang, P. Wang, Q. Zhu, R. Men, R. Gao, S. Liu, S. Luo, T. Li, T. Tang, W. Yin, X. Ren, X. Wang, X. Zhang, X. Ren, Y. Fan, Y. Su, Y. Zhang, Y. Zhang, Y. Wan, Y. Liu, Z. Wang, Z. Cui, Z. Zhang, Z. Zhou, and Z. Qiu</span><span class="ltx_text ltx_bib_year"> (2025)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Qwen3 technical report</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2505.09388</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I2.i2.p1.1" title="In 5.1.2 Configurations ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2nd item</span></a>.
+</span>
+</li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yang, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Li, D. Liu, F. Huang, H. Wei, H. Lin, J. Yang, J. Tu, J. Zhang, J. Yang, J. Yang, J. Zhou, J. Lin, K. Dang, K. Lu, K. Bao, K. Yang, L. Yu, M. Li, M. Xue, P. Zhang, Q. Zhu, R. Men, R. Lin, T. Li, T. Xia, X. Ren, X. Ren, Y. Fan, Y. Su, Y. Zhang, Y. Wan, Y. Liu, Z. Cui, Z. Zhang, and Z. Qiu</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Qwen2.5 technical report</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2412.15115</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. R. Narasimhan, and Y. Cao</span><span class="ltx_text ltx_bib_year"> (2022)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">React: synergizing reasoning and acting in language models</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">The eleventh international conference on learning representations</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Yu, Z. Zhang, R. Zhu, Y. Yuan, X. Zuo, Y. Yue, W. Dai, T. Fan, G. Liu, L. Liu, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (2025)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dapo: an open-source llm reinforcement learning system at scale</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:2503.14476</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Zelikman, Y. Wu, J. Mu, and N. D. Goodman</span><span class="ltx_text ltx_bib_year"> (2022)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">STaR: bootstrapping reasoning with reasoning</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text ltx_bib_external">2203.14465</span>,
+<a href="https://arxiv.org/abs/2203.14465" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3.1" title="2 Related work ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§2</span></a>.
+</span>
+</li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_misc">
+<span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and T. Math-AI</span><span class="ltx_text ltx_bib_year"> (2024)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">American invitational mathematics examination (aime) 2024</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.I1.i2.p1.1" title="In 5.1.1 Datasets ‣ 5.1 Experimental Setup ‣ 5 Experiments ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2nd item</span></a>.
+</span>
+</li>
+</ul>
+</section>
+<div class="ltx_pagination ltx_role_newpage"></div>
+<section id="A1" class="ltx_appendix">
+<h2 class="ltx_title ltx_title_appendix">
+<span class="ltx_tag ltx_tag_appendix">Appendix A </span>Supplementary materials.</h2>
+
+<section id="A1.SS0.SSS0.Px1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Logging files</h5>
+
+<div id="A1.SS0.SSS0.Px1.p1" class="ltx_para">
+<p id="A1.SS0.SSS0.Px1.p1.1" class="ltx_p">The logging files for the
+<a href="https://swanlab.cn/@zityuen/LambdaPO/runs/9i24963tq5rjpzf3zhize/chart" title="" class="ltx_ref ltx_url ltx_font_typewriter">https://swanlab.cn/@zityuen/LambdaPO/runs/9i24963tq5rjpzf3zhize/chart</a></p>
+</div>
+</section>
+<section id="A1.SS0.SSS0.Px2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Visualization of training dynamics</h5>
+
+<div id="A1.SS0.SSS0.Px2.p1" class="ltx_para">
+<p id="A1.SS0.SSS0.Px2.p1.1" class="ltx_p">The training dynamics of Qwen3-1.7B, Qwen3-4B, and Phi4-mini in Figure <a href="#A1.F3" title="Figure 3 ‣ Visualization of training dynamics ‣ Appendix A Supplementary materials. ‣ LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<figure id="A1.F3" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.1" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x3.png" id="A1.F3.1.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+<div class="ltx_flex_break"></div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.2" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x4.png" id="A1.F3.2.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+<div class="ltx_flex_break"></div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.3" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x5.png" id="A1.F3.3.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+<div class="ltx_flex_break"></div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.4" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x6.png" id="A1.F3.4.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+<div class="ltx_flex_break"></div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.5" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x7.png" id="A1.F3.5.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+<div class="ltx_flex_break"></div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<div id="A1.F3.6" class="ltx_block ltx_figure_panel ltx_minipage ltx_align_center ltx_align_middle" style="width:208.1pt;">
+<img src="2605.19416v1/x8.png" id="A1.F3.6.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="830" height="450" alt="Refer to caption">
+</div>
+</div>
+</div>
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Comparison on Qwen3-1.7B, Qwen3-4B, and Phi4-mini.</figcaption>
+</figure>
+</section>
+</section>
+</article>
+</div>
+</div>
+<footer class="arxiv-html-footer">
+  <div class="ltx_page_logo">
+    Experimental support, please
+    <a href="./2605.19416v1/__stdout.txt" class="ltx_ref"
+    target="_blank" rel="nofollow">view the build logs</a>
+    for errors. Generated by
+    <a href="https://math.nist.gov/~BMiller/LaTeXML/" target="_blank" class="ltx_ref ltx_LaTeXML_logo">
+      <span style="letter-spacing: -0.2em; margin-right: 0.1em;">
+        L
+        <span style="font-size: 70%; position: relative; bottom: 2.2pt;">A</span>
+        T
+        <span style="position: relative; bottom: -0.4ex;">E</span>
+      </span>
+      <span class="ltx_font_smallcaps">xml</span>
+      <img alt="[LOGO]"
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==">
+    </a>.
+  </div>
+  <div class="keyboard-glossary">
+    <h2>Instructions for reporting errors</h2>
+    <p>We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:</p>
+    <ul>
+      <li>Click the "Report Issue" <span class="mobile-only">(<svg role="presentation"
+            style="display: inline-block; vertical-align: middle; fill: var(--text-color);" aria-hidden="true"
+            height="1em" viewBox="0 0 640 640">
+            <path
+              d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+          </svg>)</span> button, located in the page header.</li>
+    </ul>
+    <p><strong>Tip:</strong> You can select the relevant text first, to include it in your report.</p>
+    <p>Our team has already identified <a class="ltx_ref" href="https://github.com/arXiv/html_feedback/issues"
+        target="_blank">the following issues</a>. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.</p>
+    <p>Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a <a
+        class="ltx_ref" href="https://github.com/brucemiller/LaTeXML/wiki/Porting-LaTeX-packages-for-LaTeXML"
+        target="_blank">list of packages that need conversion</a>, and welcome <a class="ltx_ref"
+        href="https://github.com/brucemiller/LaTeXML/issues" target="_blank">developer contributions</a>.</p>
+  </div>
+</footer>
+<div id="fixed-buttons-container">
+  <div id="beta-badge" aria-hidden="true">BETA</div>
+  <a id="disable-reading-mode-btn" class="header-button" href="javascript:toggleReadingMode();"
+    title="Disable reading mode, show header and footer">
+    <svg role="presentation" height="1.25rem"
+      viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+      <path
+        d="M0 96C0 78.3 14.3 64 32 64l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 128C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 288c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32L32 448c-17.7 0-32-14.3-32-32s14.3-32 32-32l384 0c17.7 0 32 14.3 32 32z" />
+    </svg>
+  </a>
+</div></body>
+</html>

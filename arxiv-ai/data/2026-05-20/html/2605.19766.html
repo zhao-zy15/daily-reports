@@ -1,0 +1,1299 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Synthesis and Evaluation of Long-term History-aware Medical Dialogue</title>
+<!--Generated on Tue May 19 12:24:06 2026 by LaTeXML (version 0.8.8) http://dlmf.nist.gov/LaTeXML/.-->
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="/static/browse/0.3.4/css/arxiv-html-papers-20260131.css" type="text/css">
+<script src="/static/browse/0.3.4/js/arxiv-html-papers-20260131.js"></script>
+<meta name="keywords" lang="en" content="Healthcare agent,  Synthetic Dataset,  LLM,  Medical Dialogue Dataset">
+<script>
+  // Restore the saved color scheme preference, or
+  // enact the browser preference if "automatic", 
+  // without expecting DOM load to have completed.
+  //
+  // Also restore any saved readingmode and ToC display preferences.
+  function initializeReadingPreferences() {
+    let saved_theme = localStorage.getItem("ar5iv_theme") || "automatic";
+    if (saved_theme === "automatic") {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        saved_theme = "dark";
+      }
+    }
+    if (saved_theme == "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+
+    const tocDisplay = localStorage.getItem('arxiv_html_paper_toc_display');
+    if (tocDisplay) {
+      document.documentElement.setAttribute("data-toc-display", tocDisplay);
+    }
+    const readingMode = localStorage.getItem('arxiv_html_paper_reading_mode');
+    if (readingMode) {
+      document.documentElement.setAttribute("data-reading-mode", readingMode);
+    }
+  }
+  // Run as soon as JS starts, to minimize repainting
+  initializeReadingPreferences();
+</script>
+<link rel="apple-touch-icon" sizes="180x180"
+  href="/static/browse/0.3.4/images/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32"
+  href="/static/browse/0.3.4/images/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16"
+  href="/static/browse/0.3.4/images/icons/favicon-16x16.png">
+<link rel="manifest" href="/static/browse/0.3.4/images/icons/site.webmanifest">
+<link rel="mask-icon" href="/static/browse/0.3.4/images/icons/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="stylesheet" type="text/css" media="screen" href="https://use.typekit.net/utz6mli.css">
+</head>
+<body>
+<dialog id="modal-form" aria-labelledby="modal-title" closedby="any">
+  <form id="modal-form-content" method="dialog" enctype="multipart/form-data">
+    <header class="modal-header">
+      <h5 id="modal-title" class="modal-title">Report GitHub Issue</h5>
+      <button type="submit" formnovalidate class="modal-close" aria-label="Close">×</button>
+    </header>
+
+    <div class="modal-body">
+      <label for="form_title">Title:</label>
+      <input class="form-control" id="form_title" name="form_title" required placeholder="Enter title">
+
+      <p id="selectedTextModalDescription" hidden>Content selection saved. Describe the issue below:</p>
+
+      <label for="description">Description:</label>
+      <textarea class="form-control" id="description" name="description" required maxlength="500"
+        placeholder="500 characters maximum"></textarea>
+    </div>
+
+    <footer class="modal-footer">
+      <button type="submit" value="internal-report" class="sr-only modal-submit">Submit without GitHub</button>
+      <button type="submit" value="github-report" class="modal-submit">Submit in GitHub</button>
+    </footer>
+  </form>
+</dialog>
+
+<header class="arxiv-html-header">
+  <div class="html-header-logo">
+    <a href="/">
+      <img alt="arXiv logo" class="logo desktop-only" width="100"
+        src="/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg">
+      <span class="sr-only">Back to arXiv</span>
+    </a>
+  </div>
+  <!--TOC, dark mode, links-->
+  <nav class="html-header-nav">
+    <a class="header-button hover-effect desktop-only" href="https://info.arxiv.org/about/accessible_HTML.html"
+      target="_blank">Why HTML?</a>
+    <a class="header-button" title="Report an Issue" href="#" title="Report an issue"
+      onclick="event.preventDefault(); showModalForm();">
+      <svg role="presentation" class="mobile-only toggle-icon" aria-hidden="true" height="1.25rem"
+        viewBox="0 0 640 640">
+        <path
+          d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+      </svg>
+      <span class="desktop-only">Report Issue</span></a>
+    <!--back to abstract-->
+    <a class="header-button" title="Back to abstract page" aria-label="Back to abstract page"
+      href="/abs/2605.19766v1">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 512 512" fill="#ffffff"
+        aria-hidden="true">
+        <path
+          d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224 192 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l210.7 0-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l128-128zM160 96c17.7 0 32-14.3 32-32s-14.3-32-32-32L96 32C43 32 0 75 0 128L0 384c0 53 43 96 96 96l64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32l0-256c0-17.7 14.3-32 32-32l64 0z">
+        </path>
+      </svg>
+      <span class="desktop-only">Back to Abstract</span>
+    </a>
+    <!-- PDF download link -->
+    <a class="header-button" title="Download PDF" href="/pdf/2605.19766v1"
+      target="_blank">
+      <svg class="mobile-only toggle-icon" role="presentation" height="1.25rem" viewBox="0 0 576 542">
+        <path
+          d="M208 48L96 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16l80 0 0 48-80 0c-35.3 0-64-28.7-64-64L32 64C32 28.7 60.7 0 96 0L229.5 0c17 0 33.3 6.7 45.3 18.7L397.3 141.3c12 12 18.7 28.3 18.7 45.3l0 149.5-48 0 0-128-88 0c-39.8 0-72-32.2-72-72l0-88zM348.1 160L256 67.9 256 136c0 13.3 10.7 24 24 24l68.1 0zM240 380l32 0c33.1 0 60 26.9 60 60s-26.9 60-60 60l-12 0 0 28c0 11-9 20-20 20s-20-9-20-20l0-128c0-11 9-20 20-20zm32 80c11 0 20-9 20-20s-9-20-20-20l-12 0 0 40 12 0zm96-80l32 0c28.7 0 52 23.3 52 52l0 64c0 28.7-23.3 52-52 52l-32 0c-11 0-20-9-20-20l0-128c0-11 9-20 20-20zm32 128c6.6 0 12-5.4 12-12l0-64c0-6.6-5.4-12-12-12l-12 0 0 88 12 0zm76-108c0-11 9-20 20-20l48 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 24 28 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 44c0 11-9 20-20 20s-20-9-20-20l0-128z" />
+      </svg>
+      <span class="desktop-only">Download PDF</span></a>
+    <!-- navigational table of contents toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleNavTOC();" title="Toggle navigation"
+      aria-label="Toggle navigation">
+      <svg height="1.25rem" role="presentation" viewBox="0 0 512 512">
+        <path
+          d="M40 48C26.7 48 16 58.7 16 72v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V72c0-13.3-10.7-24-24-24H40zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zM16 232v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V232c0-13.3-10.7-24-24-24H40c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V392c0-13.3-10.7-24-24-24H40z">
+        </path>
+      </svg>
+    </a>
+    <!--- collapsable header / reading mode toggle -->
+    <a class="header-button toggle-icon" href="javascript:toggleReadingMode();"
+      title="Disable reading mode, show header and footer">
+      <svg role="presentation" height="1.25rem"
+        viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+        <path
+          d="M32 32C14.3 32 0 46.3 0 64l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 32zM64 352c0-17.7-14.3-32-32-32S0 334.3 0 352l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96z" />
+      </svg>
+    </a>
+    <!--- colored theme toggle -->
+    <button type="button" class="header-button color-tog" onclick="toggleColorScheme();" title="Toggle dark/light mode" aria-label="Toggle color scheme">
+      <span class="toggle-icon automatic-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9h-1.9M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69m-9.15 3.96h2.3L12 9l-1.15 3.65Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon light-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+      <span class="toggle-icon dark-tog" aria-hidden="true">
+        <svg role="presentation" height="1.25rem" viewBox="0 0 24 24">
+          <path
+            d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z">
+          </path>
+        </svg>
+      </span>
+    </button>
+  </nav>
+</header><nav class="ltx_page_navbar">
+<nav class="ltx_TOC">
+<ol class="ltx_toclist">
+<li class="ltx_tocentry ltx_tocentry_abstract"><a href="#abstract1" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Abstract.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S1" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">1 </span>Introduction</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S2" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2 </span>Related Work</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S2.SS1" title="In 2. Related Work ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2.1 </span>Synthetic Medical Datasets</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S2.SS2" title="In 2. Related Work ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">2.2 </span>Dataset Evaluation</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S3" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3 </span>MediLongChat Synthesis Pipeline</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection">
+<a href="#S3.SS1" title="In 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1 </span>Stage 1: Knowledge-Guided Generation of Patient Medical Records</span></a>
+<ol class="ltx_toclist ltx_toclist_subsection">
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS1.SSS1" title="In 3.1. Stage 1: Knowledge-Guided Generation of Patient Medical Records ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1.1 </span>Patient Persona Construction.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS1.SSS2" title="In 3.1. Stage 1: Knowledge-Guided Generation of Patient Medical Records ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1.2 </span>Disease-and-Complication Metadata Curation and Review.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS1.SSS3" title="In 3.1. Stage 1: Knowledge-Guided Generation of Patient Medical Records ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.1.3 </span>Generation of Sequential Medical Records.</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_subsection">
+<a href="#S3.SS2" title="In 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.2 </span>Stage 2: Multi-turn Dialogue Generation Based on Task Decomposition</span></a>
+<ol class="ltx_toclist ltx_toclist_subsection">
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS2.SSS1" title="In 3.2. Stage 2: Multi-turn Dialogue Generation Based on Task Decomposition ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.2.1 </span>Definition and Scope of Chat History.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS2.SSS2" title="In 3.2. Stage 2: Multi-turn Dialogue Generation Based on Task Decomposition ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.2.2 </span>Synthesis Pipeline.</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_subsection">
+<a href="#S3.SS3" title="In 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.3 </span>Stage 3: Benchmark Generation</span></a>
+<ol class="ltx_toclist ltx_toclist_subsection">
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S3.SS3.SSS1" title="In 3.3. Stage 3: Benchmark Generation ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.3.1 </span>Motivation of benchmark.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection">
+<a href="#S3.SS3.SSS2" title="In 3.3. Stage 3: Benchmark Generation ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">3.3.2 </span>Reasoning task of benchmark.</span></a>
+<ol class="ltx_toclist ltx_toclist_subsubsection">
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S3.SS3.SSS2.Px1" title="In 3.3.2. Reasoning task of benchmark. ‣ 3.3. Stage 3: Benchmark Generation ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">In-Dialogue Reasoning.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S3.SS3.SSS2.Px2" title="In 3.3.2. Reasoning task of benchmark. ‣ 3.3. Stage 3: Benchmark Generation ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Cross-Dialogue Reasoning.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S3.SS3.SSS2.Px3" title="In 3.3.2. Reasoning task of benchmark. ‣ 3.3. Stage 3: Benchmark Generation ‣ 3. MediLongChat Synthesis Pipeline ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Synthesis Reasoning.</span></a></li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S4" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">4 </span>Evaluation</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px1" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Faithfulness (grounding to provided context/knowledge).</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px2" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Coherence (local flow and smoothness).</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px3" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Diversity (corpus-level topical breadth and balance).</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px4" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Correctness (clinical factuality independent of source).</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px5" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Realism (human-likeness, empathy, naturalness).</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px6" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">Notes on computability and assessors.</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_paragraph"><a href="#S4.SS0.SSS0.Px7" title="In 4. Evaluation ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">LLM based Evaluation</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section">
+<a href="#S5" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5 </span>Experiment</span></a>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry ltx_tocentry_subsection">
+<a href="#S5.SS1" title="In 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1 </span>Experiment Setting</span></a>
+<ol class="ltx_toclist ltx_toclist_subsection">
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S5.SS1.SSS1" title="In 5.1. Experiment Setting ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1.1 </span>Overview</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsubsection"><a href="#S5.SS1.SSS2" title="In 5.1. Experiment Setting ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.1.2 </span>Quality Evaluation of Synthetic Data</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS2" title="In 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.2 </span>Benchmarking on Our Dataset</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS3" title="In 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.3 </span>Result of Quality Evaluation</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS4" title="In 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.4 </span>Result of Benchmarking</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_subsection"><a href="#S5.SS5" title="In 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">5.5 </span>Ablation Experiment Results</span></a></li>
+</ol>
+</li>
+<li class="ltx_tocentry ltx_tocentry_section"><a href="#S6" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">6 </span>Conclusion</span></a></li>
+<li class="ltx_tocentry ltx_tocentry_bibliography"><a href="#bib" title="In Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_title">References</span></a></li>
+</ol></nav>
+</nav>
+<div class="ltx_page_main">
+<div id="infobox" class="infobox">
+  <a id="license-tr" href="https://info.arxiv.org/help/license/index.html#licenses-available">
+    License: CC BY-NC-ND 4.0
+  </a>
+  <div id="watermark-tr">
+arXiv:2605.19766v1 [cs.CL] 19 May 2026</div>
+</div><div class="ltx_page_content">
+<article class="ltx_document ltx_authors_1line">
+<div id="p1" class="ltx_para">
+<span id="p1.1" class="ltx_ERROR undefined">\setcopyright</span>
+<p id="p1.2" class="ltx_p">ifaamas
+<span id="p1.2.1" class="ltx_ERROR undefined">\acmConference</span>[AAMAS ’26]Proc. of the 25th International Conference
+on Autonomous Agents and Multiagent Systems (AAMAS 2026)May 25 – 29, 2026
+Paphos, CyprusC. Amato, L. Dennis, V. Mascardi, J. Thangarajah (eds.)
+<span id="p1.2.2" class="ltx_ERROR undefined">\copyrightyear</span>2026
+<span id="p1.2.3" class="ltx_ERROR undefined">\acmYear</span>2026
+<span id="p1.2.4" class="ltx_ERROR undefined">\acmDOI</span>
+<span id="p1.2.5" class="ltx_ERROR undefined">\acmPrice</span>
+<span id="p1.2.6" class="ltx_ERROR undefined">\acmISBN</span>
+<span id="p1.2.7" class="ltx_ERROR undefined">\authornote</span>The first two authors contributed equally to this work.
+<span id="p1.2.8" class="ltx_ERROR undefined">\affiliation</span>
+<span id="p1.2.9" class="ltx_ERROR undefined">\institution</span>South-Central Minzu University
+<span id="p1.2.10" class="ltx_ERROR undefined">\city</span>Wuhan
+<span id="p1.2.11" class="ltx_ERROR undefined">\country</span>China
+
+<span id="p1.2.12" class="ltx_ERROR undefined">\authornotemark</span>[1]
+<span id="p1.2.13" class="ltx_ERROR undefined">\affiliation</span>
+<span id="p1.2.14" class="ltx_ERROR undefined">\institution</span>South-Central Minzu University
+<span id="p1.2.15" class="ltx_ERROR undefined">\city</span>Wuhan
+<span id="p1.2.16" class="ltx_ERROR undefined">\country</span>China
+
+<span id="p1.2.17" class="ltx_ERROR undefined">\authornote</span>Corresponding author
+<span id="p1.2.18" class="ltx_ERROR undefined">\affiliation</span>
+<span id="p1.2.19" class="ltx_ERROR undefined">\institution</span>Singapore Management University
+<span id="p1.2.20" class="ltx_ERROR undefined">\city</span>Singapore
+<span id="p1.2.21" class="ltx_ERROR undefined">\country</span>Singapore
+
+<span id="p1.2.22" class="ltx_ERROR undefined">\authornotemark</span>[2]
+<span id="p1.2.23" class="ltx_ERROR undefined">\affiliation</span>
+<span id="p1.2.24" class="ltx_ERROR undefined">\institution</span>South-Central Minzu University
+<span id="p1.2.25" class="ltx_ERROR undefined">\city</span>Wuhan
+<span id="p1.2.26" class="ltx_ERROR undefined">\country</span>China</p>
+</div>
+<h1 class="ltx_title ltx_title_document">Synthesis and Evaluation of Long-term History-aware Medical Dialogue</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Hebin Hu
+</span><span class="ltx_author_notes">
+<span class="ltx_contact ltx_role_email"><a href="2605.19766v1/mailto:hebin9410@gmail.com">hebin9410@gmail.com</a>
+</span></span></span>
+<span class="ltx_author_before">, </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Renke Dai
+</span><span class="ltx_author_notes">
+<span class="ltx_contact ltx_role_email"><a href="2605.19766v1/mailto:2024110293@mail.scuec.edu.cn">2024110293@mail.scuec.edu.cn</a>
+</span></span></span>
+<span class="ltx_author_before">, </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Ah-Hwee Tan
+</span><span class="ltx_author_notes">
+<span class="ltx_contact ltx_role_email"><a href="2605.19766v1/mailto:ahtan@smu.edu.sg">ahtan@smu.edu.sg</a>
+</span></span></span>
+<span class="ltx_author_before"> and </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yilin Kang
+</span><span class="ltx_author_notes">
+<span class="ltx_contact ltx_role_email"><a href="2605.19766v1/mailto:ylkang@mail.scuec.edu.cn">ylkang@mail.scuec.edu.cn</a>
+</span></span></span>
+</div>
+
+<div id="abstract1" class="ltx_abstract">
+<h6 class="ltx_title ltx_title_abstract">Abstract.</h6>
+<p class="ltx_p">An effective healthcare agent must be able to recall and reason over a patient’s longitudinal medical history. However, the absence of datasets with realistic long-term dialogue timelines limits systematic evaluation. Real clinical text is constrained by privacy and ethics, while existing benchmarks focus on isolated interactions, failing to capture cross-session reasoning. We introduce a framework for synthesizing high-quality, long-term medical dialogues with LLMs. Our approach entails a knowledge-guided decomposition into three stages: constructing synthetic patient profiles with diverse disease and complication trajectories, generating multi-turn dialogues per encounter, and integrating them into a coherent longitudinal history dataset, MediLongChat. We establish three benchmark tasks—In-dialogue Reasoning, Cross-dialogue Reasoning, and Synthesis Reasoning—to evaluate the memory capabilities of healthcare agents. To assess data quality, we introduce a multi-dimensional evaluation framework combining vector-based metrics with LLM-as-a-judge assessments. Specifically, we define automatic measures—Faithfulness, Coherence, and Diversity—together with two LLM-based evaluations: Correctness and Realism. Benchmark experiments show that even state-of-the-art LLMs struggle with MediLongChat. These findings highlight the benchmark’s applicability and underscore the need for tailored methods to advance healthcare agents.</p>
+</div>
+<div class="ltx_keywords">
+<h6 class="ltx_title ltx_title_keywords">Key words and phrases: </h6>Healthcare agent, Synthetic Dataset, LLM, Medical Dialogue Dataset
+</div>
+<div class="ltx_classification">
+<h6 class="ltx_title ltx_title_classification">doi: </h6>EFXQ8322
+</div>
+<section id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">1. </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p id="S1.p1.1" class="ltx_p">As large language models (LLMs) have offered significant assistance in diverse areas in the medical domain <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">medrag</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">xu2019end</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">singhal2023large</span></cite>, a central challenge lies in the development of healthcare agents that can engage in long-term, coherent conversations. A core requirement for such agents is the ability to interpret and utilize longitudinal patient history—not just the current utterance, but months or years of interactions concerning prior symptoms, diagnostics, and treatments. We refer to these settings as history-aware longitudinal clinical dialogues. For instance, as shown in Fig. <a href="#S1.F1" title="Figure 1 ‣ 1. Introduction ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, consider a patient who now reports persistent headaches and blurred vision. A history-agnostic agent might default to migraine. In contrast, a history-aware agent that recalls a prior breast-cancer diagnosis and incomplete follow-up imaging will surface altogether different diagnoses and safety actions. This example illustrates a significant point: Synthesize Longitudinal Reasoning-drawing clinically valid inferences from events scattered along a longitudinal trajectory—is fundamental to building safe and reliable healthcare agents.</p>
+</div>
+<figure id="S1.F1" class="ltx_figure"><img src="2605.19766v1/x1.png" id="S1.F1.g1" class="ltx_graphics ltx_centering ltx_img_square" width="788" height="647" alt="Refer to caption">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1. </span>The importance of history-aware capabilities for healthcare agents. A history-agnostic model defaults to common causes for “headache + blurred vision,” whereas a history-aware model recalls prior breast cancer, yielding different diagnoses and safety actions.</figcaption>
+</figure>
+<div id="S1.p2" class="ltx_para">
+<p id="S1.p2.1" class="ltx_p">Despite this importance, existing public benchmarks rarely stress longitudinality. Popular dialogue corpora tend to comprise independent conversations lacking a consistent patient narrative, while medical QA benchmarks emphasize static knowledge rather than dynamic, context-dependent reasoning <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">jin2019pubmedqa</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">pal2022medmcqa</span></cite>. Moreover, assembling real longitudinal dialogue data is ethically and operationally daunting: clinical text is privacy-sensitive; de-identification is costly and imperfect; and even approved corpora frequently cover narrow settings and come with stringent governance. As a result, research on long-horizon clinical dialogue remains hampered by data scarcity.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p id="S1.p3.1" class="ltx_p">Although the synthetic approach alleviates data scarcity and compliance barriers <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">kovavcevic2024identification</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">gonzales2023synthetic</span></cite>, its quality is constrained by three common bottlenecks:</p>
+<ul id="S1.I1" class="ltx_itemize">
+<li id="S1.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i1.p1" class="ltx_para">
+<p id="S1.I1.i1.p1.1" class="ltx_p">Generation Quality and Consistency. The inherent hallucination problem <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">li2023halueval</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">manakul2023selfcheckgpt</span></cite> of LLMs is particularly detrimental in the medical field. This issue is compounded by their tendency to produce contradictory details when generating long dialogues <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">spataru2024know</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">liu2024lost</span></cite>. Furthermore, the Mixture of Experts (MoE) architecture used in many LLMs may exhibit instability when generating long texts, leading to inconsistencies in style or knowledge depth.</p>
+</div>
+</li>
+<li id="S1.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i2.p1" class="ltx_para">
+<p id="S1.I1.i2.p1.1" class="ltx_p">Context Window Limitations.
+A fundamental barrier to generating long, continuous dialogues is the finite context window of LLMs. While nowadays models support longer contexts, utilizing their full capacity is often prohibitively expensive and still falls short of capturing a complete patient history.This exposes a deeper, unsolved problem: how to architect generation processes—from single, guided passes to complex pipelines—to guarantee narrative and logical coherence over the long term.</p>
+</div>
+</li>
+<li id="S1.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I1.i3.p1" class="ltx_para">
+<p id="S1.I1.i3.p1.1" class="ltx_p">Lack of Evaluation Standards. There is a lack of standardized methods for evaluating the quality of synthetic data itself. Current research often relies on limited automatic metrics or small-scale human evaluations, lacking a systematic and scalable framework to comprehensively measure a dataset’s medical accuracy, long-term logical consistency, and effectiveness for evaluating agent capabilities.</p>
+</div>
+</li>
+</ul>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p id="S1.p4.1" class="ltx_p">To address the aforementioned challenges, this paper proposes a systematic pipeline for generating history-aware longitudinal clinical dialogue datasets and a multi-dimensional framework for their evaluation. The core of our method lies in task decomposition guided by structured knowledge. Specifically, we first construct metadata about disease cases and their complications. Based on this, we generate synthetic patient profiles with complete, diverse, and chronologically ordered medical events. Our task decomposition approach breaks down the complex process of generating a patient’s lifelong medical history into manageable steps. By progressively creating multi-turn dialogues for each clinical visit, we build a long-term, coherent, and history-aware medical conversation dataset MediLongChat.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p id="S1.p5.1" class="ltx_p">To systematically evaluate the memory and reasoning abilities of healthcare assistants, we introduce a benchmark built upon our dataset, featuring three dedicated tasks: In-dialogue Reasoning, Cross-dialogue Reasoning, and Synthesis Reasoning. These tasks respectively assess an agent’s ability to recall information from a single encounter, link events across multiple dialogues, and synthesize the complete history for clinical inference.
+More importantly, we have designed a comprehensive framework that combines automatic metrics with an LLM-as-a-Judge approach to evaluate the quality of the generated dataset by measuring its Faithfulness, Coherence, Correctness, Diversity, and Realism. </p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p id="S1.p6.1" class="ltx_p">The main contributions of this paper are summarized as follows:</p>
+<ul id="S1.I2" class="ltx_itemize">
+<li id="S1.I2.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I2.i1.p1" class="ltx_para">
+<p id="S1.I2.i1.p1.1" class="ltx_p">We propose a novel framework for synthesizing long-form, history-aware medical dialogues with explicit longitudinal dependencies, based on knowledge-guided task decomposition, directly addressing challenges of LLM hallucination and inconsistency in long-content generation.</p>
+</div>
+</li>
+<li id="S1.I2.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I2.i2.p1" class="ltx_para">
+<p id="S1.I2.i2.p1.1" class="ltx_p">We propose a comprehensive evaluation framework that establishes a new standard for assessing the quality of synthetic medical dialogue data.</p>
+</div>
+</li>
+<li id="S1.I2.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S1.I2.i3.p1" class="ltx_para">
+<p id="S1.I2.i3.p1.1" class="ltx_p">We construct a new benchmark dataset, MediLongChat, specifically designed to evaluate the longitudinal memory and reasoning capabilities of healthcare agents in multi-session dialogues.</p>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">2. </span>Related Work</h2>
+
+<section id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">2.1. </span>Synthetic Medical Datasets</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p id="S2.SS1.p1.1" class="ltx_p">In the medical field, growing concerns over privacy, ethics, and data scarcity have led researchers to increasingly favor synthetic or semi-synthetic data for model training and evaluation. NoteChat <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">NoteChat</span></cite> generates doctor-patient dialogues from clinical notes using a multi-agent framework, incorporating medical logic control to minimize invalid outputs. SynDial <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">SynDial</span></cite> leverages publicly available MTS-Dialogue and MIMIC datasets to generate dialogues via zero-shot prompting, integrating a feedback loop during generation to enhance dialogue quality. This method demonstrates superior performance in extractive and factual consistency compared to simple prompting approaches.
+SynSUM <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">synsum</span></cite> bridges structured variables and clinical text for information extraction and causal studies, employing a Bayesian network to first generate tabular variables, which are then used to prompt an LLM to produce corresponding clinical text. Holysz et al. propose a multi-stage generation framework that first generates patient profiles and case backgrounds before producing dialogues, striving to improve the diversity and medical plausibility of synthetic data.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p id="S2.SS1.p2.1" class="ltx_p">Although the aforementioned methods can generate high-quality single-session dialogues or dialogue-note paired samples, they still exhibit typical limitations in cross-turn and cross-dialogue reasoning. Most existing datasets focus on single consultation dialogues or intra-session dialogue-note alignment, with very few encompassing longitudinal records or dialogue histories of the same patient across multiple sessions. This presents a significant gap in evaluating whether healthcare agents possess long-term memory or the ability to comprehend longitudinal patient history.</p>
+</div>
+</section>
+<section id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">2.2. </span>Dataset Evaluation</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p id="S2.SS2.p1.1" class="ltx_p">Evaluating the quality of dialogue datasets and models is a critical and long-standing challenge in the field of natural language processing. Prior work can be broadly categorized into three main approaches: human-centric evaluation, traditional lexical and vector-based methods, and more recent LLM based evaluation.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p id="S2.SS2.p2.1" class="ltx_p">Human Evaluation remains the gold standard for assessing dialogue quality <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">deriu2021survey</span></cite>. For single-turn dialogues, metrics like mean opinion score or pairwise comparisons are widely used <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">deriu2021survey</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">li2016deep</span></cite>. However, evaluating multi-turn conversations presents unique challenges. Annotators must consider the entire dialogue history to assess long-term coherence, consistency, and the model’s ability to maintain a persona or follow a complex narrative arc. While highly reliable, human evaluation is expensive, time-consuming, and difficult to scale, especially for large datasets with thousands or millions of dialogues. Moreover, achieving high inter-annotator agreement can be challenging due to the subjective nature of dialogue quality.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p id="S2.SS2.p3.1" class="ltx_p">Traditional Lexical and Vector-Based Metrics were introduced to address the scalability issues of human evaluation. Early approaches focused on lexical overlap. Metrics such as BLEU <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">papineni2002bleu</span></cite>, ROUGE <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">lin2004rouge</span></cite>, and METEOR <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">banerjee2005meteor</span></cite> measure the n-gram similarity between a model’s response and a set of human-written reference responses. While effective for tasks with a limited range of correct answers, these metrics are less suitable for multi-session dialogue, where there can be many valid and novel responses that do not match the reference text. To capture semantic similarity, later methods employed word embeddings and other vector-based techniques. Metrics like embedding average or greedy matching <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">rush-etal-2015-greedy</span></cite> calculate the cosine similarity between the embeddings of the generated response and the reference response. These metrics offer an improvement over lexical overlap by accounting for synonyms and semantically similar words. However, they still struggle to evaluate nuanced aspects of dialogue quality, such as factual consistency, long-term coherence across multiple turns, and the overall conversational flow of a lengthy dialogue.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p id="S2.SS2.p4.1" class="ltx_p">Recently, the remarkable capabilities of LLMs have led to their use as automated evaluators, often referred to as ”LLM-as-a-judge” <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">zheng2023judging</span></cite>. The LLM is given a dialogue and a set of instructions, and it returns a score, a ranking, or a detailed critique. This method offers several advantages: it is significantly faster and cheaper than human evaluation, and it can be designed to assess more complex attributes like nuance, factual accuracy, and conversational flow. However, LLM-based evaluation is not without its limitations. The judgments can be susceptible to biases, such as position bias <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">zheng2023judging</span></cite> or verbosity bias. While LLM-as-a-judge has shown high correlation with human judgments in many cases, it is still a developing field, and the reliability and robustness of these methods for complex, multi-turn conversations remain an active area of research.</p>
+</div>
+<figure id="S2.F2" class="ltx_figure"><img src="2605.19766v1/x2.png" id="S2.F2.g1" class="ltx_graphics ltx_centering ltx_img_landscape" width="660" height="331" alt="Refer to caption">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2. </span>Overview of our dataset generation pipeline. Stage 1 builds records with knowledge guidance; Stage 2 generates per-event encounters and stitches them chronologically; Stage 3 derives three tasks to assess longitudinal memory and reasoning.
+</figcaption>
+</figure>
+</section>
+</section>
+<section id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">3. </span>MediLongChat Synthesis Pipeline</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p id="S3.p1.1" class="ltx_p">Our goal is to construct a high-quality, long-sequence medical dialogue dataset together with a benchmark that evaluates long-range memory and reasoning in healthcare agents. As illustrated in Fig. <a href="#S2.F2" title="Figure 2 ‣ 2.2. Dataset Evaluation ‣ 2. Related Work ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, the framework comprises three stages: (1)Knowledge-Guided Generation of Patient Medical Records; (2)Multi-turn Dialogue Generation Based on Task Decomposition; (3)Benchmark Generation.</p>
+</div>
+<section id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.1. </span>Stage 1: Knowledge-Guided Generation of Patient Medical Records</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p id="S3.SS1.p1.1" class="ltx_p">A medical record contains complete information about a specific patient. Each medical record consists of four components: personal information, lifestyle habits, past medical history, and additional information. Medical records represent fictitious yet realistic lifelong patient profiles, thus avoiding privacy concerns. Notably, medical records serve as intermediate data during the generation process and are not included explicitly in the final dataset. Also, they remain hidden from the LLMs during evaluation benchmarks. High-quality datasets start from high-quality priors. To mitigate medically incorrect hallucinations, we generate complete fictional patient records under explicit knowledge guidance in three steps, ensuring both medical plausibility and narrative diversity.</p>
+</div>
+<section id="S3.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.1.1. </span>Patient Persona Construction.</h4>
+
+<div id="S3.SS1.SSS1.p1" class="ltx_para">
+<p id="S3.SS1.SSS1.p1.1" class="ltx_p">For each fictional patient, we create detailed patient basic information, including demographics (e.g., age, sex, occupation), lifestyle habits (dietary preference, exercise frequency, smoking/alcohol history), and additional information, such as family history. We operationalize personas through prompts that explicitly state these attributes—for instance, “a sedentary young software engineer” versus “a retired teacher with balanced nutrition”—so that subsequent disease trajectories remain credible under varying contexts.</p>
+</div>
+</section>
+<section id="S3.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.1.2. </span>Disease-and-Complication Metadata Curation and Review.</h4>
+
+<div id="S3.SS1.SSS2.p1" class="ltx_para">
+<p id="S3.SS1.SSS2.p1.1" class="ltx_p">We compile metadata linking common diseases with their typical complications and temporal patterns. Because models may misestimate timing or likelihood, we incorporate a targeted human-in-the-loop review to verify: (i) evidence-based disease–complication associations; (ii) clinically plausible temporal ordering; and (iii) reasonable spacing between events across conditions. This step substantially strengthens the reliability of the underlying medical knowledge.</p>
+</div>
+</section>
+<section id="S3.SS1.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.1.3. </span>Generation of Sequential Medical Records.</h4>
+
+<div id="S3.SS1.SSS3.p1" class="ltx_para">
+<p id="S3.SS1.SSS3.p1.1" class="ltx_p">We fuse audited disease cases with patient personas to generate a coherent, clinically grounded timeline that enumerates all key medical events and their order. The timeline defines when patient–agent conversations should occur and encodes the longitudinal links among events across the patient’s life course. This event timeline serves as the narrative backbone for subsequent dialogue generation.</p>
+</div>
+</section>
+</section>
+<section id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.2. </span>Stage 2: Multi-turn Dialogue Generation Based on Task Decomposition</h3>
+
+<section id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.2.1. </span>Definition and Scope of Chat History.</h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p id="S3.SS2.SSS1.p1.1" class="ltx_p">Chat History constitutes the core component of our dataset, encapsulating all medical consultations related to diseases experienced by a patient throughout their lifetime. It consists of multiple dialogues, with each dialogue representing a consultation regarding a particular disease, simulating realistic patient-physician interactions. Each dialogue captures details such as date and location, greetings, symptom inquiry, routine examinations, and treatment discussions of the consultation. Typically, each dialogue contains around 50 conversational exchanges between the doctor and the patient, with an average length of approximately 3000 tokens. A complete patient chat history consists of 15-20 dialogues, implying the total token count of all consultations about 50K tokens.</p>
+</div>
+<div id="S3.SS2.SSS1.p2" class="ltx_para">
+<p id="S3.SS2.SSS1.p2.1" class="ltx_p">Directly asking an LLM to produce a long-term, coherent history from the full record risks context loss, information mixing, and severe hallucinations. We therefore decompose “generate the patient’s entire dialogue history” into simpler sub-tasks: generate one high-quality encounter per medical event, then order and stitch them chronologically.</p>
+</div>
+</section>
+<section id="S3.SS2.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.2.2. </span>Synthesis Pipeline.</h4>
+
+<div id="S3.SS2.SSS2.p1" class="ltx_para">
+<p id="S3.SS2.SSS2.p1.1" class="ltx_p">We decompose synthesis into three steps. (1) Medical Event Extraction. From the Stage-1 timeline, extract each independent medical event, including its time, specific disease, and the treatment method administered at that time. (2) Context-isolated prompting. For each event, we compose a self-contained prompt that fixes the patient persona (defined in Step 1) and includes only event-local facts—condition name, occurrence time, and relevant interventions—thereby avoiding information leakage across visits. (3) Dialogue realization. Conditioned on this minimal yet sufficient context, the model generates a clinician–patient encounter that covers chief complaint, history taking, recommended examinations, provisional/definitive diagnosis, and management plan. This task decomposition sidesteps hard context-window limits and attenuates long-range hallucinations, and concatenating per-event encounters in temporal order yields a coherent, history-aware dialogue history.</p>
+</div>
+<div id="S3.SS2.SSS2.p2" class="ltx_para">
+<p id="S3.SS2.SSS2.p2.1" class="ltx_p">To avoid stylistic monoculture, we introduce controlled variation during generation: (i) Physician persona diversity (e.g., “empathetic and reassuring physician,” “concise and direct physician”) sampled per encounter; (ii) Style control via prompt directives (from “focus on the patient’s lifestyle” to “quick-paced consultation”); and (iii) Stochasticity using higher decoding temperatures to encourage lexical and structural variety.</p>
+</div>
+</section>
+</section>
+<section id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">3.3. </span>Stage 3: Benchmark Generation</h3>
+
+<section id="S3.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.3.1. </span>Motivation of benchmark.</h4>
+
+<div id="S3.SS3.SSS1.p1" class="ltx_para">
+<p id="S3.SS3.SSS1.p1.1" class="ltx_p">When designing the benchmark tasks, our primary objective was to systematically evaluate a model’s ability to reason over longitudinal patient histories. Evaluations restricted to single-turn or independent dialogues cannot capture the central challenge of clinical interaction: integrating information across time and maintaining long-term dependencies. To address this limitation, we devise three complementary tasks—In-dialogue Reasoning, Cross-dialogue Reasoning, and Synthesis Reasoning—that progressively assess whether a model can accurately recall, connect, and leverage patient history over extended horizons.</p>
+</div>
+<div id="S3.SS3.SSS1.p2" class="ltx_para">
+<p id="S3.SS3.SSS1.p2.1" class="ltx_p">This task design is motivated by two considerations. First, it explicitly decomposes different levels of difficulty: In-dialogue Reasoning probes whether the model can faithfully extract salient information within a single encounter; Cross-dialogue Reasoning examines whether it can track and relate events across multiple visits, capturing temporal and causal dependencies; and Synthesis Reasoning advances toward realistic clinical inference by requiring the model to integrate the entire history and derive new medical conclusions. Second, the framework enhances the interpretability of evaluation: by comparing performance across the three tasks, we can disentangle a model’s strengths and weaknesses in short-term extraction, cross-session linkage, and longitudinal synthesis.</p>
+</div>
+</section>
+<section id="S3.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">3.3.2. </span>Reasoning task of benchmark.</h4>
+
+<div id="S3.SS3.SSS2.p1" class="ltx_para">
+<p id="S3.SS3.SSS2.p1.1" class="ltx_p">Taken together, this benchmark not only provides a quantifiable evaluation scheme but also ensures coverage of longitudinal patient history. In other words, these tasks collectively constitute a rigorous testbed for the fundamental capability that underpins safe and effective healthcare dialogue systems: long-term memory and cross-temporal reasoning.</p>
+</div>
+<section id="S3.SS3.SSS2.Px1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">In-Dialogue Reasoning.</h5>
+
+<div id="S3.SS3.SSS2.Px1.p1" class="ltx_para">
+<p id="S3.SS3.SSS2.Px1.p1.1" class="ltx_p">This in-dialogue reasoning (IDR) probes whether a model can accurately recover salient facts from a single encounter. Each item is constructed from one dialogue turn sequence and targets canonical clinical facets—such as visit date, location, presenting complaint, disease category, medications, and treatment plan—so that the answer can be grounded in explicit spans within the dialogue. Questions are phrased to require concise extraction or short abstractive summarization, thereby testing both fidelity and minimal reasoning over local context. The input to the model is the full text of one consultation; the expected output is a short textual answer.
+This task assesses the ability of LLMs to extract and succinctly summarize simple information from a single consultation dialogue.</p>
+</div>
+</section>
+<section id="S3.SS3.SSS2.Px2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Cross-Dialogue Reasoning.</h5>
+
+<div id="S3.SS3.SSS2.Px2.p1" class="ltx_para">
+<p id="S3.SS3.SSS2.Px2.p1.1" class="ltx_p">This cross-dialogue reasoning (CDR) evaluates whether a model can link information scattered across multiple visits, a prerequisite for longitudinal understanding. Each question is derived from two or more dialogues in the same Chat History and targets relationships that cannot be resolved from any single encounter alone, such as temporal ordering, duration between events, recurrence versus first onset, therapy changes, or the presence/absence of specific conditions. We include adversarial formulations (e.g., “Has the patient ever been diagnosed with … ?”) and temporally anchored prompts (e.g., “duration between two illness episodes”). Since a complete Chat History can exceed an LLM’s context window, CDR intentionally stresses memory mechanisms or long-context strategies rather than single-pass extraction.</p>
+</div>
+</section>
+<section id="S3.SS3.SSS2.Px3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Synthesis Reasoning.</h5>
+
+<div id="S3.SS3.SSS2.Px3.p1" class="ltx_para">
+<p id="S3.SS3.SSS2.Px3.p1.1" class="ltx_p">The synthesis reasoning (SR) task requires the LLM to diagnose a secondary disease or complication based on provided symptoms, given a complete medical chat history. The synthesis reasoning questions are constructed from metadata. This challenging task demands that the model not only recall the entire disease history of the patient but also accurately link current symptoms with past diseases. Strong performance on synthesis reasoning is essential for LLMs to effectively serve as medical assistants. Due to the complexity of this task, we designed it as a multiple-choice format, with interfering options selected based on symptom similarity from the Disease and Symptom dataset.</p>
+</div>
+<div id="S3.SS3.SSS2.Px3.p2" class="ltx_para">
+<p id="S3.SS3.SSS2.Px3.p2.1" class="ltx_p">To clarify the dataset contents, the full MediLongChat corpus comprises longitudinal medical dialogues from 80 patients. For each patient, we retain (i) personal information; (ii) multiple complete dialogue transcripts spanning repeated visits; and (iii) annotations for three tasks—IDR, CDR, and SR.</p>
+</div>
+</section>
+</section>
+</section>
+</section>
+<section id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">4. </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p id="S4.p1.1" class="ltx_p">We adopt a unified, multi-faceted indicator to assess MediLongChat across five key dimensions—Faithfulness, Coherence, Diversity, Correctness, and Realism. These indicators are crucial for long, complex, and high-quality medical dialogues: faithfulness and correctness guard against harmful hallucinations; coherence ensures longitudinal consistency across sessions; diversity reflects topical breadth and style variability; realism captures human-likeness, empathy, and natural conversational dynamics. Below we provide formal definitions or concrete computation procedures for each dimension, so no duplicated explanations are required elsewhere.</p>
+</div>
+<section id="S4.SS0.SSS0.Px1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Faithfulness (grounding to provided context/knowledge).</h5>
+
+<div id="S4.SS0.SSS0.Px1.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px1.p1.2" class="ltx_p">Given input context <math id="S4.SS0.SSS0.Px1.p1.1.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math> and generated dialogue <math id="S4.SS0.SSS0.Px1.p1.2.m2" class="ltx_Math" alttext="d=\{u_{1},\dots,u_{n}\}" display="inline" intent=":literal"><semantics><mrow><mi>d</mi><mo>=</mo><mrow><mo stretchy="false">{</mo><msub><mi>u</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>u</mi><mi>n</mi></msub><mo stretchy="false">}</mo></mrow></mrow><annotation encoding="application/x-tex">d=\{u_{1},\dots,u_{n}\}</annotation></semantics></math>, we compute utterance-level semantic similarity (cosine on sentence embeddings; e.g., SBERT) <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">reimers-gurevych-2019-sentence</span>)</cite>:</p>
+<table id="S4.E1" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E1.m1" class="ltx_Math" alttext="\mathrm{Faithfulness}(s,d)=\frac{1}{n}\sum_{i=1}^{n}\mathrm{sim}(s,u_{i})," display="block" intent=":literal"><semantics><mrow><mrow><mrow><mi>Faithfulness</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mn>1</mn><mi>n</mi></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><munderover><mo movablelimits="false">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mrow><mi>sim</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><msub><mi>u</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">\mathrm{Faithfulness}(s,d)=\frac{1}{n}\sum_{i=1}^{n}\mathrm{sim}(s,u_{i}),</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(1)</span></td>
+</tr></tbody>
+</table>
+<p id="S4.SS0.SSS0.Px1.p1.3" class="ltx_p">where <math id="S4.SS0.SSS0.Px1.p1.3.m1" class="ltx_Math" alttext="\mathrm{sim}(\cdot,\cdot)" display="inline" intent=":literal"><semantics><mrow><mi>sim</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mo lspace="0em" rspace="0em">⋅</mo><mo rspace="0em">,</mo><mo lspace="0em" rspace="0em">⋅</mo><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mathrm{sim}(\cdot,\cdot)</annotation></semantics></math> denotes embedding-based semantic similarity.</p>
+</div>
+</section>
+<section id="S4.SS0.SSS0.Px2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Coherence (local flow and smoothness).</h5>
+
+<div id="S4.SS0.SSS0.Px2.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px2.p1.1" class="ltx_p">To capture natural progression without abrupt shifts, we penalize sharp changes of adjacent-pair similarity:</p>
+<table id="S4.E2" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E2.m1" class="ltx_Math" alttext="\mathrm{Coherence}(d)=1-\frac{1}{n-2}\sum_{i=1}^{n-2}\left|\mathrm{sim}(u_{i+1},u_{i+2})-\mathrm{sim}(u_{i},u_{i+1})\right|." display="block" intent=":literal"><semantics><mrow><mrow><mrow><mi>Coherence</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mn>1</mn><mo>−</mo><mrow><mfrac><mn>1</mn><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><munderover><mo movablelimits="false" rspace="0em">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></munderover><mrow><mo>|</mo><mrow><mrow><mi>sim</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub><mo stretchy="false">)</mo></mrow></mrow><mo>−</mo><mrow><mi>sim</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><msub><mi>u</mi><mi>i</mi></msub><mo>,</mo><msub><mi>u</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow></mrow></mrow><mo>|</mo></mrow></mrow></mrow></mrow></mrow><mo lspace="0em">.</mo></mrow><annotation encoding="application/x-tex">\mathrm{Coherence}(d)=1-\frac{1}{n-2}\sum_{i=1}^{n-2}\left|\mathrm{sim}(u_{i+1},u_{i+2})-\mathrm{sim}(u_{i},u_{i+1})\right|.</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(2)</span></td>
+</tr></tbody>
+</table>
+</div>
+</section>
+<section id="S4.SS0.SSS0.Px3" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Diversity (corpus-level topical breadth and balance).</h5>
+
+<div id="S4.SS0.SSS0.Px3.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px3.p1.2" class="ltx_p">We cluster the corpus <math id="S4.SS0.SSS0.Px3.p1.1.m1" class="ltx_Math" alttext="C=\{d_{1},\dots,d_{m}\}" display="inline" intent=":literal"><semantics><mrow><mi>C</mi><mo>=</mo><mrow><mo stretchy="false">{</mo><msub><mi>d</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>d</mi><mi>m</mi></msub><mo stretchy="false">}</mo></mrow></mrow><annotation encoding="application/x-tex">C=\{d_{1},\dots,d_{m}\}</annotation></semantics></math> into <math id="S4.SS0.SSS0.Px3.p1.2.m2" class="ltx_Math" alttext="K" display="inline" intent=":literal"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math> latent topics using BERTopic <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">grootendorst2022bertopic</span>)</cite>, and combine coverage and normalized entropy:</p>
+<table id="S4.E3" class="ltx_equation ltx_eqn_table">
+
+<tbody><tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math id="S4.E3.m1" class="ltx_Math" alttext="\mathrm{Diversity}(C)=\frac{1}{2}\cdot\frac{K}{m}+\frac{1}{2}\cdot\frac{-\sum_{k=1}^{K}p_{k}\log p_{k}}{\log K},\quad p_{k}=\frac{c_{k}}{m}." display="block" intent=":literal"><semantics><mrow><mrow><mrow><mrow><mi>Diversity</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo lspace="0.222em" rspace="0.222em">⋅</mo><mfrac><mi>K</mi><mi>m</mi></mfrac></mrow><mo>+</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo lspace="0.222em" rspace="0.222em">⋅</mo><mfrac><mrow><mo>−</mo><mrow><msubsup><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></msubsup><mrow><msub><mi>p</mi><mi>k</mi></msub><mo lspace="0.167em" rspace="0em">​</mo><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><msub><mi>p</mi><mi>k</mi></msub></mrow></mrow></mrow></mrow><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><mi>K</mi></mrow></mfrac></mrow></mrow></mrow><mo rspace="1.167em">,</mo><mrow><msub><mi>p</mi><mi>k</mi></msub><mo>=</mo><mfrac><msub><mi>c</mi><mi>k</mi></msub><mi>m</mi></mfrac></mrow></mrow><mo lspace="0em">.</mo></mrow><annotation encoding="application/x-tex">\mathrm{Diversity}(C)=\frac{1}{2}\cdot\frac{K}{m}+\frac{1}{2}\cdot\frac{-\sum_{k=1}^{K}p_{k}\log p_{k}}{\log K},\quad p_{k}=\frac{c_{k}}{m}.</annotation></semantics></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation ltx_align_right">(3)</span></td>
+</tr></tbody>
+</table>
+</div>
+</section>
+<section id="S4.SS0.SSS0.Px4" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Correctness (clinical factuality independent of source).</h5>
+
+<div id="S4.SS0.SSS0.Px4.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px4.p1.2" class="ltx_p">Correctness targets clinical accuracy beyond mere overlap with <math id="S4.SS0.SSS0.Px4.p1.1.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>. Because purely lexical/vector metrics cannot verify medical soundness, we adopt an LLM-as-a-judge protocol based on G-Eval <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">liu-etal-2023-geval</span>)</cite>. The judge is given the full dialogue history, model response, and a rubric to check medical claims, diagnoses, and advice. Scores are on a 5-point and linearly normalized to <math id="S4.SS0.SSS0.Px4.p1.2.m2" class="ltx_Math" alttext="[0,1]" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math>.</p>
+</div>
+</section>
+<section id="S4.SS0.SSS0.Px5" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Realism (human-likeness, empathy, naturalness).</h5>
+
+<div id="S4.SS0.SSS0.Px5.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px5.p1.1" class="ltx_p">We evaluate whether a conversation resembles human-to-human clinical communication in style, turn-taking and affect. We use an LLM-as-a-judge rubric (scores 1–5, normalized to <math id="S4.SS0.SSS0.Px5.p1.1.m1" class="ltx_Math" alttext="[0,1]" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math>).</p>
+</div>
+</section>
+<section id="S4.SS0.SSS0.Px6" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Notes on computability and assessors.</h5>
+
+<div id="S4.SS0.SSS0.Px6.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px6.p1.1" class="ltx_p">Not all dimensions are equally amenable to automatic computation: <span id="S4.SS0.SSS0.Px6.p1.1.1" class="ltx_text ltx_font_italic">Faithfulness/Coherence/ Diversity</span> admit explicit, reproducible formulas (vector- or topic-based), while <span id="S4.SS0.SSS0.Px6.p1.1.2" class="ltx_text ltx_font_italic">Correctness/Realism</span> require semantic, pragmatic and domain judgments that are better captured by LLM-as-a-judge. We therefore report both automatic metrics (where applicable) and LLM-judged scores, and use a small human-annotated subset for sanity checks when necessary.</p>
+</div>
+<figure id="S4.T1" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1. </span>Summary of indicators, computation, and assessors. Vector/lexical metrics are deterministic; LLM-as-a-judge follows G-Eval with a 5-point Likert rubric normalized to <math id="S4.T1.2.m1" class="ltx_Math" alttext="[0,1]" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math>.</figcaption>
+<table id="S4.T1.11" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S4.T1.11.10.1" class="ltx_tr">
+<th id="S4.T1.11.10.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S4.T1.11.10.1.1.1" class="ltx_text" style="font-size:80%;">Indicator</span></th>
+<th id="S4.T1.11.10.1.2" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T1.11.10.1.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.10.1.2.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.11.10.1.2.1.1.1" class="ltx_text" style="font-size:80%;">What it measures (why it matters)</span></span>
+</span>
+</th>
+<th id="S4.T1.11.10.1.3" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T1.11.10.1.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.10.1.3.1.1" class="ltx_p" style="width:162.2pt;"><span id="S4.T1.11.10.1.3.1.1.1" class="ltx_text" style="font-size:80%;">Automatic (vector/topic) computation</span></span>
+</span>
+</th>
+<th id="S4.T1.11.10.1.4" class="ltx_td ltx_align_justify ltx_align_top ltx_th ltx_th_column ltx_border_tt">
+<span id="S4.T1.11.10.1.4.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.10.1.4.1.1" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.11.10.1.4.1.1.1" class="ltx_text" style="font-size:80%;">LLM-as-a-judge (G-Eval)</span></span>
+</span>
+</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S4.T1.4.2" class="ltx_tr">
+<th id="S4.T1.4.2.3" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S4.T1.4.2.3.1" class="ltx_text" style="font-size:80%;">Faithfulness</span></th>
+<td id="S4.T1.4.2.4" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t">
+<span id="S4.T1.4.2.4.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.4.2.4.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.4.2.4.1.1.1" class="ltx_text" style="font-size:80%;">Grounding to provided context/KB; prevents unsafe hallucinations</span></span>
+</span>
+</td>
+<td id="S4.T1.3.1.1" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t">
+<span id="S4.T1.3.1.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.3.1.1.1.1" class="ltx_p" style="width:162.2pt;"><math id="S4.T1.3.1.1.1.1.m1" class="ltx_Math" alttext="\frac{1}{n}\sum_{i}\mathrm{sim}(s,u_{i})" display="inline" intent=":literal"><semantics><mrow><mfrac><mn mathsize="0.800em">1</mn><mi mathsize="0.800em">n</mi></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><msub><mo maxsize="0.800em" minsize="0.800em" stretchy="true">∑</mo><mi mathsize="0.800em">i</mi></msub><mrow><mi mathsize="0.800em">sim</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo maxsize="0.800em" minsize="0.800em">(</mo><mi mathsize="0.800em">s</mi><mo mathsize="0.800em">,</mo><msub><mi mathsize="0.800em">u</mi><mi mathsize="0.800em">i</mi></msub><mo maxsize="0.800em" minsize="0.800em">)</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">\frac{1}{n}\sum_{i}\mathrm{sim}(s,u_{i})</annotation></semantics></math><span id="S4.T1.3.1.1.1.1.1" class="ltx_text" style="font-size:80%;"> using sentence embeddings cosine; </span><cite class="ltx_cite ltx_citemacro_citep"><span id="S4.T1.3.1.1.1.1.2.1" class="ltx_text" style="font-size:80%;">(</span><span class="ltx_ref ltx_missing_citation ltx_ref_self">reimers-gurevych-2019-sentence</span><span id="S4.T1.3.1.1.1.1.4.3" class="ltx_text" style="font-size:80%;">)</span></cite></span>
+</span>
+</td>
+<td id="S4.T1.4.2.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_t">
+<span id="S4.T1.4.2.2.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.4.2.2.1.1" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.4.2.2.1.1.1" class="ltx_text" style="font-size:80%;">Cross-checks claims against </span><math id="S4.T1.4.2.2.1.1.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="S4.T1.4.2.2.1.1.2" class="ltx_text" style="font-size:80%;"> &amp; history with criterion-based rubric</span></span>
+</span>
+</td>
+</tr>
+<tr id="S4.T1.5.3" class="ltx_tr">
+<th id="S4.T1.5.3.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T1.5.3.2.1" class="ltx_text" style="font-size:80%;">Coherence</span></th>
+<td id="S4.T1.5.3.3" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.5.3.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.5.3.3.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.5.3.3.1.1.1" class="ltx_text" style="font-size:80%;">Logical flow across turns/sessions; longitudinal consistency</span></span>
+</span>
+</td>
+<td id="S4.T1.5.3.1" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.5.3.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.5.3.1.1.1" class="ltx_p" style="width:162.2pt;"><math id="S4.T1.5.3.1.1.1.m1" class="ltx_Math" alttext="1-\frac{1}{n-2}\sum_{i}|\Delta\mathrm{sim}_{i\to i+1}|" display="inline" intent=":literal"><semantics><mrow><mn mathsize="0.800em">1</mn><mo mathsize="0.800em">−</mo><mrow><mfrac><mn mathsize="0.800em">1</mn><mrow><mi mathsize="0.800em">n</mi><mo mathsize="0.800em">−</mo><mn mathsize="0.800em">2</mn></mrow></mfrac><mo lspace="0em" rspace="0em">​</mo><mrow><msub><mo maxsize="0.800em" minsize="0.800em" rspace="0em" stretchy="true">∑</mo><mi mathsize="0.800em">i</mi></msub><mrow><mo maxsize="0.800em" minsize="0.800em" stretchy="true">|</mo><mrow><mi mathsize="0.800em" mathvariant="normal">Δ</mi><mo lspace="0em" rspace="0em">​</mo><msub><mi mathsize="0.800em">sim</mi><mrow><mi mathsize="0.800em">i</mi><mo mathsize="0.800em" stretchy="false">→</mo><mrow><mi mathsize="0.800em">i</mi><mo mathsize="0.800em">+</mo><mn mathsize="0.800em">1</mn></mrow></mrow></msub></mrow><mo maxsize="0.800em" minsize="0.800em" stretchy="true">|</mo></mrow></mrow></mrow></mrow><annotation encoding="application/x-tex">1-\frac{1}{n-2}\sum_{i}|\Delta\mathrm{sim}_{i\to i+1}|</annotation></semantics></math><span id="S4.T1.5.3.1.1.1.1" class="ltx_text" style="font-size:80%;"> (adjacent smoothness)</span></span>
+</span>
+</td>
+<td id="S4.T1.5.3.4" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.5.3.4.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.5.3.4.1.1" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.5.3.4.1.1.1" class="ltx_text" style="font-size:80%;">Rates discourse continuity and contradiction avoidance</span></span>
+</span>
+</td>
+</tr>
+<tr id="S4.T1.6.4" class="ltx_tr">
+<th id="S4.T1.6.4.2" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T1.6.4.2.1" class="ltx_text" style="font-size:80%;">Diversity</span></th>
+<td id="S4.T1.6.4.3" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.6.4.3.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.6.4.3.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.6.4.3.1.1.1" class="ltx_text" style="font-size:80%;">Topical breadth &amp; balance; avoids repetitive patterns</span></span>
+</span>
+</td>
+<td id="S4.T1.6.4.1" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.6.4.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.6.4.1.1.1" class="ltx_p" style="width:162.2pt;"><span id="S4.T1.6.4.1.1.1.1" class="ltx_text" style="font-size:80%;">BERTopic clusters (</span><math id="S4.T1.6.4.1.1.1.m1" class="ltx_Math" alttext="K" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math><span id="S4.T1.6.4.1.1.1.2" class="ltx_text" style="font-size:80%;">); coverage + normalized Shannon entropy </span><cite class="ltx_cite ltx_citemacro_citep"><span id="S4.T1.6.4.1.1.1.3.1" class="ltx_text" style="font-size:80%;">(</span><span class="ltx_ref ltx_missing_citation ltx_ref_self">grootendorst2022bertopic</span><span id="S4.T1.6.4.1.1.1.5.3" class="ltx_text" style="font-size:80%;">)</span></cite></span>
+</span>
+</td>
+<td id="S4.T1.6.4.4" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.6.4.4.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.6.4.4.1.1" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.6.4.4.1.1.1" class="ltx_text" style="font-size:80%;">Optional: judge comments on semantic variety</span></span>
+</span>
+</td>
+</tr>
+<tr id="S4.T1.9.7" class="ltx_tr">
+<th id="S4.T1.9.7.4" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S4.T1.9.7.4.1" class="ltx_text" style="font-size:80%;">Correctness</span></th>
+<td id="S4.T1.7.5.1" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.7.5.1.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.7.5.1.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.7.5.1.1.1.1" class="ltx_text" style="font-size:80%;">Clinical factuality independent of </span><math id="S4.T1.7.5.1.1.1.m1" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi mathsize="0.800em">s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math><span id="S4.T1.7.5.1.1.1.2" class="ltx_text" style="font-size:80%;">; medical safety</span></span>
+</span>
+</td>
+<td id="S4.T1.9.7.5" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.9.7.5.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.9.7.5.1.1" class="ltx_p" style="width:162.2pt;"><span id="S4.T1.9.7.5.1.1.1" class="ltx_text" style="font-size:80%;">— (no reliable purely lexical proxy)</span></span>
+</span>
+</td>
+<td id="S4.T1.9.7.3" class="ltx_td ltx_align_justify ltx_align_top">
+<span id="S4.T1.9.7.3.2" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.9.7.3.2.2" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.9.7.3.2.2.1" class="ltx_text" style="font-size:80%;">Judge verifies clinical claims/diagnoses/advices; scores 1–5 </span><math id="S4.T1.8.6.2.1.1.m1" class="ltx_Math" alttext="\rightarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">→</mo><annotation encoding="application/x-tex">\rightarrow</annotation></semantics></math><span id="S4.T1.9.7.3.2.2.2" class="ltx_text" style="font-size:80%;"> </span><math id="S4.T1.9.7.3.2.2.m2" class="ltx_Math" alttext="[0,1]" display="inline" intent=":literal"><semantics><mrow><mo maxsize="0.800em" minsize="0.800em">[</mo><mn mathsize="0.800em">0</mn><mo mathsize="0.800em">,</mo><mn mathsize="0.800em">1</mn><mo maxsize="0.800em" minsize="0.800em">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math></span>
+</span>
+</td>
+</tr>
+<tr id="S4.T1.11.9" class="ltx_tr">
+<th id="S4.T1.11.9.3" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb"><span id="S4.T1.11.9.3.1" class="ltx_text" style="font-size:80%;">Realism</span></th>
+<td id="S4.T1.11.9.4" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb">
+<span id="S4.T1.11.9.4.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.9.4.1.1" class="ltx_p" style="width:122.3pt;"><span id="S4.T1.11.9.4.1.1.1" class="ltx_text" style="font-size:80%;">Human-likeness, empathy, natural turn-taking</span></span>
+</span>
+</td>
+<td id="S4.T1.11.9.5" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb">
+<span id="S4.T1.11.9.5.1" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.9.5.1.1" class="ltx_p" style="width:162.2pt;"><span id="S4.T1.11.9.5.1.1.1" class="ltx_text" style="font-size:80%;">— (no reliable purely lexical proxy)</span></span>
+</span>
+</td>
+<td id="S4.T1.11.9.2" class="ltx_td ltx_align_justify ltx_align_top ltx_border_bb">
+<span id="S4.T1.11.9.2.2" class="ltx_inline-block ltx_align_top">
+<span id="S4.T1.11.9.2.2.2" class="ltx_p" style="width:133.7pt;"><span id="S4.T1.11.9.2.2.2.1" class="ltx_text" style="font-size:80%;">Judge rates naturalness/empathy; optional discrimination test; scores 1–5 </span><math id="S4.T1.10.8.1.1.1.m1" class="ltx_Math" alttext="\rightarrow" display="inline" intent=":literal"><semantics><mo mathsize="0.800em" stretchy="false">→</mo><annotation encoding="application/x-tex">\rightarrow</annotation></semantics></math><span id="S4.T1.11.9.2.2.2.2" class="ltx_text" style="font-size:80%;"> </span><math id="S4.T1.11.9.2.2.2.m2" class="ltx_Math" alttext="[0,1]" display="inline" intent=":literal"><semantics><mrow><mo maxsize="0.800em" minsize="0.800em">[</mo><mn mathsize="0.800em">0</mn><mo mathsize="0.800em">,</mo><mn mathsize="0.800em">1</mn><mo maxsize="0.800em" minsize="0.800em">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math><span id="S4.T1.11.9.2.2.2.3" class="ltx_text" style="font-size:80%;"> </span><cite class="ltx_cite ltx_citemacro_citep"><span id="S4.T1.11.9.2.2.2.4.1" class="ltx_text" style="font-size:80%;">(</span><span class="ltx_ref ltx_missing_citation ltx_ref_self">liu-etal-2023-geval</span><span id="S4.T1.11.9.2.2.2.6.3" class="ltx_text" style="font-size:80%;">)</span></cite></span>
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+</figure>
+</section>
+<section id="S4.SS0.SSS0.Px7" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">LLM based Evaluation</h5>
+
+<div id="S4.SS0.SSS0.Px7.p1" class="ltx_para">
+<p id="S4.SS0.SSS0.Px7.p1.1" class="ltx_p">To address the limitations of traditional metrics and accurately assess the nuanced qualities of long, multi-turn dialogues, we employ an LLM-as-a-judge approach based on the G-Eval framework <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">liu-etal-2023-geval</span>)</cite>. This method leverages the powerful generative and reasoning capabilities of a LLM to score dialogue turns and entire conversations against our predefined criteria. Consistent with prior work showing that strong LLM judges correlate well with human preferences <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">zheng2023judging</span>)</cite>, we adopt this paradigm for our evaluation. For each evaluation dimension— Coherence, Correctness, and Realism—we formulate a specific prompt that instructs the LLM to act as an expert evaluator.</p>
+</div>
+<div id="S4.SS0.SSS0.Px7.p2" class="ltx_para">
+<p id="S4.SS0.SSS0.Px7.p2.1" class="ltx_p">The G-Eval process is conducted as follows: we provide the LLM with a dialogue history, the current model-generated response, a set of clear instructions, and a scoring rubric (typically a 5-point scale ). The prompt is carefully designed to guide the model’s reasoning process, ensuring it considers the entire dialogue context. For instance, to evaluate Coherence, the prompt directs the LLM to assess the logical flow and consistency of the entire multi-turn conversation. Specifically, our prompts for each indicator are structured to include:</p>
+<ol id="S4.I1" class="ltx_enumerate">
+<li id="S4.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">(1)</span> 
+<div id="S4.I1.i1.p1" class="ltx_para">
+<p id="S4.I1.i1.p1.1" class="ltx_p">A clear role assignment.</p>
+</div>
+</li>
+<li id="S4.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">(2)</span> 
+<div id="S4.I1.i2.p1" class="ltx_para">
+<p id="S4.I1.i2.p1.1" class="ltx_p">The specific dialogue context, including the full history of turns.</p>
+</div>
+</li>
+<li id="S4.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">(3)</span> 
+<div id="S4.I1.i3.p1" class="ltx_para">
+<p id="S4.I1.i3.p1.1" class="ltx_p">The response to be evaluated.</p>
+</div>
+</li>
+<li id="S4.I1.i4" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">(4)</span> 
+<div id="S4.I1.i4.p1" class="ltx_para">
+<p id="S4.I1.i4.p1.1" class="ltx_p">A detailed definition of the evaluation metric.</p>
+</div>
+</li>
+<li id="S4.I1.i5" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">(5)</span> 
+<div id="S4.I1.i5.p1" class="ltx_para">
+<p id="S4.I1.i5.p1.1" class="ltx_p">The scoring rubric with concrete examples for each score (e.g., 1 = hallucinates critical information, 5 = completely factually correct).</p>
+</div>
+</li>
+</ol>
+<p id="S4.SS0.SSS0.Px7.p2.2" class="ltx_p">This method allows us to generate quantitative scores for each dialogue, which are then aggregated to provide a comprehensive dataset-level evaluation. We further compare these LLM-based scores against human annotations reported for the Conversation Chronicles dataset <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">jang-etal-2023-conversation</span>)</cite>, observing strong alignment in trends and relative rankings, consistent with prior findings on LLM–human agreement <cite class="ltx_cite ltx_citemacro_citep">(<span class="ltx_ref ltx_missing_citation ltx_ref_self">liu-etal-2023-geval</span>; <span class="ltx_ref ltx_missing_citation ltx_ref_self">zheng2023judging</span>)</cite>.</p>
+</div>
+</section>
+</section>
+<section id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">5. </span>Experiment</h2>
+
+<section id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.1. </span>Experiment Setting</h3>
+
+<figure id="S5.T2" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2. </span>Comparison of selected long-context conversation datasets.</figcaption>
+<table id="S5.T2.1" class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr id="S5.T2.1.1.1" class="ltx_tr">
+<td id="S5.T2.1.1.1.1" class="ltx_td ltx_align_left ltx_border_tt"><span id="S5.T2.1.1.1.1.1" class="ltx_text ltx_font_bold">Dataset</span></td>
+<td id="S5.T2.1.1.1.2" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T2.1.1.1.2.1" class="ltx_text ltx_font_bold">Avg. turns</span></td>
+<td id="S5.T2.1.1.1.3" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T2.1.1.1.3.1" class="ltx_text ltx_font_bold">Avg. sessions</span></td>
+<td id="S5.T2.1.1.1.4" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T2.1.1.1.4.1" class="ltx_text ltx_font_bold">Avg. tokens</span></td>
+<td id="S5.T2.1.1.1.5" class="ltx_td ltx_align_center ltx_border_tt"><span id="S5.T2.1.1.1.5.1" class="ltx_text ltx_font_bold">Domain</span></td>
+</tr>
+<tr id="S5.T2.1.2.2" class="ltx_tr">
+<td id="S5.T2.1.2.2.1" class="ltx_td"></td>
+<td id="S5.T2.1.2.2.2" class="ltx_td ltx_align_center"><span id="S5.T2.1.2.2.2.1" class="ltx_text ltx_font_bold">per conv.</span></td>
+<td id="S5.T2.1.2.2.3" class="ltx_td ltx_align_center"><span id="S5.T2.1.2.2.3.1" class="ltx_text ltx_font_bold">per conv.</span></td>
+<td id="S5.T2.1.2.2.4" class="ltx_td ltx_align_center"><span id="S5.T2.1.2.2.4.1" class="ltx_text ltx_font_bold">per conv.</span></td>
+<td id="S5.T2.1.2.2.5" class="ltx_td"></td>
+</tr>
+<tr id="S5.T2.1.3.3" class="ltx_tr">
+<td id="S5.T2.1.3.3.1" class="ltx_td ltx_align_left ltx_border_t">MSC</td>
+<td id="S5.T2.1.3.3.2" class="ltx_td ltx_align_center ltx_border_t">53.3</td>
+<td id="S5.T2.1.3.3.3" class="ltx_td ltx_align_center ltx_border_t">4</td>
+<td id="S5.T2.1.3.3.4" class="ltx_td ltx_align_center ltx_border_t">1,225.9</td>
+<td id="S5.T2.1.3.3.5" class="ltx_td ltx_align_center ltx_border_t">open</td>
+</tr>
+<tr id="S5.T2.1.4.4" class="ltx_tr">
+<td id="S5.T2.1.4.4.1" class="ltx_td ltx_align_left">CC</td>
+<td id="S5.T2.1.4.4.2" class="ltx_td ltx_align_center">58.5</td>
+<td id="S5.T2.1.4.4.3" class="ltx_td ltx_align_center">5</td>
+<td id="S5.T2.1.4.4.4" class="ltx_td ltx_align_center">1,054.7</td>
+<td id="S5.T2.1.4.4.5" class="ltx_td ltx_align_center">open</td>
+</tr>
+<tr id="S5.T2.1.5.5" class="ltx_tr">
+<td id="S5.T2.1.5.5.1" class="ltx_td ltx_align_left">LoCoMo</td>
+<td id="S5.T2.1.5.5.2" class="ltx_td ltx_align_center">588.2</td>
+<td id="S5.T2.1.5.5.3" class="ltx_td ltx_align_center">27.2</td>
+<td id="S5.T2.1.5.5.4" class="ltx_td ltx_align_center">16,618.1</td>
+<td id="S5.T2.1.5.5.5" class="ltx_td ltx_align_center">open</td>
+</tr>
+<tr id="S5.T2.1.6.6" class="ltx_tr">
+<td id="S5.T2.1.6.6.1" class="ltx_td ltx_align_left">NoteChat</td>
+<td id="S5.T2.1.6.6.2" class="ltx_td ltx_align_center">1</td>
+<td id="S5.T2.1.6.6.3" class="ltx_td ltx_align_center">1</td>
+<td id="S5.T2.1.6.6.4" class="ltx_td ltx_align_center">373.2</td>
+<td id="S5.T2.1.6.6.5" class="ltx_td ltx_align_center">healthcare</td>
+</tr>
+<tr id="S5.T2.1.7.7" class="ltx_tr">
+<td id="S5.T2.1.7.7.1" class="ltx_td ltx_align_left ltx_border_bb">ours</td>
+<td id="S5.T2.1.7.7.2" class="ltx_td ltx_align_center ltx_border_bb">960.9</td>
+<td id="S5.T2.1.7.7.3" class="ltx_td ltx_align_center ltx_border_bb">18.2</td>
+<td id="S5.T2.1.7.7.4" class="ltx_td ltx_align_center ltx_border_bb">50217.3</td>
+<td id="S5.T2.1.7.7.5" class="ltx_td ltx_align_center ltx_border_bb">healthcare</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<div id="S5.SS1.p1" class="ltx_para">
+<p id="S5.SS1.p1.1" class="ltx_p">We primarily compare MediLongChat against prior long-context conversation corpora, including MSC <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">xu2022beyond</span></cite>, Conversation Chronicles (CC) <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">jang-etal-2023-conversation</span></cite>, LoCoMo <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">maharana2024evaluating</span></cite>, and NoteChat <cite class="ltx_cite ltx_citemacro_cite"><span class="ltx_ref ltx_missing_citation ltx_ref_self">NoteChat</span></cite>.
+In MediLongChat, a complete conversation is referred to as a dialogue, which corresponds to a session in the Locomo and CC datasets. Additionally, within each dialogue (or session), a single interaction (a question followed by a response) is referred to as a turn, a term that is used similarly in the other datasets.
+The average conversation in MediLongChat has 16 times more tokens than MSC (1,225.9 vs. 50,217.3), reflecting a significantly more extended discourse. It also spans 17 times more turns (960.9 vs. 58.5) and 3.6 times more sessions (18.2 vs. 5). This highlights MediLongChat as a notably more extensive and deeper dataset, particularly in healthcare, compared to others in the Table <a href="#S5.T2" title="Table 2 ‣ 5.1. Experiment Setting ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<section id="S5.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">5.1.1. </span>Overview</h4>
+
+<div id="S5.SS1.SSS1.p1" class="ltx_para">
+<p id="S5.SS1.SSS1.p1.1" class="ltx_p">To comprehensively evaluate our dataset, we design three groups of experiments around the proposed data and evaluation framework: (1) Quality of synthetic dialogue generation; (2) Benchmarking our dataset across general-purpose LLMs; (3) Ablation of the generation pipeline.</p>
+</div>
+</section>
+<section id="S5.SS1.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">
+<span class="ltx_tag ltx_tag_subsubsection">5.1.2. </span>Quality Evaluation of Synthetic Data</h4>
+
+<div id="S5.SS1.SSS2.p1" class="ltx_para">
+<p id="S5.SS1.SSS2.p1.1" class="ltx_p">We compare four public long-form dialogue corpora under our metrics: LoCoMo, Conversation Chronicles (CC), Multi-Session Chat (MSC), and the medical dialogue dataset NoteChat. The first three corpora emphasize multi-turn or multi-session open-domain conversations and are not grounded in clinical settings, whereas NoteChat contains synthetic patient–physician encounters conditioned on clinical notes and thus resides in-domain.
+To ensure comparability, we apply a relaxed medical-factuality scoring policy to the first three datasets: we only assess self-consistency and commonsense plausibility, without penalizing based on specific medical knowledge.</p>
+</div>
+<div id="S5.SS1.SSS2.p2" class="ltx_para">
+<p id="S5.SS1.SSS2.p2.1" class="ltx_p">We evaluate along five dimensions: Faithfulness, Coherence, Correctness, Diversity, and Realism. We conduct evaluations on both Stage 1 and Stage 2 of dataset generation, while Stage 3 serves as benchmark testing and is not subject to quality evaluation. Since Stage 1 concerns patients’ medical information and does not involve dialogue fluency, we exclude Coherence from its evaluation. During assessment, we treat all patient information generated in Stage 1 as a single unit of generation for metric calculation, and likewise treat the entirety of dialogue content within a Stage 2 dialogue as a single unit of generation for evaluation.</p>
+</div>
+</section>
+</section>
+<section id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.2. </span>Benchmarking on Our Dataset</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p id="S5.SS2.p1.1" class="ltx_p">To target long-term memory and cross-session reasoning, we construct three categories of tasks: (1) In-dialogue Reasoning (IDR); (2) Cross-dialogue Reasoning (CDR); (3) Synthesis Reasoning (SR). To reduce difficulty and scoring variance in synthesis reasoning, we formulate SR task as multiple-choice questions (MCQs). On the MediLongChat benchmark, we evaluate performance using accuracy for the SR. For the IDR and CDR, we report both F1 score and BLEU-1 as evaluation metrics. On the LoCoMo benchmark, standard F1 and BLEU-1 are employed to evaluate the model’s performance. We evaluate across a representative set of closed- and open-source LLMs: GPT-4o mini, DeepSeek-R1, Qwen3, and ERNIE-4.5.</p>
+</div>
+<figure id="S5.T3" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3. </span>Evaluation results across stages. “/” indicates not applicable or not evaluated. s1 and s2 represent stage1 and stage2 in our dataset generation process</figcaption>
+<table id="S5.T3.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S5.T3.1.1.1" class="ltx_tr">
+<th id="S5.T3.1.1.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S5.T3.1.1.1.1.1" class="ltx_text ltx_font_bold">Dataset</span></th>
+<th id="S5.T3.1.1.1.2" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T3.1.1.1.2.1" class="ltx_text ltx_font_bold">Faithfulness</span></th>
+<th id="S5.T3.1.1.1.3" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T3.1.1.1.3.1" class="ltx_text ltx_font_bold">Coherence</span></th>
+<th id="S5.T3.1.1.1.4" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T3.1.1.1.4.1" class="ltx_text ltx_font_bold">Diversity</span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S5.T3.1.2.1" class="ltx_tr">
+<th id="S5.T3.1.2.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t">LoCoMo</th>
+<td id="S5.T3.1.2.1.2" class="ltx_td ltx_align_center ltx_border_t">/</td>
+<td id="S5.T3.1.2.1.3" class="ltx_td ltx_align_center ltx_border_t">0.904</td>
+<td id="S5.T3.1.2.1.4" class="ltx_td ltx_align_center ltx_border_t">0.4934</td>
+</tr>
+<tr id="S5.T3.1.3.2" class="ltx_tr">
+<th id="S5.T3.1.3.2.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">CC</th>
+<td id="S5.T3.1.3.2.2" class="ltx_td ltx_align_center">/</td>
+<td id="S5.T3.1.3.2.3" class="ltx_td ltx_align_center">0.932</td>
+<td id="S5.T3.1.3.2.4" class="ltx_td ltx_align_center">0.4879</td>
+</tr>
+<tr id="S5.T3.1.4.3" class="ltx_tr">
+<th id="S5.T3.1.4.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">MSC</th>
+<td id="S5.T3.1.4.3.2" class="ltx_td ltx_align_center">/</td>
+<td id="S5.T3.1.4.3.3" class="ltx_td ltx_align_center">0.927</td>
+<td id="S5.T3.1.4.3.4" class="ltx_td ltx_align_center">0.4874</td>
+</tr>
+<tr id="S5.T3.1.5.4" class="ltx_tr">
+<th id="S5.T3.1.5.4.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">NoteChat</th>
+<td id="S5.T3.1.5.4.2" class="ltx_td ltx_align_center">/</td>
+<td id="S5.T3.1.5.4.3" class="ltx_td ltx_align_center">0.9082</td>
+<td id="S5.T3.1.5.4.4" class="ltx_td ltx_align_center">0.5243</td>
+</tr>
+<tr id="S5.T3.1.6.5" class="ltx_tr">
+<th id="S5.T3.1.6.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">Ours(s1)</th>
+<td id="S5.T3.1.6.5.2" class="ltx_td ltx_align_center">0.635</td>
+<td id="S5.T3.1.6.5.3" class="ltx_td ltx_align_center">/</td>
+<td id="S5.T3.1.6.5.4" class="ltx_td ltx_align_center">0.4381</td>
+</tr>
+<tr id="S5.T3.1.7.6" class="ltx_tr">
+<th id="S5.T3.1.7.6.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb">Ours(s2)</th>
+<td id="S5.T3.1.7.6.2" class="ltx_td ltx_align_center ltx_border_bb">0.601</td>
+<td id="S5.T3.1.7.6.3" class="ltx_td ltx_align_center ltx_border_bb">0.925</td>
+<td id="S5.T3.1.7.6.4" class="ltx_td ltx_align_center ltx_border_bb">0.5447</td>
+</tr>
+</tbody>
+</table>
+</figure>
+</section>
+<section id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.3. </span>Result of Quality Evaluation</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p id="S5.SS3.p1.1" class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5.2. Benchmarking on Our Dataset ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> reports automatic metrics across datasets. On Coherence, our Stage-2 (0.925) is close to CC (0.932) and above LoCoMo (0.904) and NoteChat (0.9082). Faithfulness is comparable only for our data. We omit other corpora due to missing aligned sources. The gap is expected: Stage 1 (0.635), constrained by knowledge priors, yields slightly higher scores, whereas Stage 2 (0.601) shows a modest decline due to greater expressive freedom. For Diversity, Stage-2 (0.5447) is highest, followed by NoteChat (0.5243), with LoCoMo/CC slightly lower; Stage-1 (0.4381) is lower as expected. Overall, the pipeline improves diversity without sacrificing coherence, while maintaining faithfulness consistent with its structured priors.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p id="S5.SS3.p2.1" class="ltx_p">To assess robustness against judge-specific bias, we report scores from multiple independent LLM judges and their ensemble (Table <a href="#S5.T4" title="Table 4 ‣ 5.3. Result of Quality Evaluation ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). While individual judges exhibit different preferences, the ensemble provides a more stable assessment. Table <a href="#S5.T5" title="Table 5 ‣ 5.3. Result of Quality Evaluation ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents the aggregated G-Eval scores for our dataset and the three baseline datasets. The scores are normalized to a 5-point scale, where a higher score indicates better performance in that dimension.</p>
+</div>
+<figure id="S5.T4" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4. </span>Multi-judge evaluation to mitigate potential LLM-as-a-judge bias. Ensemble denotes the aggregated score across heterogeneous judges.</figcaption>
+<table id="S5.T4.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S5.T4.1.1.1" class="ltx_tr">
+<th id="S5.T4.1.1.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S5.T4.1.1.1.1.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Judge</span></th>
+<th id="S5.T4.1.1.1.2" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T4.1.1.1.2.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Diversity</span></th>
+<th id="S5.T4.1.1.1.3" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T4.1.1.1.3.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Coherence</span></th>
+<th id="S5.T4.1.1.1.4" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T4.1.1.1.4.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Correctness</span></th>
+<th id="S5.T4.1.1.1.5" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T4.1.1.1.5.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Realism</span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S5.T4.1.2.1" class="ltx_tr">
+<th id="S5.T4.1.2.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S5.T4.1.2.1.1.1" class="ltx_text" style="font-size:90%;">Gemini 2.5</span></th>
+<td id="S5.T4.1.2.1.2" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T4.1.2.1.2.1" class="ltx_text" style="font-size:90%;">4.99</span></td>
+<td id="S5.T4.1.2.1.3" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T4.1.2.1.3.1" class="ltx_text" style="font-size:90%;">4.58</span></td>
+<td id="S5.T4.1.2.1.4" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T4.1.2.1.4.1" class="ltx_text" style="font-size:90%;">4.65</span></td>
+<td id="S5.T4.1.2.1.5" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T4.1.2.1.5.1" class="ltx_text" style="font-size:90%;">4.90</span></td>
+</tr>
+<tr id="S5.T4.1.3.2" class="ltx_tr">
+<th id="S5.T4.1.3.2.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T4.1.3.2.1.1" class="ltx_text" style="font-size:90%;">GPT-5 mini</span></th>
+<td id="S5.T4.1.3.2.2" class="ltx_td ltx_align_center"><span id="S5.T4.1.3.2.2.1" class="ltx_text" style="font-size:90%;">4.99</span></td>
+<td id="S5.T4.1.3.2.3" class="ltx_td ltx_align_center"><span id="S5.T4.1.3.2.3.1" class="ltx_text" style="font-size:90%;">4.90</span></td>
+<td id="S5.T4.1.3.2.4" class="ltx_td ltx_align_center"><span id="S5.T4.1.3.2.4.1" class="ltx_text" style="font-size:90%;">3.80</span></td>
+<td id="S5.T4.1.3.2.5" class="ltx_td ltx_align_center"><span id="S5.T4.1.3.2.5.1" class="ltx_text" style="font-size:90%;">4.00</span></td>
+</tr>
+<tr id="S5.T4.1.4.3" class="ltx_tr">
+<th id="S5.T4.1.4.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T4.1.4.3.1.1" class="ltx_text" style="font-size:90%;">Qwen3-235B</span></th>
+<td id="S5.T4.1.4.3.2" class="ltx_td ltx_align_center"><span id="S5.T4.1.4.3.2.1" class="ltx_text" style="font-size:90%;">4.47</span></td>
+<td id="S5.T4.1.4.3.3" class="ltx_td ltx_align_center"><span id="S5.T4.1.4.3.3.1" class="ltx_text" style="font-size:90%;">4.88</span></td>
+<td id="S5.T4.1.4.3.4" class="ltx_td ltx_align_center"><span id="S5.T4.1.4.3.4.1" class="ltx_text" style="font-size:90%;">4.95</span></td>
+<td id="S5.T4.1.4.3.5" class="ltx_td ltx_align_center"><span id="S5.T4.1.4.3.5.1" class="ltx_text" style="font-size:90%;">4.92</span></td>
+</tr>
+<tr id="S5.T4.1.5.4" class="ltx_tr">
+<th id="S5.T4.1.5.4.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T4.1.5.4.1.1" class="ltx_text" style="font-size:90%;">Deepseek-R1</span></th>
+<td id="S5.T4.1.5.4.2" class="ltx_td ltx_align_center"><span id="S5.T4.1.5.4.2.1" class="ltx_text" style="font-size:90%;">4.94</span></td>
+<td id="S5.T4.1.5.4.3" class="ltx_td ltx_align_center"><span id="S5.T4.1.5.4.3.1" class="ltx_text" style="font-size:90%;">4.99</span></td>
+<td id="S5.T4.1.5.4.4" class="ltx_td ltx_align_center"><span id="S5.T4.1.5.4.4.1" class="ltx_text" style="font-size:90%;">4.78</span></td>
+<td id="S5.T4.1.5.4.5" class="ltx_td ltx_align_center"><span id="S5.T4.1.5.4.5.1" class="ltx_text" style="font-size:90%;">4.20</span></td>
+</tr>
+<tr id="S5.T4.1.6.5" class="ltx_tr">
+<th id="S5.T4.1.6.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb ltx_border_t"><span id="S5.T4.1.6.5.1.1" class="ltx_text" style="font-size:90%;">Ensemble</span></th>
+<td id="S5.T4.1.6.5.2" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T4.1.6.5.2.1" class="ltx_text" style="font-size:90%;">4.858</span></td>
+<td id="S5.T4.1.6.5.3" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T4.1.6.5.3.1" class="ltx_text" style="font-size:90%;">4.838</span></td>
+<td id="S5.T4.1.6.5.4" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T4.1.6.5.4.1" class="ltx_text" style="font-size:90%;">4.545</span></td>
+<td id="S5.T4.1.6.5.5" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T4.1.6.5.5.1" class="ltx_text" style="font-size:90%;">4.505</span></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<figure id="S5.T5" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5. </span>G-Eval Scores of MediLongChat vs. Baseline Multi-Turn Dialogue Datasets (5-Point Scale)</figcaption>
+<table id="S5.T5.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S5.T5.1.1.1" class="ltx_tr">
+<th id="S5.T5.1.1.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span id="S5.T5.1.1.1.1.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Dataset</span></th>
+<th id="S5.T5.1.1.1.2" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T5.1.1.1.2.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Diversity</span></th>
+<th id="S5.T5.1.1.1.3" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T5.1.1.1.3.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Coherence</span></th>
+<th id="S5.T5.1.1.1.4" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T5.1.1.1.4.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Correctness</span></th>
+<th id="S5.T5.1.1.1.5" class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span id="S5.T5.1.1.1.5.1" class="ltx_text ltx_font_bold" style="font-size:90%;">Realism</span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S5.T5.1.2.1" class="ltx_tr">
+<th id="S5.T5.1.2.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span id="S5.T5.1.2.1.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">LoCoMo</span></th>
+<td id="S5.T5.1.2.1.2" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T5.1.2.1.2.1" class="ltx_text" style="font-size:90%;">3.561</span></td>
+<td id="S5.T5.1.2.1.3" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T5.1.2.1.3.1" class="ltx_text" style="font-size:90%;">4.053</span></td>
+<td id="S5.T5.1.2.1.4" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T5.1.2.1.4.1" class="ltx_text ltx_font_bold" style="font-size:90%;">4.965</span></td>
+<td id="S5.T5.1.2.1.5" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T5.1.2.1.5.1" class="ltx_text" style="font-size:90%;">2.386</span></td>
+</tr>
+<tr id="S5.T5.1.3.2" class="ltx_tr">
+<th id="S5.T5.1.3.2.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T5.1.3.2.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">CC</span></th>
+<td id="S5.T5.1.3.2.2" class="ltx_td ltx_align_center"><span id="S5.T5.1.3.2.2.1" class="ltx_text" style="font-size:90%;">3.174</span></td>
+<td id="S5.T5.1.3.2.3" class="ltx_td ltx_align_center"><span id="S5.T5.1.3.2.3.1" class="ltx_text" style="font-size:90%;">3.504</span></td>
+<td id="S5.T5.1.3.2.4" class="ltx_td ltx_align_center"><span id="S5.T5.1.3.2.4.1" class="ltx_text" style="font-size:90%;">4.860</span></td>
+<td id="S5.T5.1.3.2.5" class="ltx_td ltx_align_center"><span id="S5.T5.1.3.2.5.1" class="ltx_text" style="font-size:90%;">2.062</span></td>
+</tr>
+<tr id="S5.T5.1.4.3" class="ltx_tr">
+<th id="S5.T5.1.4.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T5.1.4.3.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">MSC</span></th>
+<td id="S5.T5.1.4.3.2" class="ltx_td ltx_align_center"><span id="S5.T5.1.4.3.2.1" class="ltx_text" style="font-size:90%;">3.694</span></td>
+<td id="S5.T5.1.4.3.3" class="ltx_td ltx_align_center"><span id="S5.T5.1.4.3.3.1" class="ltx_text" style="font-size:90%;">3.482</span></td>
+<td id="S5.T5.1.4.3.4" class="ltx_td ltx_align_center"><span id="S5.T5.1.4.3.4.1" class="ltx_text" style="font-size:90%;">4.696</span></td>
+<td id="S5.T5.1.4.3.5" class="ltx_td ltx_align_center"><span id="S5.T5.1.4.3.5.1" class="ltx_text" style="font-size:90%;">1.982</span></td>
+</tr>
+<tr id="S5.T5.1.5.4" class="ltx_tr">
+<th id="S5.T5.1.5.4.1" class="ltx_td ltx_align_left ltx_th ltx_th_row"><span id="S5.T5.1.5.4.1.1" class="ltx_text ltx_font_typewriter" style="font-size:90%;">NoteChat</span></th>
+<td id="S5.T5.1.5.4.2" class="ltx_td ltx_align_center"><span id="S5.T5.1.5.4.2.1" class="ltx_text" style="font-size:90%;">3.138</span></td>
+<td id="S5.T5.1.5.4.3" class="ltx_td ltx_align_center"><span id="S5.T5.1.5.4.3.1" class="ltx_text" style="font-size:90%;">4.464</span></td>
+<td id="S5.T5.1.5.4.4" class="ltx_td ltx_align_center"><span id="S5.T5.1.5.4.4.1" class="ltx_text" style="font-size:90%;">3.213</span></td>
+<td id="S5.T5.1.5.4.5" class="ltx_td ltx_align_center"><span id="S5.T5.1.5.4.5.1" class="ltx_text" style="font-size:90%;">2.340</span></td>
+</tr>
+<tr id="S5.T5.1.6.5" class="ltx_tr">
+<th id="S5.T5.1.6.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb ltx_border_t"><span id="S5.T5.1.6.5.1.1" class="ltx_text ltx_font_bold" style="font-size:90%;">ours</span></th>
+<td id="S5.T5.1.6.5.2" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T5.1.6.5.2.1" class="ltx_text ltx_font_bold" style="font-size:90%;">4.858</span></td>
+<td id="S5.T5.1.6.5.3" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T5.1.6.5.3.1" class="ltx_text ltx_font_bold" style="font-size:90%;">4.838</span></td>
+<td id="S5.T5.1.6.5.4" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T5.1.6.5.4.1" class="ltx_text" style="font-size:90%;">4.545</span></td>
+<td id="S5.T5.1.6.5.5" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t"><span id="S5.T5.1.6.5.5.1" class="ltx_text ltx_font_bold" style="font-size:90%;">4.505</span></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<div id="S5.SS3.p3" class="ltx_para">
+<p id="S5.SS3.p3.1" class="ltx_p">The evaluation results highlight the significant advantages of the MediLongChat dataset, particularly in dimensions critical for effective long-term dialogue and domain-specific applications:</p>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<ul id="S5.I1" class="ltx_itemize">
+<li id="S5.I1.i1" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i1.p1" class="ltx_para">
+<p id="S5.I1.i1.p1.1" class="ltx_p"><span id="S5.I1.i1.p1.1.1" class="ltx_text ltx_font_bold">Diversity:</span> MediLongChat achieves the highest score in Diversity, nearly reaching the maximum possible score. This is a direct consequence of our data collection and cleaning process, which was meticulously designed to capture a wide variety of linguistic expressions and conversational paths over multiple turns. This high diversity ensures that models trained on our data are less prone to generating repetitive or generic responses, a common drawback in multi-turn datasets.</p>
+</div>
+</li>
+<li id="S5.I1.i2" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i2.p1" class="ltx_para">
+<p id="S5.I1.i2.p1.1" class="ltx_p"><span id="S5.I1.i2.p1.1.1" class="ltx_text ltx_font_bold">Coherence:</span> Our dataset demonstrates exceptional long-term Coherence. This score validates our focus on maintaining consistency and logical flow lengthy dialogue sessions. In contrast, baseline datasets like msc and conversation chronicles report exhibit lower coherence, suggesting difficulty in preserving the narrative or context across many turns. This superior coherence makes MediLongChat an ideal resource for training models that require strong memory and contextual understanding over extended dialogues, such as tracking a patient’s medical history.</p>
+</div>
+</li>
+<li id="S5.I1.i3" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i3.p1" class="ltx_para">
+<p id="S5.I1.i3.p1.1" class="ltx_p"><span id="S5.I1.i3.p1.1.1" class="ltx_text ltx_font_bold">Realism:</span> MediLongChat scores significantly higher on the Realistic metric compared to all baselines. This demonstrates that our dialogues closely mimic the naturalness, turn-taking dynamics, and authentic emotional tone of real-world interactions. This realistic quality is essential for training empathetic and user-friendly dialogue systems.</p>
+</div>
+</li>
+<li id="S5.I1.i4" class="ltx_item" style="list-style-type:none;">
+<span class="ltx_tag ltx_tag_item">•</span> 
+<div id="S5.I1.i4.p1" class="ltx_para">
+<p id="S5.I1.i4.p1.1" class="ltx_p"><span id="S5.I1.i4.p1.1.1" class="ltx_text ltx_font_bold">Correctness:</span> While LoCoMo shows a slightly higher score in Correctness, MediLongChat remains highly competitive with a score of <math id="S5.I1.i4.p1.1.m1" class="ltx_Math" alttext="\mathbf{4.545}" display="inline" intent=":literal"><semantics><mn class="ltx_mathvariant_bold" mathvariant="bold">4.545</mn><annotation encoding="application/x-tex">\mathbf{4.545}</annotation></semantics></math>. This indicates that our data maintains a high standard of factual and domain-specific accuracy, which is non-negotiable for medical dialogue datasets. The minor difference suggests that the baselines may contain highly curated, single-turn factual statements, whereas our slightly lower score is likely due to the inherent complexity and higher risk of errors in long, multi-turn, generated dialogue.</p>
+</div>
+</li>
+</ul>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p id="S5.SS3.p5.1" class="ltx_p">In summary, the G-Eval results confirm that the MediLongChat dataset successfully mitigates the common challenges of multi-turn dialogue datasets, particularly excelling in Diversity and Coherence, while maintaining high standards in Correctness and Realism.</p>
+</div>
+<figure id="S5.T6" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6. </span>Performance comparison of different models on the MediLongChat benchmark, including SR accuracy, IDR F1 and BLEU scores, and CDR F1 and BLEU scores.</figcaption>
+<table id="S5.T6.1" class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr id="S5.T6.1.1.1" class="ltx_tr">
+<td id="S5.T6.1.1.1.1" class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" rowspan="2"><span id="S5.T6.1.1.1.1.1" class="ltx_text ltx_font_bold">Model</span></td>
+<td id="S5.T6.1.1.1.2" class="ltx_td ltx_align_center ltx_border_r ltx_border_tt" colspan="2"><span id="S5.T6.1.1.1.2.1" class="ltx_text ltx_font_bold">IDR</span></td>
+<td id="S5.T6.1.1.1.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_tt" colspan="2"><span id="S5.T6.1.1.1.3.1" class="ltx_text ltx_font_bold">CDR</span></td>
+<td id="S5.T6.1.1.1.4" class="ltx_td ltx_align_center ltx_border_tt" rowspan="2"><span id="S5.T6.1.1.1.4.1" class="ltx_text ltx_font_bold">SR Accuracy</span></td>
+</tr>
+<tr id="S5.T6.1.2.2" class="ltx_tr">
+<td id="S5.T6.1.2.2.1" class="ltx_td ltx_align_center"><span id="S5.T6.1.2.2.1.1" class="ltx_text ltx_font_bold">F1</span></td>
+<td id="S5.T6.1.2.2.2" class="ltx_td ltx_align_center ltx_border_r"><span id="S5.T6.1.2.2.2.1" class="ltx_text ltx_font_bold">BLEU</span></td>
+<td id="S5.T6.1.2.2.3" class="ltx_td ltx_align_center"><span id="S5.T6.1.2.2.3.1" class="ltx_text ltx_font_bold">F1</span></td>
+<td id="S5.T6.1.2.2.4" class="ltx_td ltx_align_center ltx_border_r"><span id="S5.T6.1.2.2.4.1" class="ltx_text ltx_font_bold">BLEU</span></td>
+</tr>
+<tr id="S5.T6.1.3.3" class="ltx_tr">
+<td id="S5.T6.1.3.3.1" class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Deepseek-R1</td>
+<td id="S5.T6.1.3.3.2" class="ltx_td ltx_align_center ltx_border_t">33.49</td>
+<td id="S5.T6.1.3.3.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">11.12</td>
+<td id="S5.T6.1.3.3.4" class="ltx_td ltx_align_center ltx_border_t">20.36</td>
+<td id="S5.T6.1.3.3.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.41</td>
+<td id="S5.T6.1.3.3.6" class="ltx_td ltx_align_center ltx_border_t">80.00</td>
+</tr>
+<tr id="S5.T6.1.4.4" class="ltx_tr">
+<td id="S5.T6.1.4.4.1" class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Qwen3-235B</td>
+<td id="S5.T6.1.4.4.2" class="ltx_td ltx_align_center ltx_border_t">27.19</td>
+<td id="S5.T6.1.4.4.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">6.31</td>
+<td id="S5.T6.1.4.4.4" class="ltx_td ltx_align_center ltx_border_t">19.61</td>
+<td id="S5.T6.1.4.4.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.13</td>
+<td id="S5.T6.1.4.4.6" class="ltx_td ltx_align_center ltx_border_t">80.00</td>
+</tr>
+<tr id="S5.T6.1.5.5" class="ltx_tr">
+<td id="S5.T6.1.5.5.1" class="ltx_td ltx_align_left ltx_border_r ltx_border_t">ERNIE-4.5-turbo</td>
+<td id="S5.T6.1.5.5.2" class="ltx_td ltx_align_center ltx_border_t">31.74</td>
+<td id="S5.T6.1.5.5.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">8.73</td>
+<td id="S5.T6.1.5.5.4" class="ltx_td ltx_align_center ltx_border_t">16.46</td>
+<td id="S5.T6.1.5.5.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.33</td>
+<td id="S5.T6.1.5.5.6" class="ltx_td ltx_align_center ltx_border_t">80.00</td>
+</tr>
+<tr id="S5.T6.1.6.6" class="ltx_tr">
+<td id="S5.T6.1.6.6.1" class="ltx_td ltx_align_left ltx_border_r ltx_border_t">GPT-4o mini</td>
+<td id="S5.T6.1.6.6.2" class="ltx_td ltx_align_center ltx_border_t">23.30</td>
+<td id="S5.T6.1.6.6.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3.28</td>
+<td id="S5.T6.1.6.6.4" class="ltx_td ltx_align_center ltx_border_t">24.25</td>
+<td id="S5.T6.1.6.6.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.46</td>
+<td id="S5.T6.1.6.6.6" class="ltx_td ltx_align_center ltx_border_t">80.00</td>
+</tr>
+<tr id="S5.T6.1.7.7" class="ltx_tr">
+<td id="S5.T6.1.7.7.1" class="ltx_td ltx_align_left ltx_border_bb ltx_border_r ltx_border_t">GPT-4.1 mini</td>
+<td id="S5.T6.1.7.7.2" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">27.15</td>
+<td id="S5.T6.1.7.7.3" class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">6.18</td>
+<td id="S5.T6.1.7.7.4" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">18.37</td>
+<td id="S5.T6.1.7.7.5" class="ltx_td ltx_align_center ltx_border_bb ltx_border_r ltx_border_t">1.66</td>
+<td id="S5.T6.1.7.7.6" class="ltx_td ltx_align_center ltx_border_bb ltx_border_t">83.75</td>
+</tr>
+</tbody>
+</table>
+</figure>
+</section>
+<section id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.4. </span>Result of Benchmarking</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p id="S5.SS4.p1.1" class="ltx_p">We evaluate a set of general-purpose LLMs on the three MediLongChat tasks: in-dialogue reasoning (IDR; F1/BLEU), cross-dialogue reasoning (CDR; F1/BLEU), and synthesis reasoning (SR; accuracy). Across models, absolute scores remain modest for IDR and CDR, underscoring the difficulty of reasoning over long clinical histories, while SR shows comparatively higher accuracies (Table <a href="#S5.T6" title="Table 6 ‣ 5.3. Result of Quality Evaluation ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p id="S5.SS4.p2.1" class="ltx_p">On IDR, Deepseek-R1 attains the highest F1 (33.49) and BLEU (11.12), indicating relatively stronger extraction and short-range reasoning within a single consultation. For CDR, which requires linking information across sessions, GPT-4o mini yields the best F1 (24.25), though BLEU remains low for all systems, reflecting the challenge of cross-session grounding in free-form answers. For SR, GPT-4.1 mini achieves the top accuracy (83.75), suggesting that multiple-choice formulations mitigate some of the generation variance observed in open-ended settings.</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p id="S5.SS4.p3.1" class="ltx_p">Taken together, these results paint a consistent picture: current LLMs can recover salient facts within a single encounter reasonably well, but performance drops when they need to link facts across sessions. The gap between IDR/CDR and SR also suggests that constrained answer formats partially alleviate long-context errors but do not solve underlying memory and reasoning limitations. We report scores without additional memory augmentation to provide a clean baseline for future methods.</p>
+</div>
+<figure id="S5.T7" class="ltx_table">
+<figcaption class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7. </span>Ablation experiment results. Here, Fai, Coh, Cor, Div, and Rea denote Faithfulness, Coherence, Correctness, Diversity, and Realism, respectively. KG, TD, and DS represent Knowledge Guidance, Task Decomposition, and Diversity Setting in the generation process.</figcaption>
+<table id="S5.T7.1" class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr id="S5.T7.1.1.1" class="ltx_tr">
+<th id="S5.T7.1.1.1.1" class="ltx_td ltx_align_center ltx_th ltx_th_row ltx_border_r ltx_border_t">Stage</th>
+<th id="S5.T7.1.1.1.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r ltx_border_t">Method</th>
+<td id="S5.T7.1.1.1.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Fai</td>
+<td id="S5.T7.1.1.1.4" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Coh</td>
+<td id="S5.T7.1.1.1.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Cor</td>
+<td id="S5.T7.1.1.1.6" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Div</td>
+<td id="S5.T7.1.1.1.7" class="ltx_td ltx_align_center ltx_border_t">Rea</td>
+</tr>
+<tr id="S5.T7.1.2.2" class="ltx_tr">
+<th id="S5.T7.1.2.2.1" class="ltx_td ltx_align_center ltx_th ltx_th_row ltx_border_r ltx_border_t" rowspan="2"><span id="S5.T7.1.2.2.1.1" class="ltx_text">1</span></th>
+<th id="S5.T7.1.2.2.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r ltx_border_t">Ours</th>
+<td id="S5.T7.1.2.2.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.2.2.3.1" class="ltx_text ltx_font_bold">0.6353</span></td>
+<td id="S5.T7.1.2.2.4" class="ltx_td ltx_align_center ltx_border_r ltx_border_t">/</td>
+<td id="S5.T7.1.2.2.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.2.2.5.1" class="ltx_text ltx_font_bold">0.930</span></td>
+<td id="S5.T7.1.2.2.6" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.2.2.6.1" class="ltx_text ltx_font_bold">0.4381</span></td>
+<td id="S5.T7.1.2.2.7" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T7.1.2.2.7.1" class="ltx_text ltx_font_bold">0.720</span></td>
+</tr>
+<tr id="S5.T7.1.3.3" class="ltx_tr">
+<th id="S5.T7.1.3.3.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r">w/o KG</th>
+<td id="S5.T7.1.3.3.2" class="ltx_td ltx_align_center ltx_border_r">0.4415</td>
+<td id="S5.T7.1.3.3.3" class="ltx_td ltx_align_center ltx_border_r">/</td>
+<td id="S5.T7.1.3.3.4" class="ltx_td ltx_align_center ltx_border_r">0.920</td>
+<td id="S5.T7.1.3.3.5" class="ltx_td ltx_align_center ltx_border_r">0.4313</td>
+<td id="S5.T7.1.3.3.6" class="ltx_td ltx_align_center">0.540</td>
+</tr>
+<tr id="S5.T7.1.4.4" class="ltx_tr">
+<th id="S5.T7.1.4.4.1" class="ltx_td ltx_align_center ltx_th ltx_th_row ltx_border_b ltx_border_r ltx_border_t" rowspan="3"><span id="S5.T7.1.4.4.1.1" class="ltx_text">2</span></th>
+<th id="S5.T7.1.4.4.2" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r ltx_border_t">Ours</th>
+<td id="S5.T7.1.4.4.3" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.4.4.3.1" class="ltx_text ltx_font_bold">0.6010</span></td>
+<td id="S5.T7.1.4.4.4" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.4.4.4.1" class="ltx_text ltx_font_bold">0.924</span></td>
+<td id="S5.T7.1.4.4.5" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.4.4.5.1" class="ltx_text ltx_font_bold">0.909</span></td>
+<td id="S5.T7.1.4.4.6" class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span id="S5.T7.1.4.4.6.1" class="ltx_text ltx_font_bold">0.5447</span></td>
+<td id="S5.T7.1.4.4.7" class="ltx_td ltx_align_center ltx_border_t"><span id="S5.T7.1.4.4.7.1" class="ltx_text ltx_font_bold">0.901</span></td>
+</tr>
+<tr id="S5.T7.1.5.5" class="ltx_tr">
+<th id="S5.T7.1.5.5.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r">w/o TD</th>
+<td id="S5.T7.1.5.5.2" class="ltx_td ltx_align_center ltx_border_r">0.5809</td>
+<td id="S5.T7.1.5.5.3" class="ltx_td ltx_align_center ltx_border_r">0.8689</td>
+<td id="S5.T7.1.5.5.4" class="ltx_td ltx_align_center ltx_border_r">0.896</td>
+<td id="S5.T7.1.5.5.5" class="ltx_td ltx_align_center ltx_border_r">0.4590</td>
+<td id="S5.T7.1.5.5.6" class="ltx_td ltx_align_center">0.720</td>
+</tr>
+<tr id="S5.T7.1.6.6" class="ltx_tr">
+<th id="S5.T7.1.6.6.1" class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_b ltx_border_r">w/o DS</th>
+<td id="S5.T7.1.6.6.2" class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.5784</td>
+<td id="S5.T7.1.6.6.3" class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.921</td>
+<td id="S5.T7.1.6.6.4" class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.904</td>
+<td id="S5.T7.1.6.6.5" class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.3134</td>
+<td id="S5.T7.1.6.6.6" class="ltx_td ltx_align_center ltx_border_b">0.700</td>
+</tr>
+</tbody>
+</table>
+</figure>
+</section>
+<section id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">5.5. </span>Ablation Experiment Results</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p id="S5.SS5.p1.1" class="ltx_p">To quantify the contribution of each component in our two-stage pipeline, we conduct ablations on Stage-1 and Stage-2 under the same evaluation protocol as the main experiments. Coherence is not reported for Stage-1 because its outputs are structured summaries rather than multi-turn conversations. We compare three deletions: removing knowledge guidance in Stage-1, and removing task decomposition or diversity controls in Stage-2. The results are summarized in Table <a href="#S5.T7" title="Table 7 ‣ 5.4. Result of Benchmarking ‣ 5. Experiment ‣ Synthesis and Evaluation of Long-term History-aware Medical Dialogue" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.</p>
+</div>
+<div id="S5.SS5.p2" class="ltx_para">
+<p id="S5.SS5.p2.1" class="ltx_p">For Stage-1, removing knowledge guidance leads to a marked deterioration in verifiability and narrative plausibility: Faithfulness drops from 0.6353 to 0.4415 and Realism from 0.720 to 0.540.
+These results directly support the knowledge-guided design: removing curated disease–complication metadata and temporal constraints lowers Faithfulness and Realism. Accordingly, retaining Stage-1 knowledge guidance is a justified and practical choice.</p>
+</div>
+<div id="S5.SS5.p3" class="ltx_para">
+<p id="S5.SS5.p3.1" class="ltx_p">For Stage-2, both ablations underperform the full pipeline. Removing task decomposition reduces Coherence and Diversity, with smaller drops in Faithfulness, Correctness, and Realism. This indicates that decomposition helps preserve long-range logical flow and limits content mixing. Removing diversity controls shows a different profile: Diversity decreases markedly and Realism declines, while Coherence is largely preserved and Faithfulness changes only slightly. Overall, task decomposition primarily benefits coherence and clinical correctness, whereas diversity controls mainly improve linguistic variety and perceived naturalness with limited effect on faithfulness or coherence.</p>
+</div>
+</section>
+</section>
+<section id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">6. </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p id="S6.p1.1" class="ltx_p">This work presents a knowledge-guided and task-decomposed framework for synthesizing history-aware longitudinal clinical dialogues together with a multi-dimensional evaluation protocol. By employing diverse patient personas and decomposed dialogue pipelines, we can generate coherent, traceable, and varied long-term conversations. To assess data quality and downstream model capabilities, we propose a multi-dimensional evaluation scheme combining automated metrics with LLM-based judging. This establishes rigorous standards across five dimensions: Faithfulness, Coherence, Correctness, Diversity, and Realism. Empirical results show that even state-of-the-art LLMs struggle on MediLongChat, particularly in long-term memory and cross-session reasoning. Ablation results show that knowledge guidance improves faithfulness and realism, diversity controls primarily increase linguistic variety with limited impact on factuality, and task decomposition helps maintain coherence and correctness in long-range dialogues.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p id="S6.p2.1" class="ltx_p">Although our framework achieves a favorable balance between scalability and controllability, several limitations remain. First, synthetic data inevitably deviates from real clinical distributions, particularly in coverage of rare diseases, complex comorbidities, and behavioral health factors. Second, while LLM-as-a-judge offers efficient assessment, its reliability depends on prompt design and baseline model robustness, and its fine-grained agreement with clinical experts requires further improvement. Finally, our current dialogues primarily focus on the textual modality and have not yet systematically incorporated multi-modal signals such as medical images, lab curves, and structured EHR data.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p id="S6.p3.1" class="ltx_p">Moving forward, we aim to extend the framework to multimodal and multilingual settings by integrating images, temporal physiological signals, and structured medical records. Furthermore, we will explore retrieval-augmented generation and dynamic episodic memory to enhance longitudinal reasoning and mitigate hallucinations in long-text generation. We hope that MediLongChat serves as a reusable, comparable public benchmark, providing a foundation and inspiration for research on longitudinal clinical reasoning and trustworthy medical dialogue agents.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<span id="S6.p4.1" class="ltx_ERROR undefined">{acks}</span>
+<p id="S6.p4.2" class="ltx_p">This work was partly supported by the General Project of the Central Universities of China (No. CZY23007), Hubei Province Key Research and Development Special Project of Science and Technology Innovation Plan (2023BAB087), Wuhan Key Research and Development Projects (2023010402010614), and Lee Kong Chian Professorship awarded to Ah-Hwee Tan by Singapore Management University.</p>
+</div>
+</section>
+<section id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="bib.L1" class="ltx_biblist">
+</ul>
+</section>
+</article>
+</div>
+</div>
+<footer class="arxiv-html-footer">
+  <div class="ltx_page_logo">
+    Experimental support, please
+    <a href="./2605.19766v1/__stdout.txt" class="ltx_ref"
+    target="_blank" rel="nofollow">view the build logs</a>
+    for errors. Generated by
+    <a href="https://math.nist.gov/~BMiller/LaTeXML/" target="_blank" class="ltx_ref ltx_LaTeXML_logo">
+      <span style="letter-spacing: -0.2em; margin-right: 0.1em;">
+        L
+        <span style="font-size: 70%; position: relative; bottom: 2.2pt;">A</span>
+        T
+        <span style="position: relative; bottom: -0.4ex;">E</span>
+      </span>
+      <span class="ltx_font_smallcaps">xml</span>
+      <img alt="[LOGO]"
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==">
+    </a>.
+  </div>
+  <div class="keyboard-glossary">
+    <h2>Instructions for reporting errors</h2>
+    <p>We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:</p>
+    <ul>
+      <li>Click the "Report Issue" <span class="mobile-only">(<svg role="presentation"
+            style="display: inline-block; vertical-align: middle; fill: var(--text-color);" aria-hidden="true"
+            height="1em" viewBox="0 0 640 640">
+            <path
+              d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+          </svg>)</span> button, located in the page header.</li>
+    </ul>
+    <p><strong>Tip:</strong> You can select the relevant text first, to include it in your report.</p>
+    <p>Our team has already identified <a class="ltx_ref" href="https://github.com/arXiv/html_feedback/issues"
+        target="_blank">the following issues</a>. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.</p>
+    <p>Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a <a
+        class="ltx_ref" href="https://github.com/brucemiller/LaTeXML/wiki/Porting-LaTeX-packages-for-LaTeXML"
+        target="_blank">list of packages that need conversion</a>, and welcome <a class="ltx_ref"
+        href="https://github.com/brucemiller/LaTeXML/issues" target="_blank">developer contributions</a>.</p>
+  </div>
+</footer>
+<div id="fixed-buttons-container">
+  <div id="beta-badge" aria-hidden="true">BETA</div>
+  <a id="disable-reading-mode-btn" class="header-button" href="javascript:toggleReadingMode();"
+    title="Disable reading mode, show header and footer">
+    <svg role="presentation" height="1.25rem"
+      viewBox="0 0 448 512"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+      <path
+        d="M0 96C0 78.3 14.3 64 32 64l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 128C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32l384 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 288c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32L32 448c-17.7 0-32-14.3-32-32s14.3-32 32-32l384 0c17.7 0 32 14.3 32 32z" />
+    </svg>
+  </a>
+</div></body>
+</html>

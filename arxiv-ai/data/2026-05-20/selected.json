@@ -1,0 +1,359 @@
+{
+  "llm": [
+    {
+      "id": "2605.18825",
+      "title": "Not All Tokens Are Worth Caching: Learning Semantic-Aware Eviction for LLM Prefix Caches",
+      "abstract": "Abstract: Prefix caching is a key optimization in Large Language Model (LLM) serving, reusing attention Key-Value (KV) states across requests with shared prompt prefixes to reduce expensive prefill computation. However, its benefit depends critically on the eviction policy as GPU memory is scarce, and existing policies such as LRU largely treat cached blocks uniformly. This view ignores a fundamental property of LLM prompts: not all tokens are equally worth caching. We show that different token types within a prompt, including system prompts, user queries, tool outputs, model responses, and chain-of-thought reasoning, exhibit up to 756x variation in reuse rates, yet no existing eviction policy exploits this signal. In this paper, we present SAECache (Semantic-Adaptive Eviction for prefix caches), a semantic-adaptive prefix cache eviction policy that addresses this gap through three innovations: (1) a multi-queue architecture that routes KV blocks to task-specific queues with tailored priority metrics, capturing both session reuse in multi-turn requests and structural reuse in templated single-turn requests; (2) a semantic-aware token weighting mechanism that learns the reuse value of different token types online through eviction feedback; and (3) a fully adaptive online learning schema for all parameter updates, including log-normal timing parameters, position decay power, queue weights, and meta-parameters, which eliminates manual tuning and enables automatic adaptation to deployment-specific workload characteristics. Through extensive evaluation across heterogeneous workloads, we demonstrate that SAECache achieves 1.4x-2.7x TTFT improvement over production-style baselines, while fixed-parameter alternatives can degrade by up to 2.7x under workload mismatch -- a failure mode our adaptive approach avoids entirely.",
+      "link": "https://arxiv.org/abs/2605.18825",
+      "categories": [
+        "cs.LG"
+      ],
+      "authors": "Shaoke Fang, Ziang Li, Wenfei Wu, Jiatong Ji, Qingsong Liu, Ruizhi Pu",
+      "mm_kw": [],
+      "llm_kw": [
+        "large language model",
+        "language model",
+        "attention",
+        "chain-of-thought",
+        "reasoning"
+      ],
+      "rl_kw": [],
+      "agent_kw": [
+        "memory"
+      ],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "llm",
+      "score": 10
+    },
+    {
+      "id": "2605.18856",
+      "title": "SPHERICAL KV: Angle-Domain Attention and Rate-Distortion Retention for Efficient Long-Context Inference",
+      "abstract": "Abstract: Long-context inference is increasingly constrained by the KV cache: resident memory grows with context length, and decoding becomes limited by repeated High Bandwidth Memory (HBM) streaming rather than arithmetic. Existing methods such as eviction, windowing, quantization, and offloading reduce footprint, but often leave the critical-path bottleneck only partially addressed, especially when compressed states must still be reconstructed into dense vectors during decoding. We present Spherical KV, a long-context inference method that treats KV allocation as a rate-distortion problem grounded in attention geometry for efficient decoding. The method is built on two ideas: (i) represent directional information cheaply in the decode hot loop, and (ii) allocate retention and precision according to estimated future utility. Its first component, Angle-Domain Attention (ADA), stores keys in a spherical parameterization consisting of a scalar radius and compact angle codes, and computes attention logits directly from these codes without reconstructing dense keys. This preserves a paged, block-local, fusion-friendly decode path and directly targets HBM traffic in realistic serving settings. Its second component, Rate-Distortion Retention (RDR), jointly chooses keep/drop decisions and precision tiers per token and head under a fixed budget, producing tier-homogeneous pages with lightweight metadata and coalesced reads. Together, ADA and RDR provide a deployment-oriented mechanism for reducing KV residency while preserving decode efficiency.",
+      "link": "https://arxiv.org/abs/2605.18856",
+      "categories": [
+        "cs.LG"
+      ],
+      "authors": "Anay Chauhan, Gurucharan Marthi Krishna Kumar, Arion Das, Amit Dhanda, Vinija Jain, Aman Chadha, Amitava Das",
+      "mm_kw": [],
+      "llm_kw": [
+        "kv cache",
+        "attention",
+        "decoding",
+        "quantization"
+      ],
+      "rl_kw": [],
+      "agent_kw": [
+        "memory"
+      ],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "llm",
+      "score": 10
+    },
+    {
+      "id": "2605.18817",
+      "title": "Multi-Token Residual Prediction",
+      "abstract": "Abstract: Diffusion Language Models (DLMs) generate text by iteratively denoising masked token sequences, offering a tradeoff between parallelism and quality compared to autoregressive models. In current practice, the number of tokens decoded per step is controlled by a confidence threshold, and quality degrades monotonically as more tokens are denoised per step. We introduce Multi-token Residual Prediction (MRP), a lightweight module that enables dependency-aware multi-token denoising within a single backbone forward pass. MRP exploits a key property of the denoising process: the logit distributions at adjacent denoising steps are remarkably similar. Rather than running the backbone a second time to obtain the next-step logits, MRP predicts the residual between steps from the backbone's hidden states, effectively denoising more tokens per backbone forward at a fraction of the cost. We deploy MRP in two inference modes: direct decoding, which uses the corrected logits without verification for a tunable quality--speed tradeoff; and speculative decoding, which verifies MRP's proposals against the backbone for lossless acceleration. Experiments on SDAR models at the 1.7B, 4B, and 8B scales across reasoning and code generation benchmarks demonstrate up to $1.42\\times$ lossless speedup in SGLang.",
+      "link": "https://arxiv.org/abs/2605.18817",
+      "categories": [
+        "cs.LG"
+      ],
+      "authors": "Yufeng Xu, Zishuo Bao, Qian Wang, Zeshen Zhang, Haoqi Zhang, Bowen Peng, Ang Li, Rahul Chalamala, Yucheng Lu",
+      "mm_kw": [],
+      "llm_kw": [
+        "language model",
+        "decoding",
+        "speculative",
+        "reasoning",
+        "code generation"
+      ],
+      "rl_kw": [],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "llm",
+      "score": 7
+    }
+  ],
+  "rl": [
+    {
+      "id": "2605.19416",
+      "title": "LambdaPO: A Lambda Style Policy Optimization for Reasoning Language Models",
+      "abstract": "Abstract: Group Relative Policy Optimization(GRPO) has become a cornerstone of modern reinforcement learning alignment, prized for its efficacy in foregoing an explicit value-critic by leveraging reward normalization across sampled trajectory cohorts. However, the method's reliance on a monolithic statistical baseline, such as the group mean, collapses the relational topology of the trajectory space into a single scalar, thereby erasing the fine-grained preference information essential for navigating complex, rank-sensitive reward landscapes. To address this issue, we introduce a novel framework, Lambda Policy Optimization (LambdaPO), that addresses this information-theoretic bottleneck by re-conceptualizing advantage estimation from a scalar value to a decomposed, pairwise preference structure. Specifically, the advantage for any given trajectory is formulated as the integrated sum of reward differentials against all peers in its cohort, where each pairwise comparison is dynamically attenuated by the policy's own probabilistic confidence in the established preference. To further mitigate the sparsity of binary outcome supervision, we augment the objective with a semantic density reward, derived from the precision-recall alignment between generated reasoning traces and ground-truth solutions. As a result, our method can mine more fine-grained optimization signals from a group of rollouts, guiding the LLM to a better optima. Experimental results across challenging math reasoning and question-answering tasks demonstrates that LambdaPO improves performance compared to the baseline methods.",
+      "link": "https://arxiv.org/abs/2605.19416",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Zhe Yuan, Yipeng Zhou, Jinghan Li, Xinyuan Chen, Bowen Deng, Zhiqian Chen, Liang Zhao",
+      "mm_kw": [],
+      "llm_kw": [
+        "language model",
+        "rag",
+        "reasoning",
+        "math reasoning"
+      ],
+      "rl_kw": [
+        "reinforcement learning",
+        "grpo",
+        "preference",
+        "alignment",
+        "policy optimization"
+      ],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "rl",
+      "score": 16
+    },
+    {
+      "id": "2605.18864",
+      "title": "SAGE: Shaping Anchors for Guided Exploration in RLVR of LLMs",
+      "abstract": "Abstract: Recent studies observe that reinforcement learning with verifiable rewards (RLVR) reliably improves pass@1 on reasoning tasks, yet often fails to yield comparable gains in pass@k, raising the question of whether RLVR genuinely enables large language models to acquire novel reasoning abilities or merely enhances the efficiency of sampling reasoning modes already present in the base model. Prior analyses largely support the latter view, attributing this limitation to structural properties of standard RLVR objectives that result in insufficient exploration pressure. In this work, we argue that a central structural constraint arises from reverse-KL regularization, which stabilizes training but inherently anchors the policy to the reference distribution, thereby suppressing the emergence of alternative reasoning modes. However, we show that neither removing the KL term nor replacing it with forward-KL provides a satisfactory solution, as both disrupt the efficiency-coverage trade-off by either inducing reward hacking or allocating probability mass to off-target regions. To resolve this tension, we propose SAGE, a principled framework that enables controllable empirical support expansion by reshaping the reverse-KL anchor distribution itself through a guide function q(x,y), achieving consistent improvements in both pass@1 and pass@k across challenging mathematical reasoning benchmarks. Our code is available at https://github.com/tally0818/SAGE.",
+      "link": "https://arxiv.org/abs/2605.18864",
+      "categories": [
+        "cs.LG"
+      ],
+      "authors": "Chanuk Lee, Minki Kang, Sung Ju Hwang",
+      "mm_kw": [],
+      "llm_kw": [
+        "large language model",
+        "language model",
+        "rag",
+        "reasoning"
+      ],
+      "rl_kw": [
+        "reinforcement learning",
+        "rlvr",
+        "ppo",
+        "exploration"
+      ],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "rl",
+      "score": 15
+    },
+    {
+      "id": "2605.19577",
+      "title": "GoLongRL: Capability-Oriented Long Context Reinforcement Learning with Multitask Alignment",
+      "abstract": "Abstract: We present GoLongRL, a fully open-source, capability-oriented post-training recipe for long-context reinforcement learning with verifiable rewards (RLVR). Existing long-context RL methods often treat data construction as a matter of designing increasingly complex retrieval paths, leading to homogeneous task coverage and reward formulations that inadequately reflect practical long-context requirements. Our work offers two contributions. (1) Capability-oriented data construction with full open release. We openly release a dataset of 23K RLVR samples, the complete construction pipeline, and all training code. Guided by a taxonomy of long-context capabilities, the dataset spans 9 task types, each paired with its natural evaluation metric. It comprises curated open-source samples from established corpora and synthetic samples whose QA pairs are generated from real source documents such as books, academic papers, and multi-turn dialogues. Under the same vanilla GRPO setup, our dataset alone outperforms the closed-source QwenLong-L1.5 dataset. Moreover, our Qwen3-30B-A3B model trained on this data delivers long-context performance comparable to DeepSeek-R1-0528 and Qwen3-235B-A22B-Thinking-2507, suggesting that broader coverage and greater reward diversity substantially benefit long-context capability improvement. (2) TMN-Reweight for heterogeneous multitask optimization. To address optimization challenges from heterogeneous rewards, we propose TMN-Reweight, which combines task-level mean normalization for cross-task reward scale alignment with difficulty-adaptive weighting for more reliable advantage estimation. TMN-Reweight further improves average performance over vanilla GRPO, with general capabilities preserved or improved across reported evaluations.",
+      "link": "https://arxiv.org/abs/2605.19577",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Minxuan Lv, Tiehua Mei, Tanlong Du, Junmin Chen, Zhenpeng Su, Ziyang Chen, Ziqi Wang, Zhennan Wu, Ruotong Pan, jian Liang, Ruiming Tang, Han Li",
+      "mm_kw": [],
+      "llm_kw": [
+        "long context",
+        "rag"
+      ],
+      "rl_kw": [
+        "reinforcement learning",
+        "rlvr",
+        "grpo",
+        "alignment"
+      ],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "rl",
+      "score": 12
+    },
+    {
+      "id": "2605.19461",
+      "title": "Beyond Mode Collapse: Distribution Matching for Diverse Reasoning",
+      "abstract": "Abstract: On-policy reinforcement learning methods like GRPO suffer from mode collapse: they exhibit reduced solution diversity, concentrating probability mass on a single solution once discovered and ceasing exploration of alternative strategies. We show this stems from reverse KL minimization's mode-seeking behavior, which reinforces the first high-reward trajectory found rather than maintaining a distribution over multiple diverse solutions. We propose DMPO (Distribution-Matching Policy Optimization), which prevents mode collapse through principled approximation of forward KL minimization. DMPO constructs a group level target distribution over sampled trajectories proportional to their rewards, then aligns the policy distribution to this target. This provides mode-covering behavior without requiring sampling from the intractable global target distribution, enabling sustained exploration throughout training. We validate DMPO on NP-hard combinatorial optimization, where exponentially many feasible solutions exist but only a few approach optimality, an ideal testbed for evaluating exploration. DMPO achieves 43.9% Quality Ratio on text-based NP-Bench (vs. GRPO's 40.1%) and 43.1% on vision-based NP-Bench (vs. 38.4%), demonstrating 9% and 12% relative improvements respectively. These gains generalize to mathematical reasoning (+2.0%) and out-of-domain tasks (+2.3%), showing that diversity-preserving training enhances general reasoning capabilities across modalities. Our work establishes distribution matching as a practical, principled approach to preventing mode collapse in on-policy RL, with consistent quality improvements demonstrating sustained exploration across diverse reasoning tasks.",
+      "link": "https://arxiv.org/abs/2605.19461",
+      "categories": [
+        "cs.AI"
+      ],
+      "authors": "Xiaozhe Li, Yang Li, Xinyu Fang, Shengyuan Ding, Peiji Li, Yongkang Chen, Yichuan Ma, Tianyi Lyu, Linyang Li, Dahua Lin, Qipeng Guo, Qingwen Liu, Kai Chen",
+      "mm_kw": [],
+      "llm_kw": [
+        "reasoning"
+      ],
+      "rl_kw": [
+        "reinforcement learning",
+        "grpo",
+        "exploration",
+        "policy optimization"
+      ],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "rl",
+      "score": 12
+    }
+  ],
+  "agent": [
+    {
+      "id": "2605.20061",
+      "title": "Rewarding Beliefs, Not Actions: Consistency-Guided Credit Assignment for Long-Horizon Agents",
+      "abstract": "Abstract: Reinforcement learning from verifiable rewards (RLVR) is a promising paradigm for improving large language model (LLM) agents on long-horizon interactive tasks. However, in partially observable environments, incomplete observations cause agent beliefs to drift over time, while delayed rewards obscure the causal impact of intermediate decisions, exacerbating temporal credit assignment challenges. To address this, we propose ReBel (Reward Belief), a process-level reinforcement learning algorithm that explicitly models structured belief states to summarize interaction history and guide subsequent policy learning. ReBel introduces belief-consistency supervision, converting discrepancies between predicted beliefs and observed feedback into dense self-supervised signals without requiring external step-wise annotations or verifiers. It also employs belief-aware grouping to compare trajectories under similar belief states, yielding more robust and lower-variance advantage estimates. We evaluate ReBel on challenging long-horizon benchmarks, including ALFWorld and WebShop. ReBel improves task success by up to $20.4$ percentage points over the episode-level baseline GRPO and increases sample efficiency by $2.1\\times$. These results suggest that belief-aware self-supervision is a promising direction for reliable long-horizon decision-making under partial observability. Code is available at: https://github.com/Fateyetian/Rebel.git.",
+      "link": "https://arxiv.org/abs/2605.20061",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Wenjie Tang, Minne Li, Sijie Huang, Liquan Xiao, Yuan Zhou",
+      "mm_kw": [],
+      "llm_kw": [
+        "large language model",
+        "language model"
+      ],
+      "rl_kw": [
+        "reinforcement learning",
+        "rlvr",
+        "grpo",
+        "verifier"
+      ],
+      "agent_kw": [
+        "agent"
+      ],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "agent",
+      "score": 13
+    },
+    {
+      "id": "2605.19952",
+      "title": "Rethinking How to Remember: Beyond Atomic Facts in Lifelong LLM Agent Memory",
+      "abstract": "Abstract: To enable reliable long-term interaction, LLM agents require a memory system that can faithfully store, efficiently retrieve, and deeply reason over accumulated dialogue history. Most existing methods adopt an extracted fact based paradigm: handcrafted static prompts compress raw dialogues into atomic facts, which are then stored, matched, and injected into downstream reasoning. Nevertheless, such fact-centric designs inevitably discard fine-grained details in original dialogues and fail to support deep reasoning over scattered isolated facts. Moreover, static prompts cannot maintain consistent extraction granularity across diverse dialogue styles. To address these limitations, we propose TriMem, which maintains three coexisting representation granularities, including raw dialogue segments anchored by source identifiers for storage fidelity, extracted atomic facts for efficient memory retrieval, synthesized profiles that aggregate dispersed facts into holistic semantic understanding for deep reasoning. We further adopt TextGrad-based prompt optimization, which iteratively refines extraction and profiling prompts via response quality feedback, achieving lifelong evolution without any parameter updating. Extensive experiments on LoCoMo and PerLTQA across multiple LLM backbones demonstrate that TriMem consistently outperforms strong memory baselines. The code is available at https://TMLR-TriMem.github.io .",
+      "link": "https://arxiv.org/abs/2605.19952",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Jingwei Sun, Jianing Zhu, Jiangchao Yao, Tongliang Liu, Bo Han",
+      "mm_kw": [],
+      "llm_kw": [
+        "rag",
+        "reasoning"
+      ],
+      "rl_kw": [
+        "ppo"
+      ],
+      "agent_kw": [
+        "agent",
+        "memory"
+      ],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "agent",
+      "score": 11
+    },
+    {
+      "id": "2605.19604",
+      "title": "Formal Skill: Programmable Runtime Skills for Efficient and Accurate LLM Agents",
+      "abstract": "Abstract: Large Language Model (LLM) agents increasingly act inside real workspaces, where tools and skills determine whether model reasoning becomes reliable action. Existing skills remain largely informal: Markdown skills and instruction packs encode procedures as long natural-language documents, while function calling, Model Context Protocol (MCP) servers, and framework tools structure individual actions but usually leave workflow state, policy enforcement, and completion discipline outside the skill itself. We introduce Formal Skill, a runtime-native abstraction that represents reusable capability with JSON metadata and action schemas, reliable Python executors, hook-governed control logic, Formal Skill routing, and skill-local runtime state. By moving reusable procedure from repeated prompt text into executable state machines and hook policies, Formal Skill gives agents a token-efficient and enforceable control surface. We implement the abstraction in FairyClaw, an open-source event-driven runtime for executable, observable, and composable Formal Skills. On Harness-Bench, FairyClaw obtains highly competitive average scores while using substantially fewer tokens, with especially strong results on tasks that expose the role of Formal Skill.",
+      "link": "https://arxiv.org/abs/2605.19604",
+      "categories": [
+        "cs.AI"
+      ],
+      "authors": "Xi Zhang, Meijun Gao, Yuntian Zhao, Xinyu Tan, Yilun Yao, Feiyu Wang, Yanshu Wang,  Dingsiyi, Tong Yang",
+      "mm_kw": [],
+      "llm_kw": [
+        "large language model",
+        "language model",
+        "rag",
+        "reasoning"
+      ],
+      "rl_kw": [],
+      "agent_kw": [
+        "agent"
+      ],
+      "med_kw": [],
+      "is_mm": false,
+      "section": "agent",
+      "score": 9
+    }
+  ],
+  "medical": [
+    {
+      "id": "2605.19766",
+      "title": "Synthesis and Evaluation of Long-term History-aware Medical Dialogue",
+      "abstract": "Abstract: An effective healthcare agent must be able to recall and reason over a patient's longitudinal medical history. However, the absence of datasets with realistic long-term dialogue timelines limits systematic evaluation. Real clinical text is constrained by privacy and ethics, while existing benchmarks focus on isolated interactions, failing to capture cross-session reasoning. We introduce a framework for synthesizing high-quality, long-term medical dialogues with LLMs. Our approach entails a knowledge-guided decomposition into three stages: constructing synthetic patient profiles with diverse disease and complication trajectories, generating multi-turn dialogues per encounter, and integrating them into a coherent longitudinal history dataset, MediLongChat. We establish three benchmark tasks-In-dialogue Reasoning, Cross-dialogue Reasoning, and Synthesis Reasoning-to evaluate the memory capabilities of healthcare agents. To assess data quality, we introduce a multi-dimensional evaluation framework combining vector-based metrics with LLM-as-a-judge assessments. Specifically, we define automatic measures-Faithfulness, Coherence, and Diversity-together with two LLM-based evaluations: Correctness and Realism. Benchmark experiments show that even state-of-the-art LLMs struggle with MediLongChat. These findings highlight the benchmark's applicability and underscore the need for tailored methods to advance healthcare agents.",
+      "link": "https://arxiv.org/abs/2605.19766",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Hebin Hu, Renke Dai, Ah-Hwee Tan, Yilin Kang",
+      "mm_kw": [],
+      "llm_kw": [
+        "reasoning"
+      ],
+      "rl_kw": [],
+      "agent_kw": [
+        "agent",
+        "memory"
+      ],
+      "med_kw": [
+        "clinical",
+        "medical",
+        "patient",
+        "disease",
+        "healthcare"
+      ],
+      "is_mm": false,
+      "section": "medical",
+      "score": 23
+    },
+    {
+      "id": "2605.19173",
+      "title": "Prompting language influences diagnostic reasoning and accuracy of large language models",
+      "abstract": "Abstract: Large language models (LLMs) are increasingly explored for clinical decision support, yet most evaluations are conducted in English, leaving their reliability in other languages uncertain. Here we evaluate the impact of prompting language on diagnostic reasoning and final diagnosis accuracy by comparing English and French performance across five LLMs (o3, DeepSeek-R1, GPT-4-Turbo, Llama-3.1-405B-Instruct, and BioMistral-7B). A total of 180 clinical vignettes covering 16 medical specialties were assessed by two physicians using an 18-point scale evaluating both diagnosis accuracy and reasoning quality. Four of the five models performed better in English (mean difference 0.37-0.91, adjusted p < 0.05), with the gap spanning multiple aspects of reasoning, including differential diagnosis, logical structure, and internal validity. o3 was the only model showing no overall language effect. These findings demonstrate that prompting language remains a critical determinant of LLM clinical performance, with implications for equitable linguistico-cultural deployment worldwide.",
+      "link": "https://arxiv.org/abs/2605.19173",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Adrien Bazoge, Josselin Corvellec, Sofiane Djillali Sid-Ahmed, Pierre-Antoine Gourraud",
+      "mm_kw": [],
+      "llm_kw": [
+        "large language model",
+        "language model",
+        "reasoning"
+      ],
+      "rl_kw": [
+        "ppo"
+      ],
+      "agent_kw": [],
+      "med_kw": [
+        "clinical",
+        "medical",
+        "diagnos"
+      ],
+      "is_mm": false,
+      "section": "medical",
+      "score": 16
+    }
+  ],
+  "multimodal": [
+    {
+      "id": "2605.20177",
+      "title": "From Seeing to Thinking: Decoupling Perception and Reasoning Improves Post-Training of Vision-Language Models",
+      "abstract": "Abstract: Recent advances in vision-language models (VLMs) emphasize long chain-of-thought reasoning; yet, we find that their performance on visual tasks is primarily limited by a lack of visual perception as opposed to reasoning itself. In this work, we systematically study the interplay between perception and reasoning in VLM post-training by decomposing their capabilities into three separate training stages: visual perception, visual reasoning, and textual reasoning, incorporating specialized training data. We demonstrate that visual perception (a) requires targeted optimization with specialized data; (b) serves as a fundamental scaffold that should be solidified through staged training before refining visual reasoning; and (c) is more effectively learned via RL than caption-based SFT. Our experiments across multiple VLMs demonstrate that staged training consistently improves both visual perception and reasoning performance over merged training. Notably, models trained with our approach achieve 1.5% higher reasoning accuracy with 20.8% shorter reasoning traces, suggesting that superior perception reduces the need for excessive reasoning. Furthermore, we show that this capability-based staging represents a new curriculum dimension orthogonal to traditional difficulty-based curricula, and combining both yields further additive gains. Our staged-training models achieve superior performance among open-weight VLMs, establishing advanced results on several visual math and perception (e.g., +5.2% on WeMath and +3.7% on RealWorldQA) tasks compared with the base counterpart.",
+      "link": "https://arxiv.org/abs/2605.20177",
+      "categories": [
+        "cs.CL"
+      ],
+      "authors": "Juncheng Wu, Hardy Chen, Haoqin Tu, Xianfeng Tang, Freda Shi, Hui Liu, Hanqing Lu, Cihang Xie, Yuyin Zhou",
+      "mm_kw": [
+        "vision-language",
+        "vlm",
+        "visual"
+      ],
+      "llm_kw": [
+        "language model",
+        "chain-of-thought",
+        "reasoning"
+      ],
+      "rl_kw": [
+        "ppo"
+      ],
+      "agent_kw": [],
+      "med_kw": [],
+      "is_mm": true,
+      "section": "multimodal",
+      "score": 7
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+  <div class="paper" id="p9">
+    <h3 class="paper-title">Agent-2 · TriMem: Rethinking How to Remember — Beyond Atomic Facts in Lifelong LLM Agent Memory</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19952">arXiv:2605.19952</a></span><br>
+      <span>🏛 Hong Kong Baptist University, UT Austin, Shanghai Jiao Tong University（+ Sydney AI Center）</span><br>
+      <span class="tag tag-agent">Agent</span><span class="tag tag-agent">Memory</span><span class="tag tag-agent">Lifelong</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM Agent 在长程多轮交互（如 LoCoMo benchmark：数十轮对话跨越数月）下，必须把过去 history 压缩进 memory 系统。现有 memory 方案（Mem0、A-Mem、MemoryOS、LightMem 等）都用 <strong>"atomic facts" 表示</strong>：用静态人工设计 prompt 把对话抽取成 fact tuple，retrieval 基于相似度匹配。本文指出 atomic facts 表示有三个根本问题：(i) <strong>修饰语丢失</strong>——"working with trans people, helping mental health" 被抽成 "Caroline wants to pursue counseling"，限定语丢；(ii) <strong>反例信息无法表示</strong>——"Melanie 不太可能再去 roadtrip 因为这次出事了"，否定信息原子 fact 无法捕获；(iii) <strong>多 fact 整合推理弱</strong>——分散事实需要 holistic profile 才能正确推理。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 三粒度共存表示（Tri-Granularity Memory）</strong>
+        <p>TriMem 维护三类共存表示：</p>
+        <ul>
+          <li><strong>Raw dialogue segments</strong>（按 source identifier 锚定）：保留原始上下文 fidelity</li>
+          <li><strong>Extracted atomic facts</strong>：传统 fact tuple，用于高效相似度检索</li>
+          <li><strong>Synthesized profiles</strong>：把分散 facts 聚合成 holistic semantic understanding，用于深度推理</li>
+        </ul>
+        <p>retrieval 时根据 query 类型决定调用哪个粒度——简单 lookup 用 fact，复杂推理用 profile，需 verbatim 引用用 raw。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② TextGrad-based 自演化 Prompt 优化</strong>
+        <p>关键创新：不依赖人工 prompt engineering。用 TextGrad 把 extraction prompt 和 profiling prompt 视为可优化变量，通过 response quality feedback 反向 textual gradient 更新：</p>
+        <p>$$p_e^{(t+1)} = p_e^{(t)} \oplus g_e^{(t)}, \quad p_\psi^{(t+1)} = p_\psi^{(t)} \oplus g_\psi^{(t)}$$</p>
+        <p>其中 $\oplus$ 是 prompt edit 算子，$g$ 是基于响应质量的文本梯度。<strong>无任何参数更新即可 lifelong 进化</strong>，prompt 随经验越来越好。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Profile 合成机制（Holistic Semantic）</strong>
+        <p>对每个 entity（如 "Caroline"），TriMem 周期性合成 profile：整合该 entity 的所有 atomic facts + 相关 raw dialogue 片段 → 一段连贯的 1-2 段 profile 文本，包含：背景、当前状态、modifier qualifications、可能负面信息。Profile 解决了 atomic fact 表示丢修饰语和反例信息的问题。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Multi-Granularity Retrieval Routing</strong>
+        <p>给定 query，TriMem 先用 LLM 判断 query 类型：<em>verbatim lookup</em>（"Caroline 那次说了什么"）→ raw；<em>factual lookup</em>（"Caroline 的职业是什么"）→ fact；<em>understanding-based</em>（"Melanie 还会再去 roadtrip 吗"）→ profile。然后只检索对应粒度，token 开销可控。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>LoCoMo 反例（论文 Figure 1 中提到的）：</strong>
+        <ol>
+          <li><strong>Query：</strong>"Melanie 是否会很快再去一次 roadtrip？"</li>
+          <li><strong>Raw dialogue：</strong>"Hey Caroline, that roadtrip this past weekend was insane! We were all freaked when my son got into an accident."</li>
+          <li><strong>Atomic fact 提取：</strong>"Melanie's son got into an accident in the roadtrip last weekend."</li>
+          <li><strong>Atomic-only memory 答：</strong>"Not mentioned at all." ❌（fact 没显式说"不会再去"）</li>
+          <li><strong>TriMem profile 答：</strong>"Likely no; since this one went badly." ✅（profile 整合了 "insane"、"freaked"、"accident" 等情绪 + 上下文信号）</li>
+          <li><strong>OpenDomain F1：</strong>GPT-4.1-mini + TriMem = 43.88 vs SimpleMem 24.50 (+19.38 pt)，差距全部来自这类 reasoning 友好的 holistic 表示。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（LoCoMo Benchmark，GPT-4.1-mini backbone）</h4>
+      <table>
+        <tr><th>Method</th><th>MultiHop BLEU/F1</th><th>Temporal BLEU/F1</th><th>OpenDomain BLEU/F1</th><th>SingleHop BLEU/F1</th><th>Avg BLEU/F1</th><th>Token Cost</th></tr>
+        <tr><td>LoCoMo (raw context)</td><td>8.00/17.26</td><td>10.17/14.89</td><td>8.29/16.28</td><td>17.43/19.36</td><td>13.62/17.85</td><td>16863</td></tr>
+        <tr><td>Naïve RAG</td><td>11.49/13.24</td><td>20.52/28.80</td><td>11.79/10.75</td><td>22.85/30.29</td><td>19.59/25.64</td><td>1119</td></tr>
+        <tr><td>Mem0</td><td>28.81/31.44</td><td>35.41/46.24</td><td>18.51/17.93</td><td>31.25/35.34</td><td>30.88/35.81</td><td>1153</td></tr>
+        <tr><td>MemoryOS</td><td>16.46/24.02</td><td>34.78/46.52</td><td>14.89/19.58</td><td>36.18/43.92</td><td>30.95/39.30</td><td>936</td></tr>
+        <tr><td>A-Mem</td><td>15.11/20.66</td><td>41.57/50.94</td><td>11.18/13.20</td><td>38.25/43.72</td><td>33.01/39.10</td><td>1276</td></tr>
+        <tr><td>LightMem</td><td>32.93/40.33</td><td>47.53/55.23</td><td>18.31/21.91</td><td>37.68/48.39</td><td>37.66/46.69</td><td class="best">695</td></tr>
+        <tr><td>SimpleMem</td><td>32.40/39.33</td><td>43.69/58.01</td><td>19.56/24.50</td><td>43.41/53.99</td><td>39.97/50.30</td><td>587</td></tr>
+        <tr><td class="best">TriMem (Ours)</td><td class="best">35.20/42.59</td><td class="best">49.56/64.72</td><td class="best">36.86/43.88</td><td class="best">45.25/55.36</td><td class="best">43.79/54.26</td><td>1217</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">TriMem 在所有任务类型上 dominant，<strong>OpenDomain F1 43.88 vs 第二名 SimpleMem 24.50（+19.38 pt）</strong> 是最大跃迁——证明 profile 表示对 holistic understanding 有质变意义。GPT-4o 上 TriMem Avg F1 50.23 vs LightMem 47.37（+2.86 pt）；GPT-5-nano 表现一致。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>(i) 去掉 raw dialogue：verbatim lookup 任务跌 8+ pt F1；(ii) 去掉 fact tuple：simple factual lookup 跌 5 pt；(iii) 去掉 profile：OpenDomain 跌 18+ pt——证明三粒度<strong>各自不可替代</strong>。(iv) TextGrad 优化 vs 静态 prompt：在 3 个 epoch 后 prompt 自演化让 extraction quality F1 +4.2 pt，无需人工调试。<strong>Token cost：</strong>TriMem 1217 token/query 比 Mem0 (1153) 略多，但相比 raw context 16863 仍便宜 14×。<strong>局限：</strong>profile 合成需要额外 LLM 调用，增加 latency；TextGrad 收敛非保证；冷启动期（前 100 turn）profile 不准。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>TriMem 是<strong>第一篇系统地挑战"atomic fact 是 LLM agent memory 的天然单位"的工作</strong>。其核心洞见——memory 应该是<strong>多粒度共存而非单一表示</strong>——直接 informs 工业 agent 的设计。对于 Cursor Agent、Claude Code、Devin 等真实部署的 agent：</p>
+      <ul>
+        <li>不要只存 extracted facts；要保留 raw 片段 + holistic profile 三层</li>
+        <li>不要靠人工写 extraction prompt；用 TextGrad 类的自演化机制</li>
+        <li>retrieval 路由要按 query type 动态选择粒度</li>
+      </ul>
+      <p>预期 TriMem 的设计模式会在 2026 年下半年被 LangGraph、Letta（前 MemGPT）、AutoGen 等 agent framework 采纳。</p>
+    </div>
+  </div>
+

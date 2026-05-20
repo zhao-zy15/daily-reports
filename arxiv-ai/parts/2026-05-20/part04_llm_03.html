@@ -1,0 +1,88 @@
+  <div class="paper" id="p3">
+    <h3 class="paper-title">LLM-3 · Multi-Token Residual Prediction: 让扩散 LLM 一次前向解多 token，无损 1.42× 加速</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12 · <a href="https://arxiv.org/abs/2605.18817">arXiv:2605.18817</a></span><br>
+      <span>🏛 New York University, NYU Shanghai, Nous Research（+ Modal）</span><br>
+      <span class="tag tag-llm">LLM</span><span class="tag tag-llm">Diffusion LM</span><span class="tag tag-llm">Speculative Decoding</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>Diffusion Language Models（DLMs，如 SDAR、LLaDA）通过迭代去噪生成文本，提供 parallelism 与 quality 之间的折中。每步通过 confidence threshold 控制揭示多少 token，但 quality 随每步 unmask token 数 $r$ <strong>单调下降</strong>——baseline $r=2$ 在 MATH500 上比 $r=1$ 损失 7.0 pt 准确率（4B 模型）。能不能"更激进地多揭示，但用一个轻量模块预测下一步 logit 的修正"？作者的关键经验观察：相邻两步去噪的 logit 差异 $\delta_t = \ell_{t-1} - \ell_t$ 的 RMS 仅为完整 logits 的 ~20%（$k=1$），远比从头预测简单。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Logit Residual 的存在性（实证 + 理论）</strong>
+        <p>定义 per-step logit residual：</p>
+        <p>$$\boldsymbol{\delta}_t = \ell_{t-1} - \ell_t \in \mathbb{R}^{L \times V}$$</p>
+        <p>实证（GSM8K + SDAR 1.7B/4B/8B）：RMS$(\boldsymbol{\delta}_t)$ 在 $k=1$ 时为 RMS$(\ell_t)$ 的 ~20%，$k=16$ 时仍 &lt; 100%。理论：partially masked states $\boldsymbol{x}_T, \ldots, \boldsymbol{x}_0$ 是 Markov chain，相邻状态仅由 unmask 集合 $\mathcal{R}_t$ 改变，所以 $f(\boldsymbol{x}_{t-1})$ 与 $f(\boldsymbol{x}_t)$ 的差异由该 chain transition 上界。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② MRP 模块结构</strong>
+        <p>MRP 是 2-3 层 transformer 模块 $g_\phi$，输入是 backbone 当前的 hidden states $\boldsymbol{h}$ 和当前 partially masked sequence $\boldsymbol{x}_t$，输出 hidden residual $\boldsymbol{\Delta}$ 与 logit residual $\boldsymbol{\delta}$：</p>
+        <p>$$(\boldsymbol{\Delta}, \boldsymbol{\delta}) = g_\phi(\boldsymbol{x}_t, \boldsymbol{h})$$</p>
+        <p>训练时 backbone 冻结，仅训练 $g_\phi$，使用 KL divergence 对齐 teacher logits：</p>
+        <p>$$\mathcal{L} = \text{KL}\big( \text{softmax}(\ell_{t-1})_{\text{masked}} \big\| \text{softmax}(\ell_t + \boldsymbol{\delta})_{\text{masked}} \big)$$</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Direct Decoding 模式（牺牲一点 quality 换更高速）</strong>
+        <p>每次 backbone forward 后，运行 $K$ 步 MRP 迭代：每步 $\boldsymbol{h} \leftarrow \boldsymbol{h} + \boldsymbol{\Delta}, \ell \leftarrow \ell + \boldsymbol{\delta}$，按阈值 $\tau$ 揭示新位置。一次 backbone forward 等价于 $K+1$ 步去噪，引入小近似误差。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Speculative Decoding 模式（无损加速）</strong>
+        <p>把 MRP 解出的 $K$ 步 token 当作 draft，让 backbone 一次 forward 做验证（采用 Self Speculative Decoding 验证框架）。Verified pass 部分提交，错误部分回退。<strong>K=3 时实现 1.42× 无损加速</strong>。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>SDAR-1.7B 解一道 GSM8K 数学题：</strong>
+        <ol>
+          <li><strong>Base (r=1)</strong>：每步揭示 1 token，accuracy 78.7%，TPS 267.4。</li>
+          <li><strong>Base (r=2)</strong>：贪心多揭示 2 token，TPS 提升到 1.86×（497），但 accuracy 暴跌到 70.8%（-7.9 pt），不可接受。</li>
+          <li><strong>Direct K=1</strong>：用 MRP 预测 1 步残差，accuracy 77.5%（-1.2 pt），TPS 1.50×（401）。Quality 损失温和。</li>
+          <li><strong>Spec K=3</strong>：MRP 解 3 步，backbone 验证。accuracy <strong>77.8%（与 base 平齐 -0.9 pt）</strong>，TPS 1.20×。在 8B 上 Spec K=3 反而比 base accuracy 略高（90.7% vs 91.0%）—— verification 严格 lossless。</li>
+          <li><strong>实操关键：</strong>对代码（HumanEval）任务 direct 模式 accuracy 跌得多（48.2% vs 53.7%），因为 code token 分布转移更陡——这是 MRP 的 known limitation。speculative 模式则把这个问题完全消除。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（论文 Table 2，3 个 scale）</h4>
+      <table>
+        <tr><th>Model</th><th>Setting</th><th>GSM8K Acc</th><th>GSM8K TPS</th><th>MATH500 Acc</th><th>HumanEval Acc</th><th>MBPP Acc</th></tr>
+        <tr><td rowspan="5">SDAR-1.7B</td><td>Base r=1</td><td>78.7</td><td>267.4</td><td>55.0</td><td>53.7</td><td>52.9</td></tr>
+        <tr><td>Base r=2</td><td>70.8</td><td>1.86×</td><td>45.8</td><td>29.9</td><td>32.3</td></tr>
+        <tr><td>Direct K=1</td><td>77.5</td><td>1.50×</td><td>54.2</td><td>48.2</td><td>45.5</td></tr>
+        <tr><td>Direct K=2</td><td>74.8</td><td>1.67×</td><td>50.6</td><td>41.5</td><td>42.4</td></tr>
+        <tr><td class="best">Spec K=3</td><td class="best">77.8</td><td class="best">1.20×</td><td class="best">58.4</td><td class="best">55.5</td><td class="best">53.3</td></tr>
+
+        <tr><td rowspan="5">SDAR-4B</td><td>Base r=1</td><td>90.1</td><td>152.6</td><td>71.4</td><td>67.1</td><td>66.5</td></tr>
+        <tr><td>Base r=2</td><td>86.4</td><td>1.90×</td><td>64.0</td><td>45.7</td><td>37.7</td></tr>
+        <tr><td>Direct K=2</td><td>87.6</td><td>1.82×</td><td>60.4</td><td>53.0</td><td>51.0</td></tr>
+        <tr><td class="best">Spec K=3</td><td class="best">90.6</td><td class="best">1.36×</td><td class="best">68.0</td><td class="best">67.7</td><td class="best">66.5</td></tr>
+
+        <tr><td>SDAR-8B</td><td class="best">Spec K=3</td><td class="best">90.7</td><td class="best">1.40×</td><td class="best">74.8</td><td class="best">72.6</td><td class="best">67.3</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">最关键的对比：base r=2 在 MATH500 上 accuracy 跌 7.4 pt（4B）/3.8 pt（8B），但 TPS 仅 1.02×—1.04×；而 Spec K=3 几乎平 accuracy 同时拿 1.30–1.42× TPS，证明<strong>残差是"低成本可学的"</strong>。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>残差 vs 直接蒸馏：</strong>同一架构、同一数据下，用残差目标训 vs 直接蒸馏目标训，在 $K=4$ 时残差版本平均提升 +65 pt accuracy——证明利用相邻 logit 相似性的归纳偏置是有效的，而非简单地"训了一个 draft model"。<strong>MRP 深度 sweep：</strong>2-3 层是 sweet spot，超过 4 层 accuracy 平台、throughput 下降——验证残差信号确实低复杂度。<strong>局限：</strong>code generation 在 direct 模式损失较多（code token 分布更陡）；MRP 训练数据需要来自 backbone 的 hidden states，跨 backbone 迁移性弱。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>MRP 对扩散 LLM 提出了"speculative decoding for diffusion"的范式，类似于 autoregressive Medusa/EAGLE：把昂贵的 backbone 一次前向当作 oracle，用轻量 head 解多步。<strong>更深层的启示：</strong>大模型推理中，<strong>"邻近 distribution 高度相似"</strong>是普遍现象（既适用于 autoregressive 邻近 token，也适用于 diffusion 邻近 step），只要能 cheap 地刻画残差，就能换 throughput。对于希望部署扩散 LLM（如 SDAR、Mercury Coder、Inception）的厂商，MRP 是<strong>近期可立刻接入 SGLang/vLLM 的 1.4× 免费加速</strong>。</p>
+    </div>
+
+  <h2 class="section-title rl">🎯 RL</h2>
+

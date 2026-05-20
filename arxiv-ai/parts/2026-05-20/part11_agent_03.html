@@ -1,0 +1,100 @@
+  <div class="paper" id="p10">
+    <h3 class="paper-title">Agent-3 · Formal Skill: 把 Markdown skill 升级为可编程运行时，46.8K token 完成 SWE 任务</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19604">arXiv:2605.19604</a></span><br>
+      <span>🏛 FairyClaw (independent，open-source 运行时)</span><br>
+      <span class="tag tag-agent">Agent</span><span class="tag tag-agent">SWE</span><span class="tag tag-agent">Skill System</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>当前 LLM agent 的 "skill" 大多是 Markdown 文件（Anthropic Skill、OpenAI Operator skill、Cursor rules）：自然语言写一段操作流程，依赖模型自己解读 + 自我约束。但实际部署遇到三大问题：(i) <strong>约束不可执行</strong>——"修改前请备份"这种规则模型可能跳过；(ii) <strong>状态不显式</strong>——agent 不知道自己在哪个 phase，无法 recover；(iii) <strong>工具暴露过宽</strong>——所有工具一直可见，导致 token 浪费且诱发误用。本文提出 <strong>Formal Skill</strong>：把 Markdown skill 升级为带 schema、executable hooks、phase state machine 的可编程运行时插件。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Action Plane（动作平面）</strong>
+        <p>每个 Formal Skill 暴露<strong>typed action schema</strong>（JSON Schema）+ <strong>Python executor</strong>。模型只看到 JSON schema（"collect evidence", "apply unified patch"），Python 端做实际执行 + 路径检查 + 命令白名单 + patch-shape validation。模型无法绕过执行端的检查。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Hook-Governed Phase State Machine（CODEREPAIROPS 示例）</strong>
+        <p>Formal Skill 维护 skill-local runtime state（phase, verification status, produced artifacts, gate-failure reasons）。<code>before_llm_call</code> hook 按 phase 过滤可见工具：</p>
+        <table style="font-size:13px;margin-top:8px;">
+          <tr><th>Phase</th><th>Visible actions</th><th>Hook policy</th></tr>
+          <tr><td>reproduce</td><td>collect evidence</td><td>仅 evidence 可见。命令或日志证据更新 failure signature → 进入 patch</td></tr>
+          <tr><td>diagnose</td><td>collect, patch</td><td>routed optional 阶段。通用 mutation 工具隐藏</td></tr>
+          <tr><td>patch</td><td>collect, patch</td><td>必须用 unified patch 工具；guards 拒绝保护路径 / 缺失 hunk / 过大变更。成功 → verify</td></tr>
+          <tr><td>verify</td><td>verify</td><td>仅 verification check 可见。通过 → report；失败 → 回 patch</td></tr>
+          <tr><td>report</td><td>write artifacts, done</td><td>artifact 写入与 completion 可见。done 被阻塞直到 verification 通过</td></tr>
+        </table>
+        <p style="margin-top:8px;">这样<strong>约束变成 action semantics 而非可被忽略的 prompt</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Skill-Local Runtime State（recovery 友好）</strong>
+        <p>每个 skill 维护独立 runtime state（不污染 main agent context）。当 verification 失败，runtime 知道精确 failure reason，可决策：继续 collect evidence、回 patch、enter reporting、block finalization。<strong>recovery 不再依赖模型自己 reason "我现在该干什么"</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Token Efficiency Mechanism</strong>
+        <p>三个 token 节省来源：(1) phase-specific tool visibility（每 LLM call 只注入相关 tools）；(2) compact phase guidance（不是整段 skill.md，而是当前 phase 的 condensed instruction）；(3) narrower tool exposure（避免无关工具列表 inflation）。这些机制<strong>不依赖 transcript 压缩</strong>，是结构性的 token 节省。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>Harness-Bench code-debugging 任务：</strong>
+        <ol>
+          <li><strong>Workspace：</strong>buggy_code.py 含 5 层叠加 bug，每轮只暴露当前层，agent 必须修复、validate，过了当前层才能 stop。</li>
+          <li><strong>FairyClaw + Formal Skill 行为：</strong>
+            <ul>
+              <li>Phase reproduce：仅 evidence 工具可见，agent 跑测试拿到 bug 1 的 stack trace；</li>
+              <li>Phase patch：仅 unified patch 工具，agent 写一个 minimal diff，guard 拒掉了"覆盖整个文件"的 sweep edit；</li>
+              <li>Phase verify：跑 test，bug 1 pass；verification_passed=true；</li>
+              <li>Phase report：写 artifact，completion gate 检查通过，stop。</li>
+            </ul>
+          </li>
+          <li><strong>对比 OpenClaw（无 phase state）：</strong>agent 一次性看到所有工具，倾向用 "edit_file" 把整个文件重写——失败率 30%+，且 token 多出 2-3 倍。</li>
+          <li><strong>结果：</strong>FairyClaw + gpt-5.4 combined score <strong>0.865</strong> on debugging task；其他 agent 多在 0.5-0.7 之间。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Harness-Bench, 75 tasks）</h4>
+      <table>
+        <tr><th>Agent</th><th>Model</th><th>Combined ↑</th><th>Total tok ↓</th><th>Avg tok ↓</th></tr>
+        <tr><td class="best">FairyClaw</td><td>gpt-5.4</td><td class="best">0.746</td><td class="best">3.51M</td><td class="best">46.8K</td></tr>
+        <tr><td>Moltis</td><td>gpt-5.4</td><td>0.744</td><td>6.29M</td><td>83.8K</td></tr>
+        <tr><td>Hermes</td><td>gpt-5.4</td><td>0.740</td><td>7.28M</td><td>97.0K</td></tr>
+        <tr><td>OpenClaw</td><td>gpt-5.4</td><td>0.693</td><td>6.03M</td><td>80.4K</td></tr>
+        <tr><td>NullClaw</td><td>gpt-5.4</td><td>0.685</td><td>8.16M</td><td>108.9K</td></tr>
+        <tr><td>ZeroClaw</td><td>gpt-5.4</td><td>0.587</td><td>6.09M</td><td>81.2K</td></tr>
+        <tr><td>OpenClaw</td><td>gemini-3.1-pro</td><td>0.689</td><td>6.58M</td><td>87.7K</td></tr>
+        <tr><td>FairyClaw</td><td>gemini-3.1-pro</td><td>0.635</td><td class="best">3.84M</td><td class="best">51.2K</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">FairyClaw 在 gpt-5.4 上 combined score 最高（0.746），同时<strong>token 用量是第二名 Moltis 的 56%、最贵的 NullClaw 的 43%</strong>。这是 score–cost 的 Pareto-optimal point。代码 debugging 任务上单独得分 0.865（gpt-5.4）/ 0.843（gemini-3.1-pro），两个模型族均第一。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>Compression 已禁用：</strong>FairyClaw 的 token 节省<strong>不来自激进的 transcript compression</strong>，而是 routed Formal Skill + phase guidance + narrower tool exposure 的结构性收益。<strong>Skill authoring cost：</strong>Formal Skill 比 Markdown skill 编写门槛更高，需要写 JSON schema + Python executor + hook code。论文提出的 mitigation：用 LLM 把 Skill.md 自动编译成 Formal Skill 组件（schema + executor skeleton），让 user 仍然能从 human-readable Skill 开始。<strong>局限：</strong>仅在 75 task Harness-Bench 上评测，覆盖度有限；对开放式探索任务（无明确 phase 划分）适用性未验证；require 团队投入工程力构造 typed action interface。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>Formal Skill 把当前 agent ecosystem 中流行的 "prompt-only skill" 范式提升到 "executable, typed, state-machine 化的运行时插件"。对于工业 agent 平台（Anthropic Claude Skills、Cursor、Devin、Operator），这是<strong>下一步发展的明确方向</strong>：</p>
+      <ul>
+        <li>用 hooks 把"安全约束"做成 unbypassable 的 execution gate，不依赖模型自律</li>
+        <li>用 phase state 把工具暴露动态收缩，显著节省 token</li>
+        <li>用 skill-local runtime state 让 recovery 不依赖模型 reasoning</li>
+      </ul>
+      <p>结合 ReBel（Agent-1，让 agent 显式输出 belief 状态）+ TriMem（Agent-2，多粒度 memory）+ Formal Skill（执行约束运行时），我们看到 2026 年 5 月 LLM agent 工程范式的明确演进方向：<strong>从"全靠模型自律"走向"约束硬编码 + 状态显式 + 工具受限"</strong>。这是工业可靠性的必经之路。</p>
+    </div>
+
+  <h2 class="section-title medical">⚕️ Medical</h2>
+

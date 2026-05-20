@@ -1,0 +1,83 @@
+  <div class="paper" id="p6">
+    <h3 class="paper-title">RL-3 · GoLongRL: 能力导向的长上下文 RLVR 配方，开源 23K 数据集 + TMN-Reweight 算法</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19577">arXiv:2605.19577</a></span><br>
+      <span>🏛 Kuaishou Technology (快手), University of Chinese Academy of Sciences</span><br>
+      <span class="tag tag-rl">RL</span><span class="tag tag-rl">Long Context</span><span class="tag tag-rl">Open Dataset</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>当前长上下文 RL 配方（如 QwenLong-L1.5、AEPO）有两大问题：(i) <strong>数据侧</strong>过度集中于 UUID chain、chunk QA 等"复杂检索路径"，summarization / ranking / aggregation / structured reasoning 等关键能力没有直接 supervision；(ii) <strong>算法侧</strong>标准 GRPO 在异构多任务下出问题——per-prompt 归一化扭曲 advantage，EM/F1/NDCG/ROUGE-L 的 variance 差异导致 high-variance task 贡献过大梯度。本文提出 GoLongRL 配方：23K 任务多样性 RLVR 数据集 + TMN-Reweight 算法。<strong>完全开源</strong>，code + data + 模型权重都在 GitHub。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 9 种任务的能力分类（Capability Taxonomy）</strong>
+        <p>基于 LongBench Pro 拆出 9 个能力维度：单文档理解、跨文档推理、长 retrieval、规则归纳、对话记忆、文档求和、ranking、aggregation、结构化推理。每个任务配最适合的 reward function（EM / F1 / NDCG@k / ROUGE-L / 数值精度等）。这是关键创新——<strong>不再把所有任务的 reward 折叠成单一 indicator</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 四阶段数据构建 Pipeline</strong>
+        <p>(P1) Source Corpus Collection（Project Gutenberg books + arXiv CC0 + PMC Open Access）；(P2) Task-Oriented Filtering & Assignment；(P3) 双轨道样本构建——open-source 14K（domain-rich：法律案例、财报、多轮对话）+ synthetic 9K（DeepSeek-V3.2 / Gemini-2.5-Pro 生成 QA pairs，Qwen3-4B 做难度分箱）；(P4) Iterative Refinement——通过 benchmark diagnostics 找 capability gap，针对性补充样本。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ TMN-Reweight：Task-level Mean Normalization with difficulty-adaptive Reweighting</strong>
+        <p>(a) Task-level Normalization：把 per-prompt $\sigma_u$ 换成 task-level RMS 标准差 $\sigma_T$：</p>
+        <p>$$\hat{A}_{u,i} = \frac{R_{u,i} - \mu_u}{\sigma_T}, \quad \sigma_T = \sqrt{\frac{1}{|T|}\sum_{u \in T} \sigma_u^2}$$</p>
+        <p>这<strong>消除跨 task 的 reward 尺度差异</strong>但保留 per-prompt 难度差异。</p>
+        <p>(b) Difficulty-adaptive Weighting：用 smoothed pass rate $\bar{p}_u$ 加权：</p>
+        <p>$$w_u = \exp(-\alpha \bar{p}_u)$$</p>
+        <p>$\bar{p}_u$ 越低（任务越难）权重越大——把梯度引向 informative hard positive samples。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 反污染（Decontamination）</strong>
+        <p>用 13-gram overlap 检测 + 跨 6 个 benchmark 的反污染过滤。保证 OOD 测评公正。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>P4 数据迭代示例（论文 Table 4）：</strong>
+        <ol>
+          <li><strong>V1（9.6K）：</strong>单文档理解 + 基础检索已饱和，但 CorpusQA 50.2、MRCR 38.8 落后——诊断为 cross-document 与 long-range memory 覆盖不足。</li>
+          <li><strong>V2（17.7K，+8.1K 通用扩展）：</strong>CorpusQA 50.2 → 57.8（+7.6 pt），但 MRCR 仍停在 40.7。</li>
+          <li><strong>诊断：</strong>MRCR 不响应通用扩展，需<strong>定向补充</strong> multi-hop reasoning + context-memory 样本。</li>
+          <li><strong>V3（23.0K，+5.2K 定向）：</strong>MRCR 40.7 → 67.5（<strong>+26.8 pt</strong>）！average +7.2 vs V1→V2 仅 +2.2。</li>
+          <li><strong>启示：</strong>数据效率 = 诊断驱动 > 无差别扩展。Capability taxonomy 提供了精准诊断的 evaluation dimensions。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（论文 Figure 1，Qwen3-30B-A3B 训练后）</h4>
+      <table>
+        <tr><th>Model</th><th>DocMath</th><th>LongBench-V2</th><th>Frames</th><th>MRCR</th><th>CorpusQA</th><th>LBV1-QA</th><th>Avg</th></tr>
+        <tr><td>GPT-5-Nano</td><td>63.9</td><td>43.7</td><td>73.5</td><td>43.9</td><td>50.3</td><td>67.1</td><td>57.1</td></tr>
+        <tr><td>GPT-OSS-120B</td><td>61.2</td><td>47.0</td><td>72.7</td><td>39.7</td><td>64.4</td><td>66.3</td><td>58.5</td></tr>
+        <tr><td>Qwen3-30B-A3B (base)</td><td>63.3</td><td>48.7</td><td>70.2</td><td>41.6</td><td>70.5</td><td>66.5</td><td>60.1</td></tr>
+        <tr><td>Qwen3-235B-A22B-Thinking</td><td>65.8</td><td>57.5</td><td>75.1</td><td>66.2</td><td>75.3</td><td>70.9</td><td>68.5</td></tr>
+        <tr><td>DeepSeek-R1-0528</td><td>63.4</td><td>59.5</td><td>76.9</td><td>64.9</td><td>77.5</td><td>69.9</td><td>68.7</td></tr>
+        <tr><td>Gemini-2.5-Flash-Thinking</td><td>64.8</td><td>56.8</td><td>65.8</td><td>78.8</td><td>79.4</td><td>66.9</td><td>68.7</td></tr>
+        <tr><td>QwenLong-L1.5 (GRPO)</td><td>65.1</td><td>55.3</td><td>71.4</td><td>66.9</td><td>76.9</td><td>67.9</td><td>67.2</td></tr>
+        <tr><td class="best">GoLongRL-30B-A3B (Ours)</td><td class="best">65.3</td><td>55.1</td><td>74.5</td><td class="best">81.6</td><td>73.6</td><td>68.7</td><td class="best">69.8</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">GoLongRL-30B-A3B 平均 69.8，超越 235B 参数的 Qwen3-235B (68.5)、DeepSeek-R1-0528 (68.7)、Gemini-2.5-Flash-Thinking (68.7)；MRCR 项目 81.6 是所有模型最高。4B 模型上 vanilla GRPO + GoLongRL 数据：53.0 → 62.2（+9.2 pt），超过 GRPO + QwenLong-L1.5 数据的 56.1。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>数据 vs 算法：</strong>vanilla GRPO 在 GoLongRL 数据上已经达到 62.2 / 69.8（4B/30B），接近 QwenLong-L1.5 用专门 AEPO 算法的 59.4 / 71.2，证明 <strong>data 与 algorithm 是 complementary 而非 substitute</strong>。<strong>TMN-Reweight 单独贡献：</strong>在同一数据上把 GRPO 进一步推到 +1.5 pt avg，主要来自 high-variance task（如 CorpusQA F1）的梯度被适度抑制。<strong>局限：</strong>9 个任务的 reward function 由人工指派，需要 task-specific 调试；模型 size 仅在 4B / 30B-A3B 测试；与商业 long-context 模型（如 Claude 4.6 200K）的对比缺失。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>GoLongRL 是 2026 年长上下文 RLVR 的<strong>第一个真正开源 + 可复现的工业级配方</strong>。其核心洞见——"capability taxonomy 驱动 data refinement、task-level normalization 治理异构 reward"——对所有训练 long-context reasoning model 的团队都有借鉴价值。MRCR 任务上 81.6 的成绩超越 Gemini 2.5 Flash，说明开源 30B-A3B 模型在专门 RL post-training 下可以 punch above its weight。对于希望在内部数据（如金融报告、法律文档）上做 long-context fine-tuning 的团队，这个 four-phase pipeline 可直接套用。<strong>启示：</strong>2026 年 long-context training 的关键不是更长 context window，而是<strong>更细粒度的能力分解和针对性 supervision</strong>。</p>
+    </div>
+  </div>
+

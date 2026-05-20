@@ -1,0 +1,83 @@
+  <div class="paper" id="p5">
+    <h3 class="paper-title">RL-2 · SAGE: Shaping Anchors for Guided Exploration in RLVR of LLMs</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-15 · <a href="https://arxiv.org/abs/2605.18864">arXiv:2605.18864</a></span><br>
+      <span>🏛 KAIST (Korea Advanced Institute of Science and Technology)</span><br>
+      <span class="tag tag-rl">RL</span><span class="tag tag-rl">RLVR</span><span class="tag tag-rl">Exploration</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>RLVR（Reinforcement Learning with Verifiable Rewards）能可靠提升 pass@1，但 pass@k 往往不增——这意味着 RLVR <strong>不是真正学到新推理能力，而是把基模本有的某条 reasoning mode 锐化了</strong>。已有理论（Wu et al., 2025）证明：标准 reverse-KL RLVR 的<strong>empirical support 永远是 reference model support 的子集</strong>（Theorem 4.2）——即不可能发现 base model 完全没见过的解。常见对策（弱化 KL、用 forward KL、annealed KL）虽能扩 coverage 但会让训练不稳定。本文目标：保留 reverse-KL 的稳定性同时让 empirical support 真正扩展。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Pseudo-KL：让 anchor 可以非归一化</strong>
+        <p>标准 RLVR 目标 $J(\theta) = \mathbb{E}_{x,y\sim\pi_\theta}[r(x,y) - \beta D_{KL}(\pi_\theta \| \pi_{\text{ref}})]$ 强制 anchor 是归一化分布。作者引入<strong>pseudo-KL</strong>：</p>
+        <p>$$\tilde{D}_{KL}(p \| f) = \mathbb{E}_{y \sim p}\left[\log \frac{p(y)}{f(y)}\right]$$</p>
+        <p>$f$ 可以是任意 positive unnormalized function。这保留 stationary proportional solution 但允许 anchor 用<strong>非归一化的"引导函数" $q(x,y)$</strong> 进行 shaping：</p>
+        <p>$$J'(\theta) = \mathbb{E}\left[r(x,y) - \beta \tilde{D}_{KL}(\pi_\theta \| q \cdot \pi_{\text{ref}})\right]$$</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 三类 SAGE 引导函数</strong>
+        <p>token-level 因子化：$q(x, y) = \prod_t q(y_t | x, y_{&lt;t})$。Pseudo-KL 展开：</p>
+        <p>$$\tilde{D}_{KL}(\pi_\theta \| q \cdot \pi_{\text{ref}}) = D_{KL}(\pi_\theta \| \pi_{\text{ref}}) - \mathbb{E}_{x,y\sim\pi_\theta}\!\left[\sum_t \log q(y_t | x, y_{&lt;t})\right]$$</p>
+        <p>三种 $q$ 设计：(1) <em>Random</em>：均匀噪声；(2) <em>Token-level</em>：基于 token 出现频率；(3) <em>Branch-level（推荐）</em>：基于 token entropy</p>
+        <p>$$q_{\text{Branch}}(y_t | x, y_{&lt;t}) = 1 + \gamma (H_t - \tau)_+ \quad \text{where} \quad H_t = -\sum_v \pi_\theta(v|x, y_{&lt;t}) \log \pi_\theta(v|x, y_{&lt;t})$$</p>
+        <p>仅在高熵分支点（推理 fork）激活探索，低熵确定 token 不扰动。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Empirical Support Expansion 定理</strong>
+        <p>Theorem 4.3：若 $q(x, y^\star) &gt; 0$ 对某个 $y^\star \in \mathcal{C} \setminus \text{supp}_\epsilon(\pi_{\text{ref}})$（即 reference model 不会生成的正确 completion），SAGE 可以让 $\pi_{\text{SAGE}}$ 把 $y^\star$ 纳入 empirical support。这意味着 SAGE <strong>能真正发现 base model 没见过的解</strong>，不是单纯锐化。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ 在线计算无开销</strong>
+        <p>所有 intrinsic signals（token entropy）可以从 rollout forward pass 中直接拿到，不需要额外计算。SAGE 与 GRPO 算力开销几乎一致，是 plug-and-play 升级。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>Qwen2.5-Math-7B 在 AIME 上：</strong>
+        <ol>
+          <li><strong>Base：</strong>pass@1 = 0.033, pass@256 = 0.393。说明 base model 有 39.3% 题目能在 256 次采样中至少找到一次正解。</li>
+          <li><strong>GRPO 标准训练 1000 步：</strong>pass@1 升到 0.053（+0.020 pt），但 pass@256 几乎不变（0.407，+0.014 pt）。这是典型 mode sharpening：把已有 mode 收敛得更紧，但没扩 coverage。</li>
+          <li><strong>SAGE-Branch：</strong>把 q(y_t) 设为 entropy-gated multiplier。当模型在某个 reasoning step 出现高熵（如选择哪个公式应用）时，给予更多探索奖励。训练 1000 步后：<strong>pass@1 = 0.063（vs GRPO 0.053），pass@256 = 0.427（vs GRPO 0.407）</strong> — 双向都提升。</li>
+          <li><strong>Branch trigger：</strong>典型触发点是"设 x=?"或"应用引理?" 这种 token，模型的 next-token entropy 显著高于普通 token（如 H=2.5 nats vs 普通 H=0.3）。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（论文 Table 1，5 个随机种子）</h4>
+      <table>
+        <tr><th>Algorithm</th><th>AIME pass@1</th><th>AIME pass@256</th><th>AMC23 pass@1</th><th>AMC23 pass@256</th><th>MATH-500 pass@1</th><th>Avg pass@1</th><th>Avg pass@256</th></tr>
+        <tr><td>Base Model</td><td>0.033±0.024</td><td>0.393±0.025</td><td>0.355±0.062</td><td>0.950±0.018</td><td>0.294±0.018</td><td>0.227</td><td>0.708</td></tr>
+        <tr><td>GRPO</td><td>0.053±0.027</td><td>0.407±0.025</td><td>0.430±0.057</td><td>0.960±0.014</td><td>0.315±0.036</td><td>0.266</td><td>0.714</td></tr>
+        <tr><td>GRPO w/o KL</td><td>0.043</td><td>0.410</td><td>0.410</td><td>0.930</td><td>0.319</td><td>0.258</td><td>0.701</td></tr>
+        <tr><td>GRPO + Forward KL</td><td>0.057</td><td>0.433</td><td>0.420</td><td>0.975</td><td>0.318</td><td>0.265</td><td>0.727</td></tr>
+        <tr><td>SAGE + Random</td><td>0.050</td><td>0.420</td><td>0.410</td><td>0.965</td><td class="best">0.340</td><td>0.267</td><td>0.722</td></tr>
+        <tr><td>SAGE + Token</td><td>0.057</td><td>0.427</td><td>0.395</td><td>0.960</td><td>0.303</td><td>0.252</td><td>0.718</td></tr>
+        <tr><td class="best">SAGE + Branch</td><td class="best">0.063</td><td>0.427</td><td class="best">0.465</td><td>0.965</td><td>0.322</td><td class="best">0.284</td><td class="best">0.729</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">SAGE-Branch 在 pass@1 和 pass@256 两个指标上都超过 GRPO baseline 和 GRPO+Forward KL，特别 AMC23 pass@1 +3.5 pt。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>三个 q 设计的对比：Random（无差别噪声）效果有限，Token-level（基于词频）反而比 GRPO 差，Branch-level（基于 entropy）才显著生效——证明 <strong>探索应该集中在推理分支点</strong>，而非均匀扰动。<strong>γ, τ 敏感性：</strong>$\gamma$ 控制扰动幅度、$\tau$ 控制 entropy 触发阈值，论文在 Appendix D 给出 grid search，最优 $\gamma=0.5, \tau=2.0$。<strong>局限：</strong>仅在 7B 模型 + 数学推理上测试，对长 chain reasoning（如代码、定理证明）需要重新调参；与 Forward-KL 的本质区别需要更深的理论比较——两者都是 KL 调整，但 SAGE 在 token-level 更细。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SAGE 提供了 RLVR 探索-利用 tradeoff 的<strong>新理论框架</strong>：把 KL anchor 从"归一化分布"扩展到"未归一化引导函数"，理论上证明 empirical support 可以严格扩张。这与 LambdaPO（RL-1, pairwise advantage）、DMPO（RL-4, forward KL distribution matching）一同构成了 2026 年 5 月 RLVR 三大方向：分别从 advantage estimator、optimization objective、exploration shaping 三个角度治理 GRPO 的 mode collapse 问题。SAGE 的<strong>"在高熵点扰动"</strong>实践非常工程友好——它不需要额外网络、不需要 critic、不改变 GRPO loop，仅在 token-level 加一个 entropy-gated multiplier 即可。</p>
+    </div>
+  </div>
+

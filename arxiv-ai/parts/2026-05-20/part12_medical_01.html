@@ -1,0 +1,77 @@
+  <div class="paper" id="p11">
+    <h3 class="paper-title">Medical-1 · MediLongChat: 跨会话长程医学对话评测基准，G-Eval 4.84 综合最佳</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.19766">arXiv:2605.19766</a></span><br>
+      <span>🏛 South-Central Minzu University (中南民族大学), Singapore Management University</span><br>
+      <span class="tag tag-medical">Medical</span><span class="tag tag-medical">Long Dialogue</span><span class="tag tag-medical">Benchmark</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>有效的 healthcare agent 必须能回溯并推理患者的纵向病史（longitudinal medical history）。但现有医学对话数据集（NoteChat、MSC、Conversation Chronicles、LoCoMo）都<strong>聚焦单次孤立交互</strong>，无法捕捉跨会话推理（cross-session reasoning）。真实临床数据又受隐私和伦理约束。本文提出 <strong>MediLongChat</strong>：用 LLM 知识引导的三阶段合成 pipeline，构造高质量、长时间跨度、真实情感色调的医学对话数据集，并定义三个 benchmark task（in-dialogue / cross-dialogue / synthesis reasoning）评估 agent 的 memory capability。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① Stage 1: Synthetic Patient Profile 构造</strong>
+        <p>用 LLM 基于医学知识库（ICD-10 + UMLS + 临床指南）合成 patient profile：基础人口学（年龄、性别、职业）、主病轨迹（如 type-2 diabetes 5 年）、并发症轨迹（如 retinopathy、neuropathy）、accompanying conditions（hypertension, dyslipidemia）。每个 profile 是一个 longitudinal timeline，覆盖数月至数年。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Stage 2: Multi-Turn Dialogue per Encounter</strong>
+        <p>对 timeline 上每个 encounter（如 "3 个月 follow-up"），用 LLM 生成医生-患者多轮对话。引入 <strong>structured priors</strong>（症状描述方式、医生 questioning style、患者 emotional tone）避免对话过于"教科书式"。Stage 2 比 Stage 1 给更大表达自由度——Faithfulness 略降（0.601 vs 0.635）换 Diversity 提升（0.5447 vs 0.4381）。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Stage 3: Longitudinal History Integration</strong>
+        <p>把多个 encounter 对话整合为<strong>连贯纵向历史</strong>。关键：在新对话开始时，自然引用之前 encounter 的关键事件（如 "上次复诊您提到血糖控制改善了，这次..."），并随时间推移引入新症状、新检查结果、新药物调整。这是 MediLongChat 区别于其他多轮数据集的核心——cross-session 连贯性而非孤立 session。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Benchmark Tasks（评估 memory capability）</strong>
+        <p>三个任务：(1) <em>In-dialogue Reasoning</em>：当前 session 内事实推理；(2) <em>Cross-dialogue Reasoning</em>：跨 session 信息整合（"对比上次和这次的 HbA1c"）；(3) <em>Synthesis Reasoning</em>：基于完整纵向历史的高阶诊断推理（"基于 6 次复诊，病程进展如何，下一步建议"）。<strong>Multi-dimensional evaluation</strong>：用 Faithfulness（基于 source）、Coherence、Diversity 自动指标 + 4 个 LLM judge ensemble。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>典型 MediLongChat patient timeline：</strong>
+        <ol>
+          <li><strong>Profile：</strong>58岁男性，T2DM 8年，最近确诊 diabetic retinopathy 早期。</li>
+          <li><strong>Encounter 1（半年前）：</strong>"医生，最近视物有点模糊。" → 检查 → 确诊视网膜病变，开始 anti-VEGF + 加大二甲双胍剂量。</li>
+          <li><strong>Encounter 2（3个月前）：</strong>"上次您说要监测血压，最近测了 145/90，担心。" → 加 ACEI。</li>
+          <li><strong>Encounter 3（当前）：</strong>"视物比上次好一些，但晚上起夜增多。" → cross-session 触发：医生提示需排查 ACEI 加重 nocturia 还是糖尿病 nephropathy 进展。</li>
+          <li><strong>Cross-dialogue Reasoning 任务：</strong>"基于这位患者三次就诊，nocturia 增加最可能的原因是什么？" 标答需要整合 Encounter 2 的 ACEI 用药史 + Encounter 3 的 nocturia 主诉 + Encounter 1 的 diabetic complications 风险。</li>
+          <li><strong>Synthesis Reasoning：</strong>"过去 6 个月这位患者的病情整体走向？" 需要整合三次会诊的 trend 信息。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（G-Eval 5-point scale, 4 LLM judge ensemble）</h4>
+      <table>
+        <tr><th>Dataset</th><th>Diversity</th><th>Coherence</th><th>Correctness</th><th>Realism</th></tr>
+        <tr><td>LoCoMo</td><td>3.561</td><td>4.053</td><td class="best">4.965</td><td>2.386</td></tr>
+        <tr><td>Conversation Chronicles</td><td>3.174</td><td>3.504</td><td>4.860</td><td>2.062</td></tr>
+        <tr><td>MSC</td><td>3.694</td><td>3.482</td><td>4.696</td><td>1.982</td></tr>
+        <tr><td>NoteChat</td><td>3.138</td><td>4.464</td><td>3.213</td><td>2.340</td></tr>
+        <tr><td class="best">MediLongChat (Ours)</td><td class="best">4.858</td><td class="best">4.838</td><td>4.545</td><td class="best">4.505</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">MediLongChat 在 4 个维度中 3 个第一（Diversity 4.858, Coherence 4.838, Realism 4.505）。Realism 4.505 vs 最高基线 2.386 ——<strong>+2.12 pt 是质的飞跃</strong>，证明合成 pipeline 捕捉到了真实临床对话的自然 turn-taking、情感语调与省略式表达。Correctness 4.545 仅略低于 LoCoMo（4.965），但 LoCoMo 是通用领域而非医学场景的高 fidelity。</p>
+      <p>Multi-judge ensemble 设计：Gemini 2.5、GPT-5 mini、Qwen3-235B、DeepSeek-R1 四个评委独立打分再 ensemble，最终 Diversity 4.858, Coherence 4.838, Correctness 4.545, Realism 4.505。即使个别 judge 有 bias（如 GPT-5 mini 对 correctness 严苛只给 3.80），ensemble 仍稳定。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>Stage 1 vs Stage 2 tradeoff：</strong>Stage 1 受 knowledge prior 严格约束，Faithfulness 0.635 高 / Diversity 0.4381 低；Stage 2 给更大表达自由，Faithfulness 0.601 略降 / Diversity 0.5447 提升 → 论文最终把 Stage 1 知识骨架与 Stage 2 自由表达<strong>组合</strong>，得到 pipeline-best。<strong>局限：</strong>(i) 合成数据 by-definition 缺乏真实临床的边缘情况（rare disease、atypical presentation）；(ii) Correctness 不及 LoCoMo——表达自由度引入小错误；(iii) 仅以中文背景作者构造，可能存在文化 bias；(iv) Benchmark 不替代真实临床测试，需 IRB approval 才能用于真实部署测评。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>MediLongChat 填补了医学 NLP 评测的<strong>关键缺口</strong>——cross-session reasoning。它的 three-stage pipeline 可被推广到其他需要 longitudinal 数据的领域（如教育辅导、客服 history、法律案件追踪）。对于希望部署 medical agent 的团队（如腾讯健康、平安健康、医联），MediLongChat 提供了一个<strong>无需触碰真实病历就能评测 memory + reasoning capability</strong> 的安全 benchmark。<strong>关键启示：</strong>合成数据的核心质量维度不是 correctness（fact 总能学），而是 Realism + Diversity——这两者决定了 agent 在真实临床环境中是否能 generalize。结合 Agent-2 TriMem 的多粒度 memory 设计，MediLongChat 提供了 longitudinal medical agent 训练 + 评测的完整链路。</p>
+    </div>
+  </div>
+

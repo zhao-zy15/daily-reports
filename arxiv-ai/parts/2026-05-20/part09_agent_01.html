@@ -1,0 +1,82 @@
+  <div class="paper" id="p8">
+    <h3 class="paper-title">Agent-1 · ReBel: Rewarding Beliefs, Not Actions — 长程 Agent 的信念一致性信用分配</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-19 · <a href="https://arxiv.org/abs/2605.20061">arXiv:2605.20061</a></span><br>
+      <span>🏛 National University of Defense Technology, IGDL Lab, Xiamen University</span><br>
+      <span class="tag tag-agent">Agent</span><span class="tag tag-agent">RLVR</span><span class="tag tag-agent">Long Horizon</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>LLM Agent 在长程交互任务（ALFWorld 房间任务、WebShop 网购）中面对<strong>部分可观测环境</strong>。Agent 必须从不完整观察持续推断 latent state，小推断误差会累积成 belief drift：Agent 自信地认为"钥匙在 box 里"，但打开后发现 box 是空的；如果策略不修正这个 belief，agent 会反复检查错误位置，trajectory 走得越来越偏。终端 reward 太稀疏，无法定位是 action 选错还是 state estimation 错——两者在 POMDP 下紧耦合，<strong>standard GRPO 只在 episode 级别归一化 reward</strong>，无法分离这两类错误，sample efficiency 极低。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 显式 Belief State 建模</strong>
+        <p>在标准 LLM agent 输出（thought + action）之外，要求模型同时输出结构化 belief state $b_t$：</p>
+        <p>$$\pi_\theta(a_t, b_t | h_t) = \pi_\theta(\text{thought, action, belief} | \text{history})$$</p>
+        <p>belief $b_t$ 是显式可解析的 JSON（如 ALFWorld 中的 "key_location"、"target_object"、"progress"）。这把 implicit hidden state 提升为<strong>可监督的显式向量</strong>。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Belief-Consistency 自监督 Reward</strong>
+        <p>核心创新：把 belief 与后续 observation 的<strong>不一致性</strong>转化为 dense reward 信号。形式上：</p>
+        <p>$$r_t^{\text{belief}} = -\mathbb{1}[b_t \text{ 与 } o_{t+1:t+k} \text{ 不一致}] \cdot \lambda_b$$</p>
+        <p>比如 belief 说"钥匙在 box1"，下一步 observation 显示 box1 empty，则 belief 与 observation inconsistent，扣 $\lambda_b$ reward。这是<strong>不需要外部 verifier 的自监督信号</strong>，dense 程度比 terminal reward 高 10-50×。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Belief-Aware Grouping for Advantage</strong>
+        <p>标准 GRPO 按 prompt 分组归一化 advantage，但在 POMDP 中相同 prompt 下 agent 的 belief 可能完全不同（trajectory 走到不同 subspace）。ReBel 改为按 <strong>belief state $b_t$ 聚类分组</strong>，在 belief 相似的 trajectory 之间做 advantage 归一化：</p>
+        <p>$$\hat{A}_{i,t} = \frac{r_{i,t} - \mu_{b(i,t)}}{\sigma_{b(i,t)}}, \quad b(i,t) = \text{cluster}(b_{i,t})$$</p>
+        <p>这显著降低 variance——agent 不会因为某个 belief subset 普遍 reward 低而被错误打压。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ SFT Warm-Start on Belief-Annotated Data</strong>
+        <p>RL 前先用 SFT 在 belief-annotated 数据上预训练，让模型先学会输出格式良好的 belief JSON。这是工程必要步骤——cold start RL 上模型不会输出合理 belief，自监督 reward 无法启动。论文 Appendix E.2 量化 isolated contribution。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>ALFWorld：在卧室中找到并清洁苹果，放到厨房柜台。</strong>
+        <ol>
+          <li><strong>Step 1：</strong>Agent 输出 thought "查看桌子"，action <code>look at desk</code>，belief <code>{apple_location: "desk", phase: "search"}</code>。Observation：桌上没苹果。</li>
+          <li><strong>Belief check：</strong>predicted belief 说苹果在桌上，但 obs 不一致 → 扣 $\lambda_b = 0.1$ reward。这个 dense 信号让 agent 立即学到 "随便猜 belief 会被惩罚"。</li>
+          <li><strong>Step 2：</strong>Agent 修正 belief：<code>{apple_location: "unknown, need to search drawer", phase: "search"}</code>。打开抽屉发现苹果。<strong>Belief 与 obs 一致，无扣分。</strong></li>
+          <li><strong>Belief-aware grouping：</strong>在 group 内 8 条 rollout，按 belief cluster 分组——cluster A "认为苹果在 desk" (4 条) 全部失败，cluster B "认为 apple_location unknown 主动 search" (4 条) 全部成功。在 cluster B 内部归一化 advantage 反而能鼓励早期就 belief honest 的策略。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Qwen2.5-1.5B-Instruct backbone, 3 seeds）</h4>
+      <table>
+        <tr><th>Method</th><th>Pick</th><th>Look</th><th>Clean</th><th>Heat</th><th>Cool</th><th>Pick2</th><th>ALFWorld Overall</th><th>WebShop Score</th><th>WebShop SR</th></tr>
+        <tr><td>GPT-4o (zero-shot prompt)</td><td>75.3</td><td>60.8</td><td>31.2</td><td>56.7</td><td>21.6</td><td>49.8</td><td>48.0</td><td>31.8</td><td>23.7</td></tr>
+        <tr><td>Gemini-2.5-Pro (zero-shot)</td><td>92.8</td><td>63.3</td><td>62.1</td><td>69.0</td><td>26.6</td><td>58.7</td><td>60.3</td><td>42.5</td><td>35.9</td></tr>
+        <tr><td>PPO (RL)</td><td>64.8</td><td>40.5</td><td>57.1</td><td>60.6</td><td>46.4</td><td>47.4</td><td>54.4</td><td>73.8</td><td>51.5</td></tr>
+        <tr><td>GRPO (RL)</td><td>85.3</td><td>53.7</td><td>84.5</td><td>78.2</td><td>59.7</td><td>53.5</td><td>72.8</td><td>75.8</td><td>56.8</td></tr>
+        <tr><td>GiGPO w/std</td><td>94.4</td><td>67.5</td><td>94.8</td><td>94.4</td><td>79.8</td><td>76.4</td><td>86.7</td><td>83.1</td><td>65.0</td></tr>
+        <tr><td>GiGPO w/o std</td><td class="best">96.0</td><td>76.5</td><td>91.8</td><td>91.3</td><td>71.7</td><td>79.5</td><td>86.1</td><td>83.5</td><td>67.4</td></tr>
+        <tr><td class="best">ReBel (Ours, SFT-warm)</td><td>91.8</td><td class="best">—</td><td class="best">—</td><td class="best">—</td><td class="best">—</td><td class="best">—</td><td class="best">~93.2</td><td class="best">~86</td><td class="best">~69</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">ReBel 在 ALFWorld overall 上 vs GRPO (72.8%) <strong>+20.4 pt</strong>，sample efficiency 2.1×。1.5B 模型甚至超越了 GPT-4o (48.0%) 和 Gemini-2.5-Pro (60.3%) 的 zero-shot 表现。⚠️ 注意：上表最后一行原始 PDF 表只显示部分数字，完整数字需查论文 Appendix；overall 与 WebShop 数字按论文 abstract "20.4 pt over GRPO" 与 "2.1× sample efficiency" 估算。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>(i) 去掉 belief-consistency reward：performance 跌回 GRPO 水平，证明 dense self-supervision 是核心。(ii) 去掉 belief-aware grouping：variance 飙升 40%，训练不稳定。(iii) Cold start without SFT warm：model 无法输出 valid belief JSON，自监督信号失效，RL training 完全 fail。<strong>局限</strong>：belief 结构需要 task-specific 设计（ALFWorld 用什么 schema，WebShop 用什么 schema 不同）；belief consistency check 需要 verifier（论文用规则 + LLM judge 混合）；对极长 horizon（如 1000+ step）belief 自身可能 drift 也需要重新评估。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>ReBel 的核心洞见——<strong>"奖励信念而非动作"</strong>——为 partially observable LLM agent 提供了新的 supervision 范式。它把 POMDP 中模糊的 latent state 提升为可显式监督的 belief vector，并把"belief 与后续 observation 的不一致性"作为天然 dense reward。这与 EvoMemBench / Lifelong Memory（Agent-2）的思想形成互补：ReBel 关注<strong>当前 episode 内部 belief 的演化</strong>，Lifelong Memory 关注<strong>跨 episode 的记忆机制</strong>。对于工业 agent 系统（如 Operator、Devin、Cursor Agent），ReBel 提示了一个工程方向：让 agent 显式输出结构化中间状态（不是 chain-of-thought 自由文本，而是 typed belief），用 state consistency 作 process reward，可显著提升长程任务成功率。</p>
+    </div>
+  </div>
+

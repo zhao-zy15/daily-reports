@@ -1,0 +1,81 @@
+  <div class="paper" id="p1">
+    <h3 class="paper-title">LLM-1 · SAECache: Not All Tokens Are Worth Caching — Learning Semantic-Aware Eviction for LLM Prefix Caches</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-12 · <a href="https://arxiv.org/abs/2605.18825">arXiv:2605.18825</a></span><br>
+      <span>🏛 Peking University, FirestAI, Tsinghua University（共 6 个机构）</span><br>
+      <span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV Cache</span><span class="tag tag-llm">Serving</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>Prefix cache 是现代 LLM serving 的关键优化——把不同请求间共享的 prompt 前缀 KV 状态复用，跳过 prefill 计算。但 GPU 显存稀缺，必须有淘汰策略。生产中普遍使用的 LRU 等策略<strong>把所有 KV 块视为同质</strong>：只看访问时间。本文作者用真实流量数据（ShareGPT + AgentBank）测得一个被忽视的事实——<strong>不同 token 类型的复用率差距高达 42 倍</strong>：system prompt 复用率 92.3%，user prompt 30.8%，response 27.8%，tool output 23.0%，而 chain-of-thought 推理痕迹仅 2.2%。把一个 system prompt 块和一个 CoT 块按相同优先级保留，等于浪费宝贵的 HBM。此外，多轮会话的复用几乎 100% 是 session-local，inter-turn 时间间隔服从 session 特定的 <strong>log-normal 分布</strong>（chat: P50=63s, P99=633s；agentic: P50=6s, P99=79s）——固定参数完全无法兼顾。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 多队列分区架构（Multi-Queue Routing）</strong>
+        <p>SAECache 用基于规则的 partition 把每个 KV 块路由到三类专用队列：单轮模板队列（system prompt + tool def）、多轮历史队列（user/response/tool output）、CoT 推理队列。每个队列维护独立的优先级度量：</p>
+        <p>$$\text{Priority}(b) = w_{\text{type}}(t_b) \cdot w_{\text{queue}}(q_b) \cdot f(\Delta t_b, \tau_q)$$</p>
+        <p>其中 $w_{\text{type}}$ 是 token-type 权重（系统 prompt > user > response > CoT），$w_{\text{queue}}$ 是队列级权重，$f(\Delta t_b, \tau_q)$ 是与 log-normal session timescale $\tau_q$ 匹配的时间衰减函数。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② 语义感知的 token 加权（Online Reuse Weighting）</strong>
+        <p>不依赖人工调参，作者把权重 $w_{\text{type}}(t)$ 设为在线学习参数。每当一个块被命中时，给该类型的权重一个正梯度；每当一个块被淘汰却随后被请求未中，给一个负梯度。形式上：</p>
+        <p>$$w_{\text{type}}^{(k+1)}(t) = w_{\text{type}}^{(k)}(t) + \eta \cdot [\mathbb{1}_{\text{hit}}(b) - \lambda \cdot \mathbb{1}_{\text{miss-after-evict}}(b)]$$</p>
+        <p>其中 $\eta$ 是学习率，$\lambda$ 是惩罚因子。整个机制不需要 offline profiling。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Tail-First eviction（结构性保护）</strong>
+        <p>实证发现：相同 prefix 模板下，淘汰 prefix 头部块比淘汰尾部块更致命——因为头部一旦被驱逐，整段共享 prefix 就重新需要从头 prefill。SAECache 在每个队列内部强制 <strong>tail-first eviction</strong>，即同等优先级下优先驱逐尾部块。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Inter-Turn 自适应（log-normal 时间窗）</strong>
+        <p>对每个 session 类型，SAECache 拟合 log-normal 分布 $\log \Delta t \sim \mathcal{N}(\mu_q, \sigma_q^2)$，并把生存期 $\tau_q$ 设为 $\exp(\mu_q + k\sigma_q)$（论文用 $k=2$，覆盖到 P95）。这样 agentic 工作流（短间隔）的块快速淘汰为后续高频请求让位，而 chat 工作流的块得到更长保留。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>场景：</strong>一个混合 chat + agentic 的 LLM 服务，GPU KV 池仅能容纳 50% 的活跃前缀。
+        <ul>
+          <li><strong>请求 A</strong>（chat，刚结束一轮，下一轮预计 60s 后）：含 1000 token system prompt + 500 token 历史对话 + 200 token 当前 CoT 推理</li>
+          <li><strong>请求 B</strong>（agentic，每 8s 来一轮）：含 800 token system + tool def + 300 token tool output</li>
+        </ul>
+        <strong>LRU 行为：</strong>按时间排序，把刚生成完的 A 的 CoT 块也放到队尾"高优先级"；当 B 的 tool def 块被淘汰时，下一次 B 必须重 prefill 1100 token。
+        <ol>
+          <li><strong>SAECache 路由：</strong>A 的 system → 单轮模板队列（保留权重高）；A 的 CoT → 推理队列（权重 0.02 倍，立即可弃）；B 的 system + tool def → 单轮模板队列。</li>
+          <li><strong>权重更新：</strong>online 学习 200 个请求后，CoT 权重 → 0.022，system 权重 → 0.923，差距 42×。</li>
+          <li><strong>结果：</strong>A 的 CoT 块第一个被淘汰，B 的 tool def 永久保留，B 命中率从 LRU 的 41% 提升到 78%；端到端 TTFT 从 850ms 降到 360ms（2.36× 加速）。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果</h4>
+      <table>
+        <tr><th>Workload</th><th>LRU baseline</th><th>LPC (NSDI'26)</th><th>Static priority</th><th>SAECache</th><th>Gain vs LRU</th></tr>
+        <tr><td>ShareGPT (chat)</td><td>1.00×</td><td>1.32×</td><td>1.18×</td><td class="best">1.41× TTFT</td><td class="best">+41%</td></tr>
+        <tr><td>AgentBank (agentic)</td><td>1.00×</td><td>1.55×</td><td>1.21×</td><td class="best">2.68× TTFT</td><td class="best">+168%</td></tr>
+        <tr><td>Mixed prod trace</td><td>1.00×</td><td>1.41×</td><td>1.09×</td><td class="best">1.93× TTFT</td><td class="best">+93%</td></tr>
+        <tr><td>Workload mismatch</td><td>1.00×</td><td>0.85×</td><td>0.37×</td><td class="best">1.62× TTFT</td><td>—</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">Static priority 在工作负载切换时降到 0.37×（比 LRU 还差 2.7 倍）——这是论文最强的论点：<strong>固定参数策略不仅没有上限，还有显著下限风险</strong>，online 自适应是必需的。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p>消融实验显示三个组件的独立贡献：去掉 token-type weighting 损失 23% 增益；去掉自适应 queue weighting 损失 39%；去掉 tail-first 损失 11%。三者均不可或缺。<strong>局限</strong>：在线学习需要 ~500 个请求的 warm-up，冷启动期收益较小；CoT 复用率统计基于公开数据集 ShareGPT，对于代码补全等"高 CoT 复用"场景未必准确。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>SAECache 的核心洞见——"语义结构 + 时间分布 + 在线学习" 三轴联合驱动 KV cache 淘汰——为 LLM serving 系统打开了新的优化维度。它呼应了 LLM-2 Spherical KV 的理念：把 KV 看作 rate–distortion 分配问题；但走的是更朴素的工程路线：不需要改 attention kernel，只需在 serving runtime 加 200 行代码。对于阿里、字节、火山等推理平台，这是<strong>近期可落地的最高 ROI 改进点之一</strong>，预计将在下一波 vLLM/SGLang/TensorRT-LLM 优化中被吸收。</p>
+    </div>
+  </div>
+

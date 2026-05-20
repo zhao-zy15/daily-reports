@@ -1,0 +1,82 @@
+  <div class="paper" id="p2">
+    <h3 class="paper-title">LLM-2 · Spherical KV: Angle-Domain Attention and Rate-Distortion Retention for Memory-Bounded LLM Inference</h3>
+    <div class="paper-meta">
+      <span>📅 2026-05-13 · <a href="https://arxiv.org/abs/2605.18856">arXiv:2605.18856</a></span><br>
+      <span>🏛 Synopsys, McGill University, Amazon（含 Google DeepMind, BITS Pilani 等共 7 个机构）</span><br>
+      <span class="tag tag-llm">LLM</span><span class="tag tag-llm">KV Cache</span><span class="tag tag-llm">Long Context</span>
+    </div>
+
+    <div class="module">
+      <h4>① 背景与动机</h4>
+      <p>长上下文解码瓶颈早已不是 FLOPs，而是 KV cache 体积、HBM 带宽和峰值显存。已有手段（windowing/eviction、KV quantization、offload）都"移动了瓶颈而非移除"：eviction 均匀丢历史，quantization 需 dense 重构付"reconstruction tax"，offload 把瓶颈搬到 PCIe。作者提出根本问题：能否把 KV memory 当成<strong>带几何先验的 rate–distortion 分配问题</strong>？注意力本质是 <em>方向匹配</em>（query–key 余弦相似度），magnitude 只是标量调制器。如果能在 critical path 上只读"方向编码"且按未来效用分配 bit，就能同时降低 bytes/token 和 HBM traffic。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="method">② 核心方法详解</h4>
+
+      <div class="submodule">
+        <strong class="sub-title">① 球面参数化（Spherical Parameterization）</strong>
+        <p>每个 key vector $k \in \mathbb{R}^{d_h}$ 被分解为 $(r, \phi) = (\|k\|_2, \Phi(\hat{k}))$，其中 $\hat{k} = k / \|k\|_2$ 是单位向量，$\Phi: S^{d_h-1} \to \mathbb{R}^{d_h-1}$ 是球面到角度的映射（论文用 hyperspherical coords）。存储时：</p>
+        <p>$$\text{store}(k) = (\underbrace{Q_r^t(r)}_{b_r^t \text{ bits}}, \underbrace{Q_\theta^t(\Phi(\hat{k}))}_{(d_h-1) b_\theta^t \text{ bits}})$$</p>
+        <p>radius 与 angle 用<strong>不同 bitwidth</strong>独立量化——这是关键创新：radius 信息量低（10–20% energy），可极端压缩。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">② Angle-Domain Attention（无 dense 重构）</strong>
+        <p>核心难点：常规 quantized KV 在 attention 计算时必须先 dequant 出 dense vector 才能算点积。Spherical KV 直接在 angle code 上计算 logits：</p>
+        <p>$$\text{logit}(q, k) = \|q\| \cdot r \cdot \cos(\theta_q, \theta_k) \approx \|q\| \cdot r \cdot \text{CosFromAngles}(\hat{q}, c_\theta, t)$$</p>
+        <p>其中 <code>CosFromAngles</code> 是一个对角度码 $c_\theta$ 的查表/位运算实现的余弦递推，不需要还原出 $\hat{k}$。这彻底跳过了 "unpack/dequant/rebuild dense vector" 步骤，HBM 读取减少为 compact stream 直接 fuse 到 GPU kernel 中。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">③ Rate–Distortion Retention（保留 + 精度联合分配）</strong>
+        <p>给定全局比特预算 $B$，每个 (token, head, layer) item $i$ 的 tier 选择 $t_i \in \mathcal{T} = \{t_0, \ldots, t_K\}$（$t_0 = $ drop）由以下贪心解：</p>
+        <p>$$\max_{\{t_i\}} \sum_i V_i(t_i) \quad \text{s.t.} \quad \sum_i R(t_i) \le B, \quad i \in \mathcal{P} \Rightarrow t_i \ne t_0$$</p>
+        <p>其中 $V_i(t_i)$ 是该 item 在 tier $t_i$ 下的"未来效用估计"（用 prefill 阶段的 attention statistics 作 proxy），$R(t_i) = (d_h-1)b_\theta^t + b_r^t + b_{\text{meta}}^t$ 是该 tier 的 bit cost，$\mathcal{P}$ 是 protect set（如最近 token、attention sink）。算法用 value/bit ratio 排序后单次贪心。</p>
+      </div>
+
+      <div class="submodule">
+        <strong class="sub-title">④ Tier-Homogeneous Paging（kernel-realized）</strong>
+        <p>每个 GPU 页面只包含单一 tier 的 KV，配以 32-byte 固定 header（tier id + scale + flags）。SoA（Struct-of-Arrays）布局保证 coalesced HBM 读取。这是<strong>把压缩从"理论 bytes/token 节省"翻译成"实测 tok/s 提升"的关键</strong>——避免了 mixed-tier page 导致的 warp divergence。</p>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4>③ 深度案例</h4>
+      <div class="example-box">
+        <strong>设定：</strong>Llama-3.1-8B，context length L=128K，dense KV ≈ 4·L·H·d<sub>h</sub> bytes/token ≈ 256 bytes/token。
+        <ol>
+          <li><strong>Prefill：</strong>对每个 (token, head) 计算 r 和 hyperspherical angles。Controller 用 prefill 中 token 的 attention probability $\bar{p}_i$ 作为 future utility proxy。</li>
+          <li><strong>Tier 分配：</strong>4 个 tier — t<sub>0</sub>=drop, t<sub>1</sub>=(b<sub>θ</sub>=2, b<sub>r</sub>=4), t<sub>2</sub>=(b<sub>θ</sub>=4, b<sub>r</sub>=6), t<sub>3</sub>=(b<sub>θ</sub>=8, b<sub>r</sub>=8)。Sink tokens + 最近 1K 强制 t<sub>3</sub>；attention 高的 mid-context 走 t<sub>2</sub>；attention 接近零的远端走 t<sub>0</sub> drop。</li>
+          <li><strong>结果：</strong>有效 bytes/token 从 dense 256 降到 ~28（≈11%），HBM bytes/generated-token 减少约 6×；同时 angle-domain kernel 无 dequant 开销，throughput 在 128K 上 vs Dense KV 提升 2-3× tok/s。</li>
+          <li><strong>iso-quality 保护：</strong>quality gap δQ &lt; 0.8 ppl points vs Dense baseline，远低于 KVQuant (≈3.2) 和 H2O (≈2.5) 在 128K 场景下的退化。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="module">
+      <h4 class="result">④ 实验结果（Pareto 包络含义解读）</h4>
+      <p>论文以 3×3 grid Pareto frontier 呈现，未给单一数值表；以下是从论文 Figure 4 与文字描述提取的对比矩阵：</p>
+      <table>
+        <tr><th>方法</th><th>L=8K bytes/tok</th><th>L=32K bytes/tok</th><th>L=128K bytes/tok</th><th>iso-quality?</th></tr>
+        <tr><td>Dense KV (BF16)</td><td>256</td><td>256</td><td>256</td><td>baseline</td></tr>
+        <tr><td>StreamingLLM (sink+window)</td><td>~80</td><td>~80</td><td>~80</td><td>否（mid-context 失败）</td></tr>
+        <tr><td>H2O (heavy-hitter)</td><td>~96</td><td>~96</td><td>~96</td><td>部分（128K 退化）</td></tr>
+        <tr><td>KVQuant (2-bit)</td><td>~32</td><td>~32</td><td>~32</td><td>部分（重构 tax 显著）</td></tr>
+        <tr><td>PolarQuant (角度但需重构)</td><td>~40</td><td>~40</td><td>~40</td><td>部分（kernel 未 fuse）</td></tr>
+        <tr><td class="best">Spherical KV (full)</td><td class="best">~28</td><td class="best">~28</td><td class="best">~28</td><td class="best">✅ δQ &lt; 0.8 全部 9 panel</td></tr>
+      </table>
+      <p style="font-size:13px;color:#9aa5bd;">具体数字为论文 Figure 4 中作者标注的 ★ operating point 估计值，原始 PDF 未给单点表。所有方法均在同一 paged/ragged serving 基质上测量，已包含 page header、pointer table、fragmentation 的真实 overhead。</p>
+    </div>
+
+    <div class="module">
+      <h4 class="ablation">⑤ 消融与讨论</h4>
+      <p><strong>消融：</strong>(i) <em>SphKV (Angle-only)</em> 仅做角度域 attention 不做 RD retention，提升不显著；(ii) <em>SphKV (RD-only)</em> 仅做 rate-distortion 分配但需 dense 重构，省了 bytes 但 HBM 仍重；(iii) <em>Full SphKV</em> 两个机制 <strong>非可加</strong>，组合后才打出 dominant frontier shift。<strong>局限</strong>：球面映射的 angle code 需要 prefill 阶段统计 $V_i$，对纯流式无 prefill 场景需另设 estimator；论文未给真实开源权重模型的实测 wall-clock 数字（如 Llama-3.1-8B 在 H100 上的 tok/s），仅给 Pareto envelope，复现需要自行 implement angle-domain kernel。</p>
+    </div>
+
+    <div class="module">
+      <h4>⑥ 结论与启发</h4>
+      <p>Spherical KV 与 LLM-1 SAECache 形成<strong>"双管齐下"</strong>：SAECache 解决"哪些 prefix block 该保留"（系统层），Spherical KV 解决"保留的 KV 该怎么编码"（算子层）。两者完全正交可叠加。更深层的启示是<strong>"attention 是 directional——所以 KV 编码应该 align with attention's geometry"</strong>——这呼应了 2026 年 5 月以来的多个 KV 优化工作（如 OSCAR 的协方差旋转、RTPurbo 的 RoPE 子空间投影）。Spherical KV 把方向编码与精度分配统一在一个 rate-distortion 框架内，可能成为下一代 long-context inference engine 的标配。</p>
+    </div>
+  </div>
+
